@@ -345,7 +345,7 @@ private fun DownloadsScreen(repository: GameRepository, downloadRepository: Down
     val jobs by downloadRepository.observeJobs().collectAsState()
     Column {
         Text("Downloads", fontSize = 38.sp, fontWeight = FontWeight.Bold)
-        Text("Durable queue prototype - no network or filesystem writes yet",
+        Text("Durable queue plus verified app-private asset installation",
             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.68f))
         Spacer(Modifier.height(20.dp))
         if (jobs.isEmpty()) Text("No active downloads")

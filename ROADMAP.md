@@ -45,6 +45,7 @@ Browse -> details -> install an authorized test file -> verify -> Library -> lau
 - [x] Reverified, read-only FileProvider content handoff to the emulator adapter
 - [ ] Replace diagnostic text payload with an authorized runnable homebrew fixture
 - [x] Persistent save record retained through content-only uninstall and reinstall
+- [x] Restart reconciliation of WorkManager success against real content and checksum
 
 ## 0.5 - Save-safe platform support
 

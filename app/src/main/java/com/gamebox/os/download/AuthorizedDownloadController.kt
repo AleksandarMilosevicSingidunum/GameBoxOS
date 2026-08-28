@@ -20,7 +20,7 @@ data class AuthorizedDownloadState(
     val totalBytes: Long = AuthorizedTestDownload.SIZE_BYTES,
     val error: String? = null
 ) {
-    enum class Status { IDLE, QUEUED, RUNNING, SUCCEEDED, FAILED, CANCELLED }
+    enum class Status { IDLE, QUEUED, RUNNING, SUCCEEDED, MISSING_CONTENT, ALTERED_CONTENT, FAILED, CANCELLED }
     val progress: Float
         get() = if (totalBytes <= 0L) 0f
         else (bytesTransferred.toFloat() / totalBytes.toFloat()).coerceIn(0f, 1f)
@@ -37,8 +37,12 @@ class WorkManagerAuthorizedDownloadController(
     private val gameRepository: GameRepository,
     scope: CoroutineScope
 ) : AuthorizedDownloadController {
-    private val workManager = WorkManager.getInstance(context.applicationContext)
-    private val scheduler = DownloadWorkScheduler(context)
+    private val applicationContext = context.applicationContext
+    private val workManager = WorkManager.getInstance(applicationContext)
+    private val scheduler = DownloadWorkScheduler(applicationContext)
+    private val contentValidator = InstalledContentValidator(
+        applicationContext.filesDir.resolve(AssetDownloadWorker.INSTALL_ROOT)
+    )
     private val state = workManager
         .getWorkInfosForUniqueWorkFlow(AuthorizedTestDownload.UNIQUE_WORK_NAME)
         .map { workInfos -> workInfos.lastOrNull().toAuthorizedState() }
@@ -80,13 +84,26 @@ class WorkManagerAuthorizedDownloadController(
             status = when (state) {
                 WorkInfo.State.ENQUEUED, WorkInfo.State.BLOCKED -> AuthorizedDownloadState.Status.QUEUED
                 WorkInfo.State.RUNNING -> AuthorizedDownloadState.Status.RUNNING
-                WorkInfo.State.SUCCEEDED -> AuthorizedDownloadState.Status.SUCCEEDED
+                WorkInfo.State.SUCCEEDED -> when (contentValidator.validate(
+                    AuthorizedTestDownload.RELATIVE_PATH,
+                    AuthorizedTestDownload.SHA256
+                )) {
+                    InstalledContentStatus.VERIFIED -> AuthorizedDownloadState.Status.SUCCEEDED
+                    InstalledContentStatus.MISSING -> AuthorizedDownloadState.Status.MISSING_CONTENT
+                    InstalledContentStatus.ALTERED -> AuthorizedDownloadState.Status.ALTERED_CONTENT
+                }
                 WorkInfo.State.FAILED -> AuthorizedDownloadState.Status.FAILED
                 WorkInfo.State.CANCELLED -> AuthorizedDownloadState.Status.CANCELLED
             },
             bytesTransferred = transferred,
             totalBytes = total,
-            error = outputData.getString(AssetDownloadWorker.KEY_ERROR)
+            error = outputData.getString(AssetDownloadWorker.KEY_ERROR) ?: when {
+                state == WorkInfo.State.SUCCEEDED &&
+                    !applicationContext.filesDir.resolve(AssetDownloadWorker.INSTALL_ROOT)
+                        .resolve(AuthorizedTestDownload.RELATIVE_PATH).isFile ->
+                    "Recorded install is missing; reinstall required"
+                else -> null
+            }
         )
     }
 
@@ -95,6 +112,8 @@ class WorkManagerAuthorizedDownloadController(
         AuthorizedDownloadState.Status.QUEUED -> InstallState.QUEUED
         AuthorizedDownloadState.Status.RUNNING -> InstallState.DOWNLOADING
         AuthorizedDownloadState.Status.SUCCEEDED -> InstallState.INSTALLED
+        AuthorizedDownloadState.Status.MISSING_CONTENT -> InstallState.MISSING_FILES
+        AuthorizedDownloadState.Status.ALTERED_CONTENT -> InstallState.FAILED
         AuthorizedDownloadState.Status.FAILED -> InstallState.FAILED
         AuthorizedDownloadState.Status.CANCELLED -> InstallState.NOT_INSTALLED
     }
