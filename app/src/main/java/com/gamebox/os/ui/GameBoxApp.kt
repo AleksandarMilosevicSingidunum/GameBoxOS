@@ -33,6 +33,7 @@ import com.gamebox.os.download.AuthorizedDownloadController
 import com.gamebox.os.download.AuthorizedDownloadState
 import com.gamebox.os.launch.GameLaunchController
 import com.gamebox.os.launch.LaunchUiState
+import com.gamebox.os.storage.SaveSafetyController
 
 private enum class Destination(val title: String) {
     HOME("Home"), LIBRARY("Library"), STORE("Store"), DOWNLOADS("Downloads")
@@ -43,7 +44,8 @@ fun GameBoxApp(
     repository: GameRepository,
     downloadRepository: DownloadRepository,
     authorizedDownloadController: AuthorizedDownloadController,
-    gameLaunchController: GameLaunchController
+    gameLaunchController: GameLaunchController,
+    saveSafetyController: SaveSafetyController
 ) {
     val games by repository.observeGames().collectAsState()
     var destination by remember { mutableStateOf(Destination.HOME) }
@@ -81,6 +83,7 @@ fun GameBoxApp(
                 downloadRepository,
                 authorizedDownloadController,
                 gameLaunchController,
+                saveSafetyController,
                 onBack = { selectedGameId = null }
             )
         } else {
@@ -215,11 +218,13 @@ private fun DetailsScreen(
     downloadRepository: DownloadRepository,
     authorizedDownloadController: AuthorizedDownloadController,
     gameLaunchController: GameLaunchController,
+    saveSafetyController: SaveSafetyController,
     onBack: () -> Unit
 ) {
     val isAuthorizedTest = game.id.value == "retro-test"
     val authorizedState by authorizedDownloadController.observeState().collectAsState()
     val launchState by gameLaunchController.observeState().collectAsState()
+    val saveSafetyState by saveSafetyController.observeState().collectAsState()
     val workerActive = authorizedState.status == AuthorizedDownloadState.Status.QUEUED ||
         authorizedState.status == AuthorizedDownloadState.Status.RUNNING
     Column {
@@ -284,6 +289,14 @@ private fun DetailsScreen(
                         Button(onClick = { gameLaunchController.launch(game) }) {
                             Text("Play")
                         }
+                        OutlinedButton(onClick = saveSafetyController::uninstallTestContent) {
+                            Text("Uninstall content")
+                        }
+                    }
+                    if (isAuthorizedTest && !saveSafetyState.saveRecordPresent) {
+                        OutlinedButton(onClick = saveSafetyController::createTestSaveRecord) {
+                            Text("Create test save")
+                        }
                     }
                     if (game.state == InstallState.DOWNLOADING || game.state == InstallState.PAUSED) {
                         OutlinedButton(onClick = { if (game.state == InstallState.PAUSED) downloadRepository.resume(game.id)
@@ -293,6 +306,14 @@ private fun DetailsScreen(
                         }
                     }
                     OutlinedButton(onClick = onBack) { Text("Back") }
+                }
+                if (isAuthorizedTest && saveSafetyState.saveRecordPresent) {
+                    Spacer(Modifier.height(12.dp))
+                    Text(
+                        "Save retained: " + saveSafetyState.relativePath +
+                            " (" + saveSafetyState.sizeBytes + " bytes)",
+                        color = MaterialTheme.colorScheme.primary
+                    )
                 }
                 if (launchState.gameId == game.id &&
                     launchState.status != LaunchUiState.Status.IDLE

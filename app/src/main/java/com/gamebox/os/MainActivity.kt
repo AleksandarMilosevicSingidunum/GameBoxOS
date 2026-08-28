@@ -17,7 +17,8 @@ class MainActivity : ComponentActivity() {
                     container.gameRepository,
                     container.downloadRepository,
                     container.authorizedDownloadController,
-                    container.gameLaunchController
+                    container.gameLaunchController,
+                    container.saveSafetyController
                 )
             }
         }

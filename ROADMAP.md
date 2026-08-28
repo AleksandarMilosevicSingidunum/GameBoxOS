@@ -44,7 +44,7 @@ Browse -> details -> install an authorized test file -> verify -> Library -> lau
 - [x] Allowlisted RetroArch package adapter and return/play-session tracking
 - [x] Reverified, read-only FileProvider content handoff to the emulator adapter
 - [ ] Replace diagnostic text payload with an authorized runnable homebrew fixture
-- [ ] Save record retention through uninstall and reinstall
+- [x] Persistent save record retained through content-only uninstall and reinstall
 
 ## 0.5 - Save-safe platform support
 
