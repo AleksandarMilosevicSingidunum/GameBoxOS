@@ -1,5 +1,6 @@
 package com.gamebox.os
 
+import com.gamebox.os.domain.InstallState
 import org.junit.Assert.assertEquals
 import org.junit.Test
 

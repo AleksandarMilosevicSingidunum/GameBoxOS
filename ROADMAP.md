@@ -7,15 +7,17 @@ The development blueprint is guidance. Work proceeds in small, testable incremen
 - [x] Android and Compose project
 - [x] GameBox dark TV theme
 - [x] Controller-focusable cards
-- [x] Home, Library, and Store shells
+- [x] Home, Library, Store, Details, and Downloads mock screens
 - [x] Fixture catalog and explicit install states
-- [x] Starter domain test
+- [x] LB/RB tab switching and controller Back handling
+- [x] Fake install, pause, resume, verify, and install transitions
+- [x] Domain transition tests
 - [ ] Physical controller check on Galaxy A53
-- [ ] Compose focus and navigation tests
+- [ ] Compose focus restoration and navigation tests
 
 ## 0.2 - Persistent catalog shell
 
-Room schema, DataStore preferences, cached manifest fixtures, details and downloads screens, offline-first repository tests.
+Room schema, DataStore preferences, cached manifest fixtures, details and downloads state restoration, offline-first repository tests.
 
 ## 0.3 - First vertical slice
 
