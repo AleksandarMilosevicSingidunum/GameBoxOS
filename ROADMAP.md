@@ -37,8 +37,10 @@ Browse -> details -> install an authorized test file -> verify -> Library -> lau
 - [x] Deterministic traversal-safe install paths
 - [x] Streaming SHA-256 verification primitive
 - [x] Save-retaining uninstall planner
-- [ ] Temporary-file download worker
-- [ ] Atomic verified install move
+- [x] Staged streaming transfer core with cancellation and size limits
+- [x] Commit gated behind successful checksum verification
+- [ ] WorkManager download adapter
+- [ ] Filesystem-backed atomic staging target
 - [ ] One emulator adapter and return tracking
 - [ ] Save record retention through uninstall and reinstall
 
