@@ -7,17 +7,24 @@ import com.gamebox.os.ui.GameBoxApp
 import com.gamebox.os.ui.theme.GameBoxTheme
 
 class MainActivity : ComponentActivity() {
+    private val container by lazy { (application as GameBoxApplication).container }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val container = (application as GameBoxApplication).container
         setContent {
             GameBoxTheme {
                 GameBoxApp(
                     container.gameRepository,
                     container.downloadRepository,
-                    container.authorizedDownloadController
+                    container.authorizedDownloadController,
+                    container.gameLaunchController
                 )
             }
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        container.gameLaunchController.onHostResumed()
     }
 }

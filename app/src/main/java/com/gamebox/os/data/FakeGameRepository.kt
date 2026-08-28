@@ -15,6 +15,7 @@ interface GameRepository {
     fun pauseOrResume(id: GameId)
     fun cancelInstall(id: GameId)
     fun setInstallState(id: GameId, state: InstallState)
+    fun recordPlaySession(id: GameId, endedAtMillis: Long, minutesPlayed: Int)
     fun observeCatalogRefreshState(): StateFlow<CatalogRefreshState>
     fun refreshCatalog()
 }
@@ -55,6 +56,15 @@ class FakeGameRepository : GameRepository {
 
     override fun setInstallState(id: GameId, state: InstallState) {
         update(id) { it.copy(state = state) }
+    }
+
+    override fun recordPlaySession(id: GameId, endedAtMillis: Long, minutesPlayed: Int) {
+        update(id) {
+            it.copy(
+                lastPlayed = java.time.Instant.ofEpochMilli(endedAtMillis).toString(),
+                minutesPlayed = it.minutesPlayed + minutesPlayed.coerceAtLeast(0)
+            )
+        }
     }
 
     override fun observeCatalogRefreshState(): StateFlow<CatalogRefreshState> = refreshState.asStateFlow()

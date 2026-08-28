@@ -8,6 +8,10 @@ import com.gamebox.os.data.local.MIGRATION_1_2
 import com.gamebox.os.download.AuthorizedDownloadController
 import com.gamebox.os.download.WorkManagerAuthorizedDownloadController
 import com.gamebox.os.settings.SettingsRepository
+import com.gamebox.os.launch.AndroidPackageGateway
+import com.gamebox.os.launch.DefaultGameLaunchController
+import com.gamebox.os.launch.EmulatorCapabilityRegistry
+import com.gamebox.os.launch.GameLaunchController
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -17,6 +21,7 @@ interface AppContainer {
     val settingsRepository: SettingsRepository
     val downloadRepository: DownloadRepository
     val authorizedDownloadController: AuthorizedDownloadController
+    val gameLaunchController: GameLaunchController
 }
 
 class DefaultAppContainer(context: Context) : AppContainer {
@@ -48,4 +53,10 @@ class DefaultAppContainer(context: Context) : AppContainer {
             gameRepository,
             applicationScope
         )
+
+    override val gameLaunchController: GameLaunchController = DefaultGameLaunchController(
+        EmulatorCapabilityRegistry(),
+        AndroidPackageGateway(applicationContext),
+        gameRepository
+    )
 }

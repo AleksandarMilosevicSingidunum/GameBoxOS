@@ -89,6 +89,13 @@ class RoomGameRepository(
     override fun setInstallState(id: GameId, state: InstallState) {
         scope.launch { dao.updateInstallState(id.value, state.name) }
     }
+
+    override fun recordPlaySession(id: GameId, endedAtMillis: Long, minutesPlayed: Int) {
+        val lastPlayed = java.time.Instant.ofEpochMilli(endedAtMillis).toString()
+        scope.launch {
+            dao.recordPlaySession(id.value, lastPlayed, minutesPlayed.coerceAtLeast(0))
+        }
+    }
 }
 
 fun mergeCatalogPreservingLocalState(existing: List<Game>, incoming: List<Game>): List<Game> {

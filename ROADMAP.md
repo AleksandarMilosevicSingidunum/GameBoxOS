@@ -41,7 +41,8 @@ Browse -> details -> install an authorized test file -> verify -> Library -> lau
 - [x] WorkManager adapter for the bundled authorized test asset
 - [x] App-private filesystem staging with atomic promotion
 - [x] Wire the authorized test install action and real worker progress into the UI
-- [ ] One emulator adapter and return tracking
+- [x] Allowlisted RetroArch package adapter and return/play-session tracking
+- [ ] Verified content handoff to the emulator adapter
 - [ ] Save record retention through uninstall and reinstall
 
 ## 0.5 - Save-safe platform support

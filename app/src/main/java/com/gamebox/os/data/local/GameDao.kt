@@ -21,4 +21,12 @@ interface GameDao {
 
     @Query("UPDATE games SET installState = :state WHERE id = :id")
     suspend fun updateInstallState(id: String, state: String)
+
+    @Query("""
+        UPDATE games
+        SET lastPlayed = :lastPlayed,
+            minutesPlayed = minutesPlayed + :additionalMinutes
+        WHERE id = :id
+    """)
+    suspend fun recordPlaySession(id: String, lastPlayed: String, additionalMinutes: Int)
 }

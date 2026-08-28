@@ -31,6 +31,8 @@ import com.gamebox.os.domain.InstallState
 import com.gamebox.os.domain.primaryAction
 import com.gamebox.os.download.AuthorizedDownloadController
 import com.gamebox.os.download.AuthorizedDownloadState
+import com.gamebox.os.launch.GameLaunchController
+import com.gamebox.os.launch.LaunchUiState
 
 private enum class Destination(val title: String) {
     HOME("Home"), LIBRARY("Library"), STORE("Store"), DOWNLOADS("Downloads")
@@ -40,7 +42,8 @@ private enum class Destination(val title: String) {
 fun GameBoxApp(
     repository: GameRepository,
     downloadRepository: DownloadRepository,
-    authorizedDownloadController: AuthorizedDownloadController
+    authorizedDownloadController: AuthorizedDownloadController,
+    gameLaunchController: GameLaunchController
 ) {
     val games by repository.observeGames().collectAsState()
     var destination by remember { mutableStateOf(Destination.HOME) }
@@ -77,6 +80,7 @@ fun GameBoxApp(
                 repository,
                 downloadRepository,
                 authorizedDownloadController,
+                gameLaunchController,
                 onBack = { selectedGameId = null }
             )
         } else {
@@ -210,10 +214,12 @@ private fun DetailsScreen(
     repository: GameRepository,
     downloadRepository: DownloadRepository,
     authorizedDownloadController: AuthorizedDownloadController,
+    gameLaunchController: GameLaunchController,
     onBack: () -> Unit
 ) {
     val isAuthorizedTest = game.id.value == "retro-test"
     val authorizedState by authorizedDownloadController.observeState().collectAsState()
+    val launchState by gameLaunchController.observeState().collectAsState()
     val workerActive = authorizedState.status == AuthorizedDownloadState.Status.QUEUED ||
         authorizedState.status == AuthorizedDownloadState.Status.RUNNING
     Column {
@@ -252,7 +258,9 @@ private fun DetailsScreen(
                                     InstallState.QUEUED, InstallState.DOWNLOADING, InstallState.VERIFYING,
                                     InstallState.INSTALLING -> downloadRepository.advance(game.id)
                                     InstallState.PAUSED -> downloadRepository.resume(game.id)
-                                    else -> Unit
+                                    InstallState.INSTALLED, InstallState.UPDATE_AVAILABLE ->
+                                        gameLaunchController.launch(game)
+                                }
                                 }
                                 repository.advanceInstall(game.id)
                             }
@@ -271,6 +279,13 @@ private fun DetailsScreen(
                             Text("Cancel")
                         }
                     }
+                    if (isAuthorizedTest && (game.state == InstallState.INSTALLED ||
+                        game.state == InstallState.UPDATE_AVAILABLE)
+                    ) {
+                        Button(onClick = { gameLaunchController.launch(game) }) {
+                            Text("Play")
+                        }
+                    }
                     if (game.state == InstallState.DOWNLOADING || game.state == InstallState.PAUSED) {
                         OutlinedButton(onClick = { if (game.state == InstallState.PAUSED) downloadRepository.resume(game.id)
                             else downloadRepository.pause(game.id)
@@ -279,6 +294,22 @@ private fun DetailsScreen(
                         }
                     }
                     OutlinedButton(onClick = onBack) { Text("Back") }
+                }
+                if (launchState.gameId == game.id &&
+                    launchState.status != LaunchUiState.Status.IDLE
+                ) {
+                    Spacer(Modifier.height(12.dp))
+                    Text(
+                        launchState.message ?: when (launchState.status) {
+                            LaunchUiState.Status.LAUNCHED -> "Emulator launched"
+                            LaunchUiState.Status.RETURNED -> "Returned safely; play session recorded"
+                            else -> launchState.status.name.lowercase().replace('_', ' ')
+                        },
+                        color = if (launchState.status == LaunchUiState.Status.EMULATOR_UNAVAILABLE ||
+                            launchState.status == LaunchUiState.Status.UNSUPPORTED ||
+                            launchState.status == LaunchUiState.Status.NOT_INSTALLED
+                        ) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
+                    )
                 }
             }
         }
