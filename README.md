@@ -10,7 +10,7 @@ The current 0.1 day-zero shell includes:
 - Home, Library, and Store mock screens
 - explicit install-state model and safe fixture content
 - verified app-private test installation with WorkManager
-- save-safe content uninstall and reinstall
+- save-safe content uninstall, reinstall, and user-controlled backup import/export
 - allowlisted emulator handoff with checksum re-verification
 - persistent catalog, download, save, and play-session state
 - automated unit tests and debug APK builds

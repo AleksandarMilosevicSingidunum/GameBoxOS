@@ -3,12 +3,14 @@ package com.gamebox.os.storage
 import com.gamebox.os.download.Sha256Verifier
 import com.gamebox.os.download.VerificationResult
 import java.io.File
+import java.io.InputStream
+import java.io.OutputStream
 import java.nio.file.AtomicMoveNotSupportedException
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption
 import java.security.MessageDigest
 
-enum class BackupResult { SUCCESS, SOURCE_MISSING, BACKUP_MISSING, CHECKSUM_MISMATCH }
+enum class BackupResult { SUCCESS, SOURCE_MISSING, BACKUP_MISSING, CHECKSUM_MISMATCH, SIZE_LIMIT_EXCEEDED }
 
 class SaveBackupService(
     savesDirectory: File,
@@ -61,6 +63,55 @@ class SaveBackupService(
             return BackupResult.CHECKSUM_MISMATCH
         }
         promote(staged, destination)
+        return BackupResult.SUCCESS
+    }
+
+    fun exportBackup(relativePath: String, output: OutputStream): BackupResult {
+        val backup = resolveContained(backupsRoot, relativePath)
+        val checksum = checksumFile(backup)
+        if (!backup.isFile || !checksum.isFile) return BackupResult.BACKUP_MISSING
+        val expected = checksum.readText().trim()
+        if (!Regex("[0-9a-fA-F]{64}").matches(expected)) return BackupResult.CHECKSUM_MISMATCH
+        if (backup.inputStream().use { verifier.verify(it, expected) } != VerificationResult.Verified) {
+            return BackupResult.CHECKSUM_MISMATCH
+        }
+        backup.inputStream().use { input -> input.copyTo(output) }
+        output.flush()
+        return BackupResult.SUCCESS
+    }
+
+    fun importBackup(
+        relativePath: String,
+        input: InputStream,
+        maxBytes: Long = 16L * 1024L * 1024L
+    ): BackupResult {
+        require(maxBytes > 0L) { "Import size limit must be positive" }
+        val backup = resolveContained(backupsRoot, relativePath)
+        val staged = File(requireNotNull(backup.parentFile), backup.name + ".import.part")
+        check(backup.parentFile?.mkdirs() != false || backup.parentFile?.isDirectory == true)
+        var transferred = 0L
+        var exceeded = false
+        staged.outputStream().use { output ->
+            val buffer = ByteArray(64 * 1024)
+            while (!exceeded) {
+                val count = input.read(buffer)
+                if (count < 0) break
+                if (count == 0) continue
+                transferred += count
+                if (transferred > maxBytes) {
+                    exceeded = true
+                } else {
+                    output.write(buffer, 0, count)
+                }
+            }
+        }
+        if (exceeded) {
+            staged.delete()
+            return BackupResult.SIZE_LIMIT_EXCEEDED
+        }
+        val checksum = staged.sha256()
+        promote(staged, backup)
+        checksumFile(backup).writeText(checksum)
         return BackupResult.SUCCESS
     }
 

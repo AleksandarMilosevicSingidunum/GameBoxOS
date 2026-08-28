@@ -1,6 +1,7 @@
 package com.gamebox.os.storage
 
 import android.content.Context
+import android.net.Uri
 import com.gamebox.os.data.GameRepository
 import com.gamebox.os.data.local.SaveRecordDao
 import com.gamebox.os.data.local.SaveRecordEntity
@@ -29,6 +30,8 @@ interface SaveSafetyController {
     fun uninstallTestContent()
     fun backupSave()
     fun restoreSave()
+    fun exportBackup(uri: Uri)
+    fun importBackup(uri: Uri)
 }
 
 class DefaultSaveSafetyController(
@@ -98,6 +101,38 @@ class DefaultSaveSafetyController(
         scope.launch {
             val relativePath = state.value.relativePath ?: return@launch
             if (backupService.restore(relativePath) == BackupResult.SUCCESS) {
+                saveRecordDao.upsert(
+                    SaveRecordEntity(
+                        gameId.value,
+                        relativePath,
+                        System.currentTimeMillis(),
+                        savesRoot.resolve(relativePath).length()
+                    )
+                )
+            }
+        }
+    }
+
+    override fun exportBackup(uri: Uri) {
+        scope.launch {
+            val relativePath = state.value.relativePath ?: return@launch
+            runCatching {
+                applicationContext.contentResolver.openOutputStream(uri, "wt")?.use { output ->
+                    backupService.exportBackup(relativePath, output)
+                }
+            }
+        }
+    }
+
+    override fun importBackup(uri: Uri) {
+        scope.launch {
+            val relativePath = state.value.relativePath ?: return@launch
+            val result = runCatching {
+                applicationContext.contentResolver.openInputStream(uri)?.use { input ->
+                    backupService.importBackup(relativePath, input)
+                }
+            }.getOrNull()
+            if (result == BackupResult.SUCCESS) {
                 saveRecordDao.upsert(
                     SaveRecordEntity(
                         gameId.value,

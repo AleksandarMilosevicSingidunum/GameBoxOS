@@ -56,7 +56,7 @@ Browse -> details -> install an authorized test file -> verify -> Library -> lau
 - [x] Backup checksum sidecar and tamper rejection
 - [x] Emulator capability registry and per-game adapter
 - [x] Conservative content-only uninstall service
-- [ ] User-controlled backup provider
+- [x] User-controlled Storage Access Framework backup import/export
 
 ## 1.0 - Target hardware release
 

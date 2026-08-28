@@ -7,6 +7,8 @@ import org.junit.Assert.assertThrows
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
+import java.io.ByteArrayInputStream
+import java.io.ByteArrayOutputStream
 
 class SaveBackupServiceTest {
     @get:Rule val temporaryFolder = TemporaryFolder()
@@ -38,6 +40,55 @@ class SaveBackupServiceTest {
 
         assertEquals(BackupResult.CHECKSUM_MISMATCH, service.restore("retro-test/save.dat"))
         assertEquals("CURRENT", save.readText())
+    }
+
+    @Test fun providerExportAndImportRemainVerifiedAndStaged() {
+        val saves = temporaryFolder.newFolder("saves")
+        val backups = temporaryFolder.newFolder("backups")
+        val save = saves.resolve("retro-test/save.dat")
+        save.parentFile.mkdirs()
+        save.writeText("SAVE")
+        val service = SaveBackupService(saves, backups)
+        service.createBackup("retro-test/save.dat")
+        val exported = ByteArrayOutputStream()
+
+        assertEquals(
+            BackupResult.SUCCESS,
+            service.exportBackup("retro-test/save.dat", exported)
+        )
+        assertEquals(
+            BackupResult.SUCCESS,
+            service.importBackup(
+                "retro-test/save.dat",
+                ByteArrayInputStream("IMPORTED".toByteArray())
+            )
+        )
+        save.writeText("CURRENT")
+        assertEquals(BackupResult.SUCCESS, service.restore("retro-test/save.dat"))
+        assertEquals("IMPORTED", save.readText())
+        assertEquals("SAVE", exported.toString())
+    }
+
+    @Test fun providerImportHonorsSizeLimitWithoutReplacingBackup() {
+        val saves = temporaryFolder.newFolder("saves")
+        val backups = temporaryFolder.newFolder("backups")
+        val save = saves.resolve("retro-test/save.dat")
+        save.parentFile.mkdirs()
+        save.writeText("ORIGINAL")
+        val service = SaveBackupService(saves, backups)
+        service.createBackup("retro-test/save.dat")
+
+        assertEquals(
+            BackupResult.SIZE_LIMIT_EXCEEDED,
+            service.importBackup(
+                "retro-test/save.dat",
+                ByteArrayInputStream("TOO-LARGE".toByteArray()),
+                maxBytes = 3
+            )
+        )
+        save.writeText("CURRENT")
+        assertEquals(BackupResult.SUCCESS, service.restore("retro-test/save.dat"))
+        assertEquals("ORIGINAL", save.readText())
     }
 
     @Test fun missingAndTraversalInputsFailClosed() {

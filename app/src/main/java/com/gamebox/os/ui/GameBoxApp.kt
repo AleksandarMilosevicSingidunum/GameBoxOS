@@ -1,6 +1,8 @@
 package com.gamebox.os.ui
 
 import android.view.KeyEvent as AndroidKeyEvent
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -305,6 +307,12 @@ private fun DetailsScreen(
     val saveSafetyState by saveSafetyController.observeState().collectAsState()
     val workerActive = authorizedState.status == AuthorizedDownloadState.Status.QUEUED ||
         authorizedState.status == AuthorizedDownloadState.Status.RUNNING
+    val exportBackupLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/octet-stream")
+    ) { uri -> uri?.let(saveSafetyController::exportBackup) }
+    val importBackupLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri -> uri?.let(saveSafetyController::importBackup) }
     Column {
         Text(game.platform.uppercase(), color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
         Text(game.title, fontSize = 44.sp, fontWeight = FontWeight.Bold)
@@ -401,6 +409,16 @@ private fun DetailsScreen(
                             OutlinedButton(onClick = saveSafetyController::restoreSave) {
                                 Text("Restore backup")
                             }
+                            OutlinedButton(onClick = {
+                                exportBackupLauncher.launch("gamebox-retro-test-save.dat")
+                            }) {
+                                Text("Export")
+                            }
+                        }
+                        OutlinedButton(onClick = {
+                            importBackupLauncher.launch(arrayOf("application/octet-stream"))
+                        }) {
+                            Text("Import")
                         }
                     }
                 }
