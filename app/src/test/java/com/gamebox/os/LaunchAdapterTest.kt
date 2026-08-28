@@ -9,13 +9,25 @@ import org.junit.Assert.assertNull
 import org.junit.Test
 
 class LaunchAdapterTest {
-    @Test fun registry_matchesOnlyExplicitPlatformCapability() {
-        val registry = EmulatorCapabilityRegistry(
-            listOf(EmulatorCapability("approved", "example.emulator", setOf("retro")))
-        )
+    private val capability = EmulatorCapability(
+        "approved",
+        GameId("retro-test"),
+        "example.emulator",
+        "retro/retro-test/content/test.txt",
+        "application/octet-stream",
+        "94ee059335e587e501cc4bf90613e0814f00a7b08bc7c648fd865a2af6a22cc2"
+    )
 
-        assertEquals("example.emulator", registry.forPlatform("Retro")?.packageName)
-        assertNull(registry.forPlatform("Android"))
+    @Test fun registry_matchesOnlyExplicitGameCapability() {
+        val registry = EmulatorCapabilityRegistry(listOf(capability))
+
+        assertEquals("example.emulator", registry.forGame(GameId("retro-test"))?.packageName)
+        assertNull(registry.forGame(GameId("different-game")))
+    }
+
+    @Test fun capabilityContainsOnlyRelativeScopedContentPath() {
+        assertEquals("retro/retro-test/content/test.txt", capability.contentRelativePath)
+        assertEquals("application/octet-stream", capability.mimeType)
     }
 
     @Test fun returnTracker_recordsOneSessionAndThenClearsIt() {

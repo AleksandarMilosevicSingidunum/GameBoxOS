@@ -304,10 +304,14 @@ private fun DetailsScreen(
                             LaunchUiState.Status.RETURNED -> "Returned safely; play session recorded"
                             else -> launchState.status.name.lowercase().replace('_', ' ')
                         },
-                        color = if (launchState.status == LaunchUiState.Status.EMULATOR_UNAVAILABLE ||
-                            launchState.status == LaunchUiState.Status.UNSUPPORTED ||
-                            launchState.status == LaunchUiState.Status.NOT_INSTALLED
-                        ) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
+                        color = if (launchState.status in setOf(
+                            LaunchUiState.Status.EMULATOR_UNAVAILABLE,
+                            LaunchUiState.Status.UNSUPPORTED,
+                            LaunchUiState.Status.NOT_INSTALLED,
+                            LaunchUiState.Status.CONTENT_MISSING,
+                            LaunchUiState.Status.VERIFICATION_FAILED,
+                            LaunchUiState.Status.HANDOFF_REJECTED
+                        )) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
                     )
                 }
             }

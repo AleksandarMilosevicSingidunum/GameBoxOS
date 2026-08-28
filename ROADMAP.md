@@ -42,7 +42,8 @@ Browse -> details -> install an authorized test file -> verify -> Library -> lau
 - [x] App-private filesystem staging with atomic promotion
 - [x] Wire the authorized test install action and real worker progress into the UI
 - [x] Allowlisted RetroArch package adapter and return/play-session tracking
-- [ ] Verified content handoff to the emulator adapter
+- [x] Reverified, read-only FileProvider content handoff to the emulator adapter
+- [ ] Replace diagnostic text payload with an authorized runnable homebrew fixture
 - [ ] Save record retention through uninstall and reinstall
 
 ## 0.5 - Save-safe platform support
