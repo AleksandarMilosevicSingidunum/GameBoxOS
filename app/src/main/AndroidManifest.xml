@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-    <application android:allowBackup="true" android:label="GameBox" android:supportsRtl="true"
+    <application android:name=".GameBoxApplication" android:allowBackup="true" android:label="GameBox" android:supportsRtl="true"
         android:theme="@android:style/Theme.Material.NoActionBar">
         <activity android:name=".MainActivity" android:exported="true"
             android:screenOrientation="sensorLandscape"

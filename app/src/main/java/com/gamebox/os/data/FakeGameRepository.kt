@@ -13,6 +13,7 @@ interface GameRepository {
     fun game(id: GameId): Game?
     fun advanceInstall(id: GameId)
     fun pauseOrResume(id: GameId)
+    fun downloads(): List<DownloadJob>
 }
 
 class FakeGameRepository : GameRepository {
@@ -44,7 +45,7 @@ class FakeGameRepository : GameRepository {
         }
     }
 
-    fun downloads(): List<DownloadJob> = games.value
+    override fun downloads(): List<DownloadJob> = games.value
         .filter { it.state in activeDownloadStates }
         .map { game ->
             DownloadJob(game.id, game.title, game.state, when (game.state) {

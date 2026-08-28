@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "provider": {
+    "id": "gamebox-fixture",
+    "displayName": "GameBox Authorized Test Catalog"
+  },
+  "games": [
+    {
+      "id": "freedoom",
+      "title": "Freedoom",
+      "platform": "Homebrew",
+      "contentPolicy": "freeware",
+      "source": null,
+      "checksum": null
+    },
+    {
+      "id": "retro-test",
+      "title": "Retro Test Suite",
+      "platform": "Retro",
+      "contentPolicy": "developer-test-fixture",
+      "source": null,
+      "checksum": null
+    }
+  ]
+}

@@ -22,7 +22,7 @@ import androidx.compose.ui.input.key.type
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.gamebox.os.data.FakeGameRepository
+import com.gamebox.os.data.GameRepository
 import com.gamebox.os.domain.Game
 import com.gamebox.os.domain.GameId
 import com.gamebox.os.domain.InstallState
@@ -33,7 +33,7 @@ private enum class Destination(val title: String) {
 }
 
 @Composable
-fun GameBoxApp(repository: FakeGameRepository) {
+fun GameBoxApp(repository: GameRepository) {
     val games by repository.observeGames().collectAsState()
     var destination by remember { mutableStateOf(Destination.HOME) }
     var selectedGameId by remember { mutableStateOf<GameId?>(null) }
@@ -162,7 +162,7 @@ private fun GameCard(game: Game, modifier: Modifier, hero: Boolean = false, onCl
 }
 
 @Composable
-private fun DetailsScreen(game: Game, repository: FakeGameRepository, onBack: () -> Unit) {
+private fun DetailsScreen(game: Game, repository: GameRepository, onBack: () -> Unit) {
     Column {
         Text(game.platform.uppercase(), color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
         Text(game.title, fontSize = 44.sp, fontWeight = FontWeight.Bold)
@@ -190,7 +190,7 @@ private fun DetailsScreen(game: Game, repository: FakeGameRepository, onBack: ()
 }
 
 @Composable
-private fun DownloadsScreen(repository: FakeGameRepository) {
+private fun DownloadsScreen(repository: GameRepository) {
     val jobs = repository.downloads()
     Column {
         Text("Downloads", fontSize = 38.sp, fontWeight = FontWeight.Bold)

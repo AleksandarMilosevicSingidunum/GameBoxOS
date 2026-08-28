@@ -17,7 +17,13 @@ The development blueprint is guidance. Work proceeds in small, testable incremen
 
 ## 0.2 - Persistent catalog shell
 
-Room schema, DataStore preferences, cached manifest fixtures, details and downloads state restoration, offline-first repository tests.
+- [x] Initial Room catalog schema and DAO
+- [x] Preferences DataStore singleton
+- [x] Application-level repository container and seed catalog
+- [x] Cached authorized manifest fixture
+- [ ] Database migration and DAO integration tests
+- [ ] Details and download state restoration across process restart
+- [ ] Offline refresh policy
 
 ## 0.3 - First vertical slice
 
