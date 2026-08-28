@@ -13,6 +13,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.KeyEventType
@@ -50,6 +52,9 @@ fun GameBoxApp(
     val games by repository.observeGames().collectAsState()
     var destination by remember { mutableStateOf(Destination.HOME) }
     var selectedGameId by remember { mutableStateOf<GameId?>(null) }
+    val focusMemory = remember { GameFocusMemory() }
+    val restorableGameId = focusMemory.restore(destination.name, games.map { it.id })
+    val rememberGameFocus: (GameId) -> Unit = { focusMemory.remember(destination.name, it) }
 
     fun moveTab(offset: Int) {
         selectedGameId = null
@@ -88,12 +93,14 @@ fun GameBoxApp(
             )
         } else {
             when (destination) {
-                Destination.HOME -> HomeScreen(games) { selectedGameId = it.id }
+                Destination.HOME -> HomeScreen(games, restorableGameId, rememberGameFocus) { selectedGameId = it.id }
                 Destination.LIBRARY -> CollectionScreen(
                     "Your Library", "Installed and ready offline",
-                    games.filter { it.state == InstallState.INSTALLED || it.state == InstallState.UPDATE_AVAILABLE }
+                    games.filter { it.state == InstallState.INSTALLED || it.state == InstallState.UPDATE_AVAILABLE },
+                    restorableGameId,
+                    rememberGameFocus
                 ) { selectedGameId = it.id }
-                Destination.STORE -> CatalogScreen(repository, games) { selectedGameId = it.id }
+                Destination.STORE -> CatalogScreen(repository, games, restorableGameId, rememberGameFocus) { selectedGameId = it.id }
                 Destination.DOWNLOADS -> DownloadsScreen(repository, downloadRepository)
             }
         }
@@ -122,22 +129,43 @@ private fun TopNav(selected: Destination, onSelect: (Destination) -> Unit) {
 }
 
 @Composable
-private fun HomeScreen(games: List<Game>, open: (Game) -> Unit) {
+private fun HomeScreen(
+    games: List<Game>,
+    restoreGameId: GameId?,
+    onFocused: (GameId) -> Unit,
+    open: (Game) -> Unit
+) {
+    if (games.isEmpty()) {
+        Text("Catalog is loading...")
+        return
+    }
     val hero = games.first()
     Column {
         Text("Good evening", color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.68f))
         Text("Ready to play?", fontSize = 42.sp, fontWeight = FontWeight.Bold)
         Spacer(Modifier.height(24.dp))
-        GameCard(hero, Modifier.fillMaxWidth().height(188.dp), true) { open(hero) }
+        GameCard(
+            hero,
+            Modifier.fillMaxWidth().height(188.dp),
+            hero = true,
+            restoreFocus = restoreGameId == hero.id,
+            onFocused = onFocused
+        ) { open(hero) }
         Spacer(Modifier.height(24.dp))
         Text("Recently played", fontSize = 23.sp, fontWeight = FontWeight.Bold)
         Spacer(Modifier.height(10.dp))
-        GameRow(games.filter { it.lastPlayed != null }, open)
+        GameRow(games.filter { it.lastPlayed != null && it.id != hero.id }, restoreGameId, onFocused, open)
     }
 }
 
 @Composable
-private fun CatalogScreen(repository: GameRepository, games: List<Game>, open: (Game) -> Unit) {
+private fun CatalogScreen(
+    repository: GameRepository,
+    games: List<Game>,
+    restoreGameId: GameId?,
+    onFocused: (GameId) -> Unit,
+    open: (Game) -> Unit
+) {
     val refreshState by repository.observeCatalogRefreshState().collectAsState()
     Column {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
@@ -163,38 +191,74 @@ private fun CatalogScreen(repository: GameRepository, games: List<Game>, open: (
                 color = MaterialTheme.colorScheme.primary)
         }
         Spacer(Modifier.height(24.dp))
-        GameRow(games, open)
+        GameRow(games, restoreGameId, onFocused, open)
     }
 }
 
 @Composable
-private fun CollectionScreen(title: String, subtitle: String, games: List<Game>, open: (Game) -> Unit) {
+private fun CollectionScreen(
+    title: String,
+    subtitle: String,
+    games: List<Game>,
+    restoreGameId: GameId?,
+    onFocused: (GameId) -> Unit,
+    open: (Game) -> Unit
+) {
     Column {
         Text(title, fontSize = 38.sp, fontWeight = FontWeight.Bold)
         Text(subtitle, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.68f))
         Spacer(Modifier.height(24.dp))
-        GameRow(games, open)
+        GameRow(games, restoreGameId, onFocused, open)
     }
 }
 
 @Composable
-private fun GameRow(games: List<Game>, open: (Game) -> Unit) {
+private fun GameRow(
+    games: List<Game>,
+    restoreGameId: GameId?,
+    onFocused: (GameId) -> Unit,
+    open: (Game) -> Unit
+) {
     LazyRow(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
         items(games, key = { it.id.value }) { game ->
-            GameCard(game, Modifier.width(230.dp).height(170.dp), onClick = { open(game) })
+            GameCard(
+                game,
+                Modifier.width(230.dp).height(170.dp),
+                restoreFocus = restoreGameId == game.id,
+                onFocused = onFocused,
+                onClick = { open(game) }
+            )
         }
     }
 }
 
 @Composable
-private fun GameCard(game: Game, modifier: Modifier, hero: Boolean = false, onClick: () -> Unit) {
+private fun GameCard(
+    game: Game,
+    modifier: Modifier,
+    hero: Boolean = false,
+    restoreFocus: Boolean = false,
+    onFocused: (GameId) -> Unit = {},
+    onClick: () -> Unit
+) {
+    val focusRequester = remember { FocusRequester() }
     var focused by remember { mutableStateOf(false) }
     val border by animateColorAsState(
         if (focused) MaterialTheme.colorScheme.primary else Color.Transparent,
         label = "game-focus"
     )
+    LaunchedEffect(restoreFocus) {
+        if (restoreFocus) focusRequester.requestFocus()
+    }
     Surface(
-        modifier.onFocusChanged { focused = it.isFocused }.clickable(onClick = onClick).focusable(),
+        modifier
+            .focusRequester(focusRequester)
+            .onFocusChanged {
+                focused = it.isFocused
+                if (it.isFocused) onFocused(game.id)
+            }
+            .clickable(onClick = onClick)
+            .focusable(),
         shape = RoundedCornerShape(18.dp),
         color = MaterialTheme.colorScheme.surface,
         border = BorderStroke(if (focused) 3.dp else 1.dp, border),

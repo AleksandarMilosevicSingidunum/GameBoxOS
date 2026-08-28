@@ -13,7 +13,9 @@ The development blueprint is guidance. Work proceeds in small, testable incremen
 - [x] Fake install, pause, resume, verify, and install transitions
 - [x] CI-built debug APK with SHA-256 artifact
 - [ ] Physical controller check on Galaxy A53
-- [ ] Compose focus restoration and navigation tests
+- [x] Per-tab game-card focus restoration
+- [x] Focus-memory policy unit tests
+- [ ] Compose navigation instrumentation tests
 
 ## 0.2 - Persistent catalog shell
 
