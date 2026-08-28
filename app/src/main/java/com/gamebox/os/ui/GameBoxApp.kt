@@ -261,7 +261,6 @@ private fun DetailsScreen(
                                     InstallState.INSTALLED, InstallState.UPDATE_AVAILABLE ->
                                         gameLaunchController.launch(game)
                                 }
-                                }
                                 repository.advanceInstall(game.id)
                             }
                         },
