@@ -34,6 +34,14 @@ The development blueprint is guidance. Work proceeds in small, testable incremen
 
 Browse -> details -> install an authorized test file -> verify -> Library -> launch one adapter -> return -> retain save record -> uninstall content -> reinstall.
 
+- [x] Deterministic traversal-safe install paths
+- [x] Streaming SHA-256 verification primitive
+- [x] Save-retaining uninstall planner
+- [ ] Temporary-file download worker
+- [ ] Atomic verified install move
+- [ ] One emulator adapter and return tracking
+- [ ] Save record retention through uninstall and reinstall
+
 ## 0.5 - Save-safe platform support
 
 Save backup and restore, emulator capability registry, per-game adapters, conservative uninstall service, and user-controlled backup provider.
