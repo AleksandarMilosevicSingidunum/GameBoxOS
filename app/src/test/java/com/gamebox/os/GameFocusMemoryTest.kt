@@ -23,7 +23,24 @@ class GameFocusMemoryTest {
         assertNull(memory.restore("LIBRARY", listOf(GameId("installed"))))
     }
 
-    @Test fun unknownTabHasNoSyntheticFocus() {
+    @Test fun unknownTabHasNoSyntheticFocusWhenStrictlyRestoring() {
         assertNull(GameFocusMemory().restore("HOME", listOf(GameId("celeste"))))
+    }
+
+    @Test fun firstVisitCanFocusFirstAvailableGame() {
+        val games = listOf(GameId("first"), GameId("second"))
+
+        assertEquals(GameId("first"), GameFocusMemory().restoreOrFirst("STORE", games))
+        assertNull(GameFocusMemory().restoreOrFirst("STORE", emptyList()))
+    }
+
+    @Test fun removedRememberedGameFallsBackToFirstAvailable() {
+        val memory = GameFocusMemory()
+        memory.remember("LIBRARY", GameId("removed"))
+
+        assertEquals(
+            GameId("installed"),
+            memory.restoreOrFirst("LIBRARY", listOf(GameId("installed")))
+        )
     }
 }

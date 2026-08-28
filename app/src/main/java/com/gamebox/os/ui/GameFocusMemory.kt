@@ -14,4 +14,7 @@ class GameFocusMemory {
         val remembered = focusedByDestination[destination] ?: return null
         return remembered.takeIf { it in availableGames }
     }
+
+    fun restoreOrFirst(destination: String, availableGames: List<GameId>): GameId? =
+        restore(destination, availableGames) ?: availableGames.firstOrNull()
 }

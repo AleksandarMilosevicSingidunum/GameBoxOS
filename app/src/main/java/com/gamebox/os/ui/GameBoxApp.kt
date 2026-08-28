@@ -9,6 +9,7 @@ import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -140,6 +141,7 @@ private fun HomeScreen(
         return
     }
     val hero = games.first()
+    val focusTarget = restoreGameId?.takeIf { id -> games.any { it.id == id } } ?: hero.id
     Column {
         Text("Good evening", color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.68f))
         Text("Ready to play?", fontSize = 42.sp, fontWeight = FontWeight.Bold)
@@ -148,13 +150,13 @@ private fun HomeScreen(
             hero,
             Modifier.fillMaxWidth().height(188.dp),
             hero = true,
-            restoreFocus = restoreGameId == hero.id,
+            restoreFocus = focusTarget == hero.id,
             onFocused = onFocused
         ) { open(hero) }
         Spacer(Modifier.height(24.dp))
         Text("Recently played", fontSize = 23.sp, fontWeight = FontWeight.Bold)
         Spacer(Modifier.height(10.dp))
-        GameRow(games.filter { it.lastPlayed != null && it.id != hero.id }, restoreGameId, onFocused, open)
+        GameRow(games.filter { it.lastPlayed != null && it.id != hero.id }, focusTarget, onFocused, open)
     }
 }
 
@@ -167,6 +169,8 @@ private fun CatalogScreen(
     open: (Game) -> Unit
 ) {
     val refreshState by repository.observeCatalogRefreshState().collectAsState()
+    val focusTarget = restoreGameId?.takeIf { id -> games.any { it.id == id } }
+        ?: games.firstOrNull()?.id
     Column {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             Column {
@@ -191,7 +195,7 @@ private fun CatalogScreen(
                 color = MaterialTheme.colorScheme.primary)
         }
         Spacer(Modifier.height(24.dp))
-        GameRow(games, restoreGameId, onFocused, open)
+        GameRow(games, focusTarget, onFocused, open)
     }
 }
 
@@ -204,11 +208,13 @@ private fun CollectionScreen(
     onFocused: (GameId) -> Unit,
     open: (Game) -> Unit
 ) {
+    val focusTarget = restoreGameId?.takeIf { id -> games.any { it.id == id } }
+        ?: games.firstOrNull()?.id
     Column {
         Text(title, fontSize = 38.sp, fontWeight = FontWeight.Bold)
         Text(subtitle, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.68f))
         Spacer(Modifier.height(24.dp))
-        GameRow(games, restoreGameId, onFocused, open)
+        GameRow(games, focusTarget, onFocused, open)
     }
 }
 
@@ -219,7 +225,15 @@ private fun GameRow(
     onFocused: (GameId) -> Unit,
     open: (Game) -> Unit
 ) {
-    LazyRow(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+    val listState = rememberLazyListState()
+    val restoreIndex = games.indexOfFirst { it.id == restoreGameId }
+    LaunchedEffect(restoreIndex) {
+        if (restoreIndex >= 0) listState.scrollToItem(restoreIndex)
+    }
+    LazyRow(
+        state = listState,
+        horizontalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
         items(games, key = { it.id.value }) { game ->
             GameCard(
                 game,

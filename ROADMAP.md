@@ -13,7 +13,7 @@ The development blueprint is guidance. Work proceeds in small, testable incremen
 - [x] Fake install, pause, resume, verify, and install transitions
 - [x] CI-built debug APK with SHA-256 artifact
 - [ ] Physical controller check on Galaxy A53
-- [x] Per-tab game-card focus restoration
+- [x] Per-tab game-card focus restoration, including off-screen LazyRow items
 - [x] Focus-memory policy unit tests
 - [ ] Compose navigation instrumentation tests
 
