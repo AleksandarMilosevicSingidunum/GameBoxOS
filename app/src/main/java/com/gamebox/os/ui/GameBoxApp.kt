@@ -422,6 +422,15 @@ private fun DetailsScreen(
                         }
                     }
                 }
+                if (isAuthorizedTest && saveSafetyState.operationMessage != null) {
+                    Spacer(Modifier.height(10.dp))
+                    Text(
+                        saveSafetyState.operationMessage,
+                        color = if (saveSafetyState.operationSuccessful)
+                            MaterialTheme.colorScheme.primary
+                        else MaterialTheme.colorScheme.error
+                    )
+                }
                 if (launchState.gameId == game.id &&
                     launchState.status != LaunchUiState.Status.IDLE
                 ) {

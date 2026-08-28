@@ -57,6 +57,7 @@ Browse -> details -> install an authorized test file -> verify -> Library -> lau
 - [x] Emulator capability registry and per-game adapter
 - [x] Conservative content-only uninstall service
 - [x] User-controlled Storage Access Framework backup import/export
+- [x] Controller-visible save operation success and failure feedback
 
 ## 1.0 - Target hardware release
 
