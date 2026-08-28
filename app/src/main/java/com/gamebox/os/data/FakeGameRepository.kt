@@ -1,9 +1,9 @@
 package com.gamebox.os.data
 
-import com.gamebox.os.domain.DownloadJob
 import com.gamebox.os.domain.Game
 import com.gamebox.os.domain.GameId
 import com.gamebox.os.domain.InstallState
+import com.gamebox.os.domain.CatalogRefreshState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -14,10 +14,13 @@ interface GameRepository {
     fun advanceInstall(id: GameId)
     fun pauseOrResume(id: GameId)
     fun cancelInstall(id: GameId)
+    fun observeCatalogRefreshState(): StateFlow<CatalogRefreshState>
+    fun refreshCatalog()
 }
 
 class FakeGameRepository : GameRepository {
     private val games = MutableStateFlow(fixtures)
+    private val refreshState = MutableStateFlow(CatalogRefreshState.IDLE)
 
     override fun observeGames(): StateFlow<List<Game>> = games.asStateFlow()
     override fun game(id: GameId): Game? = games.value.firstOrNull { it.id == id }
@@ -47,6 +50,12 @@ class FakeGameRepository : GameRepository {
 
     override fun cancelInstall(id: GameId) {
         update(id) { it.copy(state = InstallState.NOT_INSTALLED) }
+    }
+
+    override fun observeCatalogRefreshState(): StateFlow<CatalogRefreshState> = refreshState.asStateFlow()
+
+    override fun refreshCatalog() {
+        refreshState.value = CatalogRefreshState.SUCCESS
     }
 
     private fun update(id: GameId, transform: (Game) -> Game) {

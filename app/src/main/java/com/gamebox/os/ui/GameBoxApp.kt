@@ -26,6 +26,7 @@ import com.gamebox.os.data.GameRepository
 import com.gamebox.os.domain.Game
 import com.gamebox.os.domain.GameId
 import com.gamebox.os.domain.DownloadStatus
+import com.gamebox.os.domain.CatalogRefreshState
 import com.gamebox.os.domain.InstallState
 import com.gamebox.os.domain.primaryAction
 
@@ -73,9 +74,7 @@ fun GameBoxApp(repository: GameRepository, downloadRepository: DownloadRepositor
                     "Your Library", "Installed and ready offline",
                     games.filter { it.state == InstallState.INSTALLED || it.state == InstallState.UPDATE_AVAILABLE }
                 ) { selectedGameId = it.id }
-                Destination.STORE -> CollectionScreen(
-                    "Authorized Catalog", "Homebrew, freeware, and configured personal sources", games
-                ) { selectedGameId = it.id }
+                Destination.STORE -> CatalogScreen(repository, games) { selectedGameId = it.id }
                 Destination.DOWNLOADS -> DownloadsScreen(repository, downloadRepository)
             }
         }
@@ -115,6 +114,37 @@ private fun HomeScreen(games: List<Game>, open: (Game) -> Unit) {
         Text("Recently played", fontSize = 23.sp, fontWeight = FontWeight.Bold)
         Spacer(Modifier.height(10.dp))
         GameRow(games.filter { it.lastPlayed != null }, open)
+    }
+}
+
+@Composable
+private fun CatalogScreen(repository: GameRepository, games: List<Game>, open: (Game) -> Unit) {
+    val refreshState by repository.observeCatalogRefreshState().collectAsState()
+    Column {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Column {
+                Text("Authorized Catalog", fontSize = 38.sp, fontWeight = FontWeight.Bold)
+                Text(
+                    "Local-first cache from configured personal sources",
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.68f)
+                )
+            }
+            Button(
+                onClick = repository::refreshCatalog,
+                enabled = refreshState != CatalogRefreshState.REFRESHING
+            ) {
+                Text(if (refreshState == CatalogRefreshState.REFRESHING) "Refreshing..." else "Refresh")
+            }
+        }
+        if (refreshState == CatalogRefreshState.ERROR) {
+            Text("Refresh failed - cached catalog remains available", color = MaterialTheme.colorScheme.error)
+        }
+        if (refreshState == CatalogRefreshState.SUCCESS) {
+            Text("Catalog refreshed; local install and play state preserved",
+                color = MaterialTheme.colorScheme.primary)
+        }
+        Spacer(Modifier.height(24.dp))
+        GameRow(games, open)
     }
 }
 

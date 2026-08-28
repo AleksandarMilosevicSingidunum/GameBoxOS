@@ -49,3 +49,8 @@ fun InstallState.primaryAction(): String = when (this) {
     InstallState.MISSING_FILES -> "Locate or reinstall"
     InstallState.FAILED -> "Retry"
 }
+
+
+enum class CatalogRefreshState {
+    IDLE, REFRESHING, SUCCESS, ERROR
+}

@@ -35,7 +35,8 @@ class DefaultAppContainer(context: Context) : AppContainer {
         dao = database.gameDao(),
         catalogProvider = catalogProvider,
         scope = applicationScope,
-        onCatalogSeeded = settingsRepository::markCatalogSeeded
+        onCatalogSeeded = settingsRepository::markCatalogSeeded,
+        onCatalogRefreshed = settingsRepository::markCatalogRefreshed
     )
 }
 

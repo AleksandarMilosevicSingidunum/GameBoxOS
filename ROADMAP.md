@@ -28,7 +28,7 @@ The development blueprint is guidance. Work proceeds in small, testable incremen
 - [x] Durable Room download-job table and v1-to-v2 migration
 - [x] Pause, resume, cancel, and staged-transition tests
 - [x] Details and download state restoration across process restart
-- [ ] Offline refresh policy
+- [x] Offline refresh policy preserves local state and missing entries
 
 ## 0.3 - First vertical slice
 

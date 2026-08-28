@@ -16,7 +16,8 @@ private val Context.gameBoxDataStore: DataStore<Preferences> by preferencesDataS
 data class GameBoxSettings(
     val safeAreaPercent: Float = 0.04f,
     val showUnavailableGames: Boolean = true,
-    val catalogSeededAtEpochMs: Long? = null
+    val catalogSeededAtEpochMs: Long? = null,
+    val catalogRefreshedAtEpochMs: Long? = null
 )
 
 class SettingsRepository(private val context: Context) {
@@ -24,7 +25,8 @@ class SettingsRepository(private val context: Context) {
         GameBoxSettings(
             safeAreaPercent = preferences[SAFE_AREA] ?: 0.04f,
             showUnavailableGames = preferences[SHOW_UNAVAILABLE] ?: true,
-            catalogSeededAtEpochMs = preferences[CATALOG_SEEDED_AT]
+            catalogSeededAtEpochMs = preferences[CATALOG_SEEDED_AT],
+            catalogRefreshedAtEpochMs = preferences[CATALOG_REFRESHED_AT]
         )
     }
 
@@ -36,6 +38,10 @@ class SettingsRepository(private val context: Context) {
         context.gameBoxDataStore.edit { it[SHOW_UNAVAILABLE] = value }
     }
 
+    suspend fun markCatalogRefreshed(epochMs: Long) {
+        context.gameBoxDataStore.edit { it[CATALOG_REFRESHED_AT] = epochMs }
+    }
+
     suspend fun markCatalogSeeded(epochMs: Long) {
         context.gameBoxDataStore.edit { it[CATALOG_SEEDED_AT] = epochMs }
     }
@@ -44,5 +50,6 @@ class SettingsRepository(private val context: Context) {
         val SAFE_AREA = floatPreferencesKey("safe_area_percent")
         val SHOW_UNAVAILABLE = booleanPreferencesKey("show_unavailable_games")
         val CATALOG_SEEDED_AT = longPreferencesKey("catalog_seeded_at_epoch_ms")
+        val CATALOG_REFRESHED_AT = longPreferencesKey("catalog_refreshed_at_epoch_ms")
     }
 }

@@ -10,6 +10,9 @@ interface GameDao {
     @Query("SELECT * FROM games ORDER BY title COLLATE NOCASE")
     fun observeAll(): Flow<List<GameEntity>>
 
+    @Query("SELECT * FROM games")
+    suspend fun getAllOnce(): List<GameEntity>
+
     @Query("SELECT COUNT(*) FROM games")
     suspend fun count(): Int
 
