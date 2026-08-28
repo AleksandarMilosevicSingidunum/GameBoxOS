@@ -1,5 +1,6 @@
 package com.gamebox.os.data
 
+import com.gamebox.os.catalog.CatalogProvider
 import com.gamebox.os.data.local.GameDao
 import com.gamebox.os.data.local.toDomain
 import com.gamebox.os.data.local.toEntity
@@ -16,17 +17,21 @@ import kotlinx.coroutines.launch
 
 class RoomGameRepository(
     private val dao: GameDao,
-    private val scope: CoroutineScope
+    private val catalogProvider: CatalogProvider,
+    private val scope: CoroutineScope,
+    private val onCatalogSeeded: suspend (Long) -> Unit
 ) : GameRepository {
-    private val initialGames = FakeGameRepository.fixtures
-
     private val games: StateFlow<List<Game>> = dao.observeAll()
         .map { entities -> entities.map { it.toDomain() } }
         .stateIn(scope, SharingStarted.Eagerly, emptyList())
 
     init {
         scope.launch {
-            if (dao.count() == 0) dao.upsertAll(initialGames.map { it.toEntity() })
+            if (dao.count() == 0) {
+                val snapshot = catalogProvider.load()
+                dao.upsertAll(snapshot.games.map { it.toEntity() })
+                onCatalogSeeded(System.currentTimeMillis())
+            }
         }
     }
 

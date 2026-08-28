@@ -21,6 +21,9 @@ The development blueprint is guidance. Work proceeds in small, testable incremen
 - [x] Preferences DataStore singleton
 - [x] Application-level repository container and seed catalog
 - [x] Cached authorized manifest fixture
+- [x] Versioned manifest parser and asset provider
+- [x] Duplicate, malformed, and unsupported manifest tests
+- [x] Seed timestamp persisted in DataStore
 - [ ] Database migration and DAO integration tests
 - [ ] Details and download state restoration across process restart
 - [ ] Offline refresh policy

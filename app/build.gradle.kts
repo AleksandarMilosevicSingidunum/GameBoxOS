@@ -1,6 +1,7 @@
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.plugin.compose")
+    id("org.jetbrains.kotlin.plugin.serialization")
     id("com.google.devtools.ksp")
 }
 android {
@@ -41,6 +42,7 @@ dependencies {
     ksp("androidx.room:room-compiler:2.8.4")
     testImplementation("androidx.room:room-testing:2.8.4")
     implementation("androidx.datastore:datastore-preferences:1.2.1")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.11.0")
 }
 
 

@@ -6,20 +6,83 @@
   },
   "games": [
     {
+      "id": "celeste",
+      "title": "Celeste Classic",
+      "platform": "Homebrew",
+      "year": 2015,
+      "genre": "Platformer",
+      "sizeMb": 32,
+      "contentPolicy": "freeware",
+      "initialState": "INSTALLED"
+    },
+    {
+      "id": "cave-story",
+      "title": "Cave Story",
+      "platform": "Retro",
+      "year": 2004,
+      "genre": "Adventure",
+      "sizeMb": 18,
+      "contentPolicy": "freeware",
+      "initialState": "INSTALLED"
+    },
+    {
+      "id": "openarena",
+      "title": "OpenArena",
+      "platform": "Android",
+      "year": 2012,
+      "genre": "Arena FPS",
+      "sizeMb": 480,
+      "contentPolicy": "open-source",
+      "initialState": "INSTALLED"
+    },
+    {
+      "id": "supertuxkart",
+      "title": "SuperTuxKart",
+      "platform": "Android",
+      "year": 2025,
+      "genre": "Racing",
+      "sizeMb": 820,
+      "contentPolicy": "open-source",
+      "initialState": "UPDATE_AVAILABLE"
+    },
+    {
       "id": "freedoom",
       "title": "Freedoom",
       "platform": "Homebrew",
-      "contentPolicy": "freeware",
-      "source": null,
-      "checksum": null
+      "year": 2024,
+      "genre": "FPS",
+      "sizeMb": 45,
+      "contentPolicy": "freeware"
+    },
+    {
+      "id": "luanti",
+      "title": "Luanti",
+      "platform": "Android",
+      "year": 2026,
+      "genre": "Sandbox",
+      "sizeMb": 210,
+      "contentPolicy": "open-source",
+      "initialState": "QUEUED"
+    },
+    {
+      "id": "openmw",
+      "title": "OpenMW",
+      "platform": "Source Port",
+      "year": 2026,
+      "genre": "RPG",
+      "sizeMb": 155,
+      "contentPolicy": "open-source",
+      "initialState": "PAUSED"
     },
     {
       "id": "retro-test",
       "title": "Retro Test Suite",
       "platform": "Retro",
+      "year": 2026,
+      "genre": "Test",
+      "sizeMb": 8,
       "contentPolicy": "developer-test-fixture",
-      "source": null,
-      "checksum": null
+      "initialState": "VERIFYING"
     }
   ]
 }
