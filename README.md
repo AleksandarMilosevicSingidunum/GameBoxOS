@@ -13,6 +13,6 @@ The current 0.1 day-zero shell includes:
 
 ## Run
 
-Open the repository root in the current stable Android Studio, install Android SDK 37, sync Gradle, and run the app on an emulator or Galaxy A53. Pair a controller and verify that core navigation works without touch.
+Open the repository root in the current stable Android Studio, install Android SDK 36, sync Gradle, and run the app on an emulator or Galaxy A53. Pair a controller and verify that core navigation works without touch.
 
 GameBox is an Android and DeX shell, not a custom ROM or emulator. Sources are limited to user-owned backups, homebrew, freeware, and otherwise authorized content.
