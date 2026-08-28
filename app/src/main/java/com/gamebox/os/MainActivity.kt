@@ -9,10 +9,10 @@ import com.gamebox.os.ui.theme.GameBoxTheme
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val repository = (application as GameBoxApplication).container.gameRepository
+        val container = (application as GameBoxApplication).container
         setContent {
             GameBoxTheme {
-                GameBoxApp(repository)
+                GameBoxApp(container.gameRepository, container.downloadRepository)
             }
         }
     }

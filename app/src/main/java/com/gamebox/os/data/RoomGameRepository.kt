@@ -4,7 +4,6 @@ import com.gamebox.os.catalog.CatalogProvider
 import com.gamebox.os.data.local.GameDao
 import com.gamebox.os.data.local.toDomain
 import com.gamebox.os.data.local.toEntity
-import com.gamebox.os.domain.DownloadJob
 import com.gamebox.os.domain.Game
 import com.gamebox.os.domain.GameId
 import com.gamebox.os.domain.InstallState
@@ -61,22 +60,7 @@ class RoomGameRepository(
         scope.launch { dao.updateInstallState(id.value, next.name) }
     }
 
-    override fun downloads(): List<DownloadJob> = games.value
-        .filter { it.state in activeStates }
-        .map { game ->
-            DownloadJob(game.id, game.title, game.state, when (game.state) {
-                InstallState.QUEUED -> 0f
-                InstallState.DOWNLOADING, InstallState.PAUSED -> 0.42f
-                InstallState.VERIFYING -> 0.9f
-                InstallState.INSTALLING -> 0.96f
-                else -> 1f
-            })
-        }
-
-    private companion object {
-        val activeStates = setOf(
-            InstallState.QUEUED, InstallState.DOWNLOADING, InstallState.PAUSED,
-            InstallState.VERIFYING, InstallState.INSTALLING
-        )
+    override fun cancelInstall(id: GameId) {
+        scope.launch { dao.updateInstallState(id.value, InstallState.NOT_INSTALLED.name) }
     }
 }

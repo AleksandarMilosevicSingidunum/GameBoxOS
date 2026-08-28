@@ -13,7 +13,7 @@ interface GameRepository {
     fun game(id: GameId): Game?
     fun advanceInstall(id: GameId)
     fun pauseOrResume(id: GameId)
-    fun downloads(): List<DownloadJob>
+    fun cancelInstall(id: GameId)
 }
 
 class FakeGameRepository : GameRepository {
@@ -45,29 +45,15 @@ class FakeGameRepository : GameRepository {
         }
     }
 
-    override fun downloads(): List<DownloadJob> = games.value
-        .filter { it.state in activeDownloadStates }
-        .map { game ->
-            DownloadJob(game.id, game.title, game.state, when (game.state) {
-                InstallState.QUEUED -> 0f
-                InstallState.DOWNLOADING -> 0.42f
-                InstallState.PAUSED -> 0.42f
-                InstallState.VERIFYING -> 0.9f
-                InstallState.INSTALLING -> 0.96f
-                else -> 1f
-            })
-        }
+    override fun cancelInstall(id: GameId) {
+        update(id) { it.copy(state = InstallState.NOT_INSTALLED) }
+    }
 
     private fun update(id: GameId, transform: (Game) -> Game) {
         games.value = games.value.map { if (it.id == id) transform(it) else it }
     }
 
     companion object {
-        private val activeDownloadStates = setOf(
-            InstallState.QUEUED, InstallState.DOWNLOADING, InstallState.PAUSED,
-            InstallState.VERIFYING, InstallState.INSTALLING
-        )
-
         val fixtures = listOf(
             Game(GameId("celeste"), "Celeste Classic", "Homebrew", 2015, "Platformer", 32, InstallState.INSTALLED, "Today", 180),
             Game(GameId("cave-story"), "Cave Story", "Retro", 2004, "Adventure", 18, InstallState.INSTALLED, "Yesterday", 95),

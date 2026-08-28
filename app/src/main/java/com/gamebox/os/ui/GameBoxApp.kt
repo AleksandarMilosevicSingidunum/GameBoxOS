@@ -21,9 +21,11 @@ import androidx.compose.ui.input.key.type
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.gamebox.os.data.DownloadRepository
 import com.gamebox.os.data.GameRepository
 import com.gamebox.os.domain.Game
 import com.gamebox.os.domain.GameId
+import com.gamebox.os.domain.DownloadStatus
 import com.gamebox.os.domain.InstallState
 import com.gamebox.os.domain.primaryAction
 
@@ -32,7 +34,7 @@ private enum class Destination(val title: String) {
 }
 
 @Composable
-fun GameBoxApp(repository: GameRepository) {
+fun GameBoxApp(repository: GameRepository, downloadRepository: DownloadRepository) {
     val games by repository.observeGames().collectAsState()
     var destination by remember { mutableStateOf(Destination.HOME) }
     var selectedGameId by remember { mutableStateOf<GameId?>(null) }
@@ -63,7 +65,7 @@ fun GameBoxApp(repository: GameRepository) {
 
         val selected = selectedGameId?.let(repository::game)
         if (selected != null) {
-            DetailsScreen(selected, repository, onBack = { selectedGameId = null })
+            DetailsScreen(selected, repository, downloadRepository, onBack = { selectedGameId = null })
         } else {
             when (destination) {
                 Destination.HOME -> HomeScreen(games) { selectedGameId = it.id }
@@ -74,7 +76,7 @@ fun GameBoxApp(repository: GameRepository) {
                 Destination.STORE -> CollectionScreen(
                     "Authorized Catalog", "Homebrew, freeware, and configured personal sources", games
                 ) { selectedGameId = it.id }
-                Destination.DOWNLOADS -> DownloadsScreen(repository)
+                Destination.DOWNLOADS -> DownloadsScreen(repository, downloadRepository)
             }
         }
 
@@ -161,7 +163,7 @@ private fun GameCard(game: Game, modifier: Modifier, hero: Boolean = false, onCl
 }
 
 @Composable
-private fun DetailsScreen(game: Game, repository: GameRepository, onBack: () -> Unit) {
+private fun DetailsScreen(game: Game, repository: GameRepository, downloadRepository: DownloadRepository, onBack: () -> Unit) {
     Column {
         Text(game.platform.uppercase(), color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
         Text(game.title, fontSize = 44.sp, fontWeight = FontWeight.Bold)
@@ -173,11 +175,23 @@ private fun DetailsScreen(game: Game, repository: GameRepository, onBack: () -> 
                 Text(game.state.displayName(), fontSize = 24.sp, fontWeight = FontWeight.Bold)
                 Spacer(Modifier.height(18.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                    Button(onClick = { repository.advanceInstall(game.id) }) {
+                    Button(onClick = {
+                        when (game.state) {
+                            InstallState.NOT_INSTALLED, InstallState.FAILED, InstallState.MISSING_FILES ->
+                                downloadRepository.enqueue(game)
+                            InstallState.QUEUED, InstallState.DOWNLOADING, InstallState.VERIFYING,
+                            InstallState.INSTALLING -> downloadRepository.advance(game.id)
+                            InstallState.PAUSED -> downloadRepository.resume(game.id)
+                            else -> Unit
+                        }
+                        repository.advanceInstall(game.id)
+                    }) {
                         Text(game.state.primaryAction())
                     }
                     if (game.state == InstallState.DOWNLOADING || game.state == InstallState.PAUSED) {
-                        OutlinedButton(onClick = { repository.pauseOrResume(game.id) }) {
+                        OutlinedButton(onClick = { if (game.state == InstallState.PAUSED) downloadRepository.resume(game.id)
+                            else downloadRepository.pause(game.id)
+                            repository.pauseOrResume(game.id) }) {
                             Text(if (game.state == InstallState.PAUSED) "Resume" else "Pause")
                         }
                     }
@@ -189,11 +203,11 @@ private fun DetailsScreen(game: Game, repository: GameRepository, onBack: () -> 
 }
 
 @Composable
-private fun DownloadsScreen(repository: GameRepository) {
-    val jobs = repository.downloads()
+private fun DownloadsScreen(repository: GameRepository, downloadRepository: DownloadRepository) {
+    val jobs by downloadRepository.observeJobs().collectAsState()
     Column {
         Text("Downloads", fontSize = 38.sp, fontWeight = FontWeight.Bold)
-        Text("Prototype queue - state changes are local to this app session",
+        Text("Durable queue prototype - no network or filesystem writes yet",
             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.68f))
         Spacer(Modifier.height(20.dp))
         if (jobs.isEmpty()) Text("No active downloads")
@@ -206,14 +220,41 @@ private fun DownloadsScreen(repository: GameRepository) {
                 Column(Modifier.padding(16.dp)) {
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                         Text(job.title, fontWeight = FontWeight.Bold)
-                        Text(job.state.displayName())
+                        Text(job.status.displayName())
                     }
                     Spacer(Modifier.height(8.dp))
                     LinearProgressIndicator(progress = { job.progress }, modifier = Modifier.fillMaxWidth())
+                    Spacer(Modifier.height(10.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        if (job.status == DownloadStatus.DOWNLOADING) {
+                            OutlinedButton(onClick = {
+                                downloadRepository.pause(job.gameId)
+                                repository.pauseOrResume(job.gameId)
+                            }) { Text("Pause") }
+                        }
+                        if (job.status == DownloadStatus.PAUSED) {
+                            OutlinedButton(onClick = {
+                                downloadRepository.resume(job.gameId)
+                                repository.pauseOrResume(job.gameId)
+                            }) { Text("Resume") }
+                        }
+                        if (job.status !in setOf(DownloadStatus.COMPLETED, DownloadStatus.FAILED, DownloadStatus.CANCELLED)) {
+                            Button(onClick = {
+                                downloadRepository.advance(job.gameId)
+                                repository.advanceInstall(job.gameId)
+                            }) { Text("Next test stage") }
+                            OutlinedButton(onClick = {
+                                downloadRepository.cancel(job.gameId)
+                                repository.cancelInstall(job.gameId)
+                            }) { Text("Cancel") }
+                        }
+                    }
                 }
             }
         }
     }
 }
+
+private fun DownloadStatus.displayName() = name.lowercase().replace('_', ' ')
 
 private fun InstallState.displayName() = name.lowercase().replace('_', ' ')

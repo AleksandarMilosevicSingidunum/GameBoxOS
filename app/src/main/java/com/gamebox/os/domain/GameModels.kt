@@ -20,12 +20,24 @@ data class Game(
     val minutesPlayed: Int = 0
 )
 
+enum class DownloadStatus {
+    QUEUED, DOWNLOADING, PAUSED, VERIFYING, INSTALLING,
+    COMPLETED, FAILED, CANCELLED
+}
+
 data class DownloadJob(
+    val id: String,
     val gameId: GameId,
     val title: String,
-    val state: InstallState,
+    val status: DownloadStatus,
+    val totalBytes: Long,
+    val downloadedBytes: Long,
+    val errorReason: String? = null
+) {
     val progress: Float
-)
+        get() = if (totalBytes <= 0L) 0f
+        else (downloadedBytes.toDouble() / totalBytes.toDouble()).toFloat().coerceIn(0f, 1f)
+}
 
 fun InstallState.primaryAction(): String = when (this) {
     InstallState.NOT_INSTALLED -> "Install"

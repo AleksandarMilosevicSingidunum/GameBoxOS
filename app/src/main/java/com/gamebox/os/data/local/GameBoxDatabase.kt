@@ -4,10 +4,11 @@ import androidx.room.Database
 import androidx.room.RoomDatabase
 
 @Database(
-    entities = [GameEntity::class],
-    version = 1,
+    entities = [GameEntity::class, DownloadJobEntity::class],
+    version = 2,
     exportSchema = true
 )
 abstract class GameBoxDatabase : RoomDatabase() {
     abstract fun gameDao(): GameDao
+    abstract fun downloadJobDao(): DownloadJobDao
 }
