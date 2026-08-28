@@ -392,6 +392,17 @@ private fun DetailsScreen(
                             " (" + saveSafetyState.sizeBytes + " bytes)",
                         color = MaterialTheme.colorScheme.primary
                     )
+                    Spacer(Modifier.height(8.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        OutlinedButton(onClick = saveSafetyController::backupSave) {
+                            Text(if (saveSafetyState.backupPresent) "Update backup" else "Back up save")
+                        }
+                        if (saveSafetyState.backupPresent) {
+                            OutlinedButton(onClick = saveSafetyController::restoreSave) {
+                                Text("Restore backup")
+                            }
+                        }
+                    }
                 }
                 if (launchState.gameId == game.id &&
                     launchState.status != LaunchUiState.Status.IDLE

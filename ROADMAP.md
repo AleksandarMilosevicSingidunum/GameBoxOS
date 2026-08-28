@@ -52,7 +52,11 @@ Browse -> details -> install an authorized test file -> verify -> Library -> lau
 
 ## 0.5 - Save-safe platform support
 
-Save backup and restore, emulator capability registry, per-game adapters, conservative uninstall service, and user-controlled backup provider.
+- [x] App-private staged save backup and restore
+- [x] Backup checksum sidecar and tamper rejection
+- [x] Emulator capability registry and per-game adapter
+- [x] Conservative content-only uninstall service
+- [ ] User-controlled backup provider
 
 ## 1.0 - Target hardware release
 

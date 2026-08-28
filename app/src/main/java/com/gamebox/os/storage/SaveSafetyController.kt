@@ -19,13 +19,16 @@ import java.io.File
 data class SaveSafetyState(
     val saveRecordPresent: Boolean = false,
     val relativePath: String? = null,
-    val sizeBytes: Long = 0L
+    val sizeBytes: Long = 0L,
+    val backupPresent: Boolean = false
 )
 
 interface SaveSafetyController {
     fun observeState(): StateFlow<SaveSafetyState>
     fun createTestSaveRecord()
     fun uninstallTestContent()
+    fun backupSave()
+    fun restoreSave()
 }
 
 class DefaultSaveSafetyController(
@@ -36,12 +39,20 @@ class DefaultSaveSafetyController(
 ) : SaveSafetyController {
     private val applicationContext = context.applicationContext
     private val gameId = GameId("retro-test")
+    private val savesRoot = applicationContext.filesDir.resolve("saves")
+    private val backupService = SaveBackupService(
+        savesRoot,
+        applicationContext.filesDir.resolve("save-backups")
+    )
     private val state = saveRecordDao.observe(gameId.value)
         .map { record ->
             SaveSafetyState(
                 saveRecordPresent = record != null,
                 relativePath = record?.relativePath,
-                sizeBytes = record?.sizeBytes ?: 0L
+                sizeBytes = record?.sizeBytes ?: 0L,
+                backupPresent = record?.relativePath?.let {
+                    runCatching { backupService.hasBackup(it) }.getOrDefault(false)
+                } ?: false
             )
         }
         .stateIn(scope, SharingStarted.Eagerly, SaveSafetyState())
@@ -64,6 +75,38 @@ class DefaultSaveSafetyController(
                     sizeBytes = saveFile.length()
                 )
             )
+        }
+    }
+
+    override fun backupSave() {
+        scope.launch {
+            val relativePath = state.value.relativePath ?: return@launch
+            if (backupService.createBackup(relativePath) == BackupResult.SUCCESS) {
+                saveRecordDao.upsert(
+                    SaveRecordEntity(
+                        gameId.value,
+                        relativePath,
+                        System.currentTimeMillis(),
+                        savesRoot.resolve(relativePath).length()
+                    )
+                )
+            }
+        }
+    }
+
+    override fun restoreSave() {
+        scope.launch {
+            val relativePath = state.value.relativePath ?: return@launch
+            if (backupService.restore(relativePath) == BackupResult.SUCCESS) {
+                saveRecordDao.upsert(
+                    SaveRecordEntity(
+                        gameId.value,
+                        relativePath,
+                        System.currentTimeMillis(),
+                        savesRoot.resolve(relativePath).length()
+                    )
+                )
+            }
         }
     }
 
