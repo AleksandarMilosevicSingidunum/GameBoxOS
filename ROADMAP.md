@@ -40,7 +40,7 @@ Browse -> details -> install an authorized test file -> verify -> Library -> lau
 - [x] Commit gated behind successful checksum verification
 - [x] WorkManager adapter for the bundled authorized test asset
 - [x] App-private filesystem staging with atomic promotion
-- [ ] Wire the authorized test install action into the UI
+- [x] Wire the authorized test install action and real worker progress into the UI
 - [ ] One emulator adapter and return tracking
 - [ ] Save record retention through uninstall and reinstall
 

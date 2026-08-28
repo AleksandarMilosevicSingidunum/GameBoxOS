@@ -12,7 +12,11 @@ class MainActivity : ComponentActivity() {
         val container = (application as GameBoxApplication).container
         setContent {
             GameBoxTheme {
-                GameBoxApp(container.gameRepository, container.downloadRepository)
+                GameBoxApp(
+                    container.gameRepository,
+                    container.downloadRepository,
+                    container.authorizedDownloadController
+                )
             }
         }
     }

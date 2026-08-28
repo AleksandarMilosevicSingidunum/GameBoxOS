@@ -69,7 +69,7 @@ class RoomGameRepository(
             InstallState.INSTALLING -> InstallState.INSTALLED
             else -> game.state
         }
-        scope.launch { dao.updateInstallState(id.value, next.name) }
+        setInstallState(id, next)
     }
 
     override fun pauseOrResume(id: GameId) {
@@ -79,11 +79,15 @@ class RoomGameRepository(
             InstallState.PAUSED -> InstallState.DOWNLOADING
             else -> game.state
         }
-        scope.launch { dao.updateInstallState(id.value, next.name) }
+        setInstallState(id, next)
     }
 
     override fun cancelInstall(id: GameId) {
-        scope.launch { dao.updateInstallState(id.value, InstallState.NOT_INSTALLED.name) }
+        setInstallState(id, InstallState.NOT_INSTALLED)
+    }
+
+    override fun setInstallState(id: GameId, state: InstallState) {
+        scope.launch { dao.updateInstallState(id.value, state.name) }
     }
 }
 

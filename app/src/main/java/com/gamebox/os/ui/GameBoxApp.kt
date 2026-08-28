@@ -29,13 +29,19 @@ import com.gamebox.os.domain.DownloadStatus
 import com.gamebox.os.domain.CatalogRefreshState
 import com.gamebox.os.domain.InstallState
 import com.gamebox.os.domain.primaryAction
+import com.gamebox.os.download.AuthorizedDownloadController
+import com.gamebox.os.download.AuthorizedDownloadState
 
 private enum class Destination(val title: String) {
     HOME("Home"), LIBRARY("Library"), STORE("Store"), DOWNLOADS("Downloads")
 }
 
 @Composable
-fun GameBoxApp(repository: GameRepository, downloadRepository: DownloadRepository) {
+fun GameBoxApp(
+    repository: GameRepository,
+    downloadRepository: DownloadRepository,
+    authorizedDownloadController: AuthorizedDownloadController
+) {
     val games by repository.observeGames().collectAsState()
     var destination by remember { mutableStateOf(Destination.HOME) }
     var selectedGameId by remember { mutableStateOf<GameId?>(null) }
@@ -66,7 +72,13 @@ fun GameBoxApp(repository: GameRepository, downloadRepository: DownloadRepositor
 
         val selected = selectedGameId?.let(repository::game)
         if (selected != null) {
-            DetailsScreen(selected, repository, downloadRepository, onBack = { selectedGameId = null })
+            DetailsScreen(
+                selected,
+                repository,
+                downloadRepository,
+                authorizedDownloadController,
+                onBack = { selectedGameId = null }
+            )
         } else {
             when (destination) {
                 Destination.HOME -> HomeScreen(games) { selectedGameId = it.id }
@@ -193,7 +205,17 @@ private fun GameCard(game: Game, modifier: Modifier, hero: Boolean = false, onCl
 }
 
 @Composable
-private fun DetailsScreen(game: Game, repository: GameRepository, downloadRepository: DownloadRepository, onBack: () -> Unit) {
+private fun DetailsScreen(
+    game: Game,
+    repository: GameRepository,
+    downloadRepository: DownloadRepository,
+    authorizedDownloadController: AuthorizedDownloadController,
+    onBack: () -> Unit
+) {
+    val isAuthorizedTest = game.id.value == "retro-test"
+    val authorizedState by authorizedDownloadController.observeState().collectAsState()
+    val workerActive = authorizedState.status == AuthorizedDownloadState.Status.QUEUED ||
+        authorizedState.status == AuthorizedDownloadState.Status.RUNNING
     Column {
         Text(game.platform.uppercase(), color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
         Text(game.title, fontSize = 44.sp, fontWeight = FontWeight.Bold)
@@ -203,20 +225,51 @@ private fun DetailsScreen(game: Game, repository: GameRepository, downloadReposi
             Column(Modifier.fillMaxWidth().padding(24.dp)) {
                 Text("Install state", color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f))
                 Text(game.state.displayName(), fontSize = 24.sp, fontWeight = FontWeight.Bold)
+                if (isAuthorizedTest && authorizedState.status != AuthorizedDownloadState.Status.IDLE) {
+                    Spacer(Modifier.height(12.dp))
+                    Text(
+                        "Verified asset worker: " + authorizedState.status.name.lowercase(),
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    LinearProgressIndicator(
+                        progress = { authorizedState.progress },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    authorizedState.error?.let {
+                        Text(it, color = MaterialTheme.colorScheme.error)
+                    }
+                }
                 Spacer(Modifier.height(18.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                    Button(onClick = {
-                        when (game.state) {
-                            InstallState.NOT_INSTALLED, InstallState.FAILED, InstallState.MISSING_FILES ->
-                                downloadRepository.enqueue(game)
-                            InstallState.QUEUED, InstallState.DOWNLOADING, InstallState.VERIFYING,
-                            InstallState.INSTALLING -> downloadRepository.advance(game.id)
-                            InstallState.PAUSED -> downloadRepository.resume(game.id)
-                            else -> Unit
+                    Button(
+                        onClick = {
+                            if (isAuthorizedTest) {
+                                authorizedDownloadController.install()
+                            } else {
+                                when (game.state) {
+                                    InstallState.NOT_INSTALLED, InstallState.FAILED, InstallState.MISSING_FILES ->
+                                        downloadRepository.enqueue(game)
+                                    InstallState.QUEUED, InstallState.DOWNLOADING, InstallState.VERIFYING,
+                                    InstallState.INSTALLING -> downloadRepository.advance(game.id)
+                                    InstallState.PAUSED -> downloadRepository.resume(game.id)
+                                    else -> Unit
+                                }
+                                repository.advanceInstall(game.id)
+                            }
+                        },
+                        enabled = !isAuthorizedTest || !workerActive
+                    ) {
+                        Text(
+                            if (!isAuthorizedTest) game.state.primaryAction()
+                            else if (authorizedState.status == AuthorizedDownloadState.Status.SUCCEEDED)
+                                "Reinstall verified test"
+                            else "Install verified test"
+                        )
+                    }
+                    if (isAuthorizedTest && workerActive) {
+                        OutlinedButton(onClick = authorizedDownloadController::cancel) {
+                            Text("Cancel")
                         }
-                        repository.advanceInstall(game.id)
-                    }) {
-                        Text(game.state.primaryAction())
                     }
                     if (game.state == InstallState.DOWNLOADING || game.state == InstallState.PAUSED) {
                         OutlinedButton(onClick = { if (game.state == InstallState.PAUSED) downloadRepository.resume(game.id)

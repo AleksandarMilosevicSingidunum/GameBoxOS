@@ -24,12 +24,7 @@ class AssetDownloadWorker(
 
         val result = runCatching {
             TransferEngine().transfer(
-                source = AssetTransferSource(
-                    applicationContext.assets,
-                    assetPath,
-                    totalBytes,
-                    checksum
-                ),
+                source = AssetTransferSource(applicationContext.assets, assetPath, totalBytes, checksum),
                 staging = FileStagingTarget(
                     applicationContext.filesDir.resolve(INSTALL_ROOT),
                     relativePath
@@ -51,9 +46,7 @@ class AssetDownloadWorker(
             is TransferResult.Success -> Result.success(
                 workDataOf(KEY_BYTES_TRANSFERRED to result.bytesTransferred)
             )
-            is TransferResult.Cancelled -> Result.failure(
-                workDataOf(KEY_ERROR to "cancelled")
-            )
+            is TransferResult.Cancelled -> failure("cancelled")
             is TransferResult.ChecksumMismatch -> failure("checksum mismatch")
             is TransferResult.SizeLimitExceeded -> failure("size limit exceeded")
             is TransferResult.Failed -> failure(result.reason)
@@ -100,7 +93,7 @@ class DownloadWorkScheduler(context: Context) {
             .build()
         workManager.enqueueUniqueWork(
             AuthorizedTestDownload.UNIQUE_WORK_NAME,
-            ExistingWorkPolicy.KEEP,
+            ExistingWorkPolicy.REPLACE,
             request
         )
     }

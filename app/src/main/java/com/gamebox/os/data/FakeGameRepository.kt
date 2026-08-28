@@ -14,6 +14,7 @@ interface GameRepository {
     fun advanceInstall(id: GameId)
     fun pauseOrResume(id: GameId)
     fun cancelInstall(id: GameId)
+    fun setInstallState(id: GameId, state: InstallState)
     fun observeCatalogRefreshState(): StateFlow<CatalogRefreshState>
     fun refreshCatalog()
 }
@@ -49,7 +50,11 @@ class FakeGameRepository : GameRepository {
     }
 
     override fun cancelInstall(id: GameId) {
-        update(id) { it.copy(state = InstallState.NOT_INSTALLED) }
+        setInstallState(id, InstallState.NOT_INSTALLED)
+    }
+
+    override fun setInstallState(id: GameId, state: InstallState) {
+        update(id) { it.copy(state = state) }
     }
 
     override fun observeCatalogRefreshState(): StateFlow<CatalogRefreshState> = refreshState.asStateFlow()
