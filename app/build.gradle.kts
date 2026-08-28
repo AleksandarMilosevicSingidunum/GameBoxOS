@@ -42,9 +42,9 @@ dependencies {
     ksp("androidx.room:room-compiler:2.8.4")
     testImplementation("androidx.room:room-testing:2.8.4")
     implementation("androidx.datastore:datastore-preferences:1.2.1")
+    implementation("androidx.work:work-runtime-ktx:2.11.2")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.11.0")
 }
-
 
 ksp {
     arg("room.schemaLocation", projectDir.path + "/schemas")

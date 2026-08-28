@@ -11,7 +11,6 @@ The development blueprint is guidance. Work proceeds in small, testable incremen
 - [x] Fixture catalog and explicit install states
 - [x] LB/RB tab switching and controller Back handling
 - [x] Fake install, pause, resume, verify, and install transitions
-- [x] Domain transition tests
 - [ ] Physical controller check on Galaxy A53
 - [ ] Compose focus restoration and navigation tests
 
@@ -39,8 +38,9 @@ Browse -> details -> install an authorized test file -> verify -> Library -> lau
 - [x] Save-retaining uninstall planner
 - [x] Staged streaming transfer core with cancellation and size limits
 - [x] Commit gated behind successful checksum verification
-- [ ] WorkManager download adapter
-- [ ] Filesystem-backed atomic staging target
+- [x] WorkManager adapter for the bundled authorized test asset
+- [x] App-private filesystem staging with atomic promotion
+- [ ] Wire the authorized test install action into the UI
 - [ ] One emulator adapter and return tracking
 - [ ] Save record retention through uninstall and reinstall
 
