@@ -7,14 +7,13 @@ interface CatalogTransportClient {
 class CatalogTransportProvider(
     private val client: CatalogTransportClient,
     private val parser: CatalogParser,
-    private val config: suspend () -> CatalogProviderConfig
+    private val config: suspend () -> CatalogProviderConfig,
+    private val credentials: CatalogCredentialStore? = null
 ) : CatalogProvider {
     override suspend fun load(): CatalogSnapshot {
         val selected = config()
-        val credentials = selected.credentialKey?.let { key ->
-            error("Credential resolution must be supplied by the host application for key: $key")
-        }
-        val payload = client.fetch(selected.transport, credentials)
+        val resolvedCredentials = selected.credentialKey?.let { key -> credentials?.credentials(key) }
+        val payload = client.fetch(selected.transport, resolvedCredentials)
         return parser.parse(payload)
     }
 }
