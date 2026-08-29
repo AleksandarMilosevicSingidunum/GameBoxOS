@@ -663,6 +663,16 @@ private fun DownloadsScreen(repository: GameRepository, downloadRepository: Down
                     }
                     Spacer(Modifier.height(8.dp))
                     LinearProgressIndicator(progress = { job.progress }, modifier = Modifier.fillMaxWidth())
+                    Spacer(Modifier.height(6.dp))
+                    Text(
+                        formatDownloadBytes(job.downloadedBytes) + " of " +
+                            formatDownloadBytes(job.totalBytes),
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.68f),
+                        fontSize = 12.sp
+                    )
+                    job.errorReason?.let { reason ->
+                        Text(reason, color = MaterialTheme.colorScheme.error, fontSize = 12.sp)
+                    }
                     Spacer(Modifier.height(10.dp))
                     val remoteGame = repository.game(job.gameId)?.takeIf { it.sourceUrl != null }
                     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -910,6 +920,16 @@ private fun SettingsScreen(compact: Boolean, settingsRepository: SettingsReposit
                 "will be added here as their subsystems become configurable.",
             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.62f)
         )
+    }
+}
+
+private fun formatDownloadBytes(bytes: Long): String {
+    val safe = bytes.coerceAtLeast(0L)
+    val mib = safe.toDouble() / (1024.0 * 1024.0)
+    return if (mib >= 1024.0) {
+        String.format(java.util.Locale.US, "%.1f GB", mib / 1024.0)
+    } else {
+        String.format(java.util.Locale.US, "%.1f MB", mib)
     }
 }
 
