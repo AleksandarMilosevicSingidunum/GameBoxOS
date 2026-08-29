@@ -16,7 +16,8 @@ data class GameEntity(
     val sizeMb: Int,
     val installState: String,
     val lastPlayed: String?,
-    val minutesPlayed: Int
+    val minutesPlayed: Int,
+    val favorite: Boolean
 )
 
 fun GameEntity.toDomain(): Game = Game(
@@ -28,7 +29,8 @@ fun GameEntity.toDomain(): Game = Game(
     sizeMb = sizeMb,
     state = runCatching { InstallState.valueOf(installState) }.getOrDefault(InstallState.FAILED),
     lastPlayed = lastPlayed,
-    minutesPlayed = minutesPlayed
+    minutesPlayed = minutesPlayed,
+    favorite = favorite
 )
 
 fun Game.toEntity(): GameEntity = GameEntity(
@@ -40,5 +42,6 @@ fun Game.toEntity(): GameEntity = GameEntity(
     sizeMb = sizeMb,
     installState = state.name,
     lastPlayed = lastPlayed,
-    minutesPlayed = minutesPlayed
+    minutesPlayed = minutesPlayed,
+    favorite = favorite
 )
