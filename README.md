@@ -25,7 +25,7 @@ Status as of 29 August 2026:
 | Media and PC | Partial | Installed-app detection, typed availability states, safe launch shortcuts, persistent hide-unavailable policy, responsive empty/setup states, Moonlight connectivity status, bounded host reachability probes, and recent sessions for media, Moonlight, Winlator, Termux, Files, browser, and Android settings; physical streaming validation remains |
 | Offline operation | Partial | Cached catalog and persistent local state; full airplane-mode acceptance testing remains |
 | Diagnostics | Partial | Sanitized export report, bounded structured event collection, lifecycle wiring, and visible download errors; full recovery bundles and physical failure validation remain |
-| CI and releases | Partial | Unit tests, debug APK builds, SHA-256 artifacts, and alpha release workflow; signed production builds, rollback, and update channels remain |
+| CI and releases | Partial | Unit tests, debug APK builds, SHA-256 artifacts, alpha release workflow, and deterministic channel-readiness gating; signed production builds, rollback, and update channels remain |
 | External storage | Partial | SAF folder selection, persisted permissions, read/write status, non-destructive document-tree copy execution with explicit confirmation states, safe partial-file finalization, disconnect detection, and retryable outage classification; physical unplug testing remains |
 | Target hardware | Not validated | Galaxy A53 controller testing and Galaxy S23 Ultra/DeX/HDMI/Ethernet/thermal/SSD soak testing require physical hardware |
 | Enclosure/handoff | Not started | Hardware enclosure, hub, cooling, cabling, and recovery-button work follows software maturity |
@@ -57,7 +57,7 @@ Status as of 29 August 2026:
 - Add Compose instrumentation, accessibility, lifecycle, migration, offline, and failure-recovery tests
 - Complete physical controller testing on Galaxy A53
 - Complete Galaxy S23 Ultra DeX/HDMI/Ethernet/charging/thermal/reconnect soak testing
-- Add signed production builds, update/rollback procedures, and recovery documentation
+- Configure signed production builds, update/rollback procedures, and recovery documentation
 - Complete the physical enclosure and hardware handoff
 - Expand the optional Windows companion with catalog synchronization and richer PC-runtime integrations
 - Validate host reachability and physical LAN/controller streaming
@@ -72,7 +72,7 @@ The remaining work is tracked in these concrete groups:
 - Apply graphics profiles to adapter-specific launch arguments where supported.
 - Add Compose instrumentation, accessibility, lifecycle, migration, offline, and recovery tests.
 - Complete physical controller, DeX, HDMI, Ethernet, charging, thermal, SSD, and unplug/reattach validation.
-- Add production signing, update channels, rollback/recovery procedures, and release documentation.
+- Configure production signing, update channels, rollback/recovery procedures, and release documentation.
 - Complete enclosure, cooling, cabling, and hardware handoff work.
 
 ## Build and test
