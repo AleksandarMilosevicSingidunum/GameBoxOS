@@ -668,6 +668,7 @@ private fun DownloadsScreen(repository: GameRepository, downloadRepository: Down
                 color = MaterialTheme.colorScheme.surface,
                 shape = RoundedCornerShape(14.dp),
                 modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp)
+                    .semantics { contentDescription = job.title + ", " + job.status.displayName() + (job.errorReason?.let { ", " + it } ?: "") }
             ) {
                 Column(Modifier.padding(16.dp)) {
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
