@@ -17,6 +17,7 @@ object ContentMigrationPlanner {
         require(items.all { !it.relativePath.split('/').any { segment -> segment == ".." } }) {
             "migration paths must not contain traversal segments"
         }
-        return ContentMigrationPlan(items.distinctBy { it.gameId to it.relativePath }, items.sumOf { it.sizeBytes })
+        val unique = items.distinctBy { it.gameId to it.relativePath }
+        return ContentMigrationPlan(unique, unique.sumOf { it.sizeBytes })
     }
 }
