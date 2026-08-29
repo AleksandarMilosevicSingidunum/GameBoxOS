@@ -1,6 +1,9 @@
 package com.gamebox.os.storage
 
-data class ContentMigrationItem(val gameId: String, val relativePath: String, val sizeBytes: Long)
+data class ContentMigrationItem(val gameId: String, val relativePath: String, val sizeBytes: Long) {
+    val destinationRelativePath: String
+        get() = gameId.replace(Regex("[^A-Za-z0-9._-]"), "_").trim('_').ifBlank { "game" } + "/" + relativePath.trimStart('/')
+}
 
 data class ContentMigrationPlan(val items: List<ContentMigrationItem>, val totalBytes: Long) {
     val isEmpty: Boolean get() = items.isEmpty()
