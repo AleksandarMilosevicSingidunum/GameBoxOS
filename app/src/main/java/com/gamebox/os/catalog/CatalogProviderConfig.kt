@@ -13,5 +13,11 @@ data class CatalogProviderConfig(
 ) {
     init {
         require(credentialKey == null || credentialKey.isNotBlank()) { "credential key must not be blank" }
+        val endpoint = when (val value = transport) {
+            is CatalogTransport.Https -> value.url
+            is CatalogTransport.WebDav -> value.baseUrl
+            is CatalogTransport.S3 -> value.endpoint
+        }
+        require(endpoint.startsWith("https://", ignoreCase = true)) { "catalog transports require HTTPS" }
     }
 }
