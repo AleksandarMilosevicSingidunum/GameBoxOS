@@ -25,6 +25,7 @@ Status as of 29 August 2026:
 | Offline operation | Partial | Cached catalog and persistent local state; full airplane-mode acceptance testing remains |
 | Diagnostics | Partial | Sanitized export report and visible download errors; structured log collection and recovery bundles remain |
 | CI and releases | Partial | Unit tests, debug APK builds, SHA-256 artifacts, and alpha release workflow; signed production builds, rollback, and update channels remain |
+| External storage | Partial | SAF folder selection, persisted permissions, read/write status, and disconnect detection; content migration and unplug tests remain |
 | Target hardware | Not validated | Galaxy A53 controller testing and Galaxy S23 Ultra/DeX/HDMI/Ethernet/thermal/SSD soak testing require physical hardware |
 | Enclosure/handoff | Not started | Hardware enclosure, hub, cooling, cabling, and recovery-button work follows software maturity |
 
@@ -39,6 +40,7 @@ Status as of 29 August 2026:
 - Download notifications, byte progress, failure reasons, retry, and cancellation
 - Save-safe uninstall and user-controlled backup import/export
 - Media/PC launch hubs and Android system-setting shortcuts
+- SAF external-library selection with persisted permissions and non-destructive disconnect/read-only status
 - Sanitized diagnostics export that excludes credentials, source URLs, checksums, paths, and save contents
 - Automated unit tests and debug APK builds
 
@@ -49,7 +51,7 @@ Status as of 29 August 2026:
 - Add per-game emulator selection and graphics profiles
 - Implement authenticated WebDAV/S3-style providers and provider recovery guidance
 - Add real emulator save discovery, cloud synchronization, and conflict handling
-- Add external SSD/Storage Access Framework game-library support and disconnect safety
+- Add confirmed content migration to the selected SAF/SSD library and complete physical disconnect/unplug safety tests
 - Add Compose instrumentation, accessibility, lifecycle, migration, offline, and failure-recovery tests
 - Complete physical controller testing on Galaxy A53
 - Complete Galaxy S23 Ultra DeX/HDMI/Ethernet/charging/thermal/reconnect soak testing

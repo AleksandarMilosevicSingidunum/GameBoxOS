@@ -49,6 +49,8 @@ import com.gamebox.os.download.RemoteDownloadController
 import com.gamebox.os.launch.GameLaunchController
 import com.gamebox.os.launch.LaunchUiState
 import com.gamebox.os.storage.SaveSafetyController
+import com.gamebox.os.storage.ExternalStorageController
+import com.gamebox.os.storage.ExternalStorageState
 import com.gamebox.os.settings.SettingsRepository
 import com.gamebox.os.catalog.validateAuthorizedCatalogUrl
 import com.gamebox.os.diagnostics.DiagnosticsDevice
@@ -864,8 +866,25 @@ private fun SettingsScreen(
     val diagnosticGames by gameRepository.observeGames().collectAsState()
     val diagnosticDownloads by downloadRepository.observeJobs().collectAsState()
     val scope = rememberCoroutineScope()
+    val externalStorageController = remember(context, settingsRepository) {
+        ExternalStorageController(context, settingsRepository)
+    }
     var catalogUrl by remember(currentSettings.catalogUrl) { mutableStateOf(currentSettings.catalogUrl) }
     var catalogMessage by remember { mutableStateOf<String?>(null) }
+    val externalStorageStatus = externalStorageController.inspect(currentSettings.externalLibraryUri)
+    val externalTreeLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocumentTree()
+    ) { uri ->
+        if (uri != null) {
+            scope.launch {
+                val result = runCatching { externalStorageController.adoptTree(uri) }
+                catalogMessage = result.fold(
+                    onSuccess = { it.message },
+                    onFailure = { it.message ?: "External library could not be selected" }
+                )
+            }
+        }
+    }
     val notificationPermissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { granted ->
@@ -920,6 +939,35 @@ private fun SettingsScreen(
         Text(
             "App storage: " + formatBytes(usableStorage) + " free of " + formatBytes(totalStorage),
             color = MaterialTheme.colorScheme.primary
+        )
+        Spacer(Modifier.height(18.dp))
+        Text("External game library", fontWeight = FontWeight.Bold)
+        Text(
+            externalStorageStatus.displayName ?: externalStorageStatus.message,
+            color = when (externalStorageStatus.state) {
+                ExternalStorageState.AVAILABLE_READ_WRITE -> MaterialTheme.colorScheme.primary
+                ExternalStorageState.AVAILABLE_READ_ONLY -> MaterialTheme.colorScheme.tertiary
+                ExternalStorageState.NOT_CONFIGURED -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.62f)
+                else -> MaterialTheme.colorScheme.error
+            }
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Button(onClick = { externalTreeLauncher.launch(null) }) {
+                Text(if (currentSettings.externalLibraryUri.isBlank()) "Choose folder" else "Change folder")
+            }
+            if (currentSettings.externalLibraryUri.isNotBlank()) {
+                OutlinedButton(onClick = {
+                    scope.launch {
+                        externalStorageController.forgetTree(currentSettings.externalLibraryUri)
+                        catalogMessage = "External library permission removed"
+                    }
+                }) { Text("Forget") }
+            }
+        }
+        Text(
+            "GameBox will not move or delete files until a future migration step is explicitly confirmed.",
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.62f),
+            fontSize = 12.sp
         )
         Spacer(Modifier.height(12.dp))
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
