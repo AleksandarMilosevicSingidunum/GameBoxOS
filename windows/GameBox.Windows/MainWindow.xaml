@@ -1,0 +1,45 @@
+<Window x:Class="GameBox.Windows.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="GameBox Windows Companion" Width="1120" Height="720"
+        MinWidth="760" MinHeight="520" WindowStartupLocation="CenterScreen">
+    <Grid Margin="28">
+        <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+        <DockPanel>
+            <StackPanel><TextBlock Text="GAMEBOX" Foreground="{StaticResource AccentBrush}" FontWeight="Bold" FontSize="18"/>
+                <TextBlock Text="Windows Companion" FontSize="34" FontWeight="Bold"/></StackPanel>
+            <TextBlock x:Name="StatusText" DockPanel.Dock="Right" VerticalAlignment="Center" Foreground="#9EADC0" Text="Local library ready"/>
+        </DockPanel>
+        <Grid Grid.Row="1" Margin="0,22,0,16">
+            <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+            <TextBox x:Name="SearchBox" AutomationProperties.Name="Search library" TextChanged="SearchBox_TextChanged" FontSize="16"/>
+            <CheckBox x:Name="FavoritesOnlyCheck" Grid.Column="1" Content="Favorites only" Margin="18,0" VerticalAlignment="Center" Checked="FilterChanged" Unchecked="FilterChanged"/>
+            <Button Grid.Column="2" Content="+ Add local game" Click="AddGame_Click"/>
+        </Grid>
+        <Grid Grid.Row="2">
+            <Grid.ColumnDefinitions><ColumnDefinition Width="2*"/><ColumnDefinition Width="1.15*"/></Grid.ColumnDefinitions>
+            <Border Background="{StaticResource PanelBrush}" CornerRadius="16" Padding="12">
+                <ListBox x:Name="GamesList" Background="Transparent" BorderThickness="0" Foreground="{StaticResource TextBrush}" SelectionChanged="GamesList_SelectionChanged" AutomationProperties.Name="Windows game library">
+                    <ListBox.ItemTemplate><DataTemplate><Grid Margin="8" MinHeight="62">
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                        <StackPanel><TextBlock Text="{Binding Title}" FontSize="19" FontWeight="SemiBold"/><TextBlock Text="{Binding Platform}" Foreground="#9EADC0"/></StackPanel>
+                        <TextBlock Grid.Column="1" Text="★" FontSize="20" Foreground="{StaticResource AccentBrush}" Visibility="{Binding Favorite, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                    </Grid></DataTemplate></ListBox.ItemTemplate>
+                </ListBox>
+            </Border>
+            <Border Grid.Column="1" Background="#111824" CornerRadius="16" Margin="18,0,0,0" Padding="24">
+                <StackPanel>
+                    <TextBlock Text="SELECTED GAME" Foreground="{StaticResource AccentBrush}" FontWeight="Bold"/>
+                    <TextBlock x:Name="SelectedTitle" Text="Choose a game" FontSize="28" FontWeight="Bold" Margin="0,8,0,4" TextWrapping="Wrap"/>
+                    <TextBlock x:Name="SelectedPath" Foreground="#9EADC0" TextWrapping="Wrap" Margin="0,0,0,18"/>
+                    <Button x:Name="PlayButton" Content="Play" Click="Play_Click" IsEnabled="False"/>
+                    <Button x:Name="FavoriteButton" Content="Toggle favorite" Click="Favorite_Click" IsEnabled="False"/>
+                    <Button x:Name="RemoveButton" Content="Remove from library" Click="Remove_Click" IsEnabled="False"/>
+                    <Separator Margin="0,22"/>
+                    <TextBlock Text="Launches only files you explicitly add. It never downloads content, deletes game files, or stores streaming credentials." Foreground="#9EADC0" TextWrapping="Wrap"/>
+                </StackPanel>
+            </Border>
+        </Grid>
+        <TextBlock Grid.Row="3" Margin="0,16,0,0" Foreground="#718198" Text="Enter: Play selected   Ctrl+F: Search   Ctrl+O: Add game"/>
+    </Grid>
+</Window>
