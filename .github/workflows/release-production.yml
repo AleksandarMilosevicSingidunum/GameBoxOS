@@ -43,6 +43,12 @@ jobs:
             fi
           done
 
+      - name: Validate release tags exist
+        shell: bash
+        run: |
+          git ls-remote --exit-code --tags origin "refs/tags/$RELEASE_TAG" >/dev/null
+          git ls-remote --exit-code --tags origin "refs/tags/$ROLLBACK_TAG" >/dev/null
+
       - uses: actions/checkout@v6
         with:
           ref: ${{ inputs.tag }}
