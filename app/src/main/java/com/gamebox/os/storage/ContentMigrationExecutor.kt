@@ -8,6 +8,7 @@ data class MigrationItemResult(val item: ContentMigrationItem, val status: Migra
 data class ContentMigrationResult(val items: List<MigrationItemResult>) {
     val copiedCount get() = items.count { it.status == MigrationItemStatus.COPIED }
     val failedCount get() = items.count { it.status == MigrationItemStatus.FAILED }
+    val retryableCount get() = items.count { it.status == MigrationItemStatus.RETRYABLE }
 }
 
 fun interface ContentCopyOperation {
