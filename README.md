@@ -59,6 +59,19 @@ Status as of 29 August 2026:
 - Add signed production builds, update/rollback procedures, and recovery documentation
 - Complete the physical enclosure and hardware handoff
 
+## Blueprint implementation backlog
+
+The remaining work is tracked in these concrete groups:
+
+- Implement authenticated WebDAV and S3 catalog network clients using the transport abstractions.
+- Connect content migration planning/execution to SAF document-tree copy operations and verify disconnect recovery.
+- Add real emulator save discovery, adapter-specific save import/export, and authenticated cloud synchronization.
+- Apply graphics profiles to adapter-specific launch arguments where supported.
+- Add Compose instrumentation, accessibility, lifecycle, migration, offline, and recovery tests.
+- Complete physical controller, DeX, HDMI, Ethernet, charging, thermal, SSD, and unplug/reattach validation.
+- Add production signing, update channels, rollback/recovery procedures, and release documentation.
+- Complete enclosure, cooling, cabling, and hardware handoff work.
+
 ## Build and test
 
 Open the repository root in the current stable Android Studio, install Android SDK 36, sync Gradle, and run the app on an emulator or Android phone.
