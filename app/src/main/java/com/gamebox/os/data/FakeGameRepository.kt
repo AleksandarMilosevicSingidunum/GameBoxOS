@@ -12,6 +12,7 @@ interface GameRepository {
     fun observeGames(): StateFlow<List<Game>>
     fun game(id: GameId): Game?
     fun setFavorite(id: GameId, favorite: Boolean)
+    fun setEmulatorSettings(id: GameId, packageName: String?, graphicsProfile: String)
     fun advanceInstall(id: GameId)
     fun pauseOrResume(id: GameId)
     fun cancelInstall(id: GameId)
@@ -27,6 +28,10 @@ class FakeGameRepository : GameRepository {
 
     override fun observeGames(): StateFlow<List<Game>> = games.asStateFlow()
     override fun game(id: GameId): Game? = games.value.firstOrNull { it.id == id }
+
+    override fun setEmulatorSettings(id: GameId, packageName: String?, graphicsProfile: String) {
+        update(id) { it.copy(emulatorPackage = packageName, graphicsProfile = graphicsProfile) }
+    }
 
     override fun setFavorite(id: GameId, favorite: Boolean) {
         update(id) { it.copy(favorite = favorite) }
