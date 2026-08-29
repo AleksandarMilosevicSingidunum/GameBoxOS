@@ -31,6 +31,26 @@ data class UninstallPlan(
     val bytesFreed: Long = deleteArtifacts.sumOf { it.sizeBytes }
 }
 
+data class UninstallConfirmation(
+    val bytesFreed: Long,
+    val retainedSaveBytes: Long,
+    val retainedSaveArtifacts: Int
+) {
+    val retainsProgress: Boolean
+        get() = retainedSaveArtifacts > 0
+}
+
+fun UninstallPlan.toConfirmation(): UninstallConfirmation {
+    val retainedSaves = retainArtifacts.filter {
+        it.kind == ArtifactKind.SAVE_DATA || it.kind == ArtifactKind.SAVE_STATE
+    }
+    return UninstallConfirmation(
+        bytesFreed = bytesFreed,
+        retainedSaveBytes = retainedSaves.sumOf { it.sizeBytes },
+        retainedSaveArtifacts = retainedSaves.size
+    )
+}
+
 class UninstallPlanner {
     fun plan(
         gameId: GameId,
