@@ -22,12 +22,16 @@ class FileStagingTarget(rootDirectory: File, relativePath: String) : StagingTarg
         require(!File(relativePath).isAbsolute) { "Install path must be relative" }
     }
 
-    override fun openOutput(): OutputStream {
+    val stagedBytes: Long get() = stagingFile.takeIf { it.isFile }?.length() ?: 0L
+
+    fun openOutput(append: Boolean): OutputStream {
         check(finalFile.parentFile?.mkdirs() != false || finalFile.parentFile?.isDirectory == true) {
             "Unable to create staging directory"
         }
-        return FileOutputStream(stagingFile, false)
+        return FileOutputStream(stagingFile, append)
     }
+
+    override fun openOutput(): OutputStream = openOutput(append = false)
 
     override fun openInput(): InputStream = FileInputStream(stagingFile)
 
