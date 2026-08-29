@@ -27,7 +27,7 @@ class HttpsCatalogTransportClient(
             connection.setRequestProperty("Authorization", "Basic $token")
         } }
         if (transport is CatalogTransport.S3 && credentials?.accessKey != null && credentials.secretKey != null) {
-            val signer = s3Signer ?: throw IllegalStateException("S3 signer required for access-key credentials")
+            val signer = s3Signer ?: throw IllegalArgumentException("S3 signer required for access-key credentials")
             val emptyHash = MessageDigest.getInstance("SHA-256").digest(ByteArray(0)).joinToString("") { "%02x".format(it) }
             val signed = signer.sign("GET", uri.toString(), emptyHash, credentials)
             connection.setRequestProperty("x-amz-date", signed.date)
