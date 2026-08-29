@@ -1,5 +1,9 @@
 name: Publish signed production APK
 
+concurrency:
+  group: gamebox-production-publish
+  cancel-in-progress: false
+
 on:
   workflow_dispatch:
     inputs:
