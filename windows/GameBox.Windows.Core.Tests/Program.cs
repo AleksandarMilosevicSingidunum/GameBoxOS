@@ -57,6 +57,15 @@ try
     catch (ArgumentException) { unsafeEndpointRejected = true; }
     Require(unsafeEndpointRejected, "Insecure catalog endpoints must be rejected.");
 
+    var oversizedRejected = false;
+    using var oversizedClient = new HttpClient(new StubHttpMessageHandler(_ => new HttpResponseMessage(HttpStatusCode.OK) {
+        RequestMessage = new HttpRequestMessage(HttpMethod.Get, "https://catalog.example/games"),
+        Content = new StringContent(new string('x', 1_048_577))
+    }));
+    try { await new WindowsCatalogSyncClient(oversizedClient).EnrichExistingAsync(new[] { syncExisting }, "https://catalog.example/games"); }
+    catch (InvalidDataException) { oversizedRejected = true; }
+    Require(oversizedRejected, "Catalog responses above the limit must be rejected before parsing.");
+
     Console.WriteLine("GameBox Windows core tests passed.");
 }
 finally
