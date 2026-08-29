@@ -1,6 +1,8 @@
 package com.gamebox.os.ui
 
+import android.Manifest
 import android.content.ActivityNotFoundException
+import android.os.Build
 import android.content.Intent
 import android.provider.Settings
 import android.view.KeyEvent as AndroidKeyEvent
@@ -845,6 +847,12 @@ private fun SettingsScreen(compact: Boolean, settingsRepository: SettingsReposit
     val scope = rememberCoroutineScope()
     var catalogUrl by remember(currentSettings.catalogUrl) { mutableStateOf(currentSettings.catalogUrl) }
     var catalogMessage by remember { mutableStateOf<String?>(null) }
+    val notificationPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        catalogMessage = if (granted) "Download notifications enabled"
+        else "Notification permission was not granted"
+    }
     val storageRoot = context.filesDir
     val totalStorage = storageRoot.totalSpace
     val usableStorage = storageRoot.usableSpace
@@ -868,6 +876,16 @@ private fun SettingsScreen(compact: Boolean, settingsRepository: SettingsReposit
             color = MaterialTheme.colorScheme.primary
         )
         Spacer(Modifier.height(12.dp))
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            OutlinedButton(
+                onClick = {
+                    notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                },
+                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
+            ) {
+                Text("Enable download notifications", modifier = Modifier.fillMaxWidth())
+            }
+        }
         settings.forEach { (title, action) ->
             OutlinedButton(
                 onClick = {
