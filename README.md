@@ -23,7 +23,7 @@ Status as of 30 August 2026:
 | Saves | Partial | Platform save-adapter registry, real directory discovery, reactive per-game save presence in Details, multi-artifact backup/restore, atomic checksum-protected snapshot manifests, import/export, retention, deterministic sync conflict resolution, cross-game safety checks, and orchestration that executes upload/download/conflict operations with automated JUnit coverage; credential-safe cloud sync contract with HTTPS/payload/offline guards plus bounded Basic/SigV4 authenticated upload/download byte transport and shared recovery handling; real-endpoint integration and physical emulator validation remain |
 | Emulator integration | Partial | Allowlisted emulator handoff with per-game package selection and graphics profile persistence exposed in Details, read-only FileProvider access, return tracking, capability registry, documented PPSSPP Args graphics mapping, and Dolphin AutoStartFiles launch wiring; production adapter validation remains |
 | Media and PC | Partial | Installed-app detection, typed availability states, safe launch shortcuts, persistent hide-unavailable policy, responsive empty/setup states, Moonlight connectivity status, bounded host reachability probes, interactive PC host-probe panel, and recent sessions for media, Moonlight, Winlator, Termux, Files, browser, and Android settings; physical streaming validation remains |
-| Offline operation | Partial | Cached catalog and persistent local state; full airplane-mode acceptance testing remains |
+| Offline operation | Implemented foundation | Cached catalog and persistent local state, explicit network-aware fallback selection, and a reactive offline-mode banner; full airplane-mode acceptance testing remains |
 | Diagnostics | Partial | Sanitized report, bounded redacted event collection, lifecycle wiring, visible download errors, and a 2 MiB ZIP recovery bundle export; physical failure validation remains |
 | CI and releases | Partial | Unit tests, debug APK builds, SHA-256 artifacts, alpha release workflow, deterministic channel-readiness gating, validated APK provenance manifests with size/hash/channel metadata, rollback tag metadata, and tag/channel consistency validation; signed production builds and real update-channel execution remain |
 | External storage | Partial | SAF folder selection, persisted permissions, read/write status, real filesDir/installed discovery, exact migration planning, Settings confirmation/execution with result totals, non-destructive document-tree copy execution with explicit confirmation states, safe partial-file finalization, disconnect detection, and retryable outage classification; physical unplug testing remains |
@@ -47,6 +47,7 @@ Status as of 30 August 2026:
 - Automated unit tests covering storage/provider/release/accessibility contracts plus compiled Compose migration/accessibility instrumentation APKs, debug APK builds, and self-contained Windows Companion builds
 - Friendly emulator selection with validated graphics profiles, launch-time profile handoff, and unsupported-platform guidance
 - Deterministic release manifest generation containing APK hash, size, channel, and optional rollback tag
+- Network-aware offline catalog selection with a reactive accessible offline-mode banner
 - Release validation rejects unsupported tags and manifest channel/tag mismatches before publication
 
 ## Important remaining work for Blueprint 1.0
@@ -56,7 +57,7 @@ Status as of 30 August 2026:
 - Complete end-to-end authenticated WebDAV/S3 integration testing and physical recovery validation
 - Validate authenticated cloud-save byte transfer against real WebDAV/S3 endpoints and real save adapters against production emulators
 - Complete physical disconnect/unplug safety tests for confirmed SAF migrations
-- Execute Compose accessibility/lifecycle instrumentation on devices and expand offline and failure-recovery scenarios
+- Execute Compose accessibility/lifecycle instrumentation on devices and expand airplane-mode and failure-recovery scenarios
 - Complete physical controller testing on Galaxy A53
 - Complete Galaxy S23 Ultra DeX/HDMI/Ethernet/charging/thermal/reconnect soak testing
 - Configure signed production builds and execute real update-channel/rollback validation using generated release manifests
