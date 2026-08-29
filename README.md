@@ -22,7 +22,7 @@ Status as of 29 August 2026:
 | Install/uninstall | Partial | App-private verified install plus explicit save-safe uninstall confirmation with exact freed and retained byte counts; generalized production content adapters and physical storage validation remain |
 | Saves | Partial | Platform save-adapter registry, real directory discovery, reactive per-game save presence in Details, multi-artifact backup/restore, atomic checksum-protected snapshot manifests, import/export, retention, deterministic sync conflict resolution, and cross-game safety checks; authenticated cloud synchronization and physical emulator validation remain |
 | Emulator integration | Partial | Allowlisted emulator handoff with per-game package selection and graphics profile persistence exposed in Details, read-only FileProvider access, return tracking, and capability registry; production adapter validation remains |
-| Media and PC | Partial | Installed-app detection, typed availability states, safe launch shortcuts, persistent hide-unavailable policy, and responsive empty/setup states for media, Moonlight, Winlator, Termux, Files, browser, and Android settings; Moonlight host/session status remains |
+| Media and PC | Partial | Installed-app detection, typed availability states, safe launch shortcuts, persistent hide-unavailable policy, responsive empty/setup states, Moonlight connectivity status and bounded recent sessions for media, Moonlight, Winlator, Termux, Files, browser, and Android settings; host reachability and physical streaming validation remain |
 | Offline operation | Partial | Cached catalog and persistent local state; full airplane-mode acceptance testing remains |
 | Diagnostics | Partial | Sanitized export report, bounded structured event collection, lifecycle wiring, and visible download errors; full recovery bundles and physical failure validation remain |
 | CI and releases | Partial | Unit tests, debug APK builds, SHA-256 artifacts, and alpha release workflow; signed production builds, rollback, and update channels remain |
@@ -40,7 +40,7 @@ Status as of 29 August 2026:
 - App-private staging; content is promoted only after complete SHA-256 verification
 - Download notifications, byte progress, measured speed/ETA, low-storage warnings, failure reasons, retry, and cancellation
 - Save-safe uninstall, reactive per-game save presence, durable multi-artifact snapshot manifests, and user-controlled backup import/export
-- Configurable Media/PC launch hubs with installed-only filtering and Android system-setting shortcuts
+- Configurable Media/PC launch hubs with installed-only filtering, Moonlight network status/recent sessions, and Android system-setting shortcuts
 - SAF external-library selection with persisted permissions and non-destructive disconnect/read-only status
 - Sanitized diagnostics export that excludes credentials, source URLs, checksums, paths, and save contents
 - Automated unit tests, debug APK builds, and self-contained Windows Companion builds
@@ -60,6 +60,7 @@ Status as of 29 August 2026:
 - Add signed production builds, update/rollback procedures, and recovery documentation
 - Complete the physical enclosure and hardware handoff
 - Expand the optional Windows companion with catalog synchronization and richer PC-runtime integrations
+- Add Moonlight host reachability checks and physical LAN/controller streaming validation
 
 ## Blueprint implementation backlog
 
