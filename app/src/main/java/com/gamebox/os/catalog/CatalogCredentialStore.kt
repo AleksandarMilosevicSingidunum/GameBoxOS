@@ -17,5 +17,6 @@ interface CatalogCredentialStore {
 class InMemoryCatalogCredentialStore(
     private val values: Map<String, CatalogCredentials>
 ) : CatalogCredentialStore {
+    init { require(values.keys.all { it.isNotBlank() }) { "credential keys must not be blank" } }
     override fun credentials(key: String): CatalogCredentials? = values[key]
 }
