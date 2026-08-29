@@ -22,11 +22,8 @@ class AssetCatalogProvider(
     }
 }
 
-
 internal fun validateAuthorizedCatalogUrl(value: String): String {
-    val uri = try {
-        URI(value.trim())
-    } catch (error: Exception) {
+    val uri = try { URI(value.trim()) } catch (error: Exception) {
         throw IllegalArgumentException("Catalog URL is invalid", error)
     }
     require(uri.scheme.equals("https", ignoreCase = true)) { "Catalog URL must use HTTPS" }
@@ -39,10 +36,11 @@ internal fun validateAuthorizedCatalogUrl(value: String): String {
 class ConfiguredCatalogProvider(
     private val fallback: CatalogProvider,
     private val remote: CatalogProvider,
-    private val configuredUrl: suspend () -> String
+    private val configuredUrl: suspend () -> String,
+    private val networkAvailable: suspend () -> Boolean = { true }
 ) : CatalogProvider {
     override suspend fun load(): CatalogSnapshot {
-        return if (configuredUrl().isBlank()) fallback.load() else remote.load()
+        return if (configuredUrl().isBlank() || !networkAvailable()) fallback.load() else remote.load()
     }
 }
 
@@ -73,11 +71,8 @@ class HttpsCatalogProvider(
             cacheUrlFile.writeText(url)
             snapshot
         } catch (error: Exception) {
-            if (cacheFile.isFile && cacheUrlFile.readText().trim() == url) {
-                parser.parse(cacheFile.readText())
-            } else {
-                throw error
-            }
+            if (cacheFile.isFile && cacheUrlFile.readText().trim() == url) parser.parse(cacheFile.readText())
+            else throw error
         }
     }
 
@@ -89,7 +84,9 @@ class HttpsCatalogProvider(
         connection.setRequestProperty("Accept", "application/json")
         connection.setRequestProperty("User-Agent", "GameBoxOS/0.1")
         if (credentials?.username != null && credentials.password != null) {
-            val token = java.util.Base64.getEncoder().encodeToString((credentials.username + ":" + credentials.password).toByteArray())
+            val token = java.util.Base64.getEncoder().encodeToString(
+                (credentials.username + ":" + credentials.password).toByteArray()
+            )
             connection.setRequestProperty("Authorization", "Basic " + token)
         }
         try {
@@ -99,9 +96,7 @@ class HttpsCatalogProvider(
                 else "Catalog request failed with HTTP " + status
             }
             val declaredLength = connection.contentLengthLong
-            require(declaredLength < 0 || declaredLength <= maxResponseBytes) {
-                "Catalog response is too large"
-            }
+            require(declaredLength < 0 || declaredLength <= maxResponseBytes) { "Catalog response is too large" }
             val bytes = connection.inputStream.use { input ->
                 val output = java.io.ByteArrayOutputStream()
                 val buffer = ByteArray(8_192)
