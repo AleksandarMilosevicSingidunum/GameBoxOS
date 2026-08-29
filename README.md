@@ -25,7 +25,7 @@ Status as of 29 August 2026:
 | Offline operation | Partial | Cached catalog and persistent local state; full airplane-mode acceptance testing remains |
 | Diagnostics | Partial | Sanitized export report and visible download errors; structured log collection and recovery bundles remain |
 | CI and releases | Partial | Unit tests, debug APK builds, SHA-256 artifacts, and alpha release workflow; signed production builds, rollback, and update channels remain |
-| External storage | Partial | SAF folder selection, persisted permissions, read/write status, and disconnect detection; content migration and unplug tests remain |
+| External storage | Partial | SAF folder selection, persisted permissions, read/write status, disconnect detection, and safe content-migration planning; copy execution and unplug tests remain |
 | Target hardware | Not validated | Galaxy A53 controller testing and Galaxy S23 Ultra/DeX/HDMI/Ethernet/thermal/SSD soak testing require physical hardware |
 | Enclosure/handoff | Not started | Hardware enclosure, hub, cooling, cabling, and recovery-button work follows software maturity |
 
