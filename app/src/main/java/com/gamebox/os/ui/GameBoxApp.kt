@@ -47,6 +47,7 @@ import com.gamebox.os.domain.DownloadStatus
 import com.gamebox.os.domain.CatalogRefreshState
 import com.gamebox.os.domain.InstallState
 import com.gamebox.os.domain.primaryAction
+import com.gamebox.os.domain.summarizeLibrary
 import com.gamebox.os.download.AuthorizedDownloadController
 import com.gamebox.os.download.AuthorizedDownloadState
 import com.gamebox.os.download.RemoteDownloadController
@@ -332,9 +333,45 @@ private fun CollectionScreen(
     val filtered = filterGames(games, query, platform, genre, favoritesOnly)
     val focusTarget = restoreGameId?.takeIf { id -> filtered.any { it.id == id } }
         ?: filtered.firstOrNull()?.id
+    val summary = summarizeLibrary(games)
     Column {
         Text(title, fontSize = if (compact) 28.sp else 38.sp, fontWeight = FontWeight.Bold)
         Text(subtitle, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.68f))
+        Surface(
+            color = MaterialTheme.colorScheme.surfaceVariant,
+            shape = RoundedCornerShape(14.dp),
+            modifier = Modifier.fillMaxWidth().padding(top = 12.dp).semantics {
+                contentDescription = summary.totalGames.toString() + " games, " +
+                    summary.installedGames + " installed, " + summary.favorites + " favorites, " +
+                    summary.totalHoursPlayed + " hours played"
+            }
+        ) {
+            Column(Modifier.padding(if (compact) 14.dp else 18.dp)) {
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(summary.totalGames.toString() + " games", fontWeight = FontWeight.Bold)
+                    Text(summary.installedGames.toString() + " installed")
+                    Text(summary.favorites.toString() + " favorites")
+                }
+                Text(
+                    summary.totalHoursPlayed.toString() + "h " +
+                        summary.remainingMinutes.toString().padStart(2, '0') + "m total playtime",
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.68f),
+                    fontSize = 12.sp
+                )
+                summary.resumeGame?.let { resume ->
+                    Text(
+                        "Ready to resume: " + resume.title,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 13.sp,
+                        modifier = Modifier.padding(top = 6.dp)
+                    )
+                }
+            }
+        }
         Spacer(Modifier.height(14.dp))
         GameFilterBar(
             games, query, { query = it }, platform, { platform = it },
