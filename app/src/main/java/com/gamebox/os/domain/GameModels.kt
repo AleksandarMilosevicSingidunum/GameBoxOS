@@ -29,7 +29,9 @@ data class Game(
     val sourceUrl: String? = null,
     val expectedSha256: String? = null,
     val emulatorPackage: String? = null,
-    val graphicsProfile: String = "Balanced"
+    val graphicsProfile: String = "Balanced",
+    val savePresent: Boolean = false,
+    val saveSizeBytes: Long = 0L
 )
 
 enum class DownloadStatus {
@@ -61,7 +63,6 @@ fun InstallState.primaryAction(): String = when (this) {
     InstallState.MISSING_FILES -> "Locate or reinstall"
     InstallState.FAILED -> "Retry"
 }
-
 
 enum class CatalogRefreshState {
     IDLE, REFRESHING, SUCCESS, ERROR

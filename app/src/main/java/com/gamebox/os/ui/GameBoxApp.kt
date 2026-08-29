@@ -592,12 +592,37 @@ private fun DetailsScreen(
                     ) { Text(if (game.favorite) "Remove favorite" else "Favorite") }
                     OutlinedButton(onClick = onBack) { Text("Back") }
                 }
+                Spacer(Modifier.height(16.dp))
+                Surface(
+                    color = MaterialTheme.colorScheme.surfaceVariant,
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.fillMaxWidth().semantics {
+                        contentDescription = if (game.savePresent) {
+                            "Save data present, " + formatDownloadBytes(game.saveSizeBytes)
+                        } else {
+                            "No save data discovered"
+                        }
+                    }
+                ) {
+                    Column(Modifier.padding(14.dp)) {
+                        Text("Save data", fontWeight = FontWeight.Bold)
+                        Text(
+                            if (game.savePresent) {
+                                formatDownloadBytes(game.saveSizeBytes) +
+                                    " retained independently of installed content"
+                            } else {
+                                "No save data discovered for this game"
+                            },
+                            color = if (game.savePresent) MaterialTheme.colorScheme.primary
+                            else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.68f)
+                        )
+                    }
+                }
                 if (isAuthorizedTest && saveSafetyState.saveRecordPresent) {
                     Spacer(Modifier.height(12.dp))
                     Text(
-                        "Save retained: " + saveSafetyState.relativePath +
-                            " (" + saveSafetyState.sizeBytes + " bytes)",
-                        color = MaterialTheme.colorScheme.primary
+                        "Test save path: " + saveSafetyState.relativePath,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.68f)
                     )
                     Spacer(Modifier.height(8.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {

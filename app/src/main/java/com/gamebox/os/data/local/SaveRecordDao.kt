@@ -10,6 +10,9 @@ interface SaveRecordDao {
     @Query("SELECT * FROM save_records WHERE gameId = :gameId LIMIT 1")
     fun observe(gameId: String): Flow<SaveRecordEntity?>
 
+    @Query("SELECT * FROM save_records ORDER BY gameId")
+    fun observeAll(): Flow<List<SaveRecordEntity>>
+
     @Upsert
     suspend fun upsert(record: SaveRecordEntity)
 }
