@@ -66,6 +66,11 @@ try
     catch (InvalidDataException) { oversizedRejected = true; }
     Require(oversizedRejected, "Catalog responses above the limit must be rejected before parsing.");
 
+    var invalidTimeoutRejected = false;
+    try { _ = new WindowsCatalogSyncClient(new HttpClient(), TimeSpan.Zero); }
+    catch (ArgumentOutOfRangeException) { invalidTimeoutRejected = true; }
+    Require(invalidTimeoutRejected, "Non-positive catalog timeouts must be rejected.");
+
     Console.WriteLine("GameBox Windows core tests passed.");
 }
 finally
