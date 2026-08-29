@@ -7,6 +7,7 @@ import java.util.Base64
 
 class HttpsCatalogTransportClient(private val maxResponseBytes: Int = 1_048_576) : CatalogTransportClient {
     override suspend fun fetch(transport: CatalogTransport, credentials: CatalogCredentials?): String {
+        require(credentials?.accessKey == null && credentials?.secretKey == null) { "S3 access-key signing is not implemented" }
         val uri = when (transport) {
             is CatalogTransport.Https -> URI(transport.url)
             is CatalogTransport.WebDav -> transport.catalogUri()
