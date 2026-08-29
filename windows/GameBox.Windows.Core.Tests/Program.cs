@@ -1,3 +1,4 @@
+using System.Net;
 using GameBox.Windows.Core;
 
 var root = Path.Combine(Path.GetTempPath(), "gamebox-windows-tests-" + Guid.NewGuid().ToString("N"));
