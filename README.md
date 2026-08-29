@@ -19,7 +19,7 @@ Status as of 29 August 2026:
 | Remote providers | Partial | Configurable HTTPS catalog with strict validation, offline cache, out-of-band credential abstraction, optional Basic auth, and safe WebDAV/S3 URI builders; WebDAV/S3 network clients remain |
 | Downloads | Implemented foundation | Durable WorkManager jobs, notifications, low-space reserve, pause/resume, Range validation, retries, cancellation, size limits, SHA-256 verification, and atomic install |
 | Install/uninstall | Partial | App-private verified install and content-only uninstall prototype; full storage-volume and freed-space UX remain |
-| Saves | Partial | Persistent save records, checksum-protected backup/restore, import/export, retention prototype, and deterministic sync conflict resolver; real emulator save adapters and cloud transport remain |
+| Saves | Partial | Persistent save records, checksum-protected backup/restore, import/export, retention prototype, deterministic sync conflict resolver, and cross-game safety checks; real emulator save adapters and cloud transport remain |
 | Emulator integration | Partial | Allowlisted emulator handoff with per-game package selection and graphics profile persistence exposed in Details, read-only FileProvider access, return tracking, and capability registry; production adapter validation remains |
 | Media and PC | Partial | Installed-app detection and safe launch shortcuts for media, Moonlight, Winlator, Termux, Files, browser, and Android settings |
 | Offline operation | Partial | Cached catalog and persistent local state; full airplane-mode acceptance testing remains |
