@@ -2,12 +2,7 @@ package com.gamebox.os.diagnostics
 
 enum class DiagnosticLevel { INFO, WARNING, ERROR }
 
-data class DiagnosticEvent(
-    val level: DiagnosticLevel,
-    val code: String,
-    val message: String,
-    val timestampMillis: Long
-)
+data class DiagnosticEvent(val level: DiagnosticLevel, val code: String, val message: String, val timestampMillis: Long)
 
 class DiagnosticEventCollector(private val nowMillis: () -> Long = System::currentTimeMillis) {
     private val events = mutableListOf<DiagnosticEvent>()
@@ -17,6 +12,5 @@ class DiagnosticEventCollector(private val nowMillis: () -> Long = System::curre
     fun snapshot(): List<DiagnosticEvent> = events.toList()
     private fun sanitize(message: String): String = message
         .replace(Regex("https?://\\S+"), "<url>")
-        .replace(Regex("(?i)(password|secret|token|key)=\\S+"), "${'
-}}1=<redacted>")
+        .replace(Regex("(?i)(password|secret|token|key)=\\S+")) { match -> match.value.substringBefore("=") + "=<redacted>" }
 }
