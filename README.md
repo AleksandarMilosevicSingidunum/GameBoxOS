@@ -20,7 +20,7 @@ Status as of 29 August 2026:
 | Remote providers | Partial | Configurable HTTPS catalog with strict validation, offline cache, out-of-band credential abstraction, optional Basic auth, safe WebDAV/S3 URI builders, and bounded transport client; S3 request-signing boundary with AWS Signature V4 and authenticated transport wiring; WebDAV Basic auth hardens incomplete credentials; shared bounded recovery classification covers auth, rate limits, transient network, and permanent failures |
 | Downloads | Implemented | Durable WorkManager jobs, notifications, measured speed and ETA, preemptive low-storage warnings using the worker reserve, pause/resume, Range validation, retries, cancellation, size limits, SHA-256 verification, and atomic install |
 | Install/uninstall | Partial | App-private verified install plus explicit save-safe uninstall confirmation with exact freed and retained byte counts; generalized production content adapters and physical storage validation remain |
-| Saves | Partial | Platform save-adapter registry, real directory discovery, reactive per-game save presence in Details, multi-artifact backup/restore, atomic checksum-protected snapshot manifests, import/export, retention, deterministic sync conflict resolution, and cross-game safety checks; authenticated cloud synchronization and physical emulator validation remain |
+| Saves | Partial | Platform save-adapter registry, real directory discovery, reactive per-game save presence in Details, multi-artifact backup/restore, atomic checksum-protected snapshot manifests, import/export, retention, deterministic sync conflict resolution, and cross-game safety checks; credential-safe cloud sync contract with HTTPS/payload/offline guards; authenticated transport integration and physical emulator validation remain |
 | Emulator integration | Partial | Allowlisted emulator handoff with per-game package selection and graphics profile persistence exposed in Details, read-only FileProvider access, return tracking, and capability registry; production adapter validation remains |
 | Media and PC | Partial | Installed-app detection, typed availability states, safe launch shortcuts, persistent hide-unavailable policy, responsive empty/setup states, Moonlight connectivity status, bounded host reachability probes, and recent sessions for media, Moonlight, Winlator, Termux, Files, browser, and Android settings; physical streaming validation remains |
 | Offline operation | Partial | Cached catalog and persistent local state; full airplane-mode acceptance testing remains |
@@ -39,7 +39,7 @@ Status as of 29 August 2026:
 - Verified remote download pipeline with true pause/resume and safe job-scoped cleanup
 - App-private staging; content is promoted only after complete SHA-256 verification
 - Download notifications, byte progress, measured speed/ETA, low-storage warnings, failure reasons, retry, and cancellation
-- Save-safe uninstall, reactive per-game save presence, durable multi-artifact snapshot manifests, and user-controlled backup import/export
+- Save-safe uninstall, reactive per-game save presence, durable multi-artifact snapshot manifests, user-controlled backup import/export, and bounded cloud-sync validation
 - Configurable Media/PC launch hubs with installed-only filtering, Moonlight network status/recent sessions, and Android system-setting shortcuts
 - SAF external-library selection with persisted permissions, explicit migration confirmation dialog, retryable disconnect/read-only status, and non-destructive copy execution
 - Sanitized diagnostics export that excludes credentials, source URLs, checksums, paths, and save contents
@@ -52,7 +52,7 @@ Status as of 29 August 2026:
 - Validate at least one real emulator adapter for every officially supported platform group
 - Validate additional production emulator adapters and apply graphics profiles to adapter launch arguments
 - Use the recovery policy in provider transports and complete end-to-end authenticated WebDAV/S3 integration testing
-- Complete authenticated cloud save synchronization and validate real save adapters against production emulators
+- Wire the cloud-save contract into authenticated transports and validate real save adapters against production emulators
 - Complete physical disconnect/unplug safety tests for confirmed SAF migrations
 - Add Compose instrumentation, accessibility, lifecycle, migration, offline, and failure-recovery tests
 - Complete physical controller testing on Galaxy A53
