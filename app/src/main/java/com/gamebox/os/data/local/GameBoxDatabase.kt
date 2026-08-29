@@ -9,7 +9,7 @@ import androidx.room.RoomDatabase
     exportSchema = true
 )
 abstract class GameBoxDatabase : RoomDatabase() {
-    abstract fun gameDao(): GameDao()
-    abstract fun downloadJobDao(): DownloadJobDao()
-    abstract fun saveRecordDao(): SaveRecordDao()
+    abstract fun gameDao(): GameDao
+    abstract fun downloadJobDao(): DownloadJobDao
+    abstract fun saveRecordDao(): SaveRecordDao
 }
