@@ -25,6 +25,7 @@ fun GameSettingsPanel(game: Game, repository: GameRepository, modifier: Modifier
         Row(Modifier.horizontalScroll(rememberScrollState())) {
             FilterChip(game.emulatorPackage == null, { repository.setEmulatorSettings(game.id, null, game.graphicsProfile) }, label = { Text("Automatic") })
             options.forEach { pkg -> FilterChip(game.emulatorPackage == pkg, { repository.setEmulatorSettings(game.id, pkg, game.graphicsProfile) }, label = { Text(EmulatorCapabilityRegistry().displayName(pkg)) }) }
+            if (options.isEmpty()) Text("No approved emulator adapter for this platform")
         }
         Text("Graphics profile")
         Row(Modifier.horizontalScroll(rememberScrollState())) {
