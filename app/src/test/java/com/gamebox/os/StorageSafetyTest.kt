@@ -5,6 +5,7 @@ import com.gamebox.os.storage.ArtifactKind
 import com.gamebox.os.storage.InstallPathPolicy
 import com.gamebox.os.storage.StoredArtifact
 import com.gamebox.os.storage.UninstallPlanner
+import com.gamebox.os.storage.toConfirmation
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
@@ -48,6 +49,25 @@ class StorageSafetyTest {
         assertTrue(plan.deleteArtifacts.any { it.kind == ArtifactKind.SAVE_STATE })
         assertTrue(plan.retainArtifacts.any { it.kind == ArtifactKind.METADATA })
         assertTrue(plan.retainArtifacts.any { it.kind == ArtifactKind.PLAY_HISTORY })
+    }
+
+    @Test fun confirmation_reportsExactFreedAndRetainedSaveBytes() {
+        val confirmation = UninstallPlanner().plan(gameId, artifacts()).toConfirmation()
+
+        assertEquals(100L, confirmation.bytesFreed)
+        assertEquals(15L, confirmation.retainedSaveBytes)
+        assertEquals(2, confirmation.retainedSaveArtifacts)
+        assertTrue(confirmation.retainsProgress)
+    }
+
+    @Test fun progressDeletion_confirmationDoesNotClaimRetainedSave() {
+        val confirmation = UninstallPlanner()
+            .plan(gameId, artifacts(), deleteProgress = true)
+            .toConfirmation()
+
+        assertEquals(115L, confirmation.bytesFreed)
+        assertEquals(0L, confirmation.retainedSaveBytes)
+        assertEquals(0, confirmation.retainedSaveArtifacts)
     }
 
     private fun artifacts() = listOf(
