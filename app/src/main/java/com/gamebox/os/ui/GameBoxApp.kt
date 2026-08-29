@@ -490,6 +490,7 @@ private fun DetailsScreen(
     val authorizedState by authorizedDownloadController.observeState().collectAsState()
     val launchState by gameLaunchController.observeState().collectAsState()
     val saveSafetyState by saveSafetyController.observeState().collectAsState()
+    var showUninstallConfirmation by remember(game.id) { mutableStateOf(false) }
     val workerActive = authorizedState.status == AuthorizedDownloadState.Status.QUEUED ||
         authorizedState.status == AuthorizedDownloadState.Status.RUNNING
     val exportBackupLauncher = rememberLauncherForActivityResult(
@@ -498,6 +499,46 @@ private fun DetailsScreen(
     val importBackupLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocument()
     ) { uri -> uri?.let(saveSafetyController::importBackup) }
+    if (showUninstallConfirmation) {
+        val preview = saveSafetyController.uninstallPreview()
+        AlertDialog(
+            onDismissRequest = { showUninstallConfirmation = false },
+            title = { Text("Uninstall " + game.title + "?") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Content to remove: " + formatDownloadBytes(preview.bytesFreed))
+                    Text(
+                        if (preview.retainsProgress) {
+                            "Save data retained: " + formatDownloadBytes(preview.retainedSaveBytes) +
+                                " across " + preview.retainedSaveArtifacts + " artifact(s)"
+                        } else {
+                            "No save data is currently recorded. Metadata, favorites, and play history are retained."
+                        }
+                    )
+                    Text(
+                        "Only installed game content will be removed.",
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.68f)
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        saveSafetyController.uninstallTestContent()
+                        showUninstallConfirmation = false
+                    },
+                    modifier = Modifier.semantics {
+                        contentDescription = "Confirm uninstall and retain save data"
+                    }
+                ) { Text("Uninstall content") }
+            },
+            dismissButton = {
+                OutlinedButton(onClick = { showUninstallConfirmation = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
         Text(game.platform.uppercase(), color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
         Text(game.title, fontSize = if (compact) 32.sp else 44.sp, fontWeight = FontWeight.Bold)
@@ -571,7 +612,7 @@ private fun DetailsScreen(
                         Button(onClick = { gameLaunchController.launch(game) }) {
                             Text("Play")
                         }
-                        OutlinedButton(onClick = saveSafetyController::uninstallTestContent) {
+                        OutlinedButton(onClick = { showUninstallConfirmation = true }) {
                             Text("Uninstall content")
                         }
                     }
