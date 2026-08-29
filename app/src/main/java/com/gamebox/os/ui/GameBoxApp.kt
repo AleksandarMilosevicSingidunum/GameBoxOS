@@ -46,6 +46,9 @@ import com.gamebox.os.download.AuthorizedDownloadState
 import com.gamebox.os.launch.GameLaunchController
 import com.gamebox.os.launch.LaunchUiState
 import com.gamebox.os.storage.SaveSafetyController
+import com.gamebox.os.settings.SettingsRepository
+import com.gamebox.os.catalog.validateAuthorizedCatalogUrl
+import kotlinx.coroutines.launch
 
 private enum class Destination(val title: String) {
     HOME("Home"), LIBRARY("Library"), STORE("Store"), DOWNLOADS("Downloads"),
@@ -58,7 +61,8 @@ fun GameBoxApp(
     downloadRepository: DownloadRepository,
     authorizedDownloadController: AuthorizedDownloadController,
     gameLaunchController: GameLaunchController,
-    saveSafetyController: SaveSafetyController
+    saveSafetyController: SaveSafetyController,
+    settingsRepository: SettingsRepository
 ) {
     val games by repository.observeGames().collectAsState()
     var destination by remember { mutableStateOf(Destination.HOME) }
@@ -138,7 +142,7 @@ fun GameBoxApp(
                             pcShortcuts,
                             compact
                         )
-                        Destination.SETTINGS -> SettingsScreen(compact)
+                        Destination.SETTINGS -> SettingsScreen(compact, settingsRepository)
                     }
                 }
             }
@@ -787,8 +791,12 @@ private fun ShortcutCard(
 }
 
 @Composable
-private fun SettingsScreen(compact: Boolean) {
+private fun SettingsScreen(compact: Boolean, settingsRepository: SettingsRepository) {
     val context = LocalContext.current
+    val currentSettings by settingsRepository.settings.collectAsState(initial = com.gamebox.os.settings.GameBoxSettings())
+    val scope = rememberCoroutineScope()
+    var catalogUrl by remember(currentSettings.catalogUrl) { mutableStateOf(currentSettings.catalogUrl) }
+    var catalogMessage by remember { mutableStateOf<String?>(null) }
     val storageRoot = context.filesDir
     val totalStorage = storageRoot.totalSpace
     val usableStorage = storageRoot.usableSpace
@@ -826,6 +834,38 @@ private fun SettingsScreen(compact: Boolean) {
                 Text(title, modifier = Modifier.fillMaxWidth())
             }
         }
+        Spacer(Modifier.height(18.dp))
+        Text("Authorized catalog provider", fontWeight = FontWeight.Bold)
+        Text(
+            "Leave blank to use the bundled offline fixture. Remote catalogs must use HTTPS.",
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.62f)
+        )
+        OutlinedTextField(
+            value = catalogUrl,
+            onValueChange = { catalogUrl = it },
+            label = { Text("HTTPS catalog URL") },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth()
+        )
+        Button(
+            onClick = {
+                val trimmed = catalogUrl.trim()
+                val validationError = if (trimmed.isEmpty()) null else
+                    runCatching { validateAuthorizedCatalogUrl(trimmed) }.exceptionOrNull()
+                if (validationError != null) {
+                    catalogMessage = validationError.message ?: "Invalid catalog URL"
+                } else {
+                    scope.launch {
+                        settingsRepository.setCatalogUrl(trimmed)
+                        catalogMessage = if (trimmed.isEmpty())
+                            "Bundled offline catalog selected"
+                        else "Catalog URL saved. Open Store and choose Refresh."
+                    }
+                }
+            },
+            modifier = Modifier.padding(top = 8.dp)
+        ) { Text("Save catalog source") }
+        catalogMessage?.let { Text(it, color = MaterialTheme.colorScheme.primary) }
         Spacer(Modifier.height(12.dp))
         Text(
             "Downloads, emulator profiles, saves, cloud providers, and developer diagnostics " +
