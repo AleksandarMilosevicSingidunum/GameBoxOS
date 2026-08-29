@@ -12,7 +12,7 @@ Status as of 30 August 2026:
 
 | Blueprint area | Status | Current implementation |
 | --- | --- | --- |
-| Android/Compose shell | Implemented | Dark GameBox theme, resizeable phone portrait/landscape layouts, IME-aware resizing, and large DeX layouts |
+| Android/Compose shell | Implemented | Dark GameBox theme, resizeable phone portrait/landscape layouts, IME-aware resizing, modern back-invoked navigation, and large DeX layouts |
 | Windows companion | Implemented foundation | Native .NET 8/WPF local-library launcher with search, favorites, atomic JSON state, safe file validation, bounded HTTPS catalog synchronization that preserves local executable trust, rejects oversized payloads before buffering, and has executable size-guard coverage, and self-contained win-x64 CI artifact |
 | Controller navigation | Partial | Focusable cards, LB/RB tabs, Back/B handling, and focus restoration; physical-device and reconnect testing remain |
 | Primary UI | Implemented foundation | Home, Library, Store, Details, Downloads, Media, PC Hub, Settings, migration confirmation UI, accessible tab/card/progress/live-region semantics, saveable navigation/detail/focus restoration, JVM UI contracts, and compiled Compose instrumentation coverage |
