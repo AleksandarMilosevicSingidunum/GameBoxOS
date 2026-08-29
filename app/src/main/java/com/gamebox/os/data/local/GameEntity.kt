@@ -17,7 +17,9 @@ data class GameEntity(
     val installState: String,
     val lastPlayed: String?,
     val minutesPlayed: Int,
-    val favorite: Boolean = false
+    val favorite: Boolean = false,
+    val sourceUrl: String? = null,
+    val expectedSha256: String? = null
 )
 
 fun GameEntity.toDomain(): Game = Game(
@@ -30,7 +32,9 @@ fun GameEntity.toDomain(): Game = Game(
     state = runCatching { InstallState.valueOf(installState) }.getOrDefault(InstallState.FAILED),
     lastPlayed = lastPlayed,
     minutesPlayed = minutesPlayed,
-    favorite = favorite
+    favorite = favorite,
+    sourceUrl = sourceUrl,
+    expectedSha256 = expectedSha256
 )
 
 fun Game.toEntity(): GameEntity = GameEntity(
@@ -43,5 +47,7 @@ fun Game.toEntity(): GameEntity = GameEntity(
     installState = state.name,
     lastPlayed = lastPlayed,
     minutesPlayed = minutesPlayed,
-    favorite = favorite
+    favorite = favorite,
+    sourceUrl = sourceUrl,
+    expectedSha256 = expectedSha256
 )
