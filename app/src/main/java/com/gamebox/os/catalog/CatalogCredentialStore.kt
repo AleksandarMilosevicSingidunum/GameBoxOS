@@ -8,6 +8,10 @@ data class CatalogCredentials(
 )
  {
     override fun toString(): String = "CatalogCredentials(username=${username != null}, password=${password != null}, accessKey=${accessKey != null}, secretKey=${secretKey != null})"
+
+    fun hasBasicAuth(): Boolean = !username.isNullOrBlank() && !password.isNullOrBlank()
+
+    fun hasS3Auth(): Boolean = !accessKey.isNullOrBlank() && !secretKey.isNullOrBlank()
 }
 
 interface CatalogCredentialStore {
