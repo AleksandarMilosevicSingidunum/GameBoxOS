@@ -793,9 +793,9 @@ private fun ShortcutCard(
 @Composable
 private fun SettingsScreen(compact: Boolean, settingsRepository: SettingsRepository) {
     val context = LocalContext.current
-    val settings by settingsRepository.settings.collectAsState(initial = com.gamebox.os.settings.GameBoxSettings())
+    val currentSettings by settingsRepository.settings.collectAsState(initial = com.gamebox.os.settings.GameBoxSettings())
     val scope = rememberCoroutineScope()
-    var catalogUrl by remember(settings.catalogUrl) { mutableStateOf(settings.catalogUrl) }
+    var catalogUrl by remember(currentSettings.catalogUrl) { mutableStateOf(currentSettings.catalogUrl) }
     var catalogMessage by remember { mutableStateOf<String?>(null) }
     val storageRoot = context.filesDir
     val totalStorage = storageRoot.totalSpace
