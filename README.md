@@ -15,7 +15,7 @@ Status as of 29 August 2026:
 | Android/Compose shell | Implemented | Dark GameBox theme, phone portrait/landscape and large DeX layouts |
 | Windows companion | Implemented foundation | Native .NET 8/WPF local-library launcher with search, favorites, atomic JSON state, safe file validation, and self-contained win-x64 CI artifact |
 | Controller navigation | Partial | Focusable cards, LB/RB tabs, Back/B handling, and focus restoration; physical-device and reconnect testing remain |
-| Primary UI | Implemented foundation | Home, Library, Store, Details, Downloads, Media, PC Hub, Settings, migration confirmation UI, and Compose instrumentation coverage |
+| Primary UI | Implemented foundation | Home, Library, Store, Details, Downloads, Media, PC Hub, Settings, migration confirmation UI, accessible tab/card/progress/live-region semantics, JVM semantics contracts, and compiled Compose instrumentation coverage |
 | Catalog and discovery | Implemented foundation | Room-backed catalog, search, platform/genre filters, favorites, cached authorized manifests, and a pinned MIT-licensed runnable Galaxy Patrol NES fixture |
 | Remote providers | Partial | Configurable HTTPS catalog with strict validation, offline cache, out-of-band credential abstraction, optional Basic auth, safe WebDAV/S3 URI builders, and bounded transport client; S3 request-signing boundary with AWS Signature V4 and authenticated transport wiring; WebDAV Basic auth hardens incomplete credentials; shared bounded recovery classification is applied by authenticated transports for auth, rate limits, transient network, and permanent failures, with JUnit coverage |
 | Downloads | Implemented | Durable WorkManager jobs, notifications, measured speed and ETA, preemptive low-storage warnings using the worker reserve, pause/resume, Range validation, retries, cancellation, size limits, SHA-256 verification, and atomic install |
@@ -44,7 +44,7 @@ Status as of 29 August 2026:
 - Configurable Media/PC launch hubs with installed-only filtering, Moonlight network status/recent sessions, interactive PC host probing, and Android system-setting shortcuts
 - SAF external-library selection with persisted permissions, explicit migration confirmation dialog, retryable disconnect/read-only status, and non-destructive copy execution
 - Sanitized diagnostics export that excludes credentials, source URLs, checksums, paths, and save contents
-- Automated unit tests covering storage/provider/release contracts plus Compose migration instrumentation, debug APK builds, and self-contained Windows Companion builds
+- Automated unit tests covering storage/provider/release/accessibility contracts plus compiled Compose migration/accessibility instrumentation APKs, debug APK builds, and self-contained Windows Companion builds
 - Friendly emulator selection with validated graphics profiles, launch-time profile handoff, and unsupported-platform guidance
 
 ## Important remaining work for Blueprint 1.0
@@ -54,7 +54,7 @@ Status as of 29 August 2026:
 - Complete end-to-end authenticated WebDAV/S3 integration testing and physical recovery validation
 - Validate authenticated cloud-save byte transfer against real WebDAV/S3 endpoints and real save adapters against production emulators
 - Complete physical disconnect/unplug safety tests for confirmed SAF migrations
-- Expand Compose instrumentation to accessibility, lifecycle, offline, and failure-recovery tests
+- Execute Compose accessibility instrumentation on devices and expand lifecycle, offline, and failure-recovery scenarios
 - Complete physical controller testing on Galaxy A53
 - Complete Galaxy S23 Ultra DeX/HDMI/Ethernet/charging/thermal/reconnect soak testing
 - Configure signed production builds, update/rollback procedures, and recovery documentation
@@ -69,7 +69,7 @@ The remaining work is tracked in these concrete groups:
 - Complete end-to-end authenticated WebDAV/S3 provider integration and physical recovery testing.
 - Verify physical disconnect recovery for Settings-driven migrations.
 - Validate adapter-specific save discovery/import/export against production emulators and exercise authenticated cloud byte transport against real WebDAV/S3 endpoints.
-- Add Compose instrumentation, accessibility, lifecycle, migration, offline, and recovery tests.
+- Run the compiled Compose accessibility/migration suite on devices and add lifecycle, offline, and recovery scenarios.
 - Complete physical controller, DeX, HDMI, Ethernet, charging, thermal, SSD, and unplug/reattach validation.
 - Configure production signing, update channels, rollback/recovery procedures, and release documentation.
 - Complete enclosure, cooling, cabling, and hardware handoff work.
