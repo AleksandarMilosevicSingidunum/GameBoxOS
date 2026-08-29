@@ -29,6 +29,8 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
@@ -443,6 +445,7 @@ private fun GameCard(
     Surface(
         modifier
             .focusRequester(focusRequester)
+            .semantics { contentDescription = GameBoxSemantics.GAME_CARD }
             .onFocusChanged {
                 focused = it.isFocused
                 if (it.isFocused) onFocused(game.id)
