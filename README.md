@@ -15,7 +15,7 @@ Status as of 29 August 2026:
 | Android/Compose shell | Implemented | Dark GameBox theme, phone portrait/landscape and large DeX layouts |
 | Windows companion | Implemented foundation | Native .NET 8/WPF local-library launcher with search, favorites, atomic JSON state, safe file validation, and self-contained win-x64 CI artifact |
 | Controller navigation | Partial | Focusable cards, LB/RB tabs, Back/B handling, and focus restoration; physical-device and reconnect testing remain |
-| Primary UI | Implemented foundation | Home, Library, Store, Details, Downloads, Media, PC Hub, Settings, and reusable migration confirmation UI |
+| Primary UI | Implemented foundation | Home, Library, Store, Details, Downloads, Media, PC Hub, Settings, migration confirmation UI, and Compose instrumentation coverage |
 | Catalog and discovery | Implemented foundation | Room-backed catalog, search, platform/genre filters, favorites, cached authorized manifests |
 | Remote providers | Partial | Configurable HTTPS catalog with strict validation, offline cache, out-of-band credential abstraction, optional Basic auth, safe WebDAV/S3 URI builders, and bounded transport client; S3 request-signing boundary with AWS Signature V4 and authenticated transport wiring; WebDAV Basic auth hardens incomplete credentials; shared bounded recovery classification covers auth, rate limits, transient network, and permanent failures |
 | Downloads | Implemented | Durable WorkManager jobs, notifications, measured speed and ETA, preemptive low-storage warnings using the worker reserve, pause/resume, Range validation, retries, cancellation, size limits, SHA-256 verification, and atomic install |
@@ -54,7 +54,7 @@ Status as of 29 August 2026:
 - Use the recovery policy in provider transports and complete end-to-end authenticated WebDAV/S3 integration testing
 - Wire the cloud-save contract into authenticated transports and validate real save adapters against production emulators
 - Complete physical disconnect/unplug safety tests for confirmed SAF migrations
-- Add Compose instrumentation, accessibility, lifecycle, migration, offline, and failure-recovery tests
+- Expand Compose instrumentation to accessibility, lifecycle, offline, and failure-recovery tests
 - Complete physical controller testing on Galaxy A53
 - Complete Galaxy S23 Ultra DeX/HDMI/Ethernet/charging/thermal/reconnect soak testing
 - Configure signed production builds, update/rollback procedures, and recovery documentation
