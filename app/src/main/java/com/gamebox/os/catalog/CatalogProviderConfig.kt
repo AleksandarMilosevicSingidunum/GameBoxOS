@@ -22,6 +22,7 @@ data class CatalogProviderConfig(
         if (transport is CatalogTransport.S3) {
             require(transport.bucket.isNotBlank()) { "S3 bucket must not be blank" }
             require(!transport.bucket.contains("/") && !transport.bucket.contains(" ")) { "S3 bucket must be a single name" }
+            require(!transport.prefix.split("/").any { it == ".." }) { "S3 prefix must not contain traversal segments" }
         }
     }
 }
