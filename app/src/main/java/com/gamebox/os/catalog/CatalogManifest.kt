@@ -76,7 +76,9 @@ class CatalogParser(
                 year = item.year,
                 genre = item.genre,
                 sizeMb = item.sizeMb,
-                state = state
+                state = state,
+                sourceUrl = item.source,
+                expectedSha256 = item.checksum
             )
         }
 
