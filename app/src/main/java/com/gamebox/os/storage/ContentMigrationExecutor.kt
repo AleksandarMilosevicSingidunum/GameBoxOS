@@ -1,6 +1,9 @@
 package com.gamebox.os.storage
 
-enum class MigrationItemStatus { COPIED, SKIPPED, FAILED, RETRYABLE }\n\n/** Signals that removable storage is unavailable and the item can be retried safely. */\nclass ExternalStorageUnavailableException(message: String) : IllegalStateException(message)
+enum class MigrationItemStatus { COPIED, SKIPPED, FAILED, RETRYABLE }
+
+/** Signals that removable storage is unavailable and the item can be retried safely. */
+class ExternalStorageUnavailableException(message: String) : IllegalStateException(message)
 data class MigrationItemResult(val item: ContentMigrationItem, val status: MigrationItemStatus, val message: String? = null)
 data class ContentMigrationResult(val items: List<MigrationItemResult>) {
     val copiedCount get() = items.count { it.status == MigrationItemStatus.COPIED }
@@ -16,7 +19,10 @@ class ContentMigrationExecutor(private val copyOperation: ContentCopyOperation) 
         ContentMigrationResult(plan.items.map { item ->
             copyOperation.copy(item).fold(
                 onSuccess = { MigrationItemResult(item, MigrationItemStatus.COPIED) },
-                onFailure = { error ->\n                    val status = if (error is ExternalStorageUnavailableException) MigrationItemStatus.RETRYABLE else MigrationItemStatus.FAILED\n                    MigrationItemResult(item, status, error.message ?: "copy failed")\n                }
+                onFailure = { error ->
+                    val status = if (error is ExternalStorageUnavailableException) MigrationItemStatus.RETRYABLE else MigrationItemStatus.FAILED
+                    MigrationItemResult(item, status, error.message ?: "copy failed")
+                }
             )
         })
 }
