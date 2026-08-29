@@ -4,6 +4,7 @@ import com.gamebox.os.catalog.CatalogTransport
 import com.gamebox.os.catalog.CatalogTransportClient
 import com.gamebox.os.catalog.CatalogTransportProvider
 import com.gamebox.os.catalog.CatalogProviderConfig
+import com.gamebox.os.catalog.CatalogParser
 import com.gamebox.os.catalog.CatalogCredentials
 import com.gamebox.os.catalog.InMemoryCatalogCredentialStore
 import com.gamebox.os.catalog.NoopCatalogTransportClient
