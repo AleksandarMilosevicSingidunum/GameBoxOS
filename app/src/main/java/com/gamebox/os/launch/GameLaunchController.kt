@@ -43,6 +43,8 @@ class EmulatorCapabilityRegistry(
         else -> emptyList()
     }
 
+    fun forGame(gameId: GameId): EmulatorCapability? = capabilities.firstOrNull { it.gameId == gameId }
+
     fun forGame(game: Game): EmulatorCapability? {
         capabilities.firstOrNull { it.gameId == game.id }?.let { return it }
         val checksum = game.expectedSha256 ?: return null
