@@ -8,7 +8,7 @@ import com.gamebox.os.data.local.SaveRecordEntity
 import com.gamebox.os.domain.GameId
 import com.gamebox.os.domain.InstallState
 import com.gamebox.os.download.AssetDownloadWorker
-import com.gamebox.os.download.AuthorizedTestDownload
+import com.gamebox.os.download.AuthorizedHomebrewDownload
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -55,7 +55,7 @@ class DefaultSaveSafetyController(
     private val scope: CoroutineScope
 ) : SaveSafetyController {
     private val applicationContext = context.applicationContext
-    private val gameId = GameId("retro-test")
+    private val gameId = GameId("galaxy-patrol")
     private val savesRoot = applicationContext.filesDir.resolve("saves")
     private val backupService = SaveBackupService(
         savesRoot,
@@ -80,7 +80,7 @@ class DefaultSaveSafetyController(
     override fun createTestSaveRecord() {
         scope.launch {
             runCatching {
-                val relativePath = "retro-test/save.dat"
+                val relativePath = "galaxy-patrol/save.dat"
                 val root = savesRoot.canonicalFile
                 val saveFile = File(root, relativePath).canonicalFile
                 require(saveFile.path.startsWith(root.path + File.separator))
@@ -139,7 +139,7 @@ class DefaultSaveSafetyController(
     override fun uninstallPreview(): UninstallConfirmation {
         val contentFile = applicationContext.filesDir
             .resolve(AssetDownloadWorker.INSTALL_ROOT)
-            .resolve(AuthorizedTestDownload.RELATIVE_PATH)
+            .resolve(AuthorizedHomebrewDownload.RELATIVE_PATH)
         val artifacts = buildList {
             add(
                 StoredArtifact(
@@ -168,7 +168,7 @@ class DefaultSaveSafetyController(
             val result = runCatching {
                 FileContentUninstaller(
                     applicationContext.filesDir.resolve(AssetDownloadWorker.INSTALL_ROOT)
-                ).uninstall(AuthorizedTestDownload.RELATIVE_PATH)
+                ).uninstall(AuthorizedHomebrewDownload.RELATIVE_PATH)
             }
             if (result.isFailure) {
                 operation.value = SaveOperation("Uninstall failed safely", false)

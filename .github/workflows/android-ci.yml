@@ -38,8 +38,17 @@ jobs:
           gradle-version: "9.5.0"
           cache-provider: basic
 
-      - name: Validate catalog fixture
-        run: python -m json.tool app/src/main/assets/catalog/authorized-fixture.json > /dev/null
+      - name: Validate authorized homebrew fixture
+        run: |
+          python -m json.tool app/src/main/assets/catalog/authorized-fixture.json > /dev/null
+          python - <<'PY'
+          from hashlib import sha256
+          from pathlib import Path
+          rom = Path("app/src/main/assets/downloads/galaxy-patrol.nes").read_bytes()
+          assert rom[:4] == b"NES\\x1a", "fixture is not an iNES ROM"
+          assert len(rom) == 49168, "fixture size changed"
+          assert sha256(rom).hexdigest() == "97c1757ffd6a5bc1a591809b2b0f8988741f61f6abd82889c148ecae8a2f471f"
+          PY
 
       - name: Compile and run unit tests
         run: gradle --no-daemon testDebugUnitTest
