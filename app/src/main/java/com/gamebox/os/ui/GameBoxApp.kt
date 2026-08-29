@@ -283,10 +283,13 @@ private fun CatalogScreen(
             }
         }
         if (refreshState == CatalogRefreshState.ERROR) {
-            Text("Refresh failed - cached catalog remains available", color = MaterialTheme.colorScheme.error)
+            Text("Refresh failed - cached catalog remains available",
+                modifier = Modifier.semantics { contentDescription = "Catalog refresh failed; cached catalog remains available" },
+                color = MaterialTheme.colorScheme.error)
         }
         if (refreshState == CatalogRefreshState.SUCCESS) {
             Text("Catalog refreshed; local install and play state preserved",
+                modifier = Modifier.semantics { contentDescription = "Catalog refresh succeeded; local install and play state preserved" },
                 color = MaterialTheme.colorScheme.primary)
         }
         Spacer(Modifier.height(16.dp))
