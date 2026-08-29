@@ -20,7 +20,7 @@ Status as of 29 August 2026:
 | Downloads | Implemented foundation | Durable WorkManager jobs, notifications, low-space reserve, pause/resume, Range validation, retries, cancellation, size limits, SHA-256 verification, and atomic install |
 | Install/uninstall | Partial | App-private verified install and content-only uninstall prototype; full storage-volume and freed-space UX remain |
 | Saves | Partial | Persistent save records, checksum-protected backup/restore, import/export, and retention prototype; real emulator save adapters and cloud sync remain |
-| Emulator integration | Partial | Allowlisted emulator handoff with per-game package selection and graphics profile persistence, read-only FileProvider access, return tracking, and capability registry; production adapter validation remains |
+| Emulator integration | Partial | Allowlisted emulator handoff with per-game package selection and graphics profile persistence exposed in Details, read-only FileProvider access, return tracking, and capability registry; production adapter validation remains |
 | Media and PC | Partial | Installed-app detection and safe launch shortcuts for media, Moonlight, Winlator, Termux, Files, browser, and Android settings |
 | Offline operation | Partial | Cached catalog and persistent local state; full airplane-mode acceptance testing remains |
 | Diagnostics | Partial | Sanitized export report and visible download errors; structured log collection and recovery bundles remain |
