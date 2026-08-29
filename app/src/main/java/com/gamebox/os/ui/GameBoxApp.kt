@@ -43,6 +43,7 @@ import com.gamebox.os.domain.InstallState
 import com.gamebox.os.domain.primaryAction
 import com.gamebox.os.download.AuthorizedDownloadController
 import com.gamebox.os.download.AuthorizedDownloadState
+import com.gamebox.os.download.RemoteDownloadController
 import com.gamebox.os.launch.GameLaunchController
 import com.gamebox.os.launch.LaunchUiState
 import com.gamebox.os.storage.SaveSafetyController
@@ -60,6 +61,7 @@ fun GameBoxApp(
     repository: GameRepository,
     downloadRepository: DownloadRepository,
     authorizedDownloadController: AuthorizedDownloadController,
+    remoteDownloadController: RemoteDownloadController,
     gameLaunchController: GameLaunchController,
     saveSafetyController: SaveSafetyController,
     settingsRepository: SettingsRepository
@@ -109,6 +111,7 @@ fun GameBoxApp(
                         repository,
                         downloadRepository,
                         authorizedDownloadController,
+                        remoteDownloadController,
                         gameLaunchController,
                         saveSafetyController,
                         compact = compact,
@@ -129,7 +132,7 @@ fun GameBoxApp(
                         Destination.STORE -> CatalogScreen(
                             repository, games, restorableGameId, rememberGameFocus, compact
                         ) { selectedGameId = it.id }
-                        Destination.DOWNLOADS -> DownloadsScreen(repository, downloadRepository, compact)
+                        Destination.DOWNLOADS -> DownloadsScreen(repository, downloadRepository, remoteDownloadController, compact)
                         Destination.MEDIA -> AppHubScreen(
                             "Media",
                             "Launch your living-room apps and return to GameBox",
@@ -462,6 +465,7 @@ private fun DetailsScreen(
     repository: GameRepository,
     downloadRepository: DownloadRepository,
     authorizedDownloadController: AuthorizedDownloadController,
+    remoteDownloadController: RemoteDownloadController,
     gameLaunchController: GameLaunchController,
     saveSafetyController: SaveSafetyController,
     compact: Boolean,
@@ -511,17 +515,27 @@ private fun DetailsScreen(
                             } else {
                                 when (game.state) {
                                     InstallState.NOT_INSTALLED, InstallState.FAILED, InstallState.MISSING_FILES ->
-                                        downloadRepository.enqueue(game)
+                                        if (game.sourceUrl != null && game.expectedSha256 != null) {
+                                            remoteDownloadController.install(game)
+                                        } else {
+                                            repository.setInstallState(game.id, InstallState.FAILED)
+                                        }
                                     InstallState.QUEUED, InstallState.DOWNLOADING, InstallState.VERIFYING,
-                                    InstallState.INSTALLING -> downloadRepository.advance(game.id)
-                                    InstallState.PAUSED -> downloadRepository.resume(game.id)
+                                    InstallState.INSTALLING, InstallState.PAUSED -> Unit
                                     InstallState.INSTALLED, InstallState.UPDATE_AVAILABLE ->
                                         gameLaunchController.launch(game)
                                 }
-                                repository.advanceInstall(game.id)
                             }
                         },
-                        enabled = !isAuthorizedTest || !workerActive
+                        enabled = when {
+                            isAuthorizedTest -> !workerActive
+                            game.state in setOf(
+                                InstallState.NOT_INSTALLED,
+                                InstallState.FAILED,
+                                InstallState.MISSING_FILES
+                            ) -> game.sourceUrl != null && game.expectedSha256 != null
+                            else -> true
+                        }
                     ) {
                         Text(
                             if (!isAuthorizedTest) game.state.primaryAction()
@@ -628,7 +642,7 @@ private fun DetailsScreen(
 }
 
 @Composable
-private fun DownloadsScreen(repository: GameRepository, downloadRepository: DownloadRepository, compact: Boolean) {
+private fun DownloadsScreen(repository: GameRepository, downloadRepository: DownloadRepository, remoteDownloadController: RemoteDownloadController, compact: Boolean) {
     val jobs by downloadRepository.observeJobs().collectAsState()
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
         Text("Downloads", fontSize = if (compact) 28.sp else 38.sp, fontWeight = FontWeight.Bold)
@@ -650,28 +664,52 @@ private fun DownloadsScreen(repository: GameRepository, downloadRepository: Down
                     Spacer(Modifier.height(8.dp))
                     LinearProgressIndicator(progress = { job.progress }, modifier = Modifier.fillMaxWidth())
                     Spacer(Modifier.height(10.dp))
+                    val remoteGame = repository.game(job.gameId)?.takeIf { it.sourceUrl != null }
                     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        if (job.status == DownloadStatus.DOWNLOADING) {
-                            OutlinedButton(onClick = {
-                                downloadRepository.pause(job.gameId)
-                                repository.pauseOrResume(job.gameId)
-                            }) { Text("Pause") }
-                        }
-                        if (job.status == DownloadStatus.PAUSED) {
-                            OutlinedButton(onClick = {
-                                downloadRepository.resume(job.gameId)
-                                repository.pauseOrResume(job.gameId)
-                            }) { Text("Resume") }
-                        }
-                        if (job.status !in setOf(DownloadStatus.COMPLETED, DownloadStatus.FAILED, DownloadStatus.CANCELLED)) {
-                            Button(onClick = {
-                                downloadRepository.advance(job.gameId)
-                                repository.advanceInstall(job.gameId)
-                            }) { Text("Next test stage") }
-                            OutlinedButton(onClick = {
-                                downloadRepository.cancel(job.gameId)
-                                repository.cancelInstall(job.gameId)
-                            }) { Text("Cancel") }
+                        if (remoteGame != null) {
+                            if (job.status in setOf(DownloadStatus.FAILED, DownloadStatus.CANCELLED)) {
+                                Button(onClick = { remoteDownloadController.install(remoteGame) }) {
+                                    Text("Retry")
+                                }
+                            }
+                            if (job.status !in setOf(
+                                    DownloadStatus.COMPLETED,
+                                    DownloadStatus.FAILED,
+                                    DownloadStatus.CANCELLED
+                                )
+                            ) {
+                                OutlinedButton(onClick = { remoteDownloadController.cancel(remoteGame) }) {
+                                    Text("Cancel")
+                                }
+                            }
+                        } else {
+                            if (job.status == DownloadStatus.DOWNLOADING) {
+                                OutlinedButton(onClick = {
+                                    downloadRepository.pause(job.gameId)
+                                    repository.pauseOrResume(job.gameId)
+                                }) { Text("Pause") }
+                            }
+                            if (job.status == DownloadStatus.PAUSED) {
+                                OutlinedButton(onClick = {
+                                    downloadRepository.resume(job.gameId)
+                                    repository.pauseOrResume(job.gameId)
+                                }) { Text("Resume") }
+                            }
+                            if (job.status !in setOf(
+                                    DownloadStatus.COMPLETED,
+                                    DownloadStatus.FAILED,
+                                    DownloadStatus.CANCELLED
+                                )
+                            ) {
+                                Button(onClick = {
+                                    downloadRepository.advance(job.gameId)
+                                    repository.advanceInstall(job.gameId)
+                                }) { Text("Next test stage") }
+                                OutlinedButton(onClick = {
+                                    downloadRepository.cancel(job.gameId)
+                                    repository.cancelInstall(job.gameId)
+                                }) { Text("Cancel") }
+                            }
                         }
                     }
                 }
