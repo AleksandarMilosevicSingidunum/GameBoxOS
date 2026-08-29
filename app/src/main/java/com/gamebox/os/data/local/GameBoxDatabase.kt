@@ -5,7 +5,7 @@ import androidx.room.RoomDatabase
 
 @Database(
     entities = [GameEntity::class, DownloadJobEntity::class, SaveRecordEntity::class],
-    version = 4,
+    version = 5,
     exportSchema = true
 )
 abstract class GameBoxDatabase : RoomDatabase() {

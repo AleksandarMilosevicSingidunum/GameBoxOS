@@ -67,6 +67,19 @@ class CatalogParser(
                 throw CatalogFormatException("Game identity, title, and platform are required")
             }
             if (item.sizeMb < 0) throw CatalogFormatException("Game size cannot be negative")
+            if ((item.source == null) != (item.checksum == null)) {
+                throw CatalogFormatException("Remote games require both source and checksum")
+            }
+            item.source?.let {
+                try {
+                    validateAuthorizedCatalogUrl(it)
+                } catch (error: IllegalArgumentException) {
+                    throw CatalogFormatException("Game source must be an authorized HTTPS URL", error)
+                }
+            }
+            if (item.checksum != null && !item.checksum.matches(Regex("^[a-fA-F0-9]{64}$"))) {
+                throw CatalogFormatException("Game checksum must be SHA-256")
+            }
             val state = runCatching { InstallState.valueOf(item.initialState) }
                 .getOrElse { throw CatalogFormatException("Unknown install state: " + item.initialState) }
             Game(
@@ -76,7 +89,9 @@ class CatalogParser(
                 year = item.year,
                 genre = item.genre,
                 sizeMb = item.sizeMb,
-                state = state
+                state = state,
+                sourceUrl = item.source,
+                expectedSha256 = item.checksum
             )
         }
 
