@@ -43,7 +43,7 @@ Status as of 29 August 2026:
 - SAF external-library selection with persisted permissions and non-destructive disconnect/read-only status
 - Sanitized diagnostics export that excludes credentials, source URLs, checksums, paths, and save contents
 - Automated unit tests and debug APK builds
-- Friendly emulator selection with validated graphics profiles and launch-time profile handoff
+- Friendly emulator selection with validated graphics profiles, launch-time profile handoff, and unsupported-platform guidance
 
 ## Important remaining work for Blueprint 1.0
 
