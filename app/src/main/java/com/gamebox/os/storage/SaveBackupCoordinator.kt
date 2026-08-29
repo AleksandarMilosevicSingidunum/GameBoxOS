@@ -17,6 +17,8 @@ data class GameSaveBackupResult(
 class SaveBackupCoordinator(
     private val registry: SaveAdapterRegistry,
     private val backupService: SaveBackupService,
+    private val manifestStore: SaveSnapshotManifestStore? = null,
+    private val nowMillis: () -> Long = System::currentTimeMillis,
 ) {
     fun backup(platform: String, gameId: String): GameSaveBackupResult {
         val adapter = registry.adapterFor(platform)
@@ -28,15 +30,25 @@ class SaveBackupCoordinator(
 
         return runCatching { adapter.discover(gameId) }.fold(
             onSuccess = { artifacts ->
-                GameSaveBackupResult(
-                    gameId = gameId,
-                    artifacts = artifacts.map { artifact ->
-                        SaveArtifactBackupResult(
-                            artifact = artifact,
-                            result = backupService.createBackup(artifact.relativePath),
-                        )
-                    },
-                )
+                val results = artifacts.map { artifact ->
+                    SaveArtifactBackupResult(
+                        artifact = artifact,
+                        result = backupService.createBackup(artifact.relativePath),
+                    )
+                }
+                val successfulPaths = results
+                    .filter { it.result == BackupResult.SUCCESS }
+                    .map { it.artifact.relativePath }
+                if (successfulPaths.isNotEmpty()) {
+                    manifestStore?.save(
+                        SaveSnapshotManifest(
+                            gameId = gameId,
+                            createdAtMillis = nowMillis(),
+                            relativePaths = successfulPaths,
+                        ),
+                    )
+                }
+                GameSaveBackupResult(gameId = gameId, artifacts = results)
             },
             onFailure = { error ->
                 GameSaveBackupResult(
