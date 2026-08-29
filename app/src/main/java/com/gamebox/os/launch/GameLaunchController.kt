@@ -1,5 +1,6 @@
 package com.gamebox.os.launch
 
+import android.content.ClipData
 import android.content.Context
 import android.content.Intent
 import androidx.core.content.FileProvider
@@ -84,9 +85,8 @@ class AndroidPackageGateway(
     private val verifier: Sha256Verifier = Sha256Verifier()
 ) : PackageGateway {
     override fun launch(capability: EmulatorCapability): GatewayResult {
-        if (context.packageManager.getLaunchIntentForPackage(capability.packageName) == null) {
-            return GatewayResult.EMULATOR_UNAVAILABLE
-        }
+        val launcherIntent = context.packageManager.getLaunchIntentForPackage(capability.packageName)
+            ?: return GatewayResult.EMULATOR_UNAVAILABLE
         val installRoot = context.filesDir.resolve("installed").canonicalFile
         val content = File(installRoot, capability.contentRelativePath).canonicalFile
         val rootPrefix = installRoot.path + File.separator
@@ -103,10 +103,23 @@ class AndroidPackageGateway(
             context.packageName + ".files",
             content
         )
-        val intent = Intent(Intent.ACTION_VIEW)
-            .setDataAndType(uri, capability.mimeType)
-            .setPackage(capability.packageName)
+        val plan = EmulatorIntentPolicy.plan(
+            packageName = capability.packageName,
+            contentUri = uri.toString(),
+            graphicsProfile = capability.graphicsProfile,
+        )
+        val intent = when (plan.style) {
+            EmulatorIntentStyle.ACTION_VIEW -> Intent(Intent.ACTION_VIEW)
+                .setDataAndType(uri, capability.mimeType)
+                .setPackage(capability.packageName)
+            EmulatorIntentStyle.LAUNCHER_EXTRAS -> Intent(launcherIntent).apply {
+                clipData = ClipData.newRawUri("GameBox content", uri)
+                plan.stringExtras.forEach { (key, value) -> putExtra(key, value) }
+                plan.stringArrayExtras.forEach { (key, values) -> putExtra(key, values.toTypedArray()) }
+            }
+        }
             .putExtra("gamebox.graphics_profile", capability.graphicsProfile)
+            .putExtra("gamebox.graphics_profile_applied", plan.graphicsProfileApplied)
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_GRANT_READ_URI_PERMISSION)
         if (intent.resolveActivity(context.packageManager) == null) {
             return GatewayResult.HANDOFF_REJECTED
