@@ -5,7 +5,13 @@ data class SaveRevision(
     val checksum: String,
     val updatedAtMillis: Long,
     val sizeBytes: Long
-)
+) {
+    init {
+        require(gameId.isNotBlank()) { "save game id must not be blank" }
+        require(checksum.isNotBlank()) { "save checksum must not be blank" }
+        require(sizeBytes >= 0) { "save size must not be negative" }
+    }
+}
 
 enum class SaveConflictStrategy { KEEP_LOCAL, KEEP_REMOTE, KEEP_BOTH }
 
