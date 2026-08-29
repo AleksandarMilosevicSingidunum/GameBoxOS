@@ -6,6 +6,9 @@ data class CatalogCredentials(
     val accessKey: String? = null,
     val secretKey: String? = null
 )
+ {
+    override fun toString(): String = "CatalogCredentials(username=${username != null}, password=${password != null}, accessKey=${accessKey != null}, secretKey=${secretKey != null})"
+}
 
 interface CatalogCredentialStore {
     fun credentials(key: String): CatalogCredentials?
