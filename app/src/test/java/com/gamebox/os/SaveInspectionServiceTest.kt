@@ -21,8 +21,8 @@ class SaveInspectionServiceTest {
 
         assertEquals(SavePresence.PRESENT, summary.presence)
         assertEquals(2, summary.artifactCount)
-        assertEquals(30, summary.totalBytes)
-        assertEquals(200, summary.latestModifiedAtMillis)
+        assertEquals(30L, summary.totalBytes)
+        assertEquals(200L, summary.latestModifiedAtMillis)
     }
 
     @Test
