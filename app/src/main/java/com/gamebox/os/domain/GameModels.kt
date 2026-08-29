@@ -20,7 +20,9 @@ data class Game(
     val minutesPlayed: Int = 0,
     val favorite: Boolean = false,
     val sourceUrl: String? = null,
-    val expectedSha256: String? = null
+    val expectedSha256: String? = null,
+    val emulatorPackage: String? = null,
+    val graphicsProfile: String = "Balanced"
 )
 
 enum class DownloadStatus {
