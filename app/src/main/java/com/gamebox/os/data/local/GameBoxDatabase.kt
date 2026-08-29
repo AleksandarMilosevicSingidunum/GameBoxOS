@@ -5,11 +5,11 @@ import androidx.room.RoomDatabase
 
 @Database(
     entities = [GameEntity::class, DownloadJobEntity::class, SaveRecordEntity::class],
-    version = 5,
+    version = 6,
     exportSchema = true
 )
 abstract class GameBoxDatabase : RoomDatabase() {
-    abstract fun gameDao(): GameDao
-    abstract fun downloadJobDao(): DownloadJobDao
-    abstract fun saveRecordDao(): SaveRecordDao
+    abstract fun gameDao(): GameDao()
+    abstract fun downloadJobDao(): DownloadJobDao()
+    abstract fun saveRecordDao(): SaveRecordDao()
 }
