@@ -25,7 +25,14 @@ class ReleaseChannelValidationTest {
 
     @Test
     fun validatesManifestTagAndChannel() {
-        val manifest = ReleaseArtifactManifest("app.apk", "v1.0.0-alpha.1", ReleaseChannel.ALPHA, hash, bytes.size.toLong(), "v0.9.0-alpha.2")
+        val manifest = ReleaseArtifactManifest(
+            artifactName = "app.apk",
+            releaseTag = "v1.0.0-alpha.1",
+            channel = ReleaseChannel.ALPHA,
+            sha256 = hash,
+            sizeBytes = bytes.size.toLong(),
+            rollbackReleaseTag = "v0.9.0-alpha.2"
+        )
         assertTrue(ReleaseReadinessEvaluator.validateManifest(manifest, "v1.0.0-alpha.1").allowed)
         assertFalse(ReleaseReadinessEvaluator.validateManifest(manifest.copy(channel = ReleaseChannel.PRODUCTION), "v1.0.0-alpha.1").allowed)
         assertFalse(ReleaseReadinessEvaluator.validateManifest(manifest, "v1.0.0-beta.1").allowed)
