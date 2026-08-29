@@ -40,7 +40,7 @@ Status as of 29 August 2026:
 - App-private staging; content is promoted only after complete SHA-256 verification
 - Download notifications, byte progress, measured speed/ETA, low-storage warnings, failure reasons, retry, and cancellation
 - Save-safe uninstall, reactive per-game save presence, durable multi-artifact snapshot manifests, user-controlled backup import/export, and bounded cloud-sync validation
-- Configurable Media/PC launch hubs with installed-only filtering, Moonlight network status/recent sessions, and Android system-setting shortcuts
+- Configurable Media/PC launch hubs with installed-only filtering, Moonlight network status/recent sessions, interactive PC host probing, and Android system-setting shortcuts
 - SAF external-library selection with persisted permissions, explicit migration confirmation dialog, retryable disconnect/read-only status, and non-destructive copy execution
 - Sanitized diagnostics export that excludes credentials, source URLs, checksums, paths, and save contents
 - Automated unit tests covering storage/provider/release contracts plus Compose migration instrumentation, debug APK builds, and self-contained Windows Companion builds
