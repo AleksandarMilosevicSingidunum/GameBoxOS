@@ -43,4 +43,9 @@ class EmulatorSettingsTest {
         repository.setEmulatorSettings(GameId("retro-test"), null, "Ultra")
         assertEquals("Balanced", repository.game(GameId("retro-test"))?.graphicsProfile)
     }
+    @Test
+    fun supportedPackagesHaveFriendlyNames() {
+        assertEquals("RetroArch", registry.displayName("com.retroarch.aarch64"))
+        assertEquals("PPSSPP", registry.displayName("org.ppsspp.ppsspp"))
+    }
 }
