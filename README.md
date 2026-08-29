@@ -8,7 +8,7 @@ GameBox is an Android/DeX application, not a custom ROM or emulator. Game source
 
 This repository is an active pre-1.0 implementation of the August 2026 **GameBox Development Blueprint**. The blueprint is a six-month working plan, not a claim that every item is already complete.
 
-Status as of 29 August 2026:
+Status as of 30 August 2026:
 
 | Blueprint area | Status | Current implementation |
 | --- | --- | --- |
@@ -25,7 +25,7 @@ Status as of 29 August 2026:
 | Media and PC | Partial | Installed-app detection, typed availability states, safe launch shortcuts, persistent hide-unavailable policy, responsive empty/setup states, Moonlight connectivity status, bounded host reachability probes, interactive PC host-probe panel, and recent sessions for media, Moonlight, Winlator, Termux, Files, browser, and Android settings; physical streaming validation remains |
 | Offline operation | Partial | Cached catalog and persistent local state; full airplane-mode acceptance testing remains |
 | Diagnostics | Partial | Sanitized report, bounded redacted event collection, lifecycle wiring, visible download errors, and a 2 MiB ZIP recovery bundle export; physical failure validation remains |
-| CI and releases | Partial | Unit tests, debug APK builds, SHA-256 artifacts, alpha release workflow, and deterministic channel-readiness gating with JUnit coverage; signed production builds, rollback, and update channels remain |
+| CI and releases | Partial | Unit tests, debug APK builds, SHA-256 artifacts, alpha release workflow, deterministic channel-readiness gating, validated APK provenance manifests with size/hash/channel metadata, and optional rollback tag metadata; signed production builds and real update-channel execution remain |
 | External storage | Partial | SAF folder selection, persisted permissions, read/write status, real filesDir/installed discovery, exact migration planning, Settings confirmation/execution with result totals, non-destructive document-tree copy execution with explicit confirmation states, safe partial-file finalization, disconnect detection, and retryable outage classification; physical unplug testing remains |
 | Target hardware | Not validated | Galaxy A53 controller testing and Galaxy S23 Ultra/DeX/HDMI/Ethernet/thermal/SSD soak testing require physical hardware |
 | Enclosure/handoff | Not started | Hardware enclosure, hub, cooling, cabling, and recovery-button work follows software maturity |
@@ -46,6 +46,7 @@ Status as of 29 August 2026:
 - Sanitized diagnostics export that excludes credentials, source URLs, checksums, paths, and save contents
 - Automated unit tests covering storage/provider/release/accessibility contracts plus compiled Compose migration/accessibility instrumentation APKs, debug APK builds, and self-contained Windows Companion builds
 - Friendly emulator selection with validated graphics profiles, launch-time profile handoff, and unsupported-platform guidance
+- Deterministic release manifest generation containing APK hash, size, channel, and optional rollback tag
 
 ## Important remaining work for Blueprint 1.0
 
@@ -57,7 +58,7 @@ Status as of 29 August 2026:
 - Execute Compose accessibility/lifecycle instrumentation on devices and expand offline and failure-recovery scenarios
 - Complete physical controller testing on Galaxy A53
 - Complete Galaxy S23 Ultra DeX/HDMI/Ethernet/charging/thermal/reconnect soak testing
-- Configure signed production builds, update/rollback procedures, and recovery documentation
+- Configure signed production builds and execute real update-channel/rollback validation using generated release manifests
 - Complete the physical enclosure and hardware handoff
 - Expand the optional Windows companion with richer PC-runtime integrations
 - Validate physical LAN/controller streaming and host-probe behavior on target devices
@@ -71,7 +72,7 @@ The remaining work is tracked in these concrete groups:
 - Validate adapter-specific save discovery/import/export against production emulators and exercise authenticated cloud byte transport against real WebDAV/S3 endpoints.
 - Run the compiled Compose accessibility/migration/lifecycle suite on devices and add offline/recovery scenarios.
 - Complete physical controller, DeX, HDMI, Ethernet, charging, thermal, SSD, and unplug/reattach validation.
-- Configure production signing, update channels, rollback/recovery procedures, and release documentation.
+- Configure production signing and execute update-channel/rollback validation using generated artifact manifests.
 - Complete enclosure, cooling, cabling, and hardware handoff work.
 
 ## Build and test
