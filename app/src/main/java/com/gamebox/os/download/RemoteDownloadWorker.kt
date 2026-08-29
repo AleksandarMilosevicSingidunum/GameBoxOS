@@ -139,7 +139,8 @@ class RemoteDownloadWorker(
 }
 
 class RemoteDownloadScheduler(context: Context) {
-    private val workManager = WorkManager.getInstance(context.applicationContext)
+    private val applicationContext = context.applicationContext
+    private val workManager = WorkManager.getInstance(applicationContext)
 
     fun enqueue(game: Game, replace: Boolean = false) {
         val source = requireNotNull(game.sourceUrl) { "Game has no authorized source" }
@@ -172,6 +173,14 @@ class RemoteDownloadScheduler(context: Context) {
 
     fun cancel(game: Game) {
         workManager.cancelUniqueWork(RemoteDownloadWorker.TAG + ":" + game.id.value)
+    }
+
+    fun discardPartial(game: Game) {
+        val relativePath = "remote/" + game.id.value + "/content.bin"
+        FileStagingTarget(
+            applicationContext.filesDir.resolve(AssetDownloadWorker.INSTALL_ROOT),
+            relativePath
+        ).discard()
     }
 }
 
