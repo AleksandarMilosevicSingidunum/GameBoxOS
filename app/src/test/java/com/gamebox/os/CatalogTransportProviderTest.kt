@@ -24,6 +24,6 @@ class CatalogTransportProviderTest {
     fun credentialStoreKeepsSecretsOutOfTransportConfig() {
         val store = InMemoryCatalogCredentialStore(mapOf("main" to CatalogCredentials(username = "u", password = "p")))
         assertEquals("u", store.credentials("main")?.username)
-        assertEquals("https://example.test", CatalogProviderConfig(CatalogTransport.WebDav("https://example.test"), "main").transport.baseUrl)
+        assertEquals("https://example.test", (CatalogProviderConfig(CatalogTransport.WebDav("https://example.test"), "main").transport as CatalogTransport.WebDav).baseUrl)
     }
 }
