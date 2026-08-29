@@ -57,6 +57,7 @@ class DefaultAppContainer(context: Context) : AppContainer {
 
     override val gameRepository: GameRepository = RoomGameRepository(
         dao = database.gameDao(),
+        saveRecordDao = database.saveRecordDao(),
         catalogProvider = catalogProvider,
         scope = applicationScope,
         onCatalogSeeded = settingsRepository::markCatalogSeeded,
