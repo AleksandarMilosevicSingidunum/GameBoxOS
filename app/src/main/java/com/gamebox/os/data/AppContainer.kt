@@ -1,6 +1,8 @@
 package com.gamebox.os.data
 
 import android.content.Context
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 import androidx.room.Room
 import com.gamebox.os.catalog.AssetCatalogProvider
 import com.gamebox.os.catalog.ConfiguredCatalogProvider
@@ -49,7 +51,8 @@ class DefaultAppContainer(context: Context) : AppContainer {
     private val catalogProvider = ConfiguredCatalogProvider(
         fallback = assetCatalogProvider,
         remote = HttpsCatalogProvider(applicationContext, settingsRepository::catalogUrl),
-        configuredUrl = settingsRepository::catalogUrl
+        configuredUrl = settingsRepository::catalogUrl,
+        networkAvailable = { isNetworkAvailable(applicationContext) }
     )
 
     override val downloadRepository: DownloadRepository =
@@ -65,30 +68,24 @@ class DefaultAppContainer(context: Context) : AppContainer {
     )
 
     override val remoteDownloadController: RemoteDownloadController =
-        WorkManagerRemoteDownloadController(
-            applicationContext,
-            gameRepository,
-            downloadRepository,
-            applicationScope
-        )
+        WorkManagerRemoteDownloadController(applicationContext, gameRepository, downloadRepository, applicationScope)
 
     override val authorizedDownloadController: AuthorizedDownloadController =
-        WorkManagerAuthorizedDownloadController(
-            applicationContext,
-            gameRepository,
-            applicationScope
-        )
+        WorkManagerAuthorizedDownloadController(applicationContext, gameRepository, applicationScope)
 
     override val gameLaunchController: GameLaunchController = DefaultGameLaunchController(
-        EmulatorCapabilityRegistry(),
-        AndroidPackageGateway(applicationContext),
-        gameRepository
+        EmulatorCapabilityRegistry(), AndroidPackageGateway(applicationContext), gameRepository
     )
 
     override val saveSafetyController: SaveSafetyController = DefaultSaveSafetyController(
-        applicationContext,
-        database.saveRecordDao(),
-        gameRepository,
-        applicationScope
+        applicationContext, database.saveRecordDao(), gameRepository, applicationScope
     )
+}
+
+internal fun isNetworkAvailable(context: Context): Boolean {
+    val manager = context.getSystemService(ConnectivityManager::class.java) ?: return false
+    val network = manager.activeNetwork ?: return false
+    val capabilities = manager.getNetworkCapabilities(network) ?: return false
+    return capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) &&
+        capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
 }
