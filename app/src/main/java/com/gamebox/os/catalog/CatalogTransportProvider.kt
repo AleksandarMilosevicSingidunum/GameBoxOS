@@ -13,6 +13,9 @@ class CatalogTransportProvider(
     override suspend fun load(): CatalogSnapshot {
         val selected = config()
         val resolvedCredentials = selected.credentialKey?.let { key -> credentials?.credentials(key) }
+        require(selected.credentialKey == null || resolvedCredentials != null) {
+            "Configured catalog credentials are unavailable"
+        }
         val payload = client.fetch(selected.transport, resolvedCredentials)
         return parser.parse(payload)
     }
