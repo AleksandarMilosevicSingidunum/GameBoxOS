@@ -28,7 +28,7 @@ class HttpsCatalogTransportClient(
             val pass = auth.password!!
             val token = Base64.getEncoder().encodeToString((user + ":" + pass).toByteArray())
             connection.setRequestProperty("Authorization", "Basic $token")
-        } }
+        }
         if (transport is CatalogTransport.S3 && credentials?.hasS3Auth() == true) {
             val signer = s3Signer ?: throw IllegalArgumentException("S3 signer required for access-key credentials")
             val emptyHash = MessageDigest.getInstance("SHA-256").digest(ByteArray(0)).joinToString("") { "%02x".format(it) }
