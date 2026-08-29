@@ -43,7 +43,7 @@ Status as of 29 August 2026:
 - Configurable Media/PC launch hubs with installed-only filtering, Moonlight network status/recent sessions, and Android system-setting shortcuts
 - SAF external-library selection with persisted permissions, explicit migration confirmation dialog, retryable disconnect/read-only status, and non-destructive copy execution
 - Sanitized diagnostics export that excludes credentials, source URLs, checksums, paths, and save contents
-- Automated unit tests covering storage/provider/release contracts, debug APK builds, and self-contained Windows Companion builds
+- Automated unit tests covering storage/provider/release contracts plus Compose migration instrumentation, debug APK builds, and self-contained Windows Companion builds
 - Friendly emulator selection with validated graphics profiles, launch-time profile handoff, and unsupported-platform guidance
 
 ## Important remaining work for Blueprint 1.0
