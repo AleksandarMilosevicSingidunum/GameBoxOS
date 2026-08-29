@@ -56,6 +56,7 @@ import com.gamebox.os.download.formatCapacityWarning
 import com.gamebox.os.download.formatDownloadTelemetry
 import com.gamebox.os.launch.GameLaunchController
 import com.gamebox.os.launch.MoonlightConnectivity
+import com.gamebox.os.launch.MoonlightStatus
 import com.gamebox.os.launch.addRecentMoonlightSession
 import com.gamebox.os.launch.classifyMoonlightConnectivity
 import com.gamebox.os.launch.LaunchUiState
