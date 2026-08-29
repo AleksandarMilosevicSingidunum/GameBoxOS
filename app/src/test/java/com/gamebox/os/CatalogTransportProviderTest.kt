@@ -15,9 +15,9 @@ import org.junit.Test
 
 class CatalogTransportProviderTest {
     @Test
-    fun noopClientFailsExplicitly() = runBlocking {
+    fun noopClientFailsExplicitly() {
         assertThrows(UnsupportedOperationException::class.java) {
-            NoopCatalogTransportClient().fetch(CatalogTransport.WebDav("https://example.test"), null)
+            runBlocking { NoopCatalogTransportClient().fetch(CatalogTransport.WebDav("https://example.test"), null) }
         }
     }
 
