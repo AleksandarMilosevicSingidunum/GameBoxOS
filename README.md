@@ -17,7 +17,7 @@ Status as of 29 August 2026:
 | Controller navigation | Partial | Focusable cards, LB/RB tabs, Back/B handling, and focus restoration; physical-device and reconnect testing remain |
 | Primary UI | Implemented foundation | Home, Library, Store, Details, Downloads, Media, PC Hub, Settings, migration confirmation UI, and Compose instrumentation coverage |
 | Catalog and discovery | Implemented foundation | Room-backed catalog, search, platform/genre filters, favorites, cached authorized manifests |
-| Remote providers | Partial | Configurable HTTPS catalog with strict validation, offline cache, out-of-band credential abstraction, optional Basic auth, safe WebDAV/S3 URI builders, and bounded transport client; S3 request-signing boundary with AWS Signature V4 and authenticated transport wiring; WebDAV Basic auth hardens incomplete credentials; shared bounded recovery classification covers auth, rate limits, transient network, and permanent failures |
+| Remote providers | Partial | Configurable HTTPS catalog with strict validation, offline cache, out-of-band credential abstraction, optional Basic auth, safe WebDAV/S3 URI builders, and bounded transport client; S3 request-signing boundary with AWS Signature V4 and authenticated transport wiring; WebDAV Basic auth hardens incomplete credentials; shared bounded recovery classification is applied by authenticated transports for auth, rate limits, transient network, and permanent failures, with JUnit coverage |
 | Downloads | Implemented | Durable WorkManager jobs, notifications, measured speed and ETA, preemptive low-storage warnings using the worker reserve, pause/resume, Range validation, retries, cancellation, size limits, SHA-256 verification, and atomic install |
 | Install/uninstall | Partial | App-private verified install plus explicit save-safe uninstall confirmation with exact freed and retained byte counts; generalized production content adapters and physical storage validation remain |
 | Saves | Partial | Platform save-adapter registry, real directory discovery, reactive per-game save presence in Details, multi-artifact backup/restore, atomic checksum-protected snapshot manifests, import/export, retention, deterministic sync conflict resolution, and cross-game safety checks; credential-safe cloud sync contract with HTTPS/payload/offline guards and automated JUnit coverage; authenticated transport integration and physical emulator validation remain |
@@ -51,7 +51,7 @@ Status as of 29 August 2026:
 - Replace the diagnostic text payload with an authorized runnable homebrew fixture
 - Validate at least one real emulator adapter for every officially supported platform group
 - Validate additional production emulator adapters and apply graphics profiles to adapter launch arguments
-- Use the recovery policy in provider transports and complete end-to-end authenticated WebDAV/S3 integration testing
+- Complete end-to-end authenticated WebDAV/S3 integration testing and physical recovery validation
 - Wire the cloud-save contract into authenticated transports and validate real save adapters against production emulators
 - Complete physical disconnect/unplug safety tests for confirmed SAF migrations
 - Expand Compose instrumentation to accessibility, lifecycle, offline, and failure-recovery tests
@@ -66,7 +66,7 @@ Status as of 29 August 2026:
 
 The remaining work is tracked in these concrete groups:
 
-- Complete end-to-end authenticated WebDAV/S3 provider recovery and integration testing.
+- Complete end-to-end authenticated WebDAV/S3 provider integration and physical recovery testing.
 - Verify physical disconnect recovery for Settings-driven migrations.
 - Validate adapter-specific save discovery/import/export against production emulators and add authenticated cloud synchronization.
 - Apply graphics profiles to adapter-specific launch arguments where supported.
