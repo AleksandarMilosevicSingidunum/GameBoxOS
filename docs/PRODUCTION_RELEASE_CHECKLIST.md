@@ -1,9 +1,10 @@
 # Production release checklist
 
 - [ ] Configure production signing keys in protected CI secrets
-- [ ] Verify release APK checksum and provenance
-- [ ] Publish to the selected update channel
-- [ ] Validate rollback to the previous known-good version
-- [ ] Test migration from the latest alpha/beta build
-- [ ] Confirm diagnostics export excludes credentials and user content
+- [ ] Verify release APK checksum, size, and provenance manifest
+- [ ] Confirm the manifest tag and channel match the published release
+- [ ] Publish to selected update channel
+- [ ] Validate rollback to previous known-good version recorded in the manifest
+- [ ] Test migration from latest alpha/beta
+- [ ] Confirm diagnostics export excludes credentials/user content
 - [ ] Record release notes and recovery procedure

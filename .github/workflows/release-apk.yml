@@ -7,6 +7,10 @@ on:
         description: Existing GitHub release tag
         required: true
         default: v0.1.0-alpha.1
+      rollback_tag:
+        description: Previous known-good release tag for rollback metadata
+        required: false
+        default: ""
 
 permissions:
   contents: write
@@ -17,6 +21,7 @@ jobs:
     timeout-minutes: 20
     env:
       RELEASE_TAG: ${{ inputs.tag }}
+      ROLLBACK_TAG: ${{ inputs.rollback_tag }}
 
     steps:
       - name: Validate release tag
@@ -58,13 +63,44 @@ jobs:
           asset_name="GameBoxOS-$RELEASE_TAG-debug.apk"
           cp app/build/outputs/apk/debug/app-debug.apk "$asset_name"
           sha256sum "$asset_name" > "$asset_name.sha256"
+          sha256=$(cut -d ' ' -f1 "$asset_name.sha256")
+          size=$(stat -c%s "$asset_name")
+          case "$RELEASE_TAG" in
+            *-alpha*) channel="ALPHA" ;;
+            *-beta*) channel="BETA" ;;
+            *) channel="PRODUCTION" ;;
+          esac
+          if [[ -n "$ROLLBACK_TAG" && "$ROLLBACK_TAG" == "$RELEASE_TAG" ]]; then
+            echo "rollback tag must differ from release tag" >&2
+            exit 1
+          fi
+          python - "$asset_name" "$RELEASE_TAG" "$channel" "$sha256" "$size" "$ROLLBACK_TAG" <<'PY'
+          import json
+          import re
+          import sys
+          artifact, tag, channel, sha, size, rollback = sys.argv[1:]
+          if not re.fullmatch(r"v[0-9]+\.[0-9]+\.[0-9]+(?:-[A-Za-z0-9.-]+)?", tag):
+              raise SystemExit("invalid release tag")
+          manifest = {
+              "schemaVersion": 1,
+              "artifactName": artifact,
+              "releaseTag": tag,
+              "channel": channel,
+              "sha256": sha,
+              "sizeBytes": int(size),
+          }
+          if rollback:
+              if not re.fullmatch(r"v[0-9]+\.[0-9]+\.[0-9]+(?:-[A-Za-z0-9.-]+)?", rollback):
+                  raise SystemExit("invalid rollback tag")
+              manifest["rollbackReleaseTag"] = rollback
+          with open(f"GameBoxOS-{tag}-manifest.json", "w", encoding="utf-8") as stream:
+              json.dump(manifest, stream, indent=2)
+              stream.write("\n")
+          PY
 
-      - name: Attach APK to release
+      - name: Attach APK and provenance to release
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release upload "$RELEASE_TAG" \
-            "GameBoxOS-$RELEASE_TAG-debug.apk" \
-            "GameBoxOS-$RELEASE_TAG-debug.apk.sha256" \
-            --clobber
+          gh release upload "$RELEASE_TAG"             "GameBoxOS-$RELEASE_TAG-debug.apk"             "GameBoxOS-$RELEASE_TAG-debug.apk.sha256"             "GameBoxOS-$RELEASE_TAG-manifest.json"             --clobber
