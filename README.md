@@ -13,7 +13,7 @@ Status as of 29 August 2026:
 | Blueprint area | Status | Current implementation |
 | --- | --- | --- |
 | Android/Compose shell | Implemented | Dark GameBox theme, phone portrait/landscape and large DeX layouts |
-| Windows companion | Implemented foundation | Native .NET 8/WPF local-library launcher with search, favorites, atomic JSON state, safe file validation, and self-contained win-x64 CI artifact |
+| Windows companion | Implemented foundation | Native .NET 8/WPF local-library launcher with search, favorites, atomic JSON state, safe file validation, bounded HTTPS catalog synchronization that preserves local executable trust, and self-contained win-x64 CI artifact |
 | Controller navigation | Partial | Focusable cards, LB/RB tabs, Back/B handling, and focus restoration; physical-device and reconnect testing remain |
 | Primary UI | Implemented foundation | Home, Library, Store, Details, Downloads, Media, PC Hub, Settings, migration confirmation UI, accessible tab/card/progress/live-region semantics, saveable navigation/detail/focus restoration, JVM UI contracts, and compiled Compose instrumentation coverage |
 | Catalog and discovery | Implemented foundation | Room-backed catalog, search, platform/genre filters, favorites, cached authorized manifests, and a pinned MIT-licensed runnable Galaxy Patrol NES fixture |
@@ -59,7 +59,7 @@ Status as of 29 August 2026:
 - Complete Galaxy S23 Ultra DeX/HDMI/Ethernet/charging/thermal/reconnect soak testing
 - Configure signed production builds, update/rollback procedures, and recovery documentation
 - Complete the physical enclosure and hardware handoff
-- Expand the optional Windows companion with catalog synchronization and richer PC-runtime integrations
+- Expand the optional Windows companion with richer PC-runtime integrations
 - Validate physical LAN/controller streaming and host-probe behavior on target devices
 
 ## Blueprint implementation backlog
