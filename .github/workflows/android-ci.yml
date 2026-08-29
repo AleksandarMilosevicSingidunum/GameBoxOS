@@ -53,8 +53,8 @@ jobs:
       - name: Compile and run unit tests
         run: gradle --no-daemon testDebugUnitTest
 
-      - name: Build debug APK
-        run: gradle --no-daemon assembleDebug
+      - name: Build debug APK and instrumentation test APK
+        run: gradle --no-daemon assembleDebug assembleDebugAndroidTest
 
       - name: Record APK checksum
         run: |

@@ -31,8 +31,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.*
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
@@ -225,7 +224,9 @@ private fun NavButton(item: Destination, selected: Destination, onSelect: (Desti
             else MaterialTheme.colorScheme.surface
         ),
         modifier = Modifier.semantics {
-            contentDescription = if (item == selected) item.title + " tab, selected" else item.title + " tab"
+            contentDescription = item.title + " tab"
+            role = Role.Tab
+            this.selected = item == selected
         }
     ) { Text(item.title, maxLines = 1) }
 }
@@ -297,12 +298,18 @@ private fun CatalogScreen(
         }
         if (refreshState == CatalogRefreshState.ERROR) {
             Text("Refresh failed - cached catalog remains available",
-                modifier = Modifier.semantics { contentDescription = "Catalog refresh failed; cached catalog remains available" },
+                modifier = Modifier.semantics {
+                    contentDescription = "Catalog refresh failed; cached catalog remains available"
+                    liveRegion = LiveRegionMode.Assertive
+                },
                 color = MaterialTheme.colorScheme.error)
         }
         if (refreshState == CatalogRefreshState.SUCCESS) {
             Text("Catalog refreshed; local install and play state preserved",
-                modifier = Modifier.semantics { contentDescription = "Catalog refresh succeeded; local install and play state preserved" },
+                modifier = Modifier.semantics {
+                    contentDescription = "Catalog refresh succeeded; local install and play state preserved"
+                    liveRegion = LiveRegionMode.Polite
+                },
                 color = MaterialTheme.colorScheme.primary)
         }
         Spacer(Modifier.height(16.dp))
@@ -480,7 +487,7 @@ private fun GameRow(
 }
 
 @Composable
-private fun GameCard(
+internal fun GameCard(
     game: Game,
     modifier: Modifier,
     hero: Boolean = false,
@@ -500,7 +507,10 @@ private fun GameCard(
     Surface(
         modifier
             .focusRequester(focusRequester)
-            .semantics { contentDescription = GameBoxSemantics.GAME_CARD }
+            .semantics {
+                contentDescription = GameBoxSemantics.gameCardDescription(game, hero)
+                role = Role.Button
+            }
             .onFocusChanged {
                 focused = it.isFocused
                 if (it.isFocused) onFocused(game.id)
@@ -773,6 +783,18 @@ private fun DetailsScreen(
 }
 
 @Composable
+internal fun DownloadProgressIndicator(job: com.gamebox.os.domain.DownloadJob, modifier: Modifier = Modifier) {
+    LinearProgressIndicator(
+        progress = { job.progress },
+        modifier = modifier.semantics {
+            contentDescription = "Download progress for " + job.title
+            stateDescription = GameBoxSemantics.downloadProgressDescription(job)
+            progressBarRangeInfo = ProgressBarRangeInfo(job.progress, 0f..1f)
+        }
+    )
+}
+
+@Composable
 private fun DownloadsScreen(repository: GameRepository, downloadRepository: DownloadRepository, remoteDownloadController: RemoteDownloadController, compact: Boolean) {
     val jobs by downloadRepository.observeJobs().collectAsState()
     val context = LocalContext.current
@@ -790,7 +812,10 @@ private fun DownloadsScreen(repository: GameRepository, downloadRepository: Down
                 color = MaterialTheme.colorScheme.surface,
                 shape = RoundedCornerShape(14.dp),
                 modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp)
-                    .semantics { contentDescription = job.title + ", " + job.status.displayName() + (job.errorReason?.let { ", " + it } ?: "") }
+                    .semantics {
+                        contentDescription = GameBoxSemantics.downloadDescription(job)
+                        if (job.status == DownloadStatus.FAILED) liveRegion = LiveRegionMode.Assertive
+                    }
             ) {
                 Column(Modifier.padding(16.dp)) {
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
@@ -798,7 +823,7 @@ private fun DownloadsScreen(repository: GameRepository, downloadRepository: Down
                         Text(job.status.displayName())
                     }
                     Spacer(Modifier.height(8.dp))
-                    LinearProgressIndicator(progress = { job.progress }, modifier = Modifier.fillMaxWidth())
+                    DownloadProgressIndicator(job, Modifier.fillMaxWidth())
                     Spacer(Modifier.height(6.dp))
                     Text(
                         formatDownloadBytes(job.downloadedBytes) + " of " +
