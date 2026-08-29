@@ -66,8 +66,8 @@ internal class GameBoxUiState private constructor(
 }
 
 private val GameBoxUiStateSaver = listSaver<GameBoxUiState, String>(
-    save = GameBoxUiState::encode,
-    restore = GameBoxUiState::decode,
+    save = { state -> state.encode() },
+    restore = { values -> GameBoxUiState.decode(values) },
 )
 
 @Composable
