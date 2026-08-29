@@ -44,7 +44,7 @@ Status as of 30 August 2026:
 - Configurable Media/PC launch hubs with installed-only filtering, Moonlight network status/recent sessions, interactive PC host probing, and Android system-setting shortcuts
 - SAF external-library selection with persisted permissions, explicit migration confirmation dialog, retryable disconnect/read-only status, and non-destructive copy execution
 - Sanitized diagnostics export that excludes credentials, source URLs, checksums, paths, and save contents
-- Automated unit tests covering storage/provider/release/accessibility contracts plus compiled Compose migration/accessibility instrumentation APKs, debug APK builds, and self-contained Windows Companion builds with superseded-run cancellation and bounded Gradle/build steps
+- Automated unit tests covering storage/provider/release/accessibility contracts plus compiled Compose migration/accessibility instrumentation APKs, debug APK builds, self-contained Windows Companion builds, and green Android/Windows CI verification with superseded-run cancellation, bounded Gradle/build steps, and executable catalog-timeout coverage
 - Friendly emulator selection with validated graphics profiles, launch-time profile handoff, and unsupported-platform guidance
 - Deterministic release manifest generation containing APK hash, size, channel, and optional rollback tag
 - Network-aware offline catalog selection with a reactive accessible offline-mode banner
