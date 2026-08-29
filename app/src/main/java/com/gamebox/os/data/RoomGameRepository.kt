@@ -2,6 +2,8 @@ package com.gamebox.os.data
 
 import com.gamebox.os.catalog.CatalogProvider
 import com.gamebox.os.data.local.GameDao
+import com.gamebox.os.data.local.SaveRecordDao
+import com.gamebox.os.data.local.SaveRecordEntity
 import com.gamebox.os.data.local.toDomain
 import com.gamebox.os.data.local.toEntity
 import com.gamebox.os.domain.CatalogRefreshState
@@ -14,20 +16,27 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 class RoomGameRepository(
     private val dao: GameDao,
+    private val saveRecordDao: SaveRecordDao,
     private val catalogProvider: CatalogProvider,
     private val scope: CoroutineScope,
     private val onCatalogSeeded: suspend (Long) -> Unit,
     private val onCatalogRefreshed: suspend (Long) -> Unit
 ) : GameRepository {
-    private val games: StateFlow<List<Game>> = dao.observeAll()
-        .map { entities -> entities.map { it.toDomain() } }
-        .stateIn(scope, SharingStarted.Eagerly, emptyList())
+    private val games: StateFlow<List<Game>> = combine(
+        dao.observeAll(),
+        saveRecordDao.observeAll()
+    ) { entities, saveRecords ->
+        enrichGamesWithSaveRecords(
+            entities.map { it.toDomain() },
+            saveRecords
+        )
+    }.stateIn(scope, SharingStarted.Eagerly, emptyList())
     private val refreshState = MutableStateFlow(CatalogRefreshState.IDLE)
 
     init {
@@ -104,6 +113,20 @@ class RoomGameRepository(
         scope.launch {
             dao.recordPlaySession(id.value, lastPlayed, minutesPlayed.coerceAtLeast(0))
         }
+    }
+}
+
+fun enrichGamesWithSaveRecords(
+    games: List<Game>,
+    saveRecords: List<SaveRecordEntity>
+): List<Game> {
+    val savesByGameId = saveRecords.associateBy { it.gameId }
+    return games.map { game ->
+        val save = savesByGameId[game.id.value]
+        game.copy(
+            savePresent = save != null,
+            saveSizeBytes = save?.sizeBytes?.coerceAtLeast(0L) ?: 0L
+        )
     }
 }
 
