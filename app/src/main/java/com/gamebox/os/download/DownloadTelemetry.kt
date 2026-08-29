@@ -100,8 +100,8 @@ internal fun formatCapacityWarning(warning: DownloadCapacityWarning): String =
 private fun formatEta(seconds: Long): String {
     val safe = seconds.coerceAtLeast(0L)
     return when {
-        safe < 60L -> safe + " sec remaining"
-        safe < 3600L -> (safe / 60L) + " min remaining"
+        safe < 60L -> safe.toString() + " sec remaining"
+        safe < 3600L -> (safe / 60L).toString() + " min remaining"
         else -> String.format(Locale.US, "%.1f hr remaining", safe / 3600.0)
     }
 }
