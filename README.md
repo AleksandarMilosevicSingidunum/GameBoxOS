@@ -16,7 +16,7 @@ Status as of 29 August 2026:
 | Controller navigation | Partial | Focusable cards, LB/RB tabs, Back/B handling, and focus restoration; physical-device and reconnect testing remain |
 | Primary UI | Implemented foundation | Home, Library, Store, Details, Downloads, Media, PC Hub, and Settings |
 | Catalog and discovery | Implemented foundation | Room-backed catalog, search, platform/genre filters, favorites, cached authorized manifests |
-| Remote providers | Partial | Configurable HTTPS catalog with strict validation, offline cache, and out-of-band credential abstraction; WebDAV/S3 network clients remain |
+| Remote providers | Partial | Configurable HTTPS catalog with strict validation, offline cache, out-of-band credential abstraction, and optional Basic auth; WebDAV/S3 network clients remain |
 | Downloads | Implemented foundation | Durable WorkManager jobs, notifications, low-space reserve, pause/resume, Range validation, retries, cancellation, size limits, SHA-256 verification, and atomic install |
 | Install/uninstall | Partial | App-private verified install and content-only uninstall prototype; full storage-volume and freed-space UX remain |
 | Saves | Partial | Persistent save records, checksum-protected backup/restore, import/export, retention prototype, and deterministic sync conflict resolver; real emulator save adapters and cloud transport remain |
