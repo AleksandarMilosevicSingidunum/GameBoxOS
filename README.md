@@ -21,7 +21,7 @@ Status as of 29 August 2026:
 | Install/uninstall | Partial | App-private verified install and content-only uninstall prototype; full storage-volume and freed-space UX remain |
 | Saves | Partial | Persistent save records, checksum-protected backup/restore, import/export, retention prototype, deterministic sync conflict resolver, and cross-game safety checks; real emulator save adapters and cloud transport remain |
 | Emulator integration | Partial | Allowlisted emulator handoff with per-game package selection and graphics profile persistence exposed in Details, read-only FileProvider access, return tracking, and capability registry; production adapter validation remains |
-| Media and PC | Partial | Installed-app detection and safe launch shortcuts for media, Moonlight, Winlator, Termux, Files, browser, and Android settings |
+| Media and PC | Partial | Installed-app detection, typed availability states, and safe launch shortcuts for media, Moonlight, Winlator, Termux, Files, browser, and Android settings |
 | Offline operation | Partial | Cached catalog and persistent local state; full airplane-mode acceptance testing remains |
 | Diagnostics | Partial | Sanitized export report and visible download errors; structured log collection and recovery bundles remain |
 | CI and releases | Partial | Unit tests, debug APK builds, SHA-256 artifacts, and alpha release workflow; signed production builds, rollback, and update channels remain |
