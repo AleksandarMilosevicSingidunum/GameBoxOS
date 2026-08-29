@@ -19,7 +19,7 @@ Status as of 29 August 2026:
 | Remote providers | Partial | Configurable HTTPS catalog with strict validation and offline cache; WebDAV/S3/authenticated providers remain |
 | Downloads | Implemented foundation | Durable WorkManager jobs, notifications, low-space reserve, pause/resume, Range validation, retries, cancellation, size limits, SHA-256 verification, and atomic install |
 | Install/uninstall | Partial | App-private verified install and content-only uninstall prototype; full storage-volume and freed-space UX remain |
-| Saves | Partial | Persistent save records, checksum-protected backup/restore, import/export, and retention prototype; real emulator save adapters and cloud sync remain |
+| Saves | Partial | Persistent save records, checksum-protected backup/restore, import/export, retention prototype, and deterministic sync conflict resolver; real emulator save adapters and cloud transport remain |
 | Emulator integration | Partial | Allowlisted emulator handoff with per-game package selection and graphics profile persistence exposed in Details, read-only FileProvider access, return tracking, and capability registry; production adapter validation remains |
 | Media and PC | Partial | Installed-app detection and safe launch shortcuts for media, Moonlight, Winlator, Termux, Files, browser, and Android settings |
 | Offline operation | Partial | Cached catalog and persistent local state; full airplane-mode acceptance testing remains |
@@ -51,7 +51,7 @@ Status as of 29 August 2026:
 - Validate at least one real emulator adapter for every officially supported platform group
 - Validate additional production emulator adapters and apply graphics profiles to adapter launch arguments
 - Implement authenticated WebDAV/S3-style providers and provider recovery guidance
-- Add real emulator save discovery, cloud synchronization, and conflict handling
+- Add real emulator save discovery and authenticated cloud transport
 - Add confirmed content migration to the selected SAF/SSD library and complete physical disconnect/unplug safety tests
 - Add Compose instrumentation, accessibility, lifecycle, migration, offline, and failure-recovery tests
 - Complete physical controller testing on Galaxy A53
