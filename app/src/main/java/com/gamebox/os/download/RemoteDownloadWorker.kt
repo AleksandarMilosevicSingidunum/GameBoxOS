@@ -32,20 +32,22 @@ class RemoteDownloadWorker(
         val maxBytes = inputData.getLong(KEY_MAX_BYTES, -1L)
         if (maxBytes <= 0L) return@withContext failure("invalid size limit")
 
-        val requiredSpace = maxBytes + STORAGE_RESERVE_BYTES
+        val staging = FileStagingTarget(
+            applicationContext.filesDir.resolve(AssetDownloadWorker.INSTALL_ROOT),
+            relativePath
+        )
+        val remainingCapacity = (maxBytes - staging.stagedBytes).coerceAtLeast(0L)
+        val requiredSpace = remainingCapacity + STORAGE_RESERVE_BYTES
         if (applicationContext.filesDir.usableSpace < requiredSpace) {
             return@withContext failure("insufficient storage")
         }
 
         val result = runCatching {
-            TransferEngine().transfer(
+            ResumableTransferEngine().transfer(
                 source = HttpsTransferSource(sourceUrl, totalBytes = null, expectedSha256 = checksum),
-                staging = FileStagingTarget(
-                    applicationContext.filesDir.resolve(AssetDownloadWorker.INSTALL_ROOT),
-                    relativePath
-                ),
+                staging = staging,
                 maxBytes = maxBytes,
-                isCancelled = { isStopped },
+                isPausedOrCancelled = { isStopped },
                 onProgress = {
                     setForegroundAsync(
                         createForegroundInfo(gameId, it.bytesTransferred, it.totalBytes ?: -1L)
@@ -61,14 +63,15 @@ class RemoteDownloadWorker(
         }.getOrElse { return@withContext failure(it.message ?: "download configuration failed") }
 
         when (result) {
-            is TransferResult.Success -> {
+            is ResumableTransferResult.Success -> {
                 showCompletionNotification(gameId, result.bytesTransferred)
                 Result.success(workDataOf(KEY_BYTES_TRANSFERRED to result.bytesTransferred))
             }
-            is TransferResult.Cancelled -> failure("cancelled")
-            is TransferResult.ChecksumMismatch -> failure("checksum mismatch")
-            is TransferResult.SizeLimitExceeded -> failure("size limit exceeded")
-            is TransferResult.Failed ->
+            is ResumableTransferResult.Paused ->
+                failure("paused")
+            is ResumableTransferResult.ChecksumMismatch -> failure("checksum mismatch")
+            is ResumableTransferResult.SizeLimitExceeded -> failure("size limit exceeded")
+            is ResumableTransferResult.Failed ->
                 if (runAttemptCount < MAX_RETRIES) Result.retry() else failure(result.reason)
         }
     }
@@ -136,9 +139,10 @@ class RemoteDownloadWorker(
 }
 
 class RemoteDownloadScheduler(context: Context) {
-    private val workManager = WorkManager.getInstance(context.applicationContext)
+    private val applicationContext = context.applicationContext
+    private val workManager = WorkManager.getInstance(applicationContext)
 
-    fun enqueue(game: Game) {
+    fun enqueue(game: Game, replace: Boolean = false) {
         val source = requireNotNull(game.sourceUrl) { "Game has no authorized source" }
         val checksum = requireNotNull(game.expectedSha256) { "Game has no checksum" }
         require(game.id.value.matches(Regex("^[A-Za-z0-9._-]+$"))) { "Game ID is unsafe for storage" }
@@ -162,13 +166,21 @@ class RemoteDownloadScheduler(context: Context) {
             .build()
         workManager.enqueueUniqueWork(
             RemoteDownloadWorker.TAG + ":" + game.id.value,
-            ExistingWorkPolicy.KEEP,
+            if (replace) ExistingWorkPolicy.REPLACE else ExistingWorkPolicy.KEEP,
             request
         )
     }
 
     fun cancel(game: Game) {
         workManager.cancelUniqueWork(RemoteDownloadWorker.TAG + ":" + game.id.value)
+    }
+
+    fun discardPartial(game: Game) {
+        val relativePath = "remote/" + game.id.value + "/content.bin"
+        FileStagingTarget(
+            applicationContext.filesDir.resolve(AssetDownloadWorker.INSTALL_ROOT),
+            relativePath
+        ).discard()
     }
 }
 

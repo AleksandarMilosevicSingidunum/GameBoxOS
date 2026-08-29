@@ -679,6 +679,16 @@ private fun DownloadsScreen(repository: GameRepository, downloadRepository: Down
                     val remoteGame = repository.game(job.gameId)?.takeIf { it.sourceUrl != null }
                     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         if (remoteGame != null) {
+                            if (job.status == DownloadStatus.DOWNLOADING) {
+                                OutlinedButton(onClick = { remoteDownloadController.pause(remoteGame) }) {
+                                    Text("Pause")
+                                }
+                            }
+                            if (job.status == DownloadStatus.PAUSED) {
+                                Button(onClick = { remoteDownloadController.resume(remoteGame) }) {
+                                    Text("Resume")
+                                }
+                            }
                             if (job.status in setOf(DownloadStatus.FAILED, DownloadStatus.CANCELLED)) {
                                 Button(onClick = { remoteDownloadController.install(remoteGame) }) {
                                     Text("Retry")
