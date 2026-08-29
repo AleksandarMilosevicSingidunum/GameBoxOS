@@ -2,7 +2,7 @@
 
 GameBox OS is a controller-first Android living-room shell for a docked phone. It presents one coherent interface for a local game library, authorized or homebrew catalog, media launchers, streaming tools, and Samsung DeX.
 
-GameBox is an Android/DeX application, not a custom ROM or emulator. Game sources must be user-owned backups, homebrew, freeware, open-source, or otherwise authorized content.
+GameBox is an Android/DeX application, not a custom ROM or emulator. Game sources must be user-owned backups, homebrew, freeware, open-source, or otherwise authorized content. An optional native Windows Companion is provided for local Windows-library launching; it does not replace the Android/DeX shell.
 
 ## Current development status
 
@@ -13,6 +13,7 @@ Status as of 29 August 2026:
 | Blueprint area | Status | Current implementation |
 | --- | --- | --- |
 | Android/Compose shell | Implemented | Dark GameBox theme, phone portrait/landscape and large DeX layouts |
+| Windows companion | Implemented foundation | Native .NET 8/WPF local-library launcher with search, favorites, atomic JSON state, safe file validation, and self-contained win-x64 CI artifact |
 | Controller navigation | Partial | Focusable cards, LB/RB tabs, Back/B handling, and focus restoration; physical-device and reconnect testing remain |
 | Primary UI | Implemented foundation | Home, Library, Store, Details, Downloads, Media, PC Hub, and Settings |
 | Catalog and discovery | Implemented foundation | Room-backed catalog, search, platform/genre filters, favorites, cached authorized manifests |
@@ -42,7 +43,7 @@ Status as of 29 August 2026:
 - Configurable Media/PC launch hubs with installed-only filtering and Android system-setting shortcuts
 - SAF external-library selection with persisted permissions and non-destructive disconnect/read-only status
 - Sanitized diagnostics export that excludes credentials, source URLs, checksums, paths, and save contents
-- Automated unit tests and debug APK builds
+- Automated unit tests, debug APK builds, and self-contained Windows Companion builds
 - Friendly emulator selection with validated graphics profiles, launch-time profile handoff, and unsupported-platform guidance
 
 ## Important remaining work for Blueprint 1.0
@@ -58,6 +59,7 @@ Status as of 29 August 2026:
 - Complete Galaxy S23 Ultra DeX/HDMI/Ethernet/charging/thermal/reconnect soak testing
 - Add signed production builds, update/rollback procedures, and recovery documentation
 - Complete the physical enclosure and hardware handoff
+- Expand the optional Windows companion with catalog synchronization and richer PC-runtime integrations
 
 ## Blueprint implementation backlog
 
@@ -82,6 +84,8 @@ CI runs:
 testDebugUnitTest
 assembleDebug
 ```
+
+The optional Windows Companion runs its core test harness and publishes a self-contained `win-x64` ZIP from `.github/workflows/windows-ci.yml`.
 
 Each CI run produces a temporary debug APK and SHA-256 artifact. Release APKs are debug-signed development builds until production signing is configured.
 
