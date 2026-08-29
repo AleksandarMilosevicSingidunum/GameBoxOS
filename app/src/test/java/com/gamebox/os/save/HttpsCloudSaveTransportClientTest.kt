@@ -26,7 +26,7 @@ class HttpsCloudSaveTransportClientTest {
 
     @Test
     fun uploadsBytesWithBasicAuthenticationAndNoRedirects() = runBlocking {
-        val connection = FakeConnection(responseCode = 204)
+        val connection = FakeConnection(status = 204)
         val client = HttpsCloudSaveTransportClient(connectionFactory = { connection })
 
         client.upload(request, byteArrayOf(1, 2, 3, 4), CatalogCredentials("player", "secret"))
@@ -40,7 +40,7 @@ class HttpsCloudSaveTransportClientTest {
 
     @Test
     fun downloadsBoundedBytesWithS3Signature() = runBlocking {
-        val connection = FakeConnection(responseCode = 200, response = byteArrayOf(9, 8, 7))
+        val connection = FakeConnection(status = 200, response = byteArrayOf(9, 8, 7))
         val signer = RecordingSigner()
         val client = HttpsCloudSaveTransportClient(
             s3Signer = signer,
@@ -62,7 +62,7 @@ class HttpsCloudSaveTransportClientTest {
 
     @Test
     fun rejectsOversizedDownloadsAndIncompleteCredentials() {
-        val oversized = FakeConnection(responseCode = 200, response = ByteArray(5))
+        val oversized = FakeConnection(status = 200, response = ByteArray(5))
         assertThrows(IllegalArgumentException::class.java) {
             runBlocking {
                 HttpsCloudSaveTransportClient(maxResponseBytes = 4, connectionFactory = { oversized })
