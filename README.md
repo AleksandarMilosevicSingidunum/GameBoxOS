@@ -76,7 +76,7 @@ Each CI run produces a temporary debug APK and SHA-256 artifact. Release APKs ar
 
 - Never install a remote file before checksum verification succeeds.
 - Never follow untrusted catalog or download redirects.
-- Never allow catalog credentials inside URLs.
+- Never allow catalog credentials inside URLs; resolve them through the credential store and send only over HTTPS.
 - Never let an install path escape GameBox app-private storage.
 - Cancel removes only that job's partial content.
 - Uninstall keeps saves, metadata, favorites, and play history by default.
