@@ -59,6 +59,10 @@ class RoomGameRepository(
         }
     }
 
+    override fun setFavorite(id: GameId, favorite: Boolean) {
+        scope.launch { dao.updateFavorite(id.value, favorite) }
+    }
+
     override fun advanceInstall(id: GameId) {
         val game = game(id) ?: return
         val next = when (game.state) {
@@ -106,7 +110,8 @@ fun mergeCatalogPreservingLocalState(existing: List<Game>, incoming: List<Game>)
         if (local == null) remote else remote.copy(
             state = local.state,
             lastPlayed = local.lastPlayed,
-            minutesPlayed = local.minutesPlayed
+            minutesPlayed = local.minutesPlayed,
+            favorite = local.favorite
         )
     }
     return mergedIncoming + existing.filter { it.id !in incomingIds }
