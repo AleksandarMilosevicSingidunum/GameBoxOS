@@ -19,5 +19,9 @@ data class CatalogProviderConfig(
             is CatalogTransport.S3 -> value.endpoint
         }
         require(endpoint.startsWith("https://", ignoreCase = true)) { "catalog transports require HTTPS" }
+        if (transport is CatalogTransport.S3) {
+            require(transport.bucket.isNotBlank()) { "S3 bucket must not be blank" }
+            require(!transport.bucket.contains("/") && !transport.bucket.contains(" ")) { "S3 bucket must be a single name" }
+        }
     }
 }
