@@ -210,7 +210,10 @@ private fun NavButton(item: Destination, selected: Destination, onSelect: (Desti
         colors = ButtonDefaults.buttonColors(
             containerColor = if (item == selected) MaterialTheme.colorScheme.primary
             else MaterialTheme.colorScheme.surface
-        )
+        ),
+        modifier = Modifier.semantics {
+            contentDescription = if (item == selected) item.title + " tab, selected" else item.title + " tab"
+        }
     ) { Text(item.title, maxLines = 1) }
 }
 
