@@ -59,6 +59,10 @@ class RoomGameRepository(
         }
     }
 
+    override fun setEmulatorSettings(id: GameId, packageName: String?, graphicsProfile: String) {
+        scope.launch { dao.updateEmulatorSettings(id.value, packageName, graphicsProfile) }
+    }
+
     override fun setFavorite(id: GameId, favorite: Boolean) {
         scope.launch { dao.updateFavorite(id.value, favorite) }
     }
@@ -111,7 +115,9 @@ fun mergeCatalogPreservingLocalState(existing: List<Game>, incoming: List<Game>)
             state = local.state,
             lastPlayed = local.lastPlayed,
             minutesPlayed = local.minutesPlayed,
-            favorite = local.favorite
+            favorite = local.favorite,
+            emulatorPackage = local.emulatorPackage,
+            graphicsProfile = local.graphicsProfile
         )
     }
     return mergedIncoming + existing.filter { it.id !in incomingIds }
