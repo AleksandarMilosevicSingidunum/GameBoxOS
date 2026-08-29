@@ -66,7 +66,9 @@ import com.gamebox.os.storage.ExternalStorageState
 import com.gamebox.os.settings.SettingsRepository
 import com.gamebox.os.catalog.validateAuthorizedCatalogUrl
 import com.gamebox.os.diagnostics.DiagnosticsDevice
+import com.gamebox.os.diagnostics.DiagnosticEventCollector
 import com.gamebox.os.diagnostics.buildDiagnosticsReport
+import com.gamebox.os.diagnostics.buildDiagnosticsRecoveryBundle
 import kotlinx.coroutines.launch
 
 private enum class Destination(val title: String) {
@@ -1136,6 +1138,7 @@ private fun SettingsScreen(
     val diagnosticGames by gameRepository.observeGames().collectAsState()
     val diagnosticDownloads by downloadRepository.observeJobs().collectAsState()
     val scope = rememberCoroutineScope()
+    val diagnosticEvents = remember { DiagnosticEventCollector() }
     val externalStorageController = remember(context, settingsRepository) {
         ExternalStorageController(context, settingsRepository)
     }
@@ -1180,16 +1183,23 @@ private fun SettingsScreen(
         games = diagnosticGames,
         downloads = diagnosticDownloads
     )
+    val diagnosticsBundle = remember(diagnosticsReport, diagnosticEvents.snapshot()) {
+        buildDiagnosticsRecoveryBundle(diagnosticsReport, diagnosticEvents.snapshot())
+    }
     val diagnosticsLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.CreateDocument("text/plain")
+        ActivityResultContracts.CreateDocument("application/zip")
     ) { uri ->
         if (uri != null) {
             val result = runCatching {
-                context.contentResolver.openOutputStream(uri, "w")?.bufferedWriter()?.use {
-                    it.write(diagnosticsReport)
-                } ?: error("Unable to open diagnostics destination")
+                context.contentResolver.openOutputStream(uri, "w")?.use { it.write(diagnosticsBundle) }
+                    ?: error("Unable to open diagnostics destination")
             }
-            catalogMessage = if (result.isSuccess) "Sanitized diagnostics exported"
+            if (result.isSuccess) {
+                diagnosticEvents.record(com.gamebox.os.diagnostics.DiagnosticLevel.INFO, "diagnostics_export", "Recovery bundle exported")
+            } else {
+                diagnosticEvents.record(com.gamebox.os.diagnostics.DiagnosticLevel.ERROR, "diagnostics_export", result.exceptionOrNull()?.message ?: "Export failed")
+            }
+            catalogMessage = if (result.isSuccess) "Sanitized recovery bundle exported"
             else "Diagnostics export failed"
         }
     }
@@ -1326,15 +1336,15 @@ private fun SettingsScreen(
         Spacer(Modifier.height(18.dp))
         SettingsSectionHeader("Developer and diagnostics")
         Text(
-            "Export a sanitized report when troubleshooting. Credentials, remote URLs, checksums, paths, and save contents are excluded.",
+            "Export a sanitized recovery bundle when troubleshooting. Credentials, remote URLs, checksums, paths, and save contents are excluded.",
             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.62f),
             fontSize = 12.sp
         )
         OutlinedButton(
-            onClick = { diagnosticsLauncher.launch("gamebox-diagnostics.txt") },
+            onClick = { diagnosticsLauncher.launch("gamebox-diagnostics.zip") },
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text("Export sanitized diagnostics", modifier = Modifier.fillMaxWidth())
+            Text("Export sanitized recovery bundle", modifier = Modifier.fillMaxWidth())
         }
         Spacer(Modifier.height(18.dp))
         Text("Authorized catalog provider", fontWeight = FontWeight.Bold)

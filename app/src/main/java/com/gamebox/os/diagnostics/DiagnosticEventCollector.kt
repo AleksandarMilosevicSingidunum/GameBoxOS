@@ -13,7 +13,7 @@ class DiagnosticEventCollector(
     private val events = mutableListOf<DiagnosticEvent>()
 
     fun record(level: DiagnosticLevel, code: String, message: String) {
-        events += DiagnosticEvent(level, code, sanitize(message), nowMillis())
+        events += DiagnosticEvent(level, sanitize(code), sanitize(message), nowMillis())
         if (events.size > maxEvents) events.removeAt(0)
     }
 
@@ -23,9 +23,5 @@ class DiagnosticEventCollector(
 
     fun clear() { events.clear() }
 
-    private fun sanitize(message: String): String = message
-        .replace(Regex("https?://\\S+"), "<url>")
-        .replace(Regex("(?i)(password|secret|token|key)=\\S+")) { match ->
-            match.value.substringBefore("=") + "=<redacted>"
-        }
+    private fun sanitize(message: String): String = sanitizeDiagnosticToken(message)
 }
