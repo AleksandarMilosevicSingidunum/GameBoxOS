@@ -20,6 +20,29 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
+
+    val keystorePath = System.getenv("GAMEBOX_KEYSTORE_PATH")
+    val keystorePassword = System.getenv("GAMEBOX_KEYSTORE_PASSWORD")
+    val keyAliasValue = System.getenv("GAMEBOX_KEY_ALIAS")
+    val keyPasswordValue = System.getenv("GAMEBOX_KEY_PASSWORD")
+    val signingConfigured = listOf(keystorePath, keystorePassword, keyAliasValue, keyPasswordValue)
+        .all { !it.isNullOrBlank() }
+
+    if (signingConfigured) {
+        signingConfigs {
+            create("production") {
+                storeFile = file(keystorePath!!)
+                storePassword = keystorePassword
+                keyAlias = keyAliasValue
+                keyPassword = keyPasswordValue
+            }
+        }
+        buildTypes {
+            getByName("release") {
+                signingConfig = signingConfigs.getByName("production")
+            }
+        }
+    }
 }
 dependencies {
     val composeBom = platform("androidx.compose:compose-bom:2026.06.00")
