@@ -1,5 +1,12 @@
 package com.gamebox.os.domain
 
+object GraphicsProfiles {
+    const val COMPATIBILITY = "Compatibility"
+    const val BALANCED = "Balanced"
+    const val PERFORMANCE = "Performance"
+    val ALL = setOf(COMPATIBILITY, BALANCED, PERFORMANCE)
+}
+
 @JvmInline
 value class GameId(val value: String)
 
