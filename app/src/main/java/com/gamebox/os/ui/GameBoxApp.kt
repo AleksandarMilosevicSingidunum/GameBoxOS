@@ -85,16 +85,17 @@ fun GameBoxApp(
     settingsRepository: SettingsRepository
 ) {
     val games by repository.observeGames().collectAsState()
-    var destination by remember { mutableStateOf(Destination.HOME) }
-    var selectedGameId by remember { mutableStateOf<GameId?>(null) }
-    val focusMemory = remember { GameFocusMemory() }
-    val restorableGameId = focusMemory.restore(destination.name, games.map { it.id })
-    val rememberGameFocus: (GameId) -> Unit = { focusMemory.remember(destination.name, it) }
+    val uiState = rememberGameBoxUiState()
+    val destination = runCatching { Destination.valueOf(uiState.destination) }
+        .getOrDefault(Destination.HOME)
+    val selectedGameId = uiState.selectedGameId?.let(::GameId)
+    val restorableGameId = uiState.restoreFocus(destination.name, games.map { it.id.value })?.let(::GameId)
+    val rememberGameFocus: (GameId) -> Unit = { uiState.rememberFocus(destination.name, it.value) }
 
     fun moveTab(offset: Int) {
-        selectedGameId = null
         val tabs = Destination.entries
-        destination = tabs[(destination.ordinal + offset + tabs.size) % tabs.size]
+        val target = tabs[(destination.ordinal + offset + tabs.size) % tabs.size]
+        uiState.openDestination(target.name)
     }
 
     BoxWithConstraints(
@@ -105,7 +106,7 @@ fun GameBoxApp(
                     AndroidKeyEvent.KEYCODE_BUTTON_L1 -> { moveTab(-1); true }
                     AndroidKeyEvent.KEYCODE_BUTTON_R1 -> { moveTab(1); true }
                     AndroidKeyEvent.KEYCODE_BACK, AndroidKeyEvent.KEYCODE_BUTTON_B ->
-                        if (selectedGameId != null) { selectedGameId = null; true } else false
+                        if (selectedGameId != null) { uiState.clearSelection(); true } else false
                     else -> false
                 }
             }
@@ -118,7 +119,7 @@ fun GameBoxApp(
                 vertical = if (compact) 12.dp else 28.dp
             )
         ) {
-            TopNav(destination, compact) { destination = it; selectedGameId = null }
+            TopNav(destination, compact) { uiState.openDestination(it.name) }
             Spacer(Modifier.height(if (compact) 14.dp else 28.dp))
 
             Box(Modifier.weight(1f).fillMaxWidth()) {
@@ -133,23 +134,23 @@ fun GameBoxApp(
                         gameLaunchController,
                         saveSafetyController,
                         compact = compact,
-                        onBack = { selectedGameId = null }
+                        onBack = uiState::clearSelection
                     )
                 } else {
                     when (destination) {
                         Destination.HOME -> HomeScreen(
                             games, restorableGameId, rememberGameFocus, compact
-                        ) { selectedGameId = it.id }
+                        ) { uiState.openGame(it.id.value) }
                         Destination.LIBRARY -> CollectionScreen(
                             "Your Library", "Installed and ready offline",
                             games.filter { it.state == InstallState.INSTALLED || it.state == InstallState.UPDATE_AVAILABLE },
                             restorableGameId,
                             rememberGameFocus,
                             compact
-                        ) { selectedGameId = it.id }
+                        ) { uiState.openGame(it.id.value) }
                         Destination.STORE -> CatalogScreen(
                             repository, games, restorableGameId, rememberGameFocus, compact
-                        ) { selectedGameId = it.id }
+                        ) { uiState.openGame(it.id.value) }
                         Destination.DOWNLOADS -> DownloadsScreen(repository, downloadRepository, remoteDownloadController, compact)
                         Destination.MEDIA -> AppHubScreen(
                             "Media",
