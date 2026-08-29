@@ -48,4 +48,9 @@ class EmulatorSettingsTest {
         assertEquals("RetroArch", registry.displayName("com.retroarch.aarch64"))
         assertEquals("PPSSPP", registry.displayName("org.ppsspp.ppsspp"))
     }
+    @Test
+    fun androidPlatformHasNoExternalEmulatorOptions() {
+        val game = Game(GameId("native"), "Native", "Android", 2024, "Arcade", 1, InstallState.INSTALLED)
+        assertEquals(emptyList<String>(), registry.optionsFor(game))
+    }
 }
