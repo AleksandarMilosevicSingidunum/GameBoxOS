@@ -2,23 +2,79 @@
 
 GameBox OS is a controller-first Android living-room shell for a docked phone. It presents one coherent interface for a local game library, authorized or homebrew catalog, media launchers, streaming tools, and Samsung DeX.
 
-The current 0.1 day-zero shell includes:
+GameBox is an Android/DeX application, not a custom ROM or emulator. Game sources must be user-owned backups, homebrew, freeware, open-source, or otherwise authorized content.
 
-- Kotlin and Jetpack Compose
-- 16:9 landscape-first layout
-- controller-focusable navigation and game cards
-- Home, Library, and Store mock screens
-- explicit install-state model and safe fixture content
-- verified app-private test installation with WorkManager
-- save-safe content uninstall, reinstall, and user-controlled backup import/export
-- allowlisted emulator handoff with checksum re-verification
-- persistent catalog, download, save, and play-session state
-- automated unit tests and debug APK builds
+## Current development status
 
-## Run
+This repository is an active pre-1.0 implementation of the August 2026 **GameBox Development Blueprint**. The blueprint is a six-month working plan, not a claim that every item is already complete.
 
-Open the repository root in the current stable Android Studio, install Android SDK 36, sync Gradle, and run the app on an emulator or Galaxy A53. Pair a controller and verify that core navigation works without touch.
+Status as of 29 August 2026:
 
-Every CI run also produces a 14-day `gamebox-os-debug-<commit>` artifact containing the unsigned debug APK and its SHA-256 checksum. Use debug artifacts for development testing only; release signing is intentionally not configured yet.
+| Blueprint area | Status | Current implementation |
+| --- | --- | --- |
+| Android/Compose shell | Implemented | Dark GameBox theme, phone portrait/landscape and large DeX layouts |
+| Controller navigation | Partial | Focusable cards, LB/RB tabs, Back/B handling, and focus restoration; physical-device and reconnect testing remain |
+| Primary UI | Implemented foundation | Home, Library, Store, Details, Downloads, Media, PC Hub, and Settings |
+| Catalog and discovery | Implemented foundation | Room-backed catalog, search, platform/genre filters, favorites, cached authorized manifests |
+| Remote providers | Partial | Configurable HTTPS catalog with strict validation and offline cache; WebDAV/S3/authenticated providers remain |
+| Downloads | Implemented foundation | Durable WorkManager jobs, notifications, low-space reserve, pause/resume, Range validation, retries, cancellation, size limits, SHA-256 verification, and atomic install |
+| Install/uninstall | Partial | App-private verified install and content-only uninstall prototype; full storage-volume and freed-space UX remain |
+| Saves | Partial | Persistent save records, checksum-protected backup/restore, import/export, and retention prototype; real emulator save adapters and cloud sync remain |
+| Emulator integration | Partial | Allowlisted RetroArch handoff, read-only FileProvider access, return tracking, and capability registry; production platform matrix remains |
+| Media and PC | Partial | Installed-app detection and safe launch shortcuts for media, Moonlight, Winlator, Termux, Files, browser, and Android settings |
+| Offline operation | Partial | Cached catalog and persistent local state; full airplane-mode acceptance testing remains |
+| Diagnostics | Partial | Sanitized export report and visible download errors; structured log collection and recovery bundles remain |
+| CI and releases | Partial | Unit tests, debug APK builds, SHA-256 artifacts, and alpha release workflow; signed production builds, rollback, and update channels remain |
+| Target hardware | Not validated | Galaxy A53 controller testing and Galaxy S23 Ultra/DeX/HDMI/Ethernet/thermal/SSD soak testing require physical hardware |
+| Enclosure/handoff | Not started | Hardware enclosure, hub, cooling, cabling, and recovery-button work follows software maturity |
 
-GameBox is an Android and DeX shell, not a custom ROM or emulator. Sources are limited to user-owned backups, homebrew, freeware, and otherwise authorized content.
+## Implemented highlights
+
+- Kotlin, Jetpack Compose, Room, DataStore, and WorkManager
+- Responsive normal-phone and 16:9 living-room layouts
+- Persistent catalog, install state, favorites, play history, downloads, and save records
+- Authorized HTTPS catalog configuration with bounded responses and atomic offline caching
+- Verified remote download pipeline with true pause/resume and safe job-scoped cleanup
+- App-private staging; content is promoted only after complete SHA-256 verification
+- Download notifications, byte progress, failure reasons, retry, and cancellation
+- Save-safe uninstall and user-controlled backup import/export
+- Media/PC launch hubs and Android system-setting shortcuts
+- Sanitized diagnostics export that excludes credentials, source URLs, checksums, paths, and save contents
+- Automated unit tests and debug APK builds
+
+## Important remaining work for Blueprint 1.0
+
+- Replace the diagnostic text payload with an authorized runnable homebrew fixture
+- Validate at least one real emulator adapter for every officially supported platform group
+- Add per-game emulator selection and graphics profiles
+- Implement authenticated WebDAV/S3-style providers and provider recovery guidance
+- Add real emulator save discovery, cloud synchronization, and conflict handling
+- Add external SSD/Storage Access Framework game-library support and disconnect safety
+- Add Compose instrumentation, accessibility, lifecycle, migration, offline, and failure-recovery tests
+- Complete physical controller testing on Galaxy A53
+- Complete Galaxy S23 Ultra DeX/HDMI/Ethernet/charging/thermal/reconnect soak testing
+- Add signed production builds, update/rollback procedures, and recovery documentation
+- Complete the physical enclosure and hardware handoff
+
+## Build and test
+
+Open the repository root in the current stable Android Studio, install Android SDK 36, sync Gradle, and run the app on an emulator or Android phone.
+
+CI runs:
+
+```text
+testDebugUnitTest
+assembleDebug
+```
+
+Each CI run produces a temporary debug APK and SHA-256 artifact. Release APKs are debug-signed development builds until production signing is configured.
+
+## Safety invariants
+
+- Never install a remote file before checksum verification succeeds.
+- Never follow untrusted catalog or download redirects.
+- Never allow catalog credentials inside URLs.
+- Never let an install path escape GameBox app-private storage.
+- Cancel removes only that job's partial content.
+- Uninstall keeps saves, metadata, favorites, and play history by default.
+- Diagnostics exclude credentials, remote paths, checksums, file paths, and save contents.
