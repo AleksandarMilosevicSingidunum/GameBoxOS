@@ -21,6 +21,7 @@ interface DownloadRepository {
     fun resume(id: GameId)
     fun cancel(id: GameId)
     fun advance(id: GameId)
+    fun updateState(id: GameId, status: DownloadStatus, downloadedBytes: Long, errorReason: String? = null)
 }
 
 class RoomDownloadRepository(
@@ -47,6 +48,19 @@ class RoomDownloadRepository(
 
     override fun cancel(id: GameId) = update(id) { job ->
         if (job.status in terminalStatuses) job else job.copy(status = DownloadStatus.CANCELLED)
+    }
+
+    override fun updateState(
+        id: GameId,
+        status: DownloadStatus,
+        downloadedBytes: Long,
+        errorReason: String?
+    ) = update(id) { job ->
+        job.copy(
+            status = status,
+            downloadedBytes = downloadedBytes.coerceIn(0L, job.totalBytes.coerceAtLeast(downloadedBytes)),
+            errorReason = errorReason
+        )
     }
 
     override fun advance(id: GameId) = update(id) { job ->
