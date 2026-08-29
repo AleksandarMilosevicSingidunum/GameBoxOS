@@ -31,4 +31,10 @@ class EmulatorSettingsTest {
             expectedSha256 = "abc")
         assertNull(registry.forGame(android))
     }
+    @Test
+    fun selectedGraphicsProfileReachesLaunchCapability() {
+        val game = Game(GameId("retro-profile"), "Retro Profile", "Retro", 2020, "Action", 1, InstallState.INSTALLED,
+            graphicsProfile = "Performance", expectedSha256 = "abc")
+        assertEquals("Performance", registry.forGame(game)?.graphicsProfile)
+    }
 }
