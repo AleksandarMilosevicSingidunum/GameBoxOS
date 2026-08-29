@@ -4,6 +4,8 @@ import android.Manifest
 import android.content.ActivityNotFoundException
 import android.os.Build
 import android.content.Intent
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 import android.provider.Settings
 import android.view.KeyEvent as AndroidKeyEvent
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -53,6 +55,10 @@ import com.gamebox.os.download.assessDownloadCapacity
 import com.gamebox.os.download.formatCapacityWarning
 import com.gamebox.os.download.formatDownloadTelemetry
 import com.gamebox.os.launch.GameLaunchController
+import com.gamebox.os.launch.MoonlightConnectivity
+import com.gamebox.os.launch.MoonlightStatus
+import com.gamebox.os.launch.addRecentMoonlightSession
+import com.gamebox.os.launch.classifyMoonlightConnectivity
 import com.gamebox.os.launch.LaunchUiState
 import com.gamebox.os.storage.SaveSafetyController
 import com.gamebox.os.storage.ExternalStorageController
@@ -904,10 +910,30 @@ private fun AppHubScreen(
     ).toSet()
     val visibleShortcuts = shortcuts.filter { it.packageName in visiblePackages }
     var message by remember { mutableStateOf<String?>(null) }
+    var recentMoonlightSessions by remember { mutableStateOf(emptyList<String>()) }
+    val moonlightStatus = remember(launchIntents, recentMoonlightSessions) {
+        val connectivityManager = context.getSystemService(ConnectivityManager::class.java)
+        val network = connectivityManager?.activeNetwork
+        val capabilities = network?.let(connectivityManager::getNetworkCapabilities)
+        MoonlightStatus(
+            connectivity = classifyMoonlightConnectivity(
+                hasNetwork = capabilities != null,
+                hasLocalTransport = capabilities?.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) == true ||
+                    capabilities?.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET) == true
+            ),
+            moonlightInstalled = launchIntents["com.limelight"] != null,
+            recentSessions = recentMoonlightSessions
+        )
+    }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
         Text(title, fontSize = if (compact) 28.sp else 38.sp, fontWeight = FontWeight.Bold)
         Text(subtitle, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.68f))
-        Spacer(Modifier.height(18.dp))
+        if (title == "PC Hub") {
+            MoonlightStatusPanel(moonlightStatus, compact)
+            Spacer(Modifier.height(18.dp))
+        } else {
+            Spacer(Modifier.height(18.dp))
+        }
         if (visibleShortcuts.isEmpty()) {
             Text(
                 "No installed shortcuts are available. Enable unavailable shortcuts in Settings to see setup guidance.",
@@ -931,6 +957,12 @@ private fun AppHubScreen(
                             } else {
                                 try {
                                     context.startActivity(launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                                    if (shortcut.title == "Moonlight") {
+                                        recentMoonlightSessions = addRecentMoonlightSession(
+                                            recentMoonlightSessions,
+                                            "Moonlight session " + java.time.LocalTime.now().withNano(0)
+                                        )
+                                    }
                                     message = "Opened " + shortcut.title
                                 } catch (_: ActivityNotFoundException) {
                                     message = "Unable to open " + shortcut.title
@@ -944,6 +976,49 @@ private fun AppHubScreen(
         }
         message?.let {
             Text(it, color = MaterialTheme.colorScheme.primary)
+        }
+    }
+}
+
+@Composable
+private fun MoonlightStatusPanel(status: com.gamebox.os.launch.MoonlightStatus, compact: Boolean) {
+    val connectivityLabel = when (status.connectivity) {
+        MoonlightConnectivity.OFFLINE -> "Offline"
+        MoonlightConnectivity.LOCAL_NETWORK -> "LAN ready"
+        MoonlightConnectivity.INTERNET -> "Network connected"
+    }
+    Surface(
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        shape = RoundedCornerShape(14.dp),
+        modifier = Modifier.fillMaxWidth().padding(top = 14.dp).semantics {
+            contentDescription = "PC streaming: " + connectivityLabel
+        }
+    ) {
+        Column(Modifier.padding(if (compact) 14.dp else 18.dp)) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text("PC Streaming", fontWeight = FontWeight.Bold)
+                Text(
+                    connectivityLabel,
+                    color = if (status.connectivity == MoonlightConnectivity.OFFLINE)
+                        MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
+                )
+            }
+            Text(
+                if (status.moonlightInstalled) {
+                    "Moonlight is installed. Launch it to stream from a paired PC."
+                } else {
+                    "Install Moonlight to enable PC game streaming."
+                },
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.68f),
+                fontSize = 12.sp
+            )
+            if (status.recentSessions.isNotEmpty()) {
+                Spacer(Modifier.height(8.dp))
+                Text("Recent sessions", fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+                status.recentSessions.take(3).forEach { session ->
+                    Text(session, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.68f))
+                }
+            }
         }
     }
 }
