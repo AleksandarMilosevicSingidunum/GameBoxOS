@@ -20,7 +20,8 @@ data class GameBoxSettings(
     val showUnavailableGames: Boolean = true,
     val catalogSeededAtEpochMs: Long? = null,
     val catalogRefreshedAtEpochMs: Long? = null,
-    val catalogUrl: String = ""
+    val catalogUrl: String = "",
+    val externalLibraryUri: String = ""
 )
 
 class SettingsRepository(private val context: Context) {
@@ -30,8 +31,16 @@ class SettingsRepository(private val context: Context) {
             showUnavailableGames = preferences[SHOW_UNAVAILABLE] ?: true,
             catalogSeededAtEpochMs = preferences[CATALOG_SEEDED_AT],
             catalogRefreshedAtEpochMs = preferences[CATALOG_REFRESHED_AT],
-            catalogUrl = preferences[CATALOG_URL] ?: ""
+            catalogUrl = preferences[CATALOG_URL] ?: "",
+            externalLibraryUri = preferences[EXTERNAL_LIBRARY_URI] ?: ""
         )
+    }
+
+    suspend fun setExternalLibraryUri(value: String) {
+        context.gameBoxDataStore.edit { preferences ->
+            if (value.isBlank()) preferences.remove(EXTERNAL_LIBRARY_URI)
+            else preferences[EXTERNAL_LIBRARY_URI] = value
+        }
     }
 
     suspend fun catalogUrl(): String = settings.first().catalogUrl
@@ -62,5 +71,6 @@ class SettingsRepository(private val context: Context) {
         val CATALOG_SEEDED_AT = longPreferencesKey("catalog_seeded_at_epoch_ms")
         val CATALOG_REFRESHED_AT = longPreferencesKey("catalog_refreshed_at_epoch_ms")
         val CATALOG_URL = stringPreferencesKey("catalog_url")
+        val EXTERNAL_LIBRARY_URI = stringPreferencesKey("external_library_uri")
     }
 }
