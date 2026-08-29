@@ -1207,6 +1207,7 @@ private fun SettingsScreen(
             )
         }
         Spacer(Modifier.height(18.dp))
+        SettingsSectionHeader("Storage")
         Text("External game library", fontWeight = FontWeight.Bold)
         Text(
             externalStorageStatus.displayName ?: externalStorageStatus.message,
@@ -1247,6 +1248,8 @@ private fun SettingsScreen(
                 Text("Enable download notifications", modifier = Modifier.fillMaxWidth())
             }
         }
+        Spacer(Modifier.height(18.dp))
+        SettingsSectionHeader("System")
         settings.forEach { (title, action) ->
             OutlinedButton(
                 onClick = {
@@ -1262,6 +1265,13 @@ private fun SettingsScreen(
             }
         }
         Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(18.dp))
+        SettingsSectionHeader("Developer and diagnostics")
+        Text(
+            "Export a sanitized report when troubleshooting. Credentials, remote URLs, checksums, paths, and save contents are excluded.",
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.62f),
+            fontSize = 12.sp
+        )
         OutlinedButton(
             onClick = { diagnosticsLauncher.launch("gamebox-diagnostics.txt") },
             modifier = Modifier.fillMaxWidth()
@@ -1302,11 +1312,24 @@ private fun SettingsScreen(
         catalogMessage?.let { Text(it, color = MaterialTheme.colorScheme.primary) }
         Spacer(Modifier.height(12.dp))
         Text(
-            "Downloads, emulator profiles, saves, cloud providers, and developer diagnostics " +
-                "will be added here as their subsystems become configurable.",
+            "Runtime providers and emulator profiles remain intentionally scoped to their dedicated screens.",
             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.62f)
         )
     }
+}
+
+@Composable
+private fun SettingsSectionHeader(title: String) {
+    Text(
+        title.uppercase(),
+        color = MaterialTheme.colorScheme.primary,
+        fontWeight = FontWeight.Bold,
+        fontSize = 13.sp,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 4.dp, bottom = 6.dp)
+            .semantics { contentDescription = "Settings section: " + title }
+    )
 }
 
 private fun formatDownloadBytes(bytes: Long): String {
