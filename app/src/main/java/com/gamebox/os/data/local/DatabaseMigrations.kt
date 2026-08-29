@@ -52,3 +52,13 @@ val MIGRATION_4_5 = object : Migration(4, 5) {
         database.execSQL("ALTER TABLE games ADD COLUMN expectedSha256 TEXT")
     }
 }
+
+
+val MIGRATION_5_6 = object : Migration(5, 6) {
+    override fun migrate(database: SupportSQLiteDatabase) {
+        database.execSQL("ALTER TABLE games ADD COLUMN emulatorPackage TEXT")
+        database.execSQL(
+            "ALTER TABLE games ADD COLUMN graphicsProfile TEXT NOT NULL DEFAULT 'Balanced'"
+        )
+    }
+}

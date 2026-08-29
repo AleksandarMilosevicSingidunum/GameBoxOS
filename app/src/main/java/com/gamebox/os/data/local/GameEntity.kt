@@ -19,7 +19,9 @@ data class GameEntity(
     val minutesPlayed: Int,
     val favorite: Boolean = false,
     val sourceUrl: String? = null,
-    val expectedSha256: String? = null
+    val expectedSha256: String? = null,
+    val emulatorPackage: String? = null,
+    val graphicsProfile: String = "Balanced"
 )
 
 fun GameEntity.toDomain(): Game = Game(
@@ -34,7 +36,9 @@ fun GameEntity.toDomain(): Game = Game(
     minutesPlayed = minutesPlayed,
     favorite = favorite,
     sourceUrl = sourceUrl,
-    expectedSha256 = expectedSha256
+    expectedSha256 = expectedSha256,
+    emulatorPackage = emulatorPackage,
+    graphicsProfile = graphicsProfile
 )
 
 fun Game.toEntity(): GameEntity = GameEntity(
@@ -49,5 +53,7 @@ fun Game.toEntity(): GameEntity = GameEntity(
     minutesPlayed = minutesPlayed,
     favorite = favorite,
     sourceUrl = sourceUrl,
-    expectedSha256 = expectedSha256
+    expectedSha256 = expectedSha256,
+    emulatorPackage = emulatorPackage,
+    graphicsProfile = graphicsProfile
 )

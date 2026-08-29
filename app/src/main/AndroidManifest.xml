@@ -6,6 +6,9 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
     <queries>
         <package android:name="com.retroarch.aarch64" />
+        <package android:name="org.ppsspp.ppsspp" />
+        <package android:name="org.dolphinemu.dolphinemu" />
+        <package android:name="xyz.aethersx2.android" />
         <package android:name="com.google.android.youtube" />
         <package android:name="com.netflix.mediaclient" />
         <package android:name="org.xbmc.kodi" />
