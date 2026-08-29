@@ -840,6 +840,7 @@ private fun ShortcutCard(
     )
     Surface(
         modifier.height(112.dp)
+            .semantics { contentDescription = shortcut.title + ", " + if (installed) "installed" else "not installed" }
             .onFocusChanged { focused = it.isFocused }
             .clickable(onClick = onClick)
             .focusable(),
