@@ -19,6 +19,10 @@ class DiagnosticEventCollector(
 
     fun snapshot(): List<DiagnosticEvent> = events.toList()
 
+    fun size(): Int = events.size
+
+    fun clear() { events.clear() }
+
     private fun sanitize(message: String): String = message
         .replace(Regex("https?://\\S+"), "<url>")
         .replace(Regex("(?i)(password|secret|token|key)=\\S+")) { match ->
