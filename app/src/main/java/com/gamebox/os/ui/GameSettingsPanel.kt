@@ -2,6 +2,7 @@ package com.gamebox.os.ui
 
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
@@ -18,7 +19,7 @@ import com.gamebox.os.launch.EmulatorCapabilityRegistry
 @Composable
 fun GameSettingsPanel(game: Game, repository: GameRepository, modifier: Modifier = Modifier) {
     val options = androidx.compose.runtime.remember(game.platform) { EmulatorCapabilityRegistry().optionsFor(game) }
-    Column(modifier.padding(16.dp)) {
+    Column(modifier.fillMaxWidth().padding(16.dp)) {
         Text("Game settings")
         Text("Changes apply the next time this game launches.")
         Text("Emulator")
