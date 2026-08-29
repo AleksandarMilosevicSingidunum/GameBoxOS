@@ -98,6 +98,7 @@ class AndroidPackageGateway(
         val intent = Intent(Intent.ACTION_VIEW)
             .setDataAndType(uri, capability.mimeType)
             .setPackage(capability.packageName)
+            .putExtra("gamebox.graphics_profile", capability.graphicsProfile)
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_GRANT_READ_URI_PERMISSION)
         if (intent.resolveActivity(context.packageManager) == null) {
             return GatewayResult.HANDOFF_REJECTED
