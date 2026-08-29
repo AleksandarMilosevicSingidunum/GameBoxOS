@@ -28,7 +28,10 @@ public sealed class WindowsCatalogSyncClient
         CancellationToken cancellationToken = default)
     {
         var uri = ValidateEndpoint(endpoint);
-        using var response = await _client.GetAsync(uri, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+        using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        timeoutCts.CancelAfter(TimeSpan.FromSeconds(15));
+        var requestToken = timeoutCts.Token;
+        using var response = await _client.GetAsync(uri, HttpCompletionOption.ResponseHeadersRead, requestToken);
         if (response.RequestMessage?.RequestUri is not null &&
             response.RequestMessage.RequestUri != uri)
             throw new InvalidDataException("Catalog redirects are not accepted.");
@@ -37,9 +40,9 @@ public sealed class WindowsCatalogSyncClient
         var declaredLength = response.Content.Headers.ContentLength;
         if (declaredLength is > MaxResponseBytes)
             throw new InvalidDataException("Catalog response is too large.");
-        await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+        await using var stream = await response.Content.ReadAsStreamAsync(requestToken);
         using var buffer = new MemoryStream();
-        await stream.CopyToAsync(buffer, cancellationToken);
+        await stream.CopyToAsync(buffer, requestToken);
         if (buffer.Length > MaxResponseBytes)
             throw new InvalidDataException("Catalog response is too large.");
         var envelope = JsonSerializer.Deserialize<RemoteEnvelope>(buffer.ToArray(), JsonOptions)
