@@ -32,6 +32,30 @@ try
     catch (InvalidDataException) { unsafeRejected = true; }
     Require(unsafeRejected, "Unsupported launch targets must be rejected.");
 
+    var syncExisting = first with { Id = "sync-game", Favorite = true };
+    using var syncClient = new HttpClient(new StubHttpMessageHandler(_ => new HttpResponseMessage(HttpStatusCode.OK) {
+        RequestMessage = new HttpRequestMessage(HttpMethod.Get, "https://catalog.example/games"),
+        Content = new StringContent("{\"games\":[{\"id\":\"sync-game\",\"title\":\"Updated Alpha\",\"platform\":\"DOS\"},{\"id\":\"remote-only\",\"title\":\"Ignored\",\"platform\":\"PC\"}]}")
+    }));
+    var synced = await new WindowsCatalogSyncClient(syncClient).EnrichExistingAsync(
+        new[] { syncExisting }, "https://catalog.example/games");
+    Require(synced.UpdatedCount == 1 && synced.IgnoredRemoteCount == 1, "Catalog sync counts failed.");
+    Require(synced.Entries[0].Title == "Updated Alpha" && synced.Entries[0].ExecutablePath == syncExisting.ExecutablePath && synced.Entries[0].Favorite, "Catalog sync must preserve local launch state.");
+
+    var redirectRejected = false;
+    using var redirectClient = new HttpClient(new StubHttpMessageHandler(_ => new HttpResponseMessage(HttpStatusCode.OK) {
+        RequestMessage = new HttpRequestMessage(HttpMethod.Get, "https://other.example/games"),
+        Content = new StringContent("{\"games\":[]}")
+    }));
+    try { await new WindowsCatalogSyncClient(redirectClient).EnrichExistingAsync(new[] { syncExisting }, "https://catalog.example/games"); }
+    catch (InvalidDataException) { redirectRejected = true; }
+    Require(redirectRejected, "Catalog redirects must be rejected.");
+
+    var unsafeEndpointRejected = false;
+    try { await new WindowsCatalogSyncClient(new HttpClient()).EnrichExistingAsync(new[] { syncExisting }, "http://catalog.example/games"); }
+    catch (ArgumentException) { unsafeEndpointRejected = true; }
+    Require(unsafeEndpointRejected, "Insecure catalog endpoints must be rejected.");
+
     Console.WriteLine("GameBox Windows core tests passed.");
 }
 finally
