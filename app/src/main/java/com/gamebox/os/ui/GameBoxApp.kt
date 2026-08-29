@@ -1116,6 +1116,10 @@ private fun SettingsScreen(
     var catalogUrl by remember(currentSettings.catalogUrl) { mutableStateOf(currentSettings.catalogUrl) }
     var catalogMessage by remember { mutableStateOf<String?>(null) }
     val externalStorageStatus = externalStorageController.inspect(currentSettings.externalLibraryUri)
+    val installedMigration = remember(context) { com.gamebox.os.storage.InstalledContentMigration(context.filesDir.resolve("installed")) }
+    val migrationPlan = remember(diagnosticGames) { installedMigration.plan() }
+    var showMigrationDialog by remember { mutableStateOf(false) }
+    var migrationResult by remember { mutableStateOf<com.gamebox.os.storage.ContentMigrationResult?>(null) }
     val externalTreeLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocumentTree()
     ) { uri ->
@@ -1173,6 +1177,25 @@ private fun SettingsScreen(
         "Network" to Settings.ACTION_WIRELESS_SETTINGS,
         "System" to Settings.ACTION_SETTINGS
     )
+    if (showMigrationDialog) {
+        MigrationConfirmationDialog(
+            plan = migrationPlan,
+            storageStatus = externalStorageStatus,
+            previousResult = migrationResult,
+            onConfirm = {
+                showMigrationDialog = false
+                scope.launch {
+                    val result = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                        installedMigration.execute(context, android.net.Uri.parse(currentSettings.externalLibraryUri), migrationPlan)
+                    }
+                    migrationResult = result
+                    catalogMessage = "Migration copied " + result.copiedCount + " item(s), " + result.retryableCount + " retryable, " + result.failedCount + " failed"
+                }
+            },
+            onRetry = { externalTreeLauncher.launch(null) },
+            onDismiss = { showMigrationDialog = false }
+        )
+    }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
         Text("Settings", fontSize = if (compact) 28.sp else 38.sp, fontWeight = FontWeight.Bold)
         Text(
@@ -1234,8 +1257,15 @@ private fun SettingsScreen(
                 }) { Text("Forget") }
             }
         }
+        Button(
+            onClick = { showMigrationDialog = true },
+            enabled = !migrationPlan.isEmpty && externalStorageStatus.state == ExternalStorageState.AVAILABLE_READ_WRITE,
+            modifier = Modifier.fillMaxWidth().padding(top = 8.dp).semantics { contentDescription = "Migrate installed content" }
+        ) {
+            Text(if (migrationPlan.isEmpty) "No installed content to migrate" else "Migrate " + formatBytes(migrationPlan.totalBytes))
+        }
         Text(
-            "GameBox will not move or delete files until a future migration step is explicitly confirmed.",
+            "Migration copies verified installed content to the selected library. Phone files are retained.",
             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.62f),
             fontSize = 12.sp
         )
