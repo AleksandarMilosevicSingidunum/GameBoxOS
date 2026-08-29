@@ -149,13 +149,15 @@ fun GameBoxApp(
                             "Media",
                             "Launch your living-room apps and return to GameBox",
                             mediaShortcuts,
-                            compact
+                            compact,
+                            settingsRepository
                         )
                         Destination.PC -> AppHubScreen(
                             "PC Hub",
                             "Streaming, Windows, Linux, files, browser, and desktop tools",
                             pcShortcuts,
-                            compact
+                            compact,
+                            settingsRepository
                         )
                         Destination.SETTINGS -> SettingsScreen(compact, settingsRepository, repository, downloadRepository)
                     }
@@ -882,23 +884,43 @@ private fun AppHubScreen(
     title: String,
     subtitle: String,
     shortcuts: List<AppShortcut>,
-    compact: Boolean
+    compact: Boolean,
+    settingsRepository: SettingsRepository
 ) {
     val context = LocalContext.current
+    val currentSettings by settingsRepository.settings.collectAsState(
+        initial = com.gamebox.os.settings.GameBoxSettings()
+    )
+    val launchIntents = remember(shortcuts) {
+        shortcuts.associate { shortcut ->
+            shortcut.packageName to context.packageManager
+                .getLaunchIntentForPackage(shortcut.packageName)
+        }
+    }
+    val visiblePackages = visibleShortcutPackageNames(
+        shortcuts.map { it.packageName },
+        launchIntents.filterValues { it != null }.keys,
+        currentSettings.showUnavailableShortcuts
+    ).toSet()
+    val visibleShortcuts = shortcuts.filter { it.packageName in visiblePackages }
     var message by remember { mutableStateOf<String?>(null) }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
         Text(title, fontSize = if (compact) 28.sp else 38.sp, fontWeight = FontWeight.Bold)
         Text(subtitle, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.68f))
         Spacer(Modifier.height(18.dp))
-        shortcuts.chunked(if (compact) 1 else 3).forEach { row ->
+        if (visibleShortcuts.isEmpty()) {
+            Text(
+                "No installed shortcuts are available. Enable unavailable shortcuts in Settings to see setup guidance.",
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.68f)
+            )
+        }
+        visibleShortcuts.chunked(if (compact) 1 else 3).forEach { row ->
             Row(
                 Modifier.fillMaxWidth().padding(bottom = 12.dp),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 row.forEach { shortcut ->
-                    val launchIntent = remember(shortcut.packageName) {
-                        context.packageManager.getLaunchIntentForPackage(shortcut.packageName)
-                    }
+                    val launchIntent = launchIntents[shortcut.packageName]
                     ShortcutCard(
                         shortcut = shortcut,
                         installed = launchIntent != null,
@@ -1048,6 +1070,30 @@ private fun SettingsScreen(
             "App storage: " + formatBytes(usableStorage) + " free of " + formatBytes(totalStorage),
             color = MaterialTheme.colorScheme.primary
         )
+        Spacer(Modifier.height(18.dp))
+        Text("Interface", fontWeight = FontWeight.Bold)
+        Row(
+            Modifier.fillMaxWidth().padding(vertical = 6.dp),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Column(Modifier.weight(1f)) {
+                Text("Show unavailable app shortcuts")
+                Text(
+                    "When disabled, Media and PC Hub show only installed apps.",
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.62f),
+                    fontSize = 12.sp
+                )
+            }
+            Switch(
+                checked = currentSettings.showUnavailableShortcuts,
+                onCheckedChange = { show ->
+                    scope.launch { settingsRepository.setShowUnavailableShortcuts(show) }
+                },
+                modifier = Modifier.semantics {
+                    contentDescription = "Show unavailable app shortcuts"
+                }
+            )
+        }
         Spacer(Modifier.height(18.dp))
         Text("External game library", fontWeight = FontWeight.Bold)
         Text(
