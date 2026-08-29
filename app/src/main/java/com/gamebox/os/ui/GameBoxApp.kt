@@ -48,6 +48,10 @@ import com.gamebox.os.domain.primaryAction
 import com.gamebox.os.download.AuthorizedDownloadController
 import com.gamebox.os.download.AuthorizedDownloadState
 import com.gamebox.os.download.RemoteDownloadController
+import com.gamebox.os.download.DownloadTelemetryTracker
+import com.gamebox.os.download.assessDownloadCapacity
+import com.gamebox.os.download.formatCapacityWarning
+import com.gamebox.os.download.formatDownloadTelemetry
 import com.gamebox.os.launch.GameLaunchController
 import com.gamebox.os.launch.LaunchUiState
 import com.gamebox.os.storage.SaveSafetyController
@@ -726,6 +730,8 @@ private fun DetailsScreen(
 @Composable
 private fun DownloadsScreen(repository: GameRepository, downloadRepository: DownloadRepository, remoteDownloadController: RemoteDownloadController, compact: Boolean) {
     val jobs by downloadRepository.observeJobs().collectAsState()
+    val context = LocalContext.current
+    val telemetryTracker = remember { DownloadTelemetryTracker() }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
         Text("Downloads", fontSize = if (compact) 28.sp else 38.sp, fontWeight = FontWeight.Bold)
         Text("Durable queue plus verified app-private asset installation",
@@ -733,6 +739,8 @@ private fun DownloadsScreen(repository: GameRepository, downloadRepository: Down
         Spacer(Modifier.height(20.dp))
         if (jobs.isEmpty()) Text("No active downloads")
         jobs.forEach { job ->
+            val telemetry = telemetryTracker.sample(job, System.currentTimeMillis())
+            val capacityWarning = assessDownloadCapacity(job, context.filesDir.usableSpace)
             Surface(
                 color = MaterialTheme.colorScheme.surface,
                 shape = RoundedCornerShape(14.dp),
@@ -753,6 +761,28 @@ private fun DownloadsScreen(repository: GameRepository, downloadRepository: Down
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.68f),
                         fontSize = 12.sp
                     )
+                    telemetry?.let {
+                        Text(
+                            formatDownloadTelemetry(it),
+                            color = MaterialTheme.colorScheme.primary,
+                            fontSize = 12.sp,
+                            modifier = Modifier.semantics {
+                                contentDescription = "Download speed and time remaining: " +
+                                    formatDownloadTelemetry(it)
+                            }
+                        )
+                    }
+                    capacityWarning?.let {
+                        Text(
+                            formatCapacityWarning(it),
+                            color = MaterialTheme.colorScheme.error,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 12.sp,
+                            modifier = Modifier.semantics {
+                                contentDescription = formatCapacityWarning(it)
+                            }
+                        )
+                    }
                     job.errorReason?.let { reason ->
                         Text(reason, color = MaterialTheme.colorScheme.error, fontSize = 12.sp)
                     }
