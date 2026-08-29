@@ -9,7 +9,7 @@ data class SaveArtifact(
     val modifiedAtMillis: Long,
 )
 
-interface SaveAdapter {
+fun interface SaveAdapter {
     fun discover(gameId: String): List<SaveArtifact>
 }
 
