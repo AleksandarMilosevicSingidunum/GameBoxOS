@@ -17,11 +17,11 @@ Status as of 29 August 2026:
 | Primary UI | Implemented foundation | Home, Library, Store, Details, Downloads, Media, PC Hub, and Settings |
 | Catalog and discovery | Implemented foundation | Room-backed catalog, search, platform/genre filters, favorites, cached authorized manifests |
 | Remote providers | Partial | Configurable HTTPS catalog with strict validation, offline cache, out-of-band credential abstraction, optional Basic auth, safe WebDAV/S3 URI builders, and bounded transport client; S3 request-signing boundary with AWS Signature V4 and authenticated transport wiring; WebDAV Basic auth hardens incomplete credentials |
-| Downloads | Implemented foundation | Durable WorkManager jobs, notifications, low-space reserve, pause/resume, Range validation, retries, cancellation, size limits, SHA-256 verification, and atomic install |
-| Install/uninstall | Partial | App-private verified install and content-only uninstall prototype; full storage-volume and freed-space UX remain |
+| Downloads | Implemented | Durable WorkManager jobs, notifications, measured speed and ETA, preemptive low-storage warnings using the worker reserve, pause/resume, Range validation, retries, cancellation, size limits, SHA-256 verification, and atomic install |
+| Install/uninstall | Partial | App-private verified install plus explicit save-safe uninstall confirmation with exact freed and retained byte counts; generalized production content adapters and physical storage validation remain |
 | Saves | Partial | Platform save-adapter registry, real directory discovery, reactive per-game save presence in Details, multi-artifact backup/restore, atomic checksum-protected snapshot manifests, import/export, retention, deterministic sync conflict resolution, and cross-game safety checks; authenticated cloud synchronization and physical emulator validation remain |
 | Emulator integration | Partial | Allowlisted emulator handoff with per-game package selection and graphics profile persistence exposed in Details, read-only FileProvider access, return tracking, and capability registry; production adapter validation remains |
-| Media and PC | Partial | Installed-app detection, typed availability states, and safe launch shortcuts for media, Moonlight, Winlator, Termux, Files, browser, and Android settings |
+| Media and PC | Partial | Installed-app detection, typed availability states, safe launch shortcuts, persistent hide-unavailable policy, and responsive empty/setup states for media, Moonlight, Winlator, Termux, Files, browser, and Android settings; Moonlight host/session status remains |
 | Offline operation | Partial | Cached catalog and persistent local state; full airplane-mode acceptance testing remains |
 | Diagnostics | Partial | Sanitized export report, bounded structured event collection, lifecycle wiring, and visible download errors; full recovery bundles and physical failure validation remain |
 | CI and releases | Partial | Unit tests, debug APK builds, SHA-256 artifacts, and alpha release workflow; signed production builds, rollback, and update channels remain |
@@ -37,9 +37,9 @@ Status as of 29 August 2026:
 - Authorized HTTPS catalog configuration with bounded responses and atomic offline caching
 - Verified remote download pipeline with true pause/resume and safe job-scoped cleanup
 - App-private staging; content is promoted only after complete SHA-256 verification
-- Download notifications, byte progress, failure reasons, retry, and cancellation
+- Download notifications, byte progress, measured speed/ETA, low-storage warnings, failure reasons, retry, and cancellation
 - Save-safe uninstall, reactive per-game save presence, durable multi-artifact snapshot manifests, and user-controlled backup import/export
-- Media/PC launch hubs and Android system-setting shortcuts
+- Configurable Media/PC launch hubs with installed-only filtering and Android system-setting shortcuts
 - SAF external-library selection with persisted permissions and non-destructive disconnect/read-only status
 - Sanitized diagnostics export that excludes credentials, source URLs, checksums, paths, and save contents
 - Automated unit tests and debug APK builds
