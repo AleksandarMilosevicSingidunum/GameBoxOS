@@ -7,7 +7,8 @@ class ExternalStorageUnavailableException(message: String) : IllegalStateExcepti
 data class MigrationItemResult(val item: ContentMigrationItem, val status: MigrationItemStatus, val message: String? = null)
 data class ContentMigrationResult(val items: List<MigrationItemResult>) {
     val copiedCount get() = items.count { it.status == MigrationItemStatus.COPIED }
-    val failedCount get() = items.count { it.status == MigrationItemStatus.FAILED }\n    val retryableCount get() = items.count { it.status == MigrationItemStatus.RETRYABLE }
+    val failedCount get() = items.count { it.status == MigrationItemStatus.FAILED }
+    val retryableCount get() = items.count { it.status == MigrationItemStatus.RETRYABLE }
 }
 
 fun interface ContentCopyOperation {
