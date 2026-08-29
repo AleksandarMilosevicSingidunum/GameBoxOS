@@ -51,7 +51,6 @@ import com.gamebox.os.launch.LaunchUiState
 import com.gamebox.os.storage.SaveSafetyController
 import com.gamebox.os.settings.SettingsRepository
 import com.gamebox.os.catalog.validateAuthorizedCatalogUrl
-import com.gamebox.os.BuildConfig
 import com.gamebox.os.diagnostics.DiagnosticsDevice
 import com.gamebox.os.diagnostics.buildDiagnosticsReport
 import kotlinx.coroutines.launch
@@ -879,7 +878,8 @@ private fun SettingsScreen(
             manufacturer = Build.MANUFACTURER,
             model = Build.MODEL,
             sdk = Build.VERSION.SDK_INT,
-            appVersion = BuildConfig.VERSION_NAME,
+            appVersion = context.packageManager
+                .getPackageInfo(context.packageName, 0).versionName ?: "unknown",
             usableBytes = storageRoot.usableSpace,
             totalBytes = storageRoot.totalSpace
         ),
