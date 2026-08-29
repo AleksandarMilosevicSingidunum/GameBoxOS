@@ -26,7 +26,7 @@ Status as of 29 August 2026:
 | Offline operation | Partial | Cached catalog and persistent local state; full airplane-mode acceptance testing remains |
 | Diagnostics | Partial | Sanitized export report, bounded structured event collection, lifecycle wiring, and visible download errors; full recovery bundles and physical failure validation remain |
 | CI and releases | Partial | Unit tests, debug APK builds, SHA-256 artifacts, and alpha release workflow; signed production builds, rollback, and update channels remain |
-| External storage | Partial | SAF folder selection, persisted permissions, read/write status, disconnect detection, and safe content-migration planning; copy execution now classifies removable-storage outages as retryable with recovery metrics; physical SAF unplug testing remains |
+| External storage | Partial | SAF folder selection, persisted permissions, read/write status, disconnect detection, non-destructive copy execution with explicit confirmation states, and retryable outage classification; SAF document-tree copy wiring and physical unplug testing remain |
 | Target hardware | Not validated | Galaxy A53 controller testing and Galaxy S23 Ultra/DeX/HDMI/Ethernet/thermal/SSD soak testing require physical hardware |
 | Enclosure/handoff | Not started | Hardware enclosure, hub, cooling, cabling, and recovery-button work follows software maturity |
 
@@ -41,7 +41,7 @@ Status as of 29 August 2026:
 - Download notifications, byte progress, measured speed/ETA, low-storage warnings, failure reasons, retry, and cancellation
 - Save-safe uninstall, reactive per-game save presence, durable multi-artifact snapshot manifests, and user-controlled backup import/export
 - Configurable Media/PC launch hubs with installed-only filtering, Moonlight network status/recent sessions, and Android system-setting shortcuts
-- SAF external-library selection with persisted permissions and non-destructive disconnect/read-only status
+- SAF external-library selection with persisted permissions, explicit migration confirmation gating, and retryable disconnect/read-only status
 - Sanitized diagnostics export that excludes credentials, source URLs, checksums, paths, and save contents
 - Automated unit tests, debug APK builds, and self-contained Windows Companion builds
 - Friendly emulator selection with validated graphics profiles, launch-time profile handoff, and unsupported-platform guidance
@@ -53,7 +53,7 @@ Status as of 29 August 2026:
 - Validate additional production emulator adapters and apply graphics profiles to adapter launch arguments
 - Complete provider recovery guidance and end-to-end authenticated WebDAV/S3 integration testing
 - Complete authenticated cloud save synchronization and validate real save adapters against production emulators
-- Add confirmed content migration to the selected SAF/SSD library and complete physical disconnect/unplug safety tests
+- Wire confirmed migration states to SAF document-tree copy operations and complete physical disconnect/unplug safety tests
 - Add Compose instrumentation, accessibility, lifecycle, migration, offline, and failure-recovery tests
 - Complete physical controller testing on Galaxy A53
 - Complete Galaxy S23 Ultra DeX/HDMI/Ethernet/charging/thermal/reconnect soak testing
@@ -67,7 +67,7 @@ Status as of 29 August 2026:
 The remaining work is tracked in these concrete groups:
 
 - Complete end-to-end authenticated WebDAV/S3 provider recovery and integration testing.
-- Connect content migration planning/execution to SAF document-tree copy operations and verify disconnect recovery.
+- Wire the migration confirmation evaluator into SAF document-tree copy execution and verify disconnect recovery.
 - Validate adapter-specific save discovery/import/export against production emulators and add authenticated cloud synchronization.
 - Apply graphics profiles to adapter-specific launch arguments where supported.
 - Add Compose instrumentation, accessibility, lifecycle, migration, offline, and recovery tests.
