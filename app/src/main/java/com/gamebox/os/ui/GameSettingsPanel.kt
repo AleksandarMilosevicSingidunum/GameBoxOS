@@ -17,7 +17,7 @@ import com.gamebox.os.launch.EmulatorCapabilityRegistry
 
 @Composable
 fun GameSettingsPanel(game: Game, repository: GameRepository, modifier: Modifier = Modifier) {
-    val options = EmulatorCapabilityRegistry().optionsFor(game)
+    val options = androidx.compose.runtime.remember(game.platform) { EmulatorCapabilityRegistry().optionsFor(game) }
     Column(modifier.padding(16.dp)) {
         Text("Game settings")
         Text("Changes apply the next time this game launches.")
