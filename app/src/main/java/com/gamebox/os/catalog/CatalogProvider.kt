@@ -49,6 +49,8 @@ class ConfiguredCatalogProvider(
 class HttpsCatalogProvider(
     context: Context,
     private val configuredUrl: suspend () -> String,
+    private val credentialStore: CatalogCredentialStore? = null,
+    private val credentialKey: suspend () -> String? = { null },
     private val parser: CatalogParser = CatalogParser(),
     private val maxResponseBytes: Int = 1_048_576
 ) : CatalogProvider {
@@ -57,8 +59,9 @@ class HttpsCatalogProvider(
 
     override suspend fun load(): CatalogSnapshot = withContext(Dispatchers.IO) {
         val url = validateAuthorizedCatalogUrl(configuredUrl())
+        val credentials = credentialStore?.let { store -> credentialKey()?.let(store::credentials) }
         try {
-            val text = fetch(url)
+            val text = fetch(url, credentials)
             val snapshot = parser.parse(text)
             cacheFile.parentFile?.mkdirs()
             val temporary = cacheFile.resolveSibling(cacheFile.name + ".tmp")
@@ -78,13 +81,17 @@ class HttpsCatalogProvider(
         }
     }
 
-    private fun fetch(url: String): String {
+    private fun fetch(url: String, credentials: CatalogCredentials?): String {
         val connection = URL(url).openConnection() as HttpsURLConnection
         connection.connectTimeout = 10_000
         connection.readTimeout = 15_000
         connection.instanceFollowRedirects = false
         connection.setRequestProperty("Accept", "application/json")
         connection.setRequestProperty("User-Agent", "GameBoxOS/0.1")
+        if (credentials?.username != null && credentials.password != null) {
+            val token = java.util.Base64.getEncoder().encodeToString((credentials.username + ":" + credentials.password).toByteArray())
+            connection.setRequestProperty("Authorization", "Basic " + token)
+        }
         try {
             val status = connection.responseCode
             require(status in 200..299) {
