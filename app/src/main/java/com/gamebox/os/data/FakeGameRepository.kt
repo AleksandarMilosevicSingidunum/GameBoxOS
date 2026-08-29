@@ -3,6 +3,7 @@ package com.gamebox.os.data
 import com.gamebox.os.domain.Game
 import com.gamebox.os.domain.GameId
 import com.gamebox.os.domain.InstallState
+import com.gamebox.os.domain.GraphicsProfiles
 import com.gamebox.os.domain.CatalogRefreshState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -30,7 +31,7 @@ class FakeGameRepository : GameRepository {
     override fun game(id: GameId): Game? = games.value.firstOrNull { it.id == id }
 
     override fun setEmulatorSettings(id: GameId, packageName: String?, graphicsProfile: String) {
-        update(id) { it.copy(emulatorPackage = packageName, graphicsProfile = graphicsProfile) }
+        update(id) { it.copy(emulatorPackage = packageName, graphicsProfile = graphicsProfile.takeIf { it in GraphicsProfiles.ALL } ?: GraphicsProfiles.BALANCED) }
     }
 
     override fun setFavorite(id: GameId, favorite: Boolean) {
