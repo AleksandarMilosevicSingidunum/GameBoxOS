@@ -35,8 +35,28 @@ class EmulatorCapabilityRegistry(
         )
     )
 ) {
-    fun forGame(gameId: GameId): EmulatorCapability? =
-        capabilities.firstOrNull { it.gameId == gameId }
+    fun optionsFor(game: Game): List<String> = when (game.platform.lowercase()) {
+        "retro", "homebrew" -> listOf("com.retroarch.aarch64")
+        "psp" -> listOf("org.ppsspp.ppsspp")
+        "gamecube", "wii" -> listOf("org.dolphinemu.dolphinemu")
+        "ps2" -> listOf("xyz.aethersx2.android")
+        else -> emptyList()
+    }
+
+    fun forGame(game: Game): EmulatorCapability? {
+        capabilities.firstOrNull { it.gameId == game.id }?.let { return it }
+        val checksum = game.expectedSha256 ?: return null
+        val packageName = game.emulatorPackage?.takeIf { it in optionsFor(game) }
+            ?: optionsFor(game).firstOrNull() ?: return null
+        return EmulatorCapability(
+            id = "platform-" + game.id.value,
+            gameId = game.id,
+            packageName = packageName,
+            contentRelativePath = "remote/" + game.id.value + "/content.bin",
+            mimeType = "application/octet-stream",
+            expectedSha256 = checksum
+        )
+    }
 }
 
 enum class GatewayResult {
@@ -138,7 +158,7 @@ class DefaultGameLaunchController(
             update(game.id, LaunchUiState.Status.NOT_INSTALLED, "Install and verify before launching")
             return
         }
-        val capability = registry.forGame(game.id)
+        val capability = registry.forGame(game)
         if (capability == null) {
             update(game.id, LaunchUiState.Status.UNSUPPORTED, "No approved adapter for this title")
             return
