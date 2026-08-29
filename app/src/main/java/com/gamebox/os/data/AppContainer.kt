@@ -12,6 +12,8 @@ import com.gamebox.os.data.local.MIGRATION_3_4
 import com.gamebox.os.data.local.MIGRATION_4_5
 import com.gamebox.os.download.AuthorizedDownloadController
 import com.gamebox.os.download.WorkManagerAuthorizedDownloadController
+import com.gamebox.os.download.RemoteDownloadController
+import com.gamebox.os.download.WorkManagerRemoteDownloadController
 import com.gamebox.os.settings.SettingsRepository
 import com.gamebox.os.launch.AndroidPackageGateway
 import com.gamebox.os.launch.DefaultGameLaunchController
@@ -28,6 +30,7 @@ interface AppContainer {
     val settingsRepository: SettingsRepository
     val downloadRepository: DownloadRepository
     val authorizedDownloadController: AuthorizedDownloadController
+    val remoteDownloadController: RemoteDownloadController
     val gameLaunchController: GameLaunchController
     val saveSafetyController: SaveSafetyController
 }
@@ -58,6 +61,14 @@ class DefaultAppContainer(context: Context) : AppContainer {
         onCatalogSeeded = settingsRepository::markCatalogSeeded,
         onCatalogRefreshed = settingsRepository::markCatalogRefreshed
     )
+
+    override val remoteDownloadController: RemoteDownloadController =
+        WorkManagerRemoteDownloadController(
+            applicationContext,
+            gameRepository,
+            downloadRepository,
+            applicationScope
+        )
 
     override val authorizedDownloadController: AuthorizedDownloadController =
         WorkManagerAuthorizedDownloadController(
