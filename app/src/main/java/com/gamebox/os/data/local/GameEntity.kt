@@ -17,7 +17,7 @@ data class GameEntity(
     val installState: String,
     val lastPlayed: String?,
     val minutesPlayed: Int,
-    val favorite: Boolean
+    val favorite: Boolean = false
 )
 
 fun GameEntity.toDomain(): Game = Game(
