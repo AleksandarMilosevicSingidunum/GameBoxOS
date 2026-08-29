@@ -1,5 +1,9 @@
 name: Windows Companion CI
 
+concurrency:
+  group: windows-ci-${{ github.ref }}
+  cancel-in-progress: true
+
 on:
   push:
     branches: [main]
