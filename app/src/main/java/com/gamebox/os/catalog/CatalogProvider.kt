@@ -1,6 +1,9 @@
 package com.gamebox.os.catalog
 
 import android.content.Context
+import java.net.URI
+import java.net.URL
+import javax.net.ssl.HttpsURLConnection
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -16,5 +19,98 @@ class AssetCatalogProvider(
     override suspend fun load(): CatalogSnapshot = withContext(Dispatchers.IO) {
         val text = context.assets.open(assetPath).bufferedReader().use { it.readText() }
         parser.parse(text)
+    }
+}
+
+
+internal fun validateAuthorizedCatalogUrl(value: String): String {
+    val uri = try {
+        URI(value.trim())
+    } catch (error: Exception) {
+        throw IllegalArgumentException("Catalog URL is invalid", error)
+    }
+    require(uri.scheme.equals("https", ignoreCase = true)) { "Catalog URL must use HTTPS" }
+    require(!uri.host.isNullOrBlank()) { "Catalog URL must include a host" }
+    require(uri.userInfo == null) { "Credentials must not be embedded in the catalog URL" }
+    require(uri.fragment == null) { "Catalog URL must not include a fragment" }
+    return uri.toASCIIString()
+}
+
+class ConfiguredCatalogProvider(
+    private val fallback: CatalogProvider,
+    private val remote: CatalogProvider,
+    private val configuredUrl: suspend () -> String
+) : CatalogProvider {
+    override suspend fun load(): CatalogSnapshot {
+        return if (configuredUrl().isBlank()) fallback.load() else remote.load()
+    }
+}
+
+class HttpsCatalogProvider(
+    context: Context,
+    private val configuredUrl: suspend () -> String,
+    private val parser: CatalogParser = CatalogParser(),
+    private val maxResponseBytes: Int = 1_048_576
+) : CatalogProvider {
+    private val cacheFile = context.filesDir.resolve("catalog/remote-catalog.json")
+    private val cacheUrlFile = context.filesDir.resolve("catalog/remote-catalog.url")
+
+    override suspend fun load(): CatalogSnapshot = withContext(Dispatchers.IO) {
+        val url = validateAuthorizedCatalogUrl(configuredUrl())
+        try {
+            val text = fetch(url)
+            val snapshot = parser.parse(text)
+            cacheFile.parentFile?.mkdirs()
+            val temporary = cacheFile.resolveSibling(cacheFile.name + ".tmp")
+            temporary.writeText(text)
+            if (!temporary.renameTo(cacheFile)) {
+                temporary.copyTo(cacheFile, overwrite = true)
+                temporary.delete()
+            }
+            cacheUrlFile.writeText(url)
+            snapshot
+        } catch (error: Exception) {
+            if (cacheFile.isFile && cacheUrlFile.readText().trim() == url) {
+                parser.parse(cacheFile.readText())
+            } else {
+                throw error
+            }
+        }
+    }
+
+    private fun fetch(url: String): String {
+        val connection = URL(url).openConnection() as HttpsURLConnection
+        connection.connectTimeout = 10_000
+        connection.readTimeout = 15_000
+        connection.instanceFollowRedirects = false
+        connection.setRequestProperty("Accept", "application/json")
+        connection.setRequestProperty("User-Agent", "GameBoxOS/0.1")
+        try {
+            val status = connection.responseCode
+            require(status in 200..299) {
+                if (status in 300..399) "Catalog redirects are not accepted"
+                else "Catalog request failed with HTTP " + status
+            }
+            val declaredLength = connection.contentLengthLong
+            require(declaredLength < 0 || declaredLength <= maxResponseBytes) {
+                "Catalog response is too large"
+            }
+            val bytes = connection.inputStream.use { input ->
+                val output = java.io.ByteArrayOutputStream()
+                val buffer = ByteArray(8_192)
+                var total = 0
+                while (true) {
+                    val count = input.read(buffer)
+                    if (count < 0) break
+                    total += count
+                    require(total <= maxResponseBytes) { "Catalog response is too large" }
+                    output.write(buffer, 0, count)
+                }
+                output.toByteArray()
+            }
+            return bytes.toString(Charsets.UTF_8)
+        } finally {
+            connection.disconnect()
+        }
     }
 }
