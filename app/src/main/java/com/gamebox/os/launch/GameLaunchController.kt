@@ -20,7 +20,8 @@ data class EmulatorCapability(
     val packageName: String,
     val contentRelativePath: String,
     val mimeType: String,
-    val expectedSha256: String
+    val expectedSha256: String,
+    val graphicsProfile: String = "Balanced"
 )
 
 class EmulatorCapabilityRegistry(
@@ -56,7 +57,8 @@ class EmulatorCapabilityRegistry(
             packageName = packageName,
             contentRelativePath = "remote/" + game.id.value + "/content.bin",
             mimeType = "application/octet-stream",
-            expectedSha256 = checksum
+            expectedSha256 = checksum,
+            graphicsProfile = game.graphicsProfile
         )
     }
 }
