@@ -51,10 +51,10 @@ jobs:
           PY
 
       - name: Compile and run unit tests
-        run: gradle --no-daemon testDebugUnitTest
+        run: timeout 15m gradle --no-daemon testDebugUnitTest
 
       - name: Build debug APK and instrumentation test APK
-        run: gradle --no-daemon assembleDebug assembleDebugAndroidTest
+        run: timeout 15m gradle --no-daemon assembleDebug assembleDebugAndroidTest
 
       - name: Record APK checksum
         run: |
