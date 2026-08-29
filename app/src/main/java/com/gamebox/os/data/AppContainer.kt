@@ -3,6 +3,8 @@ package com.gamebox.os.data
 import android.content.Context
 import androidx.room.Room
 import com.gamebox.os.catalog.AssetCatalogProvider
+import com.gamebox.os.catalog.ConfiguredCatalogProvider
+import com.gamebox.os.catalog.HttpsCatalogProvider
 import com.gamebox.os.data.local.GameBoxDatabase
 import com.gamebox.os.data.local.MIGRATION_1_2
 import com.gamebox.os.data.local.MIGRATION_2_3
@@ -37,9 +39,13 @@ class DefaultAppContainer(context: Context) : AppContainer {
         GameBoxDatabase::class.java,
         "gamebox.db"
     ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4).build()
-    private val catalogProvider = AssetCatalogProvider(applicationContext)
-
     override val settingsRepository = SettingsRepository(applicationContext)
+    private val assetCatalogProvider = AssetCatalogProvider(applicationContext)
+    private val catalogProvider = ConfiguredCatalogProvider(
+        fallback = assetCatalogProvider,
+        remote = HttpsCatalogProvider(applicationContext, settingsRepository::catalogUrl),
+        configuredUrl = settingsRepository::catalogUrl
+    )
 
     override val downloadRepository: DownloadRepository =
         RoomDownloadRepository(database.downloadJobDao(), applicationScope)
