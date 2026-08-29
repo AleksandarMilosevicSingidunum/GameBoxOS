@@ -23,11 +23,13 @@ class HttpsCatalogTransportClient(
         connection.readTimeout = 15_000
         connection.setRequestProperty("Accept", "application/json")
         require((credentials?.username == null) == (credentials?.password == null)) { "WebDAV credentials must include both username and password" }
-        credentials?.username?.let { user -> credentials.password?.let { pass ->
+        credentials?.takeIf { it.hasBasicAuth() }?.let { auth ->
+            val user = auth.username!!
+            val pass = auth.password!!
             val token = Base64.getEncoder().encodeToString((user + ":" + pass).toByteArray())
             connection.setRequestProperty("Authorization", "Basic $token")
         } }
-        if (transport is CatalogTransport.S3 && credentials?.accessKey != null && credentials.secretKey != null) {
+        if (transport is CatalogTransport.S3 && credentials?.hasS3Auth() == true) {
             val signer = s3Signer ?: throw IllegalArgumentException("S3 signer required for access-key credentials")
             val emptyHash = MessageDigest.getInstance("SHA-256").digest(ByteArray(0)).joinToString("") { "%02x".format(it) }
             val signed = signer.sign("GET", uri.toString(), emptyHash, credentials)
