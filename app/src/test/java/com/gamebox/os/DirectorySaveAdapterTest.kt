@@ -3,13 +3,14 @@ package com.gamebox.os
 import com.gamebox.os.storage.DirectorySaveAdapter
 import java.io.File
 import org.junit.Assert.assertEquals
+import kotlin.io.path.createTempDirectory
 import org.junit.Assert.assertThrows
 import org.junit.Test
 
 class DirectorySaveAdapterTest {
     @Test
     fun discoversOnlyRequestedGameDirectory() {
-        val root = createTempDir(prefix = "gamebox-saves-")
+        val root = createTempDirectory("gamebox-saves-").toFile()
         try {
             File(root, "game-a").mkdirs()
             File(root, "game-a/progress.sav").writeText("A")
@@ -28,7 +29,7 @@ class DirectorySaveAdapterTest {
 
     @Test
     fun rejectsTraversalGameId() {
-        val root = createTempDir(prefix = "gamebox-saves-")
+        val root = createTempDirectory("gamebox-saves-").toFile()
         try {
             assertThrows(IllegalArgumentException::class.java) {
                 DirectorySaveAdapter(root).discover("../other")
