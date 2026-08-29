@@ -16,7 +16,7 @@ Status as of 29 August 2026:
 | Windows companion | Implemented foundation | Native .NET 8/WPF local-library launcher with search, favorites, atomic JSON state, safe file validation, and self-contained win-x64 CI artifact |
 | Controller navigation | Partial | Focusable cards, LB/RB tabs, Back/B handling, and focus restoration; physical-device and reconnect testing remain |
 | Primary UI | Implemented foundation | Home, Library, Store, Details, Downloads, Media, PC Hub, Settings, migration confirmation UI, and Compose instrumentation coverage |
-| Catalog and discovery | Implemented foundation | Room-backed catalog, search, platform/genre filters, favorites, cached authorized manifests |
+| Catalog and discovery | Implemented foundation | Room-backed catalog, search, platform/genre filters, favorites, cached authorized manifests, and a pinned MIT-licensed runnable Galaxy Patrol NES fixture |
 | Remote providers | Partial | Configurable HTTPS catalog with strict validation, offline cache, out-of-band credential abstraction, optional Basic auth, safe WebDAV/S3 URI builders, and bounded transport client; S3 request-signing boundary with AWS Signature V4 and authenticated transport wiring; WebDAV Basic auth hardens incomplete credentials; shared bounded recovery classification is applied by authenticated transports for auth, rate limits, transient network, and permanent failures, with JUnit coverage |
 | Downloads | Implemented | Durable WorkManager jobs, notifications, measured speed and ETA, preemptive low-storage warnings using the worker reserve, pause/resume, Range validation, retries, cancellation, size limits, SHA-256 verification, and atomic install |
 | Install/uninstall | Partial | App-private verified install plus explicit save-safe uninstall confirmation with exact freed and retained byte counts; generalized production content adapters and physical storage validation remain |
@@ -36,6 +36,7 @@ Status as of 29 August 2026:
 - Responsive normal-phone and 16:9 living-room layouts
 - Persistent catalog, install state, favorites, play history, downloads, and save records
 - Authorized HTTPS catalog configuration with bounded responses and atomic offline caching
+- Offline-installable Galaxy Patrol NES homebrew fixture with pinned source, MIT attribution, iNES/header/size/SHA-256 CI verification, and RetroArch handoff
 - Verified remote download pipeline with true pause/resume and safe job-scoped cleanup
 - App-private staging; content is promoted only after complete SHA-256 verification
 - Download notifications, byte progress, measured speed/ETA, low-storage warnings, failure reasons, retry, and cancellation
@@ -48,8 +49,7 @@ Status as of 29 August 2026:
 
 ## Important remaining work for Blueprint 1.0
 
-- Replace the diagnostic text payload with an authorized runnable homebrew fixture
-- Validate at least one real emulator adapter for every officially supported platform group
+- Validate the bundled Galaxy Patrol handoff in RetroArch and at least one real emulator adapter for every officially supported platform group
 - Validate PPSSPP/Dolphin intent behavior and additional production emulator adapters on physical target devices
 - Complete end-to-end authenticated WebDAV/S3 integration testing and physical recovery validation
 - Validate authenticated cloud-save byte transfer against real WebDAV/S3 endpoints and real save adapters against production emulators
