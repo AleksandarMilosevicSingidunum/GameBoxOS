@@ -26,7 +26,7 @@ Status as of 29 August 2026:
 | Offline operation | Partial | Cached catalog and persistent local state; full airplane-mode acceptance testing remains |
 | Diagnostics | Partial | Sanitized export report, bounded structured event collection, lifecycle wiring, and visible download errors; full recovery bundles and physical failure validation remain |
 | CI and releases | Partial | Unit tests, debug APK builds, SHA-256 artifacts, and alpha release workflow; signed production builds, rollback, and update channels remain |
-| External storage | Partial | SAF folder selection, persisted permissions, read/write status, disconnect detection, non-destructive copy execution with explicit confirmation states, and retryable outage classification; SAF document-tree copy wiring and physical unplug testing remain |
+| External storage | Partial | SAF folder selection, persisted permissions, read/write status, non-destructive document-tree copy execution with explicit confirmation states, safe partial-file finalization, disconnect detection, and retryable outage classification; physical unplug testing remains |
 | Target hardware | Not validated | Galaxy A53 controller testing and Galaxy S23 Ultra/DeX/HDMI/Ethernet/thermal/SSD soak testing require physical hardware |
 | Enclosure/handoff | Not started | Hardware enclosure, hub, cooling, cabling, and recovery-button work follows software maturity |
 
@@ -53,7 +53,7 @@ Status as of 29 August 2026:
 - Validate additional production emulator adapters and apply graphics profiles to adapter launch arguments
 - Complete provider recovery guidance and end-to-end authenticated WebDAV/S3 integration testing
 - Complete authenticated cloud save synchronization and validate real save adapters against production emulators
-- Wire confirmed migration states to SAF document-tree copy operations and complete physical disconnect/unplug safety tests
+- Complete physical disconnect/unplug safety tests for confirmed SAF migrations
 - Add Compose instrumentation, accessibility, lifecycle, migration, offline, and failure-recovery tests
 - Complete physical controller testing on Galaxy A53
 - Complete Galaxy S23 Ultra DeX/HDMI/Ethernet/charging/thermal/reconnect soak testing
@@ -67,7 +67,7 @@ Status as of 29 August 2026:
 The remaining work is tracked in these concrete groups:
 
 - Complete end-to-end authenticated WebDAV/S3 provider recovery and integration testing.
-- Wire the migration confirmation evaluator into SAF document-tree copy execution and verify disconnect recovery.
+- Verify disconnect recovery and add Compose coverage for confirmed SAF migration flows.
 - Validate adapter-specific save discovery/import/export against production emulators and add authenticated cloud synchronization.
 - Apply graphics profiles to adapter-specific launch arguments where supported.
 - Add Compose instrumentation, accessibility, lifecycle, migration, offline, and recovery tests.
