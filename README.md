@@ -13,7 +13,7 @@ Status as of 30 August 2026:
 | Blueprint area | Status | Current implementation |
 | --- | --- | --- |
 | Android/Compose shell | Implemented | Dark GameBox theme, phone portrait/landscape and large DeX layouts |
-| Windows companion | Implemented foundation | Native .NET 8/WPF local-library launcher with search, favorites, atomic JSON state, safe file validation, bounded HTTPS catalog synchronization that preserves local executable trust, and self-contained win-x64 CI artifact |
+| Windows companion | Implemented foundation | Native .NET 8/WPF local-library launcher with search, favorites, atomic JSON state, safe file validation, bounded HTTPS catalog synchronization that preserves local executable trust, rejects oversized payloads before buffering, and has executable size-guard coverage, and self-contained win-x64 CI artifact |
 | Controller navigation | Partial | Focusable cards, LB/RB tabs, Back/B handling, and focus restoration; physical-device and reconnect testing remain |
 | Primary UI | Implemented foundation | Home, Library, Store, Details, Downloads, Media, PC Hub, Settings, migration confirmation UI, accessible tab/card/progress/live-region semantics, saveable navigation/detail/focus restoration, JVM UI contracts, and compiled Compose instrumentation coverage |
 | Catalog and discovery | Implemented foundation | Room-backed catalog, search, platform/genre filters, favorites, cached authorized manifests, and a pinned MIT-licensed runnable Galaxy Patrol NES fixture |
@@ -44,7 +44,7 @@ Status as of 30 August 2026:
 - Configurable Media/PC launch hubs with installed-only filtering, Moonlight network status/recent sessions, interactive PC host probing, and Android system-setting shortcuts
 - SAF external-library selection with persisted permissions, explicit migration confirmation dialog, retryable disconnect/read-only status, and non-destructive copy execution
 - Sanitized diagnostics export that excludes credentials, source URLs, checksums, paths, and save contents
-- Automated unit tests covering storage/provider/release/accessibility contracts plus compiled Compose migration/accessibility instrumentation APKs, debug APK builds, and self-contained Windows Companion builds
+- Automated unit tests covering storage/provider/release/accessibility contracts plus compiled Compose migration/accessibility instrumentation APKs, debug APK builds, and self-contained Windows Companion builds with superseded-run cancellation and bounded Gradle/build steps
 - Friendly emulator selection with validated graphics profiles, launch-time profile handoff, and unsupported-platform guidance
 - Deterministic release manifest generation containing APK hash, size, channel, and optional rollback tag
 - Network-aware offline catalog selection with a reactive accessible offline-mode banner
