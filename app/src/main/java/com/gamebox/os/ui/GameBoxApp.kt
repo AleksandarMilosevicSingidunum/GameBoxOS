@@ -269,7 +269,7 @@ private fun CollectionScreen(
         Text(title, fontSize = if (compact) 28.sp else 38.sp, fontWeight = FontWeight.Bold)
         Text(subtitle, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.68f))
         Spacer(Modifier.height(24.dp))
-        GameRow(games, focusTarget, onFocused, open)
+        GameRow(games, focusTarget, onFocused, compact, open)
     }
 }
 
