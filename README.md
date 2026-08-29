@@ -24,7 +24,7 @@ Status as of 29 August 2026:
 | Emulator integration | Partial | Allowlisted emulator handoff with per-game package selection and graphics profile persistence exposed in Details, read-only FileProvider access, return tracking, capability registry, documented PPSSPP Args graphics mapping, and Dolphin AutoStartFiles launch wiring; production adapter validation remains |
 | Media and PC | Partial | Installed-app detection, typed availability states, safe launch shortcuts, persistent hide-unavailable policy, responsive empty/setup states, Moonlight connectivity status, bounded host reachability probes, interactive PC host-probe panel, and recent sessions for media, Moonlight, Winlator, Termux, Files, browser, and Android settings; physical streaming validation remains |
 | Offline operation | Partial | Cached catalog and persistent local state; full airplane-mode acceptance testing remains |
-| Diagnostics | Partial | Sanitized export report, bounded structured event collection, lifecycle wiring, and visible download errors; full recovery bundles and physical failure validation remain |
+| Diagnostics | Partial | Sanitized report, bounded redacted event collection, lifecycle wiring, visible download errors, and a 2 MiB ZIP recovery bundle export; physical failure validation remains |
 | CI and releases | Partial | Unit tests, debug APK builds, SHA-256 artifacts, alpha release workflow, and deterministic channel-readiness gating with JUnit coverage; signed production builds, rollback, and update channels remain |
 | External storage | Partial | SAF folder selection, persisted permissions, read/write status, real filesDir/installed discovery, exact migration planning, Settings confirmation/execution with result totals, non-destructive document-tree copy execution with explicit confirmation states, safe partial-file finalization, disconnect detection, and retryable outage classification; physical unplug testing remains |
 | Target hardware | Not validated | Galaxy A53 controller testing and Galaxy S23 Ultra/DeX/HDMI/Ethernet/thermal/SSD soak testing require physical hardware |
@@ -69,7 +69,7 @@ The remaining work is tracked in these concrete groups:
 - Complete end-to-end authenticated WebDAV/S3 provider integration and physical recovery testing.
 - Verify physical disconnect recovery for Settings-driven migrations.
 - Validate adapter-specific save discovery/import/export against production emulators and exercise authenticated cloud byte transport against real WebDAV/S3 endpoints.
-- Run the compiled Compose accessibility/migration/lifecycle suite on devices and add offline and recovery scenarios.
+- Run the compiled Compose accessibility/migration/lifecycle suite on devices and add offline/recovery scenarios.
 - Complete physical controller, DeX, HDMI, Ethernet, charging, thermal, SSD, and unplug/reattach validation.
 - Configure production signing, update channels, rollback/recovery procedures, and release documentation.
 - Complete enclosure, cooling, cabling, and hardware handoff work.
