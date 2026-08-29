@@ -28,12 +28,12 @@ data class EmulatorCapability(
 class EmulatorCapabilityRegistry(
     private val capabilities: List<EmulatorCapability> = listOf(
         EmulatorCapability(
-            id = "retroarch-aarch64-test",
-            gameId = GameId("retro-test"),
+            id = "retroarch-aarch64-galaxy-patrol",
+            gameId = GameId("galaxy-patrol"),
             packageName = "com.retroarch.aarch64",
-            contentRelativePath = "retro/retro-test/content/test.txt",
-            mimeType = "application/octet-stream",
-            expectedSha256 = "94ee059335e587e501cc4bf90613e0814f00a7b08bc7c648fd865a2af6a22cc2"
+            contentRelativePath = "retro/galaxy-patrol/content/galaxy-patrol.nes",
+            mimeType = "application/x-nes-rom",
+            expectedSha256 = "97c1757ffd6a5bc1a591809b2b0f8988741f61f6abd82889c148ecae8a2f471f"
         )
     )
 ) {

@@ -17,7 +17,7 @@ import kotlinx.coroutines.launch
 data class AuthorizedDownloadState(
     val status: Status = Status.IDLE,
     val bytesTransferred: Long = 0L,
-    val totalBytes: Long = AuthorizedTestDownload.SIZE_BYTES,
+    val totalBytes: Long = AuthorizedHomebrewDownload.SIZE_BYTES,
     val error: String? = null
 ) {
     enum class Status { IDLE, QUEUED, RUNNING, SUCCEEDED, MISSING_CONTENT, ALTERED_CONTENT, FAILED, CANCELLED }
@@ -44,7 +44,7 @@ class WorkManagerAuthorizedDownloadController(
         applicationContext.filesDir.resolve(AssetDownloadWorker.INSTALL_ROOT)
     )
     private val state = workManager
-        .getWorkInfosForUniqueWorkFlow(AuthorizedTestDownload.UNIQUE_WORK_NAME)
+        .getWorkInfosForUniqueWorkFlow(AuthorizedHomebrewDownload.UNIQUE_WORK_NAME)
         .map { workInfos -> workInfos.lastOrNull().toAuthorizedState() }
         .stateIn(scope, SharingStarted.Eagerly, AuthorizedDownloadState())
 
@@ -52,7 +52,7 @@ class WorkManagerAuthorizedDownloadController(
         scope.launch {
             state.collect { current ->
                 current.status.toInstallState()?.let {
-                    gameRepository.setInstallState(TEST_GAME_ID, it)
+                    gameRepository.setInstallState(HOMEBREW_GAME_ID, it)
                 }
             }
         }
@@ -61,12 +61,12 @@ class WorkManagerAuthorizedDownloadController(
     override fun observeState(): StateFlow<AuthorizedDownloadState> = state
 
     override fun install() {
-        gameRepository.setInstallState(TEST_GAME_ID, InstallState.QUEUED)
-        scheduler.enqueueAuthorizedTest()
+        gameRepository.setInstallState(HOMEBREW_GAME_ID, InstallState.QUEUED)
+        scheduler.enqueueAuthorizedHomebrew()
     }
 
     override fun cancel() {
-        workManager.cancelUniqueWork(AuthorizedTestDownload.UNIQUE_WORK_NAME)
+        workManager.cancelUniqueWork(AuthorizedHomebrewDownload.UNIQUE_WORK_NAME)
     }
 
     private fun WorkInfo?.toAuthorizedState(): AuthorizedDownloadState {
@@ -78,15 +78,15 @@ class WorkManagerAuthorizedDownloadController(
         }
         val total = progress.getLong(
             AssetDownloadWorker.KEY_TOTAL_BYTES,
-            AuthorizedTestDownload.SIZE_BYTES
-        ).takeIf { it > 0L } ?: AuthorizedTestDownload.SIZE_BYTES
+            AuthorizedHomebrewDownload.SIZE_BYTES
+        ).takeIf { it > 0L } ?: AuthorizedHomebrewDownload.SIZE_BYTES
         return AuthorizedDownloadState(
             status = when (state) {
                 WorkInfo.State.ENQUEUED, WorkInfo.State.BLOCKED -> AuthorizedDownloadState.Status.QUEUED
                 WorkInfo.State.RUNNING -> AuthorizedDownloadState.Status.RUNNING
                 WorkInfo.State.SUCCEEDED -> when (contentValidator.validate(
-                    AuthorizedTestDownload.RELATIVE_PATH,
-                    AuthorizedTestDownload.SHA256
+                    AuthorizedHomebrewDownload.RELATIVE_PATH,
+                    AuthorizedHomebrewDownload.SHA256
                 )) {
                     InstalledContentStatus.VERIFIED -> AuthorizedDownloadState.Status.SUCCEEDED
                     InstalledContentStatus.MISSING -> AuthorizedDownloadState.Status.MISSING_CONTENT
@@ -100,7 +100,7 @@ class WorkManagerAuthorizedDownloadController(
             error = outputData.getString(AssetDownloadWorker.KEY_ERROR) ?: when {
                 state == WorkInfo.State.SUCCEEDED &&
                     !applicationContext.filesDir.resolve(AssetDownloadWorker.INSTALL_ROOT)
-                        .resolve(AuthorizedTestDownload.RELATIVE_PATH).isFile ->
+                        .resolve(AuthorizedHomebrewDownload.RELATIVE_PATH).isFile ->
                     "Recorded install is missing; reinstall required"
                 else -> null
             }
@@ -119,6 +119,6 @@ class WorkManagerAuthorizedDownloadController(
     }
 
     private companion object {
-        val TEST_GAME_ID = GameId("retro-test")
+        val HOMEBREW_GAME_ID = GameId("galaxy-patrol")
     }
 }

@@ -67,32 +67,32 @@ class AssetDownloadWorker(
     }
 }
 
-object AuthorizedTestDownload {
-    const val UNIQUE_WORK_NAME = "authorized-test-download"
-    const val ASSET_PATH = "downloads/test.txt"
-    const val RELATIVE_PATH = "retro/retro-test/content/test.txt"
-    const val SHA256 = "94ee059335e587e501cc4bf90613e0814f00a7b08bc7c648fd865a2af6a22cc2"
-    const val SIZE_BYTES = 4L
-    const val MAX_BYTES = 1024L
+object AuthorizedHomebrewDownload {
+    const val UNIQUE_WORK_NAME = "authorized-homebrew-download"
+    const val ASSET_PATH = "downloads/galaxy-patrol.nes"
+    const val RELATIVE_PATH = "retro/galaxy-patrol/content/galaxy-patrol.nes"
+    const val SHA256 = "97c1757ffd6a5bc1a591809b2b0f8988741f61f6abd82889c148ecae8a2f471f"
+    const val SIZE_BYTES = 49_168L
+    const val MAX_BYTES = 64L * 1024L
 }
 
 class DownloadWorkScheduler(context: Context) {
     private val workManager = WorkManager.getInstance(context.applicationContext)
 
-    fun enqueueAuthorizedTest() {
+    fun enqueueAuthorizedHomebrew() {
         val request = OneTimeWorkRequestBuilder<AssetDownloadWorker>()
             .setInputData(
                 workDataOf(
-                    AssetDownloadWorker.KEY_ASSET_PATH to AuthorizedTestDownload.ASSET_PATH,
-                    AssetDownloadWorker.KEY_RELATIVE_PATH to AuthorizedTestDownload.RELATIVE_PATH,
-                    AssetDownloadWorker.KEY_SHA256 to AuthorizedTestDownload.SHA256,
-                    AssetDownloadWorker.KEY_TOTAL_BYTES to AuthorizedTestDownload.SIZE_BYTES,
-                    AssetDownloadWorker.KEY_MAX_BYTES to AuthorizedTestDownload.MAX_BYTES
+                    AssetDownloadWorker.KEY_ASSET_PATH to AuthorizedHomebrewDownload.ASSET_PATH,
+                    AssetDownloadWorker.KEY_RELATIVE_PATH to AuthorizedHomebrewDownload.RELATIVE_PATH,
+                    AssetDownloadWorker.KEY_SHA256 to AuthorizedHomebrewDownload.SHA256,
+                    AssetDownloadWorker.KEY_TOTAL_BYTES to AuthorizedHomebrewDownload.SIZE_BYTES,
+                    AssetDownloadWorker.KEY_MAX_BYTES to AuthorizedHomebrewDownload.MAX_BYTES
                 )
             )
             .build()
         workManager.enqueueUniqueWork(
-            AuthorizedTestDownload.UNIQUE_WORK_NAME,
+            AuthorizedHomebrewDownload.UNIQUE_WORK_NAME,
             ExistingWorkPolicy.REPLACE,
             request
         )

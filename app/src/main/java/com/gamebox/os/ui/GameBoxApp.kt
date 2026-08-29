@@ -535,7 +535,7 @@ private fun DetailsScreen(
     compact: Boolean,
     onBack: () -> Unit
 ) {
-    val isAuthorizedTest = game.id.value == "retro-test"
+    val isAuthorizedFixture = game.id.value == "galaxy-patrol"
     val authorizedState by authorizedDownloadController.observeState().collectAsState()
     val launchState by gameLaunchController.observeState().collectAsState()
     val saveSafetyState by saveSafetyController.observeState().collectAsState()
@@ -598,7 +598,7 @@ private fun DetailsScreen(
             Column(Modifier.fillMaxWidth().padding(24.dp)) {
                 Text("Install state", color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f))
                 Text(game.state.displayName(), fontSize = 24.sp, fontWeight = FontWeight.Bold)
-                if (isAuthorizedTest && authorizedState.status != AuthorizedDownloadState.Status.IDLE) {
+                if (isAuthorizedFixture && authorizedState.status != AuthorizedDownloadState.Status.IDLE) {
                     Spacer(Modifier.height(12.dp))
                     Text(
                         "Verified asset worker: " + authorizedState.status.name.lowercase(),
@@ -616,7 +616,7 @@ private fun DetailsScreen(
                 Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                     Button(
                         onClick = {
-                            if (isAuthorizedTest) {
+                            if (isAuthorizedFixture) {
                                 authorizedDownloadController.install()
                             } else {
                                 when (game.state) {
@@ -634,7 +634,7 @@ private fun DetailsScreen(
                             }
                         },
                         enabled = when {
-                            isAuthorizedTest -> !workerActive
+                            isAuthorizedFixture -> !workerActive
                             game.state in setOf(
                                 InstallState.NOT_INSTALLED,
                                 InstallState.FAILED,
@@ -644,18 +644,18 @@ private fun DetailsScreen(
                         }
                     ) {
                         Text(
-                            if (!isAuthorizedTest) game.state.primaryAction()
+                            if (!isAuthorizedFixture) game.state.primaryAction()
                             else if (authorizedState.status == AuthorizedDownloadState.Status.SUCCEEDED)
                                 "Reinstall verified test"
                             else "Install verified test"
                         )
                     }
-                    if (isAuthorizedTest && workerActive) {
+                    if (isAuthorizedFixture && workerActive) {
                         OutlinedButton(onClick = authorizedDownloadController::cancel) {
                             Text("Cancel")
                         }
                     }
-                    if (isAuthorizedTest && (game.state == InstallState.INSTALLED ||
+                    if (isAuthorizedFixture && (game.state == InstallState.INSTALLED ||
                         game.state == InstallState.UPDATE_AVAILABLE)
                     ) {
                         Button(onClick = { gameLaunchController.launch(game) }) {
@@ -665,7 +665,7 @@ private fun DetailsScreen(
                             Text("Uninstall content")
                         }
                     }
-                    if (isAuthorizedTest && !saveSafetyState.saveRecordPresent) {
+                    if (isAuthorizedFixture && !saveSafetyState.saveRecordPresent) {
                         OutlinedButton(onClick = saveSafetyController::createTestSaveRecord) {
                             Text("Create test save")
                         }
@@ -708,7 +708,7 @@ private fun DetailsScreen(
                         )
                     }
                 }
-                if (isAuthorizedTest && saveSafetyState.saveRecordPresent) {
+                if (isAuthorizedFixture && saveSafetyState.saveRecordPresent) {
                     Spacer(Modifier.height(12.dp))
                     Text(
                         "Test save path: " + saveSafetyState.relativePath,
@@ -724,7 +724,7 @@ private fun DetailsScreen(
                                 Text("Restore backup")
                             }
                             OutlinedButton(onClick = {
-                                exportBackupLauncher.launch("gamebox-retro-test-save.dat")
+                                exportBackupLauncher.launch("gamebox-galaxy-patrol-save.dat")
                             }) {
                                 Text("Export")
                             }
@@ -736,7 +736,7 @@ private fun DetailsScreen(
                         }
                     }
                 }
-                if (isAuthorizedTest) {
+                if (isAuthorizedFixture) {
                     saveSafetyState.operationMessage?.let { message ->
                         Spacer(Modifier.height(10.dp))
                         Text(

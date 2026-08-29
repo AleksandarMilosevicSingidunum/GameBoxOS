@@ -75,14 +75,13 @@
       "initialState": "PAUSED"
     },
     {
-      "id": "retro-test",
-      "title": "Retro Test Suite",
+      "id": "galaxy-patrol",
+      "title": "Galaxy Patrol",
       "platform": "Retro",
-      "year": 2026,
-      "genre": "Test",
-      "sizeMb": 8,
-      "contentPolicy": "developer-test-fixture",
-      "initialState": "VERIFYING"
+      "year": 2018,
+      "genre": "Arcade",
+      "sizeMb": 1,
+      "contentPolicy": "MIT-licensed-homebrew"
     }
   ]
 }
