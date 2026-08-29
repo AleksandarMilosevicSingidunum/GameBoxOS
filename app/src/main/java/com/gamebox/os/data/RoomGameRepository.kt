@@ -8,6 +8,7 @@ import com.gamebox.os.domain.CatalogRefreshState
 import com.gamebox.os.domain.Game
 import com.gamebox.os.domain.GameId
 import com.gamebox.os.domain.InstallState
+import com.gamebox.os.domain.GraphicsProfiles
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -60,7 +61,7 @@ class RoomGameRepository(
     }
 
     override fun setEmulatorSettings(id: GameId, packageName: String?, graphicsProfile: String) {
-        scope.launch { dao.updateEmulatorSettings(id.value, packageName, graphicsProfile) }
+        scope.launch { dao.updateEmulatorSettings(id.value, packageName, graphicsProfile.takeIf { it in GraphicsProfiles.ALL } ?: GraphicsProfiles.BALANCED) }
     }
 
     override fun setFavorite(id: GameId, favorite: Boolean) {
