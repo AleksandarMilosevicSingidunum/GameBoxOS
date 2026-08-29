@@ -17,7 +17,8 @@ data class Game(
     val sizeMb: Int,
     val state: InstallState,
     val lastPlayed: String? = null,
-    val minutesPlayed: Int = 0
+    val minutesPlayed: Int = 0,
+    val favorite: Boolean = false
 )
 
 enum class DownloadStatus {

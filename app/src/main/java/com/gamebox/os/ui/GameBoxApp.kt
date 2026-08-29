@@ -241,8 +241,13 @@ private fun CatalogScreen(
     open: (Game) -> Unit
 ) {
     val refreshState by repository.observeCatalogRefreshState().collectAsState()
-    val focusTarget = restoreGameId?.takeIf { id -> games.any { it.id == id } }
-        ?: games.firstOrNull()?.id
+    var query by remember { mutableStateOf("") }
+    var platform by remember { mutableStateOf<String?>(null) }
+    var genre by remember { mutableStateOf<String?>(null) }
+    var favoritesOnly by remember { mutableStateOf(false) }
+    val filtered = filterGames(games, query, platform, genre, favoritesOnly)
+    val focusTarget = restoreGameId?.takeIf { id -> filtered.any { it.id == id } }
+        ?: filtered.firstOrNull()?.id
     Column {
         if (compact) Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Column {
@@ -266,8 +271,14 @@ private fun CatalogScreen(
             Text("Catalog refreshed; local install and play state preserved",
                 color = MaterialTheme.colorScheme.primary)
         }
-        Spacer(Modifier.height(24.dp))
-        GameRow(games, focusTarget, onFocused, compact, open)
+        Spacer(Modifier.height(16.dp))
+        GameFilterBar(
+            games, query, { query = it }, platform, { platform = it },
+            genre, { genre = it }, favoritesOnly, { favoritesOnly = it }
+        )
+        Spacer(Modifier.height(16.dp))
+        if (filtered.isEmpty()) Text("No games match these filters")
+        else GameRow(filtered, focusTarget, onFocused, compact, open)
     }
 }
 
@@ -281,13 +292,91 @@ private fun CollectionScreen(
     compact: Boolean,
     open: (Game) -> Unit
 ) {
-    val focusTarget = restoreGameId?.takeIf { id -> games.any { it.id == id } }
-        ?: games.firstOrNull()?.id
+    var query by remember { mutableStateOf("") }
+    var platform by remember { mutableStateOf<String?>(null) }
+    var genre by remember { mutableStateOf<String?>(null) }
+    var favoritesOnly by remember { mutableStateOf(false) }
+    val filtered = filterGames(games, query, platform, genre, favoritesOnly)
+    val focusTarget = restoreGameId?.takeIf { id -> filtered.any { it.id == id } }
+        ?: filtered.firstOrNull()?.id
     Column {
         Text(title, fontSize = if (compact) 28.sp else 38.sp, fontWeight = FontWeight.Bold)
         Text(subtitle, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.68f))
-        Spacer(Modifier.height(24.dp))
-        GameRow(games, focusTarget, onFocused, compact, open)
+        Spacer(Modifier.height(14.dp))
+        GameFilterBar(
+            games, query, { query = it }, platform, { platform = it },
+            genre, { genre = it }, favoritesOnly, { favoritesOnly = it }
+        )
+        Spacer(Modifier.height(14.dp))
+        if (filtered.isEmpty()) Text("No games match these filters")
+        else GameRow(filtered, focusTarget, onFocused, compact, open)
+    }
+}
+
+@Composable
+private fun GameFilterBar(
+    games: List<Game>,
+    query: String,
+    onQuery: (String) -> Unit,
+    platform: String?,
+    onPlatform: (String?) -> Unit,
+    genre: String?,
+    onGenre: (String?) -> Unit,
+    favoritesOnly: Boolean,
+    onFavoritesOnly: (Boolean) -> Unit
+) {
+    val platforms = games.map { it.platform }.distinct().sorted()
+    val genres = games.map { it.genre }.distinct().sorted()
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        OutlinedTextField(
+            value = query,
+            onValueChange = onQuery,
+            label = { Text("Search games") },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth()
+        )
+        Row(
+            Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            FilterChip(selected = platform == null, onClick = { onPlatform(null) }, label = { Text("All platforms") })
+            platforms.forEach { value ->
+                FilterChip(selected = platform == value, onClick = { onPlatform(value) }, label = { Text(value) })
+            }
+        }
+        Row(
+            Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            FilterChip(
+                selected = favoritesOnly,
+                onClick = { onFavoritesOnly(!favoritesOnly) },
+                label = { Text("Favorites") }
+            )
+            FilterChip(selected = genre == null, onClick = { onGenre(null) }, label = { Text("All genres") })
+            genres.forEach { value ->
+                FilterChip(selected = genre == value, onClick = { onGenre(value) }, label = { Text(value) })
+            }
+        }
+    }
+}
+
+internal fun filterGames(
+    games: List<Game>,
+    query: String,
+    platform: String?,
+    genre: String?,
+    favoritesOnly: Boolean
+): List<Game> {
+    val normalized = query.trim()
+    return games.filter { game ->
+        (normalized.isEmpty() ||
+            game.title.contains(normalized, ignoreCase = true) ||
+            game.platform.contains(normalized, ignoreCase = true) ||
+            game.genre.contains(normalized, ignoreCase = true)) &&
+            (platform == null || game.platform == platform) &&
+            (genre == null || game.genre == genre) &&
+            (!favoritesOnly || game.favorite)
     }
 }
 
@@ -356,7 +445,7 @@ private fun GameCard(
             Text(if (hero) "CONTINUE PLAYING" else game.platform.uppercase(),
                 color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold, fontSize = 12.sp)
             Spacer(Modifier.height(10.dp))
-            Text(game.title, fontSize = if (hero) 32.sp else 21.sp, fontWeight = FontWeight.Bold)
+            Text((if (game.favorite) "★ " else "") + game.title, fontSize = if (hero) 32.sp else 21.sp, fontWeight = FontWeight.Bold)
             Spacer(Modifier.weight(1f))
             Text(if (hero) "Press A for details" else game.state.displayName(), fontSize = 13.sp)
         }
@@ -464,6 +553,9 @@ private fun DetailsScreen(
                             Text(if (game.state == InstallState.PAUSED) "Resume" else "Pause")
                         }
                     }
+                    OutlinedButton(
+                        onClick = { repository.setFavorite(game.id, !game.favorite) }
+                    ) { Text(if (game.favorite) "Remove favorite" else "Favorite") }
                     OutlinedButton(onClick = onBack) { Text("Back") }
                 }
                 if (isAuthorizedTest && saveSafetyState.saveRecordPresent) {
@@ -697,6 +789,9 @@ private fun ShortcutCard(
 @Composable
 private fun SettingsScreen(compact: Boolean) {
     val context = LocalContext.current
+    val storageRoot = context.filesDir
+    val totalStorage = storageRoot.totalSpace
+    val usableStorage = storageRoot.usableSpace
     val settings = listOf(
         "Storage" to Settings.ACTION_INTERNAL_STORAGE_SETTINGS,
         "Controllers" to Settings.ACTION_BLUETOOTH_SETTINGS,
@@ -711,7 +806,12 @@ private fun SettingsScreen(compact: Boolean) {
             "GameBox configuration and safe Android system shortcuts",
             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.68f)
         )
-        Spacer(Modifier.height(18.dp))
+        Spacer(Modifier.height(12.dp))
+        Text(
+            "App storage: " + formatBytes(usableStorage) + " free of " + formatBytes(totalStorage),
+            color = MaterialTheme.colorScheme.primary
+        )
+        Spacer(Modifier.height(12.dp))
         settings.forEach { (title, action) ->
             OutlinedButton(
                 onClick = {
@@ -733,6 +833,11 @@ private fun SettingsScreen(compact: Boolean) {
             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.62f)
         )
     }
+}
+
+private fun formatBytes(bytes: Long): String {
+    val gib = bytes.toDouble() / (1024.0 * 1024.0 * 1024.0)
+    return String.format(java.util.Locale.US, "%.1f GB", gib)
 }
 
 private fun DownloadStatus.displayName() = name.lowercase().replace('_', ' ')

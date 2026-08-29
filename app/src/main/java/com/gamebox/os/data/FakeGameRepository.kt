@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.asStateFlow
 interface GameRepository {
     fun observeGames(): StateFlow<List<Game>>
     fun game(id: GameId): Game?
+    fun setFavorite(id: GameId, favorite: Boolean)
     fun advanceInstall(id: GameId)
     fun pauseOrResume(id: GameId)
     fun cancelInstall(id: GameId)
@@ -26,6 +27,10 @@ class FakeGameRepository : GameRepository {
 
     override fun observeGames(): StateFlow<List<Game>> = games.asStateFlow()
     override fun game(id: GameId): Game? = games.value.firstOrNull { it.id == id }
+
+    override fun setFavorite(id: GameId, favorite: Boolean) {
+        update(id) { it.copy(favorite = favorite) }
+    }
 
     override fun advanceInstall(id: GameId) {
         update(id) { game ->
