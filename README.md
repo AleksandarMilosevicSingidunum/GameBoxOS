@@ -26,7 +26,7 @@ Status as of 29 August 2026:
 | Offline operation | Partial | Cached catalog and persistent local state; full airplane-mode acceptance testing remains |
 | Diagnostics | Partial | Sanitized export report, bounded structured event collection, lifecycle wiring, and visible download errors; full recovery bundles and physical failure validation remain |
 | CI and releases | Partial | Unit tests, debug APK builds, SHA-256 artifacts, alpha release workflow, and deterministic channel-readiness gating with JUnit coverage; signed production builds, rollback, and update channels remain |
-| External storage | Partial | SAF folder selection, persisted permissions, read/write status, real filesDir/installed discovery, exact migration planning, non-destructive document-tree copy execution with explicit confirmation states, safe partial-file finalization, disconnect detection, and retryable outage classification; physical unplug testing remains |
+| External storage | Partial | SAF folder selection, persisted permissions, read/write status, real filesDir/installed discovery, exact migration planning, Settings confirmation/execution with result totals, non-destructive document-tree copy execution with explicit confirmation states, safe partial-file finalization, disconnect detection, and retryable outage classification; physical unplug testing remains |
 | Target hardware | Not validated | Galaxy A53 controller testing and Galaxy S23 Ultra/DeX/HDMI/Ethernet/thermal/SSD soak testing require physical hardware |
 | Enclosure/handoff | Not started | Hardware enclosure, hub, cooling, cabling, and recovery-button work follows software maturity |
 
@@ -67,7 +67,7 @@ Status as of 29 August 2026:
 The remaining work is tracked in these concrete groups:
 
 - Complete end-to-end authenticated WebDAV/S3 provider recovery and integration testing.
-- Wire installed-content migration into Settings actions and verify physical disconnect recovery.
+- Verify physical disconnect recovery for Settings-driven migrations.
 - Validate adapter-specific save discovery/import/export against production emulators and add authenticated cloud synchronization.
 - Apply graphics profiles to adapter-specific launch arguments where supported.
 - Add Compose instrumentation, accessibility, lifecycle, migration, offline, and recovery tests.
