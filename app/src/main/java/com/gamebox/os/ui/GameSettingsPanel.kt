@@ -12,6 +12,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.gamebox.os.data.GameRepository
 import com.gamebox.os.domain.Game
+import com.gamebox.os.domain.GraphicsProfiles
 import com.gamebox.os.launch.EmulatorCapabilityRegistry
 
 @Composable
@@ -25,7 +26,7 @@ fun GameSettingsPanel(game: Game, repository: GameRepository, modifier: Modifier
         }
         Text("Graphics profile")
         Row(Modifier.horizontalScroll(rememberScrollState())) {
-            listOf("Compatibility", "Balanced", "Performance").forEach { profile -> FilterChip(game.graphicsProfile == profile, { repository.setEmulatorSettings(game.id, game.emulatorPackage, profile) }, label = { Text(profile) }) }
+            listOf(GraphicsProfiles.COMPATIBILITY, GraphicsProfiles.BALANCED, GraphicsProfiles.PERFORMANCE).forEach { profile -> FilterChip(game.graphicsProfile == profile, { repository.setEmulatorSettings(game.id, game.emulatorPackage, profile) }, label = { Text(profile) }) }
         }
     }
 }
