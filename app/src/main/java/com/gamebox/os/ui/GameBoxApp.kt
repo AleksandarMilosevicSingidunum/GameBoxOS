@@ -493,6 +493,7 @@ private fun DetailsScreen(
         Text(game.platform.uppercase(), color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
         Text(game.title, fontSize = if (compact) 32.sp else 44.sp, fontWeight = FontWeight.Bold)
         Text(game.genre + "  |  " + game.year + "  |  " + game.sizeMb + " MB")
+        GameSettingsPanel(game = game, repository = repository)
         Spacer(Modifier.height(24.dp))
         Surface(color = MaterialTheme.colorScheme.surface, shape = RoundedCornerShape(18.dp)) {
             Column(Modifier.fillMaxWidth().padding(24.dp)) {
