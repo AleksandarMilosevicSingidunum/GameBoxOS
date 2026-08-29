@@ -22,7 +22,7 @@ Status as of 29 August 2026:
 | Install/uninstall | Partial | App-private verified install plus explicit save-safe uninstall confirmation with exact freed and retained byte counts; generalized production content adapters and physical storage validation remain |
 | Saves | Partial | Platform save-adapter registry, real directory discovery, reactive per-game save presence in Details, multi-artifact backup/restore, atomic checksum-protected snapshot manifests, import/export, retention, deterministic sync conflict resolution, and cross-game safety checks; credential-safe cloud sync contract with HTTPS/payload/offline guards and automated JUnit coverage; authenticated transport integration and physical emulator validation remain |
 | Emulator integration | Partial | Allowlisted emulator handoff with per-game package selection and graphics profile persistence exposed in Details, read-only FileProvider access, return tracking, and capability registry; production adapter validation remains |
-| Media and PC | Partial | Installed-app detection, typed availability states, safe launch shortcuts, persistent hide-unavailable policy, responsive empty/setup states, Moonlight connectivity status, bounded host reachability probes, and recent sessions for media, Moonlight, Winlator, Termux, Files, browser, and Android settings; physical streaming validation remains |
+| Media and PC | Partial | Installed-app detection, typed availability states, safe launch shortcuts, persistent hide-unavailable policy, responsive empty/setup states, Moonlight connectivity status, bounded host reachability probes, interactive PC host-probe panel, and recent sessions for media, Moonlight, Winlator, Termux, Files, browser, and Android settings; physical streaming validation remains |
 | Offline operation | Partial | Cached catalog and persistent local state; full airplane-mode acceptance testing remains |
 | Diagnostics | Partial | Sanitized export report, bounded structured event collection, lifecycle wiring, and visible download errors; full recovery bundles and physical failure validation remain |
 | CI and releases | Partial | Unit tests, debug APK builds, SHA-256 artifacts, alpha release workflow, and deterministic channel-readiness gating with JUnit coverage; signed production builds, rollback, and update channels remain |
@@ -60,7 +60,7 @@ Status as of 29 August 2026:
 - Configure signed production builds, update/rollback procedures, and recovery documentation
 - Complete the physical enclosure and hardware handoff
 - Expand the optional Windows companion with catalog synchronization and richer PC-runtime integrations
-- Validate host reachability and physical LAN/controller streaming
+- Validate physical LAN/controller streaming and host-probe behavior on target devices
 
 ## Blueprint implementation backlog
 
