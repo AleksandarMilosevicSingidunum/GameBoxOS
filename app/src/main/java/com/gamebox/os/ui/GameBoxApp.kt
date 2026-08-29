@@ -588,25 +588,6 @@ private fun DetailsScreen(
             }
         )
     }
-    if (showMigrationDialog) {
-        MigrationConfirmationDialog(
-            plan = migrationPlan,
-            storageStatus = externalStorageStatus,
-            previousResult = migrationResult,
-            onConfirm = {
-                showMigrationDialog = false
-                scope.launch {
-                    val result = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-                        installedMigration.execute(context, android.net.Uri.parse(currentSettings.externalLibraryUri), migrationPlan)
-                    }
-                    migrationResult = result
-                    catalogMessage = "Migration copied " + result.copiedCount + " item(s), " + result.retryableCount + " retryable, " + result.failedCount + " failed"
-                }
-            },
-            onRetry = { externalTreeLauncher.launch(null) },
-            onDismiss = { showMigrationDialog = false }
-        )
-    }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
         Text(game.platform.uppercase(), color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
         Text(game.title, fontSize = if (compact) 32.sp else 44.sp, fontWeight = FontWeight.Bold)
@@ -1196,6 +1177,25 @@ private fun SettingsScreen(
         "Network" to Settings.ACTION_WIRELESS_SETTINGS,
         "System" to Settings.ACTION_SETTINGS
     )
+    if (showMigrationDialog) {
+        MigrationConfirmationDialog(
+            plan = migrationPlan,
+            storageStatus = externalStorageStatus,
+            previousResult = migrationResult,
+            onConfirm = {
+                showMigrationDialog = false
+                scope.launch {
+                    val result = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                        installedMigration.execute(context, android.net.Uri.parse(currentSettings.externalLibraryUri), migrationPlan)
+                    }
+                    migrationResult = result
+                    catalogMessage = "Migration copied " + result.copiedCount + " item(s), " + result.retryableCount + " retryable, " + result.failedCount + " failed"
+                }
+            },
+            onRetry = { externalTreeLauncher.launch(null) },
+            onDismiss = { showMigrationDialog = false }
+        )
+    }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
         Text("Settings", fontSize = if (compact) 28.sp else 38.sp, fontWeight = FontWeight.Bold)
         Text(
