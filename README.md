@@ -16,7 +16,7 @@ Status as of 29 August 2026:
 | Controller navigation | Partial | Focusable cards, LB/RB tabs, Back/B handling, and focus restoration; physical-device and reconnect testing remain |
 | Primary UI | Implemented foundation | Home, Library, Store, Details, Downloads, Media, PC Hub, and Settings |
 | Catalog and discovery | Implemented foundation | Room-backed catalog, search, platform/genre filters, favorites, cached authorized manifests |
-| Remote providers | Partial | Configurable HTTPS catalog with strict validation, offline cache, out-of-band credential abstraction, optional Basic auth, safe WebDAV/S3 URI builders, and bounded transport client; S3 request-signing boundary is defined with fail-closed behavior; AWS Signature V4 implementation remains |
+| Remote providers | Partial | Configurable HTTPS catalog with strict validation, offline cache, out-of-band credential abstraction, optional Basic auth, safe WebDAV/S3 URI builders, and bounded transport client; S3 request-signing boundary with AWS Signature V4 and authenticated transport wiring; WebDAV Basic auth hardens incomplete credentials |
 | Downloads | Implemented foundation | Durable WorkManager jobs, notifications, low-space reserve, pause/resume, Range validation, retries, cancellation, size limits, SHA-256 verification, and atomic install |
 | Install/uninstall | Partial | App-private verified install and content-only uninstall prototype; full storage-volume and freed-space UX remain |
 | Saves | Partial | Persistent save records, checksum-protected backup/restore, import/export, retention prototype, deterministic sync conflict resolver, and cross-game safety checks; real emulator save adapters and cloud transport remain |
@@ -25,7 +25,7 @@ Status as of 29 August 2026:
 | Offline operation | Partial | Cached catalog and persistent local state; full airplane-mode acceptance testing remains |
 | Diagnostics | Partial | Sanitized export report and visible download errors; structured log collection and recovery bundles remain |
 | CI and releases | Partial | Unit tests, debug APK builds, SHA-256 artifacts, and alpha release workflow; signed production builds, rollback, and update channels remain |
-| External storage | Partial | SAF folder selection, persisted permissions, read/write status, disconnect detection, and safe content-migration planning; copy execution and unplug tests remain |
+| External storage | Partial | SAF folder selection, persisted permissions, read/write status, disconnect detection, and safe content-migration planning; copy execution now classifies removable-storage outages as retryable with recovery metrics; physical SAF unplug testing remains |
 | Target hardware | Not validated | Galaxy A53 controller testing and Galaxy S23 Ultra/DeX/HDMI/Ethernet/thermal/SSD soak testing require physical hardware |
 | Enclosure/handoff | Not started | Hardware enclosure, hub, cooling, cabling, and recovery-button work follows software maturity |
 
