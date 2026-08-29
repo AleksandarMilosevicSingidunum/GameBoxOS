@@ -16,10 +16,14 @@ public sealed class WindowsCatalogSyncClient
         PropertyNameCaseInsensitive = true
     };
     private readonly HttpClient _client;
+    private readonly TimeSpan _requestTimeout;
 
-    public WindowsCatalogSyncClient(HttpClient client)
+    public WindowsCatalogSyncClient(HttpClient client, TimeSpan? requestTimeout = null)
     {
         _client = client;
+        _requestTimeout = requestTimeout ?? TimeSpan.FromSeconds(15);
+        if (_requestTimeout <= TimeSpan.Zero)
+            throw new ArgumentOutOfRangeException(nameof(requestTimeout), "Catalog timeout must be positive.");
     }
 
     public async Task<CatalogSyncResult> EnrichExistingAsync(
@@ -29,7 +33,7 @@ public sealed class WindowsCatalogSyncClient
     {
         var uri = ValidateEndpoint(endpoint);
         using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        timeoutCts.CancelAfter(TimeSpan.FromSeconds(15));
+        timeoutCts.CancelAfter(_requestTimeout);
         var requestToken = timeoutCts.Token;
         using var response = await _client.GetAsync(uri, HttpCompletionOption.ResponseHeadersRead, requestToken);
         if (response.RequestMessage?.RequestUri is not null &&
