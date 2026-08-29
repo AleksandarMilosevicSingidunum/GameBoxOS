@@ -19,6 +19,9 @@ interface GameDao {
     @Upsert
     suspend fun upsertAll(games: List<GameEntity>)
 
+    @Query("UPDATE games SET favorite = :favorite WHERE id = :id")
+    suspend fun updateFavorite(id: String, favorite: Boolean)
+
     @Query("UPDATE games SET installState = :state WHERE id = :id")
     suspend fun updateInstallState(id: String, state: String)
 
