@@ -953,6 +953,7 @@ private fun SettingsScreen(
         Text("External game library", fontWeight = FontWeight.Bold)
         Text(
             externalStorageStatus.displayName ?: externalStorageStatus.message,
+            modifier = Modifier.semantics { contentDescription = "External game library: " + (externalStorageStatus.displayName ?: externalStorageStatus.message) },
             color = when (externalStorageStatus.state) {
                 ExternalStorageState.AVAILABLE_READ_WRITE -> MaterialTheme.colorScheme.primary
                 ExternalStorageState.AVAILABLE_READ_ONLY -> MaterialTheme.colorScheme.tertiary
