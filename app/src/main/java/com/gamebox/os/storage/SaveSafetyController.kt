@@ -40,6 +40,7 @@ fun backupResultMessage(action: String, result: BackupResult): SaveOperation = w
 interface SaveSafetyController {
     fun observeState(): StateFlow<SaveSafetyState>
     fun createTestSaveRecord()
+    fun uninstallPreview(): UninstallConfirmation
     fun uninstallTestContent()
     fun backupSave()
     fun restoreSave()
@@ -133,6 +134,33 @@ class DefaultSaveSafetyController(
             }
             operation.value = backupResultMessage("Import", result)
         }
+    }
+
+    override fun uninstallPreview(): UninstallConfirmation {
+        val contentFile = applicationContext.filesDir
+            .resolve(AssetDownloadWorker.INSTALL_ROOT)
+            .resolve(AuthorizedTestDownload.RELATIVE_PATH)
+        val artifacts = buildList {
+            add(
+                StoredArtifact(
+                    gameId,
+                    "internal://installed-content",
+                    ArtifactKind.GAME_CONTENT,
+                    contentFile.takeIf { it.isFile }?.length() ?: 0L
+                )
+            )
+            state.value.relativePath?.let {
+                add(
+                    StoredArtifact(
+                        gameId,
+                        "internal://save-data",
+                        ArtifactKind.SAVE_DATA,
+                        state.value.sizeBytes.coerceAtLeast(0L)
+                    )
+                )
+            }
+        }
+        return UninstallPlanner().plan(gameId, artifacts).toConfirmation()
     }
 
     override fun uninstallTestContent() {
