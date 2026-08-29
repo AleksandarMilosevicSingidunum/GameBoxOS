@@ -1,5 +1,8 @@
 package com.gamebox.os.ui
 
+import android.content.ActivityNotFoundException
+import android.content.Intent
+import android.provider.Settings
 import android.view.KeyEvent as AndroidKeyEvent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -19,6 +22,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
@@ -44,7 +48,8 @@ import com.gamebox.os.launch.LaunchUiState
 import com.gamebox.os.storage.SaveSafetyController
 
 private enum class Destination(val title: String) {
-    HOME("Home"), LIBRARY("Library"), STORE("Store"), DOWNLOADS("Downloads")
+    HOME("Home"), LIBRARY("Library"), STORE("Store"), DOWNLOADS("Downloads"),
+    MEDIA("Media"), PC("PC"), SETTINGS("Settings")
 }
 
 @Composable
@@ -121,6 +126,19 @@ fun GameBoxApp(
                             repository, games, restorableGameId, rememberGameFocus, compact
                         ) { selectedGameId = it.id }
                         Destination.DOWNLOADS -> DownloadsScreen(repository, downloadRepository, compact)
+                        Destination.MEDIA -> AppHubScreen(
+                            "Media",
+                            "Launch your living-room apps and return to GameBox",
+                            mediaShortcuts,
+                            compact
+                        )
+                        Destination.PC -> AppHubScreen(
+                            "PC Hub",
+                            "Streaming, Windows, Linux, files, browser, and desktop tools",
+                            pcShortcuts,
+                            compact
+                        )
+                        Destination.SETTINGS -> SettingsScreen(compact)
                     }
                 }
             }
@@ -563,6 +581,157 @@ private fun DownloadsScreen(repository: GameRepository, downloadRepository: Down
                 }
             }
         }
+    }
+}
+
+
+private data class AppShortcut(
+    val title: String,
+    val description: String,
+    val packageName: String
+)
+
+private val mediaShortcuts = listOf(
+    AppShortcut("YouTube", "Video", "com.google.android.youtube"),
+    AppShortcut("Netflix", "Streaming", "com.netflix.mediaclient"),
+    AppShortcut("Kodi", "Media center", "org.xbmc.kodi"),
+    AppShortcut("Jellyfin", "Personal media", "org.jellyfin.mobile"),
+    AppShortcut("Plex", "Personal media", "com.plexapp.android"),
+    AppShortcut("Spotify", "Music", "com.spotify.music"),
+    AppShortcut("VLC", "Local media", "org.videolan.vlc"),
+    AppShortcut("Twitch", "Live streams", "tv.twitch.android.app")
+)
+
+private val pcShortcuts = listOf(
+    AppShortcut("Moonlight", "PC game streaming", "com.limelight"),
+    AppShortcut("Winlator", "Windows applications", "com.winlator"),
+    AppShortcut("Termux", "Linux terminal", "com.termux"),
+    AppShortcut("Files", "Android document manager", "com.google.android.documentsui"),
+    AppShortcut("Chrome", "Web browser", "com.android.chrome")
+)
+
+@Composable
+private fun AppHubScreen(
+    title: String,
+    subtitle: String,
+    shortcuts: List<AppShortcut>,
+    compact: Boolean
+) {
+    val context = LocalContext.current
+    var message by remember { mutableStateOf<String?>(null) }
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+        Text(title, fontSize = if (compact) 28.sp else 38.sp, fontWeight = FontWeight.Bold)
+        Text(subtitle, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.68f))
+        Spacer(Modifier.height(18.dp))
+        shortcuts.chunked(if (compact) 1 else 3).forEach { row ->
+            Row(
+                Modifier.fillMaxWidth().padding(bottom = 12.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                row.forEach { shortcut ->
+                    val launchIntent = remember(shortcut.packageName) {
+                        context.packageManager.getLaunchIntentForPackage(shortcut.packageName)
+                    }
+                    ShortcutCard(
+                        shortcut = shortcut,
+                        installed = launchIntent != null,
+                        modifier = Modifier.weight(1f),
+                        onClick = {
+                            if (launchIntent == null) {
+                                message = shortcut.title + " is not installed"
+                            } else {
+                                try {
+                                    context.startActivity(launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                                    message = "Opened " + shortcut.title
+                                } catch (_: ActivityNotFoundException) {
+                                    message = "Unable to open " + shortcut.title
+                                }
+                            }
+                        }
+                    )
+                }
+                repeat((if (compact) 1 else 3) - row.size) { Spacer(Modifier.weight(1f)) }
+            }
+        }
+        message?.let {
+            Text(it, color = MaterialTheme.colorScheme.primary)
+        }
+    }
+}
+
+@Composable
+private fun ShortcutCard(
+    shortcut: AppShortcut,
+    installed: Boolean,
+    modifier: Modifier,
+    onClick: () -> Unit
+) {
+    var focused by remember { mutableStateOf(false) }
+    val border by animateColorAsState(
+        if (focused) MaterialTheme.colorScheme.primary else Color.Transparent,
+        label = "shortcut-focus"
+    )
+    Surface(
+        modifier.height(112.dp)
+            .onFocusChanged { focused = it.isFocused }
+            .clickable(onClick = onClick)
+            .focusable(),
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(if (focused) 3.dp else 1.dp, border)
+    ) {
+        Column(Modifier.padding(16.dp)) {
+            Text(shortcut.title, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+            Text(shortcut.description, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.68f))
+            Spacer(Modifier.weight(1f))
+            Text(
+                if (installed) "Ready" else "Not installed",
+                color = if (installed) MaterialTheme.colorScheme.primary
+                else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                fontSize = 12.sp
+            )
+        }
+    }
+}
+
+@Composable
+private fun SettingsScreen(compact: Boolean) {
+    val context = LocalContext.current
+    val settings = listOf(
+        "Storage" to Settings.ACTION_INTERNAL_STORAGE_SETTINGS,
+        "Controllers" to Settings.ACTION_BLUETOOTH_SETTINGS,
+        "Display" to Settings.ACTION_DISPLAY_SETTINGS,
+        "Audio" to Settings.ACTION_SOUND_SETTINGS,
+        "Network" to Settings.ACTION_WIRELESS_SETTINGS,
+        "System" to Settings.ACTION_SETTINGS
+    )
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+        Text("Settings", fontSize = if (compact) 28.sp else 38.sp, fontWeight = FontWeight.Bold)
+        Text(
+            "GameBox configuration and safe Android system shortcuts",
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.68f)
+        )
+        Spacer(Modifier.height(18.dp))
+        settings.forEach { (title, action) ->
+            OutlinedButton(
+                onClick = {
+                    try {
+                        context.startActivity(Intent(action))
+                    } catch (_: ActivityNotFoundException) {
+                        context.startActivity(Intent(Settings.ACTION_SETTINGS))
+                    }
+                },
+                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
+            ) {
+                Text(title, modifier = Modifier.fillMaxWidth())
+            }
+        }
+        Spacer(Modifier.height(12.dp))
+        Text(
+            "Downloads, emulator profiles, saves, cloud providers, and developer diagnostics " +
+                "will be added here as their subsystems become configurable.",
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.62f)
+        )
     }
 }
 
