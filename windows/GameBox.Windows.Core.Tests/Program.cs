@@ -71,6 +71,12 @@ try
     catch (ArgumentOutOfRangeException) { invalidTimeoutRejected = true; }
     Require(invalidTimeoutRejected, "Non-positive catalog timeouts must be rejected.");
 
+    var cancellationObserved = false;
+    using var blockingClient = new HttpClient(new BlockingHandler());
+    try { await new WindowsCatalogSyncClient(blockingClient, TimeSpan.FromMilliseconds(10)).EnrichExistingAsync(new[] { syncExisting }, "https://catalog.example/games"); }
+    catch (OperationCanceledException) { cancellationObserved = true; }
+    Require(cancellationObserved, "Catalog synchronization timeout must cancel a blocked request.");
+
     Console.WriteLine("GameBox Windows core tests passed.");
 }
 finally
@@ -80,4 +86,14 @@ finally
 static void Require(bool condition, string message)
 {
     if (!condition) throw new InvalidOperationException(message);
+}
+
+
+sealed class BlockingHandler : HttpMessageHandler
+{
+    protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+    {
+        await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
+        throw new InvalidOperationException("unreachable");
+    }
 }
