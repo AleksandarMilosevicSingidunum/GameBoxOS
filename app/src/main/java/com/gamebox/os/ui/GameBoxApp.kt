@@ -1,6 +1,8 @@
 package com.gamebox.os.ui
 
+import android.Manifest
 import android.content.ActivityNotFoundException
+import android.os.Build
 import android.content.Intent
 import android.provider.Settings
 import android.view.KeyEvent as AndroidKeyEvent
@@ -663,6 +665,16 @@ private fun DownloadsScreen(repository: GameRepository, downloadRepository: Down
                     }
                     Spacer(Modifier.height(8.dp))
                     LinearProgressIndicator(progress = { job.progress }, modifier = Modifier.fillMaxWidth())
+                    Spacer(Modifier.height(6.dp))
+                    Text(
+                        formatDownloadBytes(job.downloadedBytes) + " of " +
+                            formatDownloadBytes(job.totalBytes),
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.68f),
+                        fontSize = 12.sp
+                    )
+                    job.errorReason?.let { reason ->
+                        Text(reason, color = MaterialTheme.colorScheme.error, fontSize = 12.sp)
+                    }
                     Spacer(Modifier.height(10.dp))
                     val remoteGame = repository.game(job.gameId)?.takeIf { it.sourceUrl != null }
                     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -835,6 +847,12 @@ private fun SettingsScreen(compact: Boolean, settingsRepository: SettingsReposit
     val scope = rememberCoroutineScope()
     var catalogUrl by remember(currentSettings.catalogUrl) { mutableStateOf(currentSettings.catalogUrl) }
     var catalogMessage by remember { mutableStateOf<String?>(null) }
+    val notificationPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        catalogMessage = if (granted) "Download notifications enabled"
+        else "Notification permission was not granted"
+    }
     val storageRoot = context.filesDir
     val totalStorage = storageRoot.totalSpace
     val usableStorage = storageRoot.usableSpace
@@ -858,6 +876,16 @@ private fun SettingsScreen(compact: Boolean, settingsRepository: SettingsReposit
             color = MaterialTheme.colorScheme.primary
         )
         Spacer(Modifier.height(12.dp))
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            OutlinedButton(
+                onClick = {
+                    notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                },
+                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
+            ) {
+                Text("Enable download notifications", modifier = Modifier.fillMaxWidth())
+            }
+        }
         settings.forEach { (title, action) ->
             OutlinedButton(
                 onClick = {
@@ -910,6 +938,16 @@ private fun SettingsScreen(compact: Boolean, settingsRepository: SettingsReposit
                 "will be added here as their subsystems become configurable.",
             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.62f)
         )
+    }
+}
+
+private fun formatDownloadBytes(bytes: Long): String {
+    val safe = bytes.coerceAtLeast(0L)
+    val mib = safe.toDouble() / (1024.0 * 1024.0)
+    return if (mib >= 1024.0) {
+        String.format(java.util.Locale.US, "%.1f GB", mib / 1024.0)
+    } else {
+        String.format(java.util.Locale.US, "%.1f MB", mib)
     }
 }
 
