@@ -1,10 +1,21 @@
 package com.gamebox.os.catalog
 
 import java.net.HttpURLConnection
+import java.io.IOException
+import com.gamebox.os.provider.ProviderRecoveryDecision
+import com.gamebox.os.provider.ProviderRecoveryPolicy
 import java.net.URI
 import java.net.URL
 import java.security.MessageDigest
 import java.util.Base64
+
+class CatalogTransportException(
+    val recovery: ProviderRecoveryDecision,
+    cause: Throwable? = null
+) : IOException(recovery.userMessage, cause)
+
+internal fun catalogTransportFailure(status: Int? = null, error: Throwable? = null): CatalogTransportException =
+    CatalogTransportException(ProviderRecoveryPolicy.classify(status, error), error)
 
 class HttpsCatalogTransportClient(
     private val maxResponseBytes: Int = 1_048_576,
@@ -38,10 +49,15 @@ class HttpsCatalogTransportClient(
             connection.setRequestProperty("Authorization", signed.authorization)
         }
         try {
-            require(connection.responseCode in 200..299) { "catalog request failed with HTTP " + connection.responseCode }
+            val status = connection.responseCode
+            if (status !in 200..299) throw catalogTransportFailure(status)
             val bytes = connection.inputStream.use { it.readNBytes(maxResponseBytes + 1) }
             require(bytes.size <= maxResponseBytes) { "catalog response is too large" }
             return bytes.toString(Charsets.UTF_8)
+        } catch (error: CatalogTransportException) {
+            throw error
+        } catch (error: IOException) {
+            throw catalogTransportFailure(error = error)
         } finally { connection.disconnect() }
     }
 }
