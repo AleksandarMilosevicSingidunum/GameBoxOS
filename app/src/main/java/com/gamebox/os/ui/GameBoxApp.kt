@@ -51,6 +51,8 @@ import com.gamebox.os.launch.LaunchUiState
 import com.gamebox.os.storage.SaveSafetyController
 import com.gamebox.os.settings.SettingsRepository
 import com.gamebox.os.catalog.validateAuthorizedCatalogUrl
+import com.gamebox.os.diagnostics.DiagnosticsDevice
+import com.gamebox.os.diagnostics.buildDiagnosticsReport
 import kotlinx.coroutines.launch
 
 private enum class Destination(val title: String) {
@@ -147,7 +149,7 @@ fun GameBoxApp(
                             pcShortcuts,
                             compact
                         )
-                        Destination.SETTINGS -> SettingsScreen(compact, settingsRepository)
+                        Destination.SETTINGS -> SettingsScreen(compact, settingsRepository, repository, downloadRepository)
                     }
                 }
             }
@@ -851,9 +853,16 @@ private fun ShortcutCard(
 }
 
 @Composable
-private fun SettingsScreen(compact: Boolean, settingsRepository: SettingsRepository) {
+private fun SettingsScreen(
+    compact: Boolean,
+    settingsRepository: SettingsRepository,
+    gameRepository: GameRepository,
+    downloadRepository: DownloadRepository
+) {
     val context = LocalContext.current
     val currentSettings by settingsRepository.settings.collectAsState(initial = com.gamebox.os.settings.GameBoxSettings())
+    val diagnosticGames by gameRepository.observeGames().collectAsState()
+    val diagnosticDownloads by downloadRepository.observeJobs().collectAsState()
     val scope = rememberCoroutineScope()
     var catalogUrl by remember(currentSettings.catalogUrl) { mutableStateOf(currentSettings.catalogUrl) }
     var catalogMessage by remember { mutableStateOf<String?>(null) }
@@ -864,6 +873,33 @@ private fun SettingsScreen(compact: Boolean, settingsRepository: SettingsReposit
         else "Notification permission was not granted"
     }
     val storageRoot = context.filesDir
+    val diagnosticsReport = buildDiagnosticsReport(
+        device = DiagnosticsDevice(
+            manufacturer = Build.MANUFACTURER,
+            model = Build.MODEL,
+            sdk = Build.VERSION.SDK_INT,
+            appVersion = context.packageManager
+                .getPackageInfo(context.packageName, 0).versionName ?: "unknown",
+            usableBytes = storageRoot.usableSpace,
+            totalBytes = storageRoot.totalSpace
+        ),
+        settings = currentSettings,
+        games = diagnosticGames,
+        downloads = diagnosticDownloads
+    )
+    val diagnosticsLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("text/plain")
+    ) { uri ->
+        if (uri != null) {
+            val result = runCatching {
+                context.contentResolver.openOutputStream(uri, "w")?.bufferedWriter()?.use {
+                    it.write(diagnosticsReport)
+                } ?: error("Unable to open diagnostics destination")
+            }
+            catalogMessage = if (result.isSuccess) "Sanitized diagnostics exported"
+            else "Diagnostics export failed"
+        }
+    }
     val totalStorage = storageRoot.totalSpace
     val usableStorage = storageRoot.usableSpace
     val settings = listOf(
@@ -909,6 +945,13 @@ private fun SettingsScreen(compact: Boolean, settingsRepository: SettingsReposit
             ) {
                 Text(title, modifier = Modifier.fillMaxWidth())
             }
+        }
+        Spacer(Modifier.height(12.dp))
+        OutlinedButton(
+            onClick = { diagnosticsLauncher.launch("gamebox-diagnostics.txt") },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Export sanitized diagnostics", modifier = Modifier.fillMaxWidth())
         }
         Spacer(Modifier.height(18.dp))
         Text("Authorized catalog provider", fontWeight = FontWeight.Bold)
