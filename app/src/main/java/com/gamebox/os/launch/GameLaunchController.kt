@@ -36,6 +36,14 @@ class EmulatorCapabilityRegistry(
         )
     )
 ) {
+    fun displayName(packageName: String): String = when (packageName) {
+        "com.retroarch.aarch64" -> "RetroArch"
+        "org.ppsspp.ppsspp" -> "PPSSPP"
+        "org.dolphinemu.dolphinemu" -> "Dolphin"
+        "xyz.aethersx2.android" -> "AetherSX2"
+        else -> packageName.substringAfterLast(".")
+    }
+
     fun optionsFor(game: Game): List<String> = when (game.platform.lowercase()) {
         "retro", "homebrew" -> listOf("com.retroarch.aarch64")
         "psp" -> listOf("org.ppsspp.ppsspp")
