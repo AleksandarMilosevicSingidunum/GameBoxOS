@@ -16,6 +16,7 @@ data class ReleaseArtifactManifest(
     val rollbackReleaseTag: String? = null,
 ) {
     init {
+        require(schemaVersion == 1) { "unsupported release manifest schema" }
         require(artifactName.matches(Regex("^[A-Za-z0-9._-]+\\.apk$")))
         require(releaseTag.matches(Regex("^v[0-9]+\\.[0-9]+\\.[0-9]+(-[A-Za-z0-9.-]+)?$")))
         require(sha256.matches(Regex("^[a-fA-F0-9]{64}$")))

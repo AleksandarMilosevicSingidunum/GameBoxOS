@@ -30,35 +30,22 @@ class ReleaseArtifactManifestTest {
     @Test
     fun rejectsInvalidMetadata() {
         assertThrows(IllegalArgumentException::class.java) {
-            ReleaseArtifactManifest(
-                artifactName = "bad/path.apk", releaseTag = "v1.0.0",
-                channel = ReleaseChannel.ALPHA, sha256 = hash, sizeBytes = 1
-            )
+            ReleaseArtifactManifest(schemaVersion = 2, artifactName = "app.apk", releaseTag = "v1.0.0", channel = ReleaseChannel.ALPHA, sha256 = hash, sizeBytes = 1)
         }
         assertThrows(IllegalArgumentException::class.java) {
-            ReleaseArtifactManifest(
-                artifactName = "app.apk", releaseTag = "release",
-                channel = ReleaseChannel.ALPHA, sha256 = hash, sizeBytes = 1
-            )
+            ReleaseArtifactManifest(artifactName = "bad/path.apk", releaseTag = "v1.0.0", channel = ReleaseChannel.ALPHA, sha256 = hash, sizeBytes = 1)
         }
         assertThrows(IllegalArgumentException::class.java) {
-            ReleaseArtifactManifest(
-                artifactName = "app.apk", releaseTag = "v1.0.0",
-                channel = ReleaseChannel.ALPHA, sha256 = "00", sizeBytes = 1
-            )
+            ReleaseArtifactManifest(artifactName = "app.apk", releaseTag = "release", channel = ReleaseChannel.ALPHA, sha256 = hash, sizeBytes = 1)
         }
         assertThrows(IllegalArgumentException::class.java) {
-            ReleaseArtifactManifest(
-                artifactName = "app.apk", releaseTag = "v1.0.0",
-                channel = ReleaseChannel.ALPHA, sha256 = hash, sizeBytes = 0
-            )
+            ReleaseArtifactManifest(artifactName = "app.apk", releaseTag = "v1.0.0", channel = ReleaseChannel.ALPHA, sha256 = "00", sizeBytes = 1)
         }
         assertThrows(IllegalArgumentException::class.java) {
-            ReleaseArtifactManifest(
-                artifactName = "app.apk", releaseTag = "v1.0.0",
-                channel = ReleaseChannel.ALPHA, sha256 = hash, sizeBytes = 1,
-                rollbackReleaseTag = "v1.0.0"
-            )
+            ReleaseArtifactManifest(artifactName = "app.apk", releaseTag = "v1.0.0", channel = ReleaseChannel.ALPHA, sha256 = hash, sizeBytes = 0)
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+            ReleaseArtifactManifest(artifactName = "app.apk", releaseTag = "v1.0.0", channel = ReleaseChannel.ALPHA, sha256 = hash, sizeBytes = 1, rollbackReleaseTag = "v1.0.0")
         }
     }
 
