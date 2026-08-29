@@ -34,6 +34,9 @@ public sealed class WindowsCatalogSyncClient
             throw new InvalidDataException("Catalog redirects are not accepted.");
         if (!response.IsSuccessStatusCode)
             throw new HttpRequestException("Catalog request failed with HTTP " + (int)response.StatusCode);
+        var declaredLength = response.Content.Headers.ContentLength;
+        if (declaredLength is > MaxResponseBytes)
+            throw new InvalidDataException("Catalog response is too large.");
         await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
         using var buffer = new MemoryStream();
         await stream.CopyToAsync(buffer, cancellationToken);
