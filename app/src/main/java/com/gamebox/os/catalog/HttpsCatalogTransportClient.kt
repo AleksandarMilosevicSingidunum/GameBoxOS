@@ -22,7 +22,8 @@ class HttpsCatalogTransportClient(
         connection.connectTimeout = 10_000
         connection.readTimeout = 15_000
         connection.setRequestProperty("Accept", "application/json")
-        require((credentials?.username == null) == (credentials?.password == null)) { "WebDAV credentials must include both username and password" }\n        credentials?.username?.let { user -> credentials.password?.let { pass ->
+        require((credentials?.username == null) == (credentials?.password == null)) { "WebDAV credentials must include both username and password" }
+        credentials?.username?.let { user -> credentials.password?.let { pass ->
             val token = Base64.getEncoder().encodeToString((user + ":" + pass).toByteArray())
             connection.setRequestProperty("Authorization", "Basic $token")
         } }
