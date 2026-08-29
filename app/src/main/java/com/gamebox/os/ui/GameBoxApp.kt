@@ -8,10 +8,13 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -65,7 +68,7 @@ fun GameBoxApp(
         destination = tabs[(destination.ordinal + offset + tabs.size) % tabs.size]
     }
 
-    Column(
+    BoxWithConstraints(
         Modifier.fillMaxSize()
             .onPreviewKeyEvent { event ->
                 if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
@@ -78,57 +81,104 @@ fun GameBoxApp(
                 }
             }
             .background(MaterialTheme.colorScheme.background)
-            .padding(horizontal = 48.dp, vertical = 28.dp)
     ) {
-        TopNav(destination) { destination = it; selectedGameId = null }
-        Spacer(Modifier.height(28.dp))
-
-        val selected = selectedGameId?.let(repository::game)
-        if (selected != null) {
-            DetailsScreen(
-                selected,
-                repository,
-                downloadRepository,
-                authorizedDownloadController,
-                gameLaunchController,
-                saveSafetyController,
-                onBack = { selectedGameId = null }
+        val compact = maxWidth < 600.dp || maxHeight < 480.dp
+        Column(
+            Modifier.fillMaxSize().padding(
+                horizontal = if (compact) 16.dp else 48.dp,
+                vertical = if (compact) 12.dp else 28.dp
             )
-        } else {
-            when (destination) {
-                Destination.HOME -> HomeScreen(games, restorableGameId, rememberGameFocus) { selectedGameId = it.id }
-                Destination.LIBRARY -> CollectionScreen(
-                    "Your Library", "Installed and ready offline",
-                    games.filter { it.state == InstallState.INSTALLED || it.state == InstallState.UPDATE_AVAILABLE },
-                    restorableGameId,
-                    rememberGameFocus
-                ) { selectedGameId = it.id }
-                Destination.STORE -> CatalogScreen(repository, games, restorableGameId, rememberGameFocus) { selectedGameId = it.id }
-                Destination.DOWNLOADS -> DownloadsScreen(repository, downloadRepository)
+        ) {
+            TopNav(destination, compact) { destination = it; selectedGameId = null }
+            Spacer(Modifier.height(if (compact) 14.dp else 28.dp))
+
+            Box(Modifier.weight(1f).fillMaxWidth()) {
+                val selected = selectedGameId?.let(repository::game)
+                if (selected != null) {
+                    DetailsScreen(
+                        selected,
+                        repository,
+                        downloadRepository,
+                        authorizedDownloadController,
+                        gameLaunchController,
+                        saveSafetyController,
+                        compact = compact,
+                        onBack = { selectedGameId = null }
+                    )
+                } else {
+                    when (destination) {
+                        Destination.HOME -> HomeScreen(
+                            games, restorableGameId, rememberGameFocus, compact
+                        ) { selectedGameId = it.id }
+                        Destination.LIBRARY -> CollectionScreen(
+                            "Your Library", "Installed and ready offline",
+                            games.filter { it.state == InstallState.INSTALLED || it.state == InstallState.UPDATE_AVAILABLE },
+                            restorableGameId,
+                            rememberGameFocus,
+                            compact
+                        ) { selectedGameId = it.id }
+                        Destination.STORE -> CatalogScreen(
+                            repository, games, restorableGameId, rememberGameFocus, compact
+                        ) { selectedGameId = it.id }
+                        Destination.DOWNLOADS -> DownloadsScreen(repository, downloadRepository, compact)
+                    }
+                }
+            }
+
+            if (!compact) {
+                Spacer(Modifier.height(12.dp))
+                Text(
+                    "A Select    B Back    LB/RB Tabs    Menu Options",
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.62f),
+                    fontSize = 14.sp
+                )
             }
         }
-
-        Spacer(Modifier.weight(1f))
-        Text("A Select    B Back    LB/RB Tabs    Menu Options",
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.62f), fontSize = 14.sp)
     }
 }
 
 @Composable
-private fun TopNav(selected: Destination, onSelect: (Destination) -> Unit) {
-    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text("GAMEBOX", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Black,
-            fontSize = 28.sp, modifier = Modifier.padding(end = 28.dp, top = 8.dp))
-        Destination.entries.forEach { item ->
-            Button(
-                onClick = { onSelect(item) },
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = if (item == selected) MaterialTheme.colorScheme.primary
-                    else MaterialTheme.colorScheme.surface
-                )
-            ) { Text(item.title) }
+private fun TopNav(selected: Destination, compact: Boolean, onSelect: (Destination) -> Unit) {
+    if (compact) {
+        Column {
+            Text(
+                "GAMEBOX",
+                color = MaterialTheme.colorScheme.primary,
+                fontWeight = FontWeight.Black,
+                fontSize = 22.sp
+            )
+            Spacer(Modifier.height(8.dp))
+            Row(
+                Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Destination.entries.forEach { item -> NavButton(item, selected, onSelect) }
+            }
+        }
+    } else {
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Text(
+                "GAMEBOX",
+                color = MaterialTheme.colorScheme.primary,
+                fontWeight = FontWeight.Black,
+                fontSize = 28.sp,
+                modifier = Modifier.padding(end = 28.dp, top = 8.dp)
+            )
+            Destination.entries.forEach { item -> NavButton(item, selected, onSelect) }
         }
     }
+}
+
+@Composable
+private fun NavButton(item: Destination, selected: Destination, onSelect: (Destination) -> Unit) {
+    Button(
+        onClick = { onSelect(item) },
+        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = if (item == selected) MaterialTheme.colorScheme.primary
+            else MaterialTheme.colorScheme.surface
+        )
+    ) { Text(item.title, maxLines = 1) }
 }
 
 @Composable
@@ -136,6 +186,7 @@ private fun HomeScreen(
     games: List<Game>,
     restoreGameId: GameId?,
     onFocused: (GameId) -> Unit,
+    compact: Boolean,
     open: (Game) -> Unit
 ) {
     if (games.isEmpty()) {
@@ -146,19 +197,19 @@ private fun HomeScreen(
     val focusTarget = restoreGameId?.takeIf { id -> games.any { it.id == id } } ?: hero.id
     Column {
         Text("Good evening", color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.68f))
-        Text("Ready to play?", fontSize = 42.sp, fontWeight = FontWeight.Bold)
+        Text("Ready to play?", fontSize = if (compact) 30.sp else 42.sp, fontWeight = FontWeight.Bold)
         Spacer(Modifier.height(24.dp))
         GameCard(
             hero,
-            Modifier.fillMaxWidth().height(188.dp),
+            Modifier.fillMaxWidth().height(if (compact) 148.dp else 188.dp),
             hero = true,
             restoreFocus = focusTarget == hero.id,
             onFocused = onFocused
         ) { open(hero) }
         Spacer(Modifier.height(24.dp))
-        Text("Recently played", fontSize = 23.sp, fontWeight = FontWeight.Bold)
+        Text("Recently played", fontSize = if (compact) 20.sp else 23.sp, fontWeight = FontWeight.Bold)
         Spacer(Modifier.height(10.dp))
-        GameRow(games.filter { it.lastPlayed != null && it.id != hero.id }, focusTarget, onFocused, open)
+        GameRow(games.filter { it.lastPlayed != null && it.id != hero.id }, focusTarget, onFocused, compact, open)
     }
 }
 
@@ -168,15 +219,16 @@ private fun CatalogScreen(
     games: List<Game>,
     restoreGameId: GameId?,
     onFocused: (GameId) -> Unit,
+    compact: Boolean,
     open: (Game) -> Unit
 ) {
     val refreshState by repository.observeCatalogRefreshState().collectAsState()
     val focusTarget = restoreGameId?.takeIf { id -> games.any { it.id == id } }
         ?: games.firstOrNull()?.id
     Column {
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+        if (compact) Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Column {
-                Text("Authorized Catalog", fontSize = 38.sp, fontWeight = FontWeight.Bold)
+                Text("Authorized Catalog", fontSize = if (compact) 28.sp else 38.sp, fontWeight = FontWeight.Bold)
                 Text(
                     "Local-first cache from configured personal sources",
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.68f)
@@ -197,7 +249,7 @@ private fun CatalogScreen(
                 color = MaterialTheme.colorScheme.primary)
         }
         Spacer(Modifier.height(24.dp))
-        GameRow(games, focusTarget, onFocused, open)
+        GameRow(games, focusTarget, onFocused, compact, open)
     }
 }
 
@@ -208,12 +260,13 @@ private fun CollectionScreen(
     games: List<Game>,
     restoreGameId: GameId?,
     onFocused: (GameId) -> Unit,
+    compact: Boolean,
     open: (Game) -> Unit
 ) {
     val focusTarget = restoreGameId?.takeIf { id -> games.any { it.id == id } }
         ?: games.firstOrNull()?.id
     Column {
-        Text(title, fontSize = 38.sp, fontWeight = FontWeight.Bold)
+        Text(title, fontSize = if (compact) 28.sp else 38.sp, fontWeight = FontWeight.Bold)
         Text(subtitle, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.68f))
         Spacer(Modifier.height(24.dp))
         GameRow(games, focusTarget, onFocused, open)
@@ -225,6 +278,7 @@ private fun GameRow(
     games: List<Game>,
     restoreGameId: GameId?,
     onFocused: (GameId) -> Unit,
+    compact: Boolean,
     open: (Game) -> Unit
 ) {
     val listState = rememberLazyListState()
@@ -239,7 +293,7 @@ private fun GameRow(
         items(games, key = { it.id.value }) { game ->
             GameCard(
                 game,
-                Modifier.width(230.dp).height(170.dp),
+                Modifier.width(if (compact) 190.dp else 230.dp).height(if (compact) 148.dp else 170.dp),
                 restoreFocus = restoreGameId == game.id,
                 onFocused = onFocused,
                 onClick = { open(game) }
@@ -299,6 +353,7 @@ private fun DetailsScreen(
     authorizedDownloadController: AuthorizedDownloadController,
     gameLaunchController: GameLaunchController,
     saveSafetyController: SaveSafetyController,
+    compact: Boolean,
     onBack: () -> Unit
 ) {
     val isAuthorizedTest = game.id.value == "retro-test"
@@ -313,9 +368,9 @@ private fun DetailsScreen(
     val importBackupLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocument()
     ) { uri -> uri?.let(saveSafetyController::importBackup) }
-    Column {
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
         Text(game.platform.uppercase(), color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
-        Text(game.title, fontSize = 44.sp, fontWeight = FontWeight.Bold)
+        Text(game.title, fontSize = if (compact) 32.sp else 44.sp, fontWeight = FontWeight.Bold)
         Text(game.genre + "  |  " + game.year + "  |  " + game.sizeMb + " MB")
         Spacer(Modifier.height(24.dp))
         Surface(color = MaterialTheme.colorScheme.surface, shape = RoundedCornerShape(18.dp)) {
@@ -459,10 +514,10 @@ private fun DetailsScreen(
 }
 
 @Composable
-private fun DownloadsScreen(repository: GameRepository, downloadRepository: DownloadRepository) {
+private fun DownloadsScreen(repository: GameRepository, downloadRepository: DownloadRepository, compact: Boolean) {
     val jobs by downloadRepository.observeJobs().collectAsState()
-    Column {
-        Text("Downloads", fontSize = 38.sp, fontWeight = FontWeight.Bold)
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+        Text("Downloads", fontSize = if (compact) 28.sp else 38.sp, fontWeight = FontWeight.Bold)
         Text("Durable queue plus verified app-private asset installation",
             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.68f))
         Spacer(Modifier.height(20.dp))
