@@ -37,4 +37,10 @@ class EmulatorSettingsTest {
             graphicsProfile = "Performance", expectedSha256 = "abc")
         assertEquals("Performance", registry.forGame(game)?.graphicsProfile)
     }
+    @Test
+    fun unknownGraphicsProfileFallsBackToBalanced() {
+        val repository = com.gamebox.os.data.FakeGameRepository()
+        repository.setEmulatorSettings(GameId("retro-test"), null, "Ultra")
+        assertEquals("Balanced", repository.game(GameId("retro-test"))?.graphicsProfile)
+    }
 }
