@@ -19,6 +19,8 @@ import com.gamebox.os.launch.EmulatorCapabilityRegistry
 fun GameSettingsPanel(game: Game, repository: GameRepository, modifier: Modifier = Modifier) {
     val options = EmulatorCapabilityRegistry().optionsFor(game)
     Column(modifier.padding(16.dp)) {
+        Text("Game settings")
+        Text("Changes apply the next time this game launches.")
         Text("Emulator")
         Row(Modifier.horizontalScroll(rememberScrollState())) {
             FilterChip(game.emulatorPackage == null, { repository.setEmulatorSettings(game.id, null, game.graphicsProfile) }, label = { Text("Automatic") })
