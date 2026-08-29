@@ -967,7 +967,8 @@ private fun AppHubScreen(
         Text(subtitle, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.68f))
         if (title == "PC Hub") {
             MoonlightStatusPanel(moonlightStatus, compact)
-            Spacer(Modifier.height(12.dp))\n            MoonlightHostProbePanel(Modifier.fillMaxWidth())
+            Spacer(Modifier.height(12.dp))
+            MoonlightHostProbePanel(Modifier.fillMaxWidth())
             Spacer(Modifier.height(18.dp))
         } else {
             Spacer(Modifier.height(18.dp))
