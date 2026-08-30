@@ -14,7 +14,7 @@
             </StackPanel>
         </DockPanel>
         <Grid Grid.Row="1" Margin="0,22,0,16">
-            <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+            <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
             <TextBox x:Name="SearchBox" AutomationProperties.Name="Search library" TextChanged="SearchBox_TextChanged" FontSize="16"/>
             <ComboBox x:Name="SortBox" Grid.Column="1" Width="150" Margin="18,0" SelectedIndex="0" SelectionChanged="FilterChanged" AutomationProperties.Name="Library sort order">
                 <ComboBoxItem Content="Favorites and title"/><ComboBoxItem Content="Recently played"/>
@@ -22,8 +22,9 @@
             <ComboBox x:Name="PlatformBox" Grid.Column="2" Width="130" Margin="0,0,18,0" SelectionChanged="FilterChanged" AutomationProperties.Name="Platform filter"/>
             <CheckBox x:Name="FavoritesOnlyCheck" Grid.Column="3" Content="Favorites only" Margin="18,0" VerticalAlignment="Center" Checked="FilterChanged" Unchecked="FilterChanged"/>
             <CheckBox x:Name="AvailableOnlyCheck" Grid.Column="4" Content="Available only" Margin="0,0,18,0" VerticalAlignment="Center" Checked="FilterChanged" Unchecked="FilterChanged"/>
-            <Button Grid.Column="5" Content="Discover games" Click="DiscoverShortcuts_Click" Margin="0,0,10,0" AutomationProperties.Name="Discover Windows shortcuts, Steam games, and Epic Games"/>
-            <Button Grid.Column="6" Content="+ Add local game" Click="AddGame_Click"/>
+            <Button Grid.Column="5" Content="Discover games" Click="DiscoverShortcuts_Click" Margin="0,0,10,0" AutomationProperties.Name="Discover Windows shortcuts, Steam, Epic Games, and GOG games"/>
+            <Button Grid.Column="6" Content="+ Moonlight" Click="AddMoonlight_Click" Margin="0,0,10,0" AutomationProperties.Name="Add Moonlight streaming session"/>
+            <Button Grid.Column="7" Content="+ Add local game" Click="AddGame_Click"/>
         </Grid>
         <Grid Grid.Row="2">
             <Grid.ColumnDefinitions><ColumnDefinition Width="2*"/><ColumnDefinition Width="1.15*"/></Grid.ColumnDefinitions>

@@ -188,6 +188,40 @@ public partial class MainWindow : Window
         catch (Exception ex) { MessageBox.Show(ex.Message, "Restore failed", MessageBoxButton.OK, MessageBoxImage.Error); }
     }
 
+    private async void AddMoonlight_Click(object sender, RoutedEventArgs e)
+    {
+        var executableDialog = new OpenFileDialog {
+            Title = "Choose Moonlight executable",
+            Filter = "Moonlight executable (moonlight.exe)|moonlight.exe|Executable files (*.exe)|*.exe",
+            CheckFileExists = true
+        };
+        if (executableDialog.ShowDialog(this) != true) return;
+
+        var sessionDialog = new MoonlightSessionDialog { Owner = this };
+        if (sessionDialog.ShowDialog() != true) return;
+        try
+        {
+            var session = MoonlightSession.Create(
+                executableDialog.FileName,
+                sessionDialog.Host,
+                sessionDialog.ApplicationName);
+            if (GameLibrary.ContainsLaunchTarget(_allGames, session.ExecutablePath) &&
+                _allGames.Any(x => x.ExecutablePath.Equals(session.ExecutablePath, StringComparison.OrdinalIgnoreCase) &&
+                                   x.Arguments.Equals(session.Arguments, StringComparison.Ordinal)))
+                throw new InvalidDataException("This Moonlight session is already in the library.");
+            _allGames.Add(session);
+            RefreshPlatformOptions();
+            await SaveLibraryAsync();
+            RefreshVisibleGames();
+            GamesList.SelectedItem = _visibleGames.FirstOrDefault(x => x.Id == session.Id);
+            StatusText.Text = "Moonlight session added";
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(ex.Message, "Unable to add Moonlight session", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
     private async void AddGame_Click(object sender, RoutedEventArgs e)
     {
         var dialog = new OpenFileDialog { Title = "Add a local Windows game", Filter = "Launchable files (*.exe;*.lnk;*.url;*.bat;*.cmd)|*.exe;*.lnk;*.url;*.bat;*.cmd", CheckFileExists = true };

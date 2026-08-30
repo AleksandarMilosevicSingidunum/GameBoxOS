@@ -260,6 +260,19 @@ try
     var missingGogDiscovery = GogDiscovery.Discover(new[] { Path.Combine(root, "missing-gog") }, Array.Empty<GameEntry>());
     Require(missingGogDiscovery.ManifestCount == 0 && missingGogDiscovery.Entries.Count == 0, "Missing GOG roots must be a safe no-op.");
 
+    var moonlightPath = Path.Combine(root, "moonlight.exe");
+    await File.WriteAllTextAsync(moonlightPath, "");
+    var moonlightSession = MoonlightSession.Create(moonlightPath, "Gaming-PC.local", "Steam Big Picture");
+    Require(moonlightSession.Platform == "Moonlight", "Moonlight sessions must retain platform metadata.");
+    Require(moonlightSession.Title == "Steam Big Picture on gaming-pc.local", "Moonlight sessions must normalize display metadata.");
+    Require(moonlightSession.Arguments == "stream \"gaming-pc.local\" \"Steam Big Picture\"", "Moonlight sessions must produce bounded CLI arguments.");
+    Require(MoonlightSession.NormalizeHost("[2001:db8::1]") == "2001:db8::1", "Moonlight sessions must normalize IPv6 hosts.");
+    RequireThrows<ArgumentException>(() => MoonlightSession.NormalizeHost("https://host/path"), "Moonlight hosts must reject URLs and paths.");
+    RequireThrows<ArgumentException>(() => MoonlightSession.NormalizeApplicationName(""), "Moonlight sessions must require an application name.");
+    var nonExeMoonlight = Path.Combine(root, "moonlight.cmd");
+    await File.WriteAllTextAsync(nonExeMoonlight, "");
+    RequireThrows<InvalidDataException>(() => MoonlightSession.Create(nonExeMoonlight, "host.local", "Desktop"), "Moonlight sessions must require an EXE target.");
+
     Console.WriteLine("GameBox Windows core tests passed.");
 }
 finally
@@ -269,6 +282,14 @@ finally
 static void Require(bool condition, string message)
 {
     if (!condition) throw new InvalidOperationException(message);
+}
+
+
+static void RequireThrows<TException>(Action action, string message) where TException : Exception
+{
+    try { action(); }
+    catch (TException) { return; }
+    throw new InvalidOperationException(message);
 }
 
 
