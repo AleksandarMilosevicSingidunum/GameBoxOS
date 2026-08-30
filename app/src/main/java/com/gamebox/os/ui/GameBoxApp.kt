@@ -227,6 +227,14 @@ private fun TopNav(selected: Destination, compact: Boolean, onSelect: (Destinati
 
 @Composable
 private fun NavButton(item: Destination, selected: Destination, onSelect: (Destination) -> Unit) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val hovered by interactionSource.collectIsHoveredAsState()
+    val pressed by interactionSource.collectIsPressedAsState()
+    val emphasized = item == selected || hovered
+    val scale by animateFloatAsState(
+        targetValue = if (pressed) 0.94f else if (emphasized) 1.04f else 1f,
+        label = "nav-scale"
+    )
     Button(
         onClick = { onSelect(item) },
         contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp),
@@ -234,11 +242,14 @@ private fun NavButton(item: Destination, selected: Destination, onSelect: (Desti
             containerColor = if (item == selected) MaterialTheme.colorScheme.primary
             else MaterialTheme.colorScheme.surface
         ),
-        modifier = Modifier.semantics {
-            contentDescription = item.title + " tab"
-            role = Role.Tab
-            this.selected = item == selected
-        }
+        modifier = Modifier
+            .graphicsLayer { scaleX = scale; scaleY = scale }
+            .hoverable(interactionSource)
+            .semantics {
+                contentDescription = item.title + " tab"
+                role = Role.Tab
+                this.selected = item == selected
+            }
     ) { Text(item.title, maxLines = 1) }
 }
 
