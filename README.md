@@ -10,7 +10,7 @@ This repository is an active pre-1.0 implementation of the August 2026 **GameBox
 
 Status as of 30 August 2026:
 
-Latest verified increments: blueprint motion states now cover game cards, navigation tabs, Home quick-launch actions, and Media/PC shortcut cards; catalog artwork and rich metadata are persisted through Room; bundled Celeste Classic and Cave Story entries exercise HTTPS artwork and details metadata; TheGamesDB enrichment is available as a composable provider; Galaxy Patrol declares the FCEUmm NES core; production tags drive APK version names; Compose navigation, fixture checksum, metadata-boundary, and release workflow tests are covered.
+Latest verified increments: catalog refresh now distinguishes normal success, offline bundled fallback, remote-provider fallback, and terminal error; Store recovery messages are accessible and actionable; optional TheGamesDB transport or per-entry enrichment failures no longer block the authorized catalog; fallback status propagates through provider decorators; Windows GOG discovery and Moonlight session launching, protected Authenticode releases, and PS1/N64/Dreamcast emulator profiles are implemented; Android and Windows CI passed on each merged increment.
 
 | Blueprint area | Status | Current implementation |
 | --- | --- | --- |
@@ -25,7 +25,7 @@ Latest verified increments: blueprint motion states now cover game cards, naviga
 | Saves | Partial | Platform save-adapter registry, real directory discovery, reactive per-game save presence in Details, multi-artifact backup/restore, atomic checksum-protected snapshot manifests, import/export, retention, deterministic sync conflict resolution, cross-game safety checks, and orchestration that executes upload/download/conflict operations with automated JUnit coverage; credential-safe cloud sync contract with HTTPS/payload/offline guards plus bounded Basic/SigV4 authenticated upload/download byte transport and shared recovery handling; real-endpoint integration and physical emulator validation remain |
 | Emulator integration | Partial | Allowlisted emulator handoff with per-game package selection and graphics profile persistence exposed in Details, read-only FileProvider access, return tracking, capability registry, documented PPSSPP Args graphics mapping, Dolphin AutoStartFiles launch wiring, and approved scoped handoffs for PS1/DuckStation, N64/M64Plus FZ, and Dreamcast/Flycast with RetroArch fallbacks; production adapter validation remains |
 | Media and PC | Partial | Installed-app detection, typed availability states, safe launch shortcuts, persistent hide-unavailable policy, responsive empty/setup states, Moonlight connectivity status, bounded host reachability probes, interactive PC host-probe panel, and recent sessions for media, Moonlight, Winlator, Termux, Files, browser, and Android settings; physical streaming validation remains |
-| Offline operation | Implemented foundation | Cached catalog and persistent local state, explicit network-aware fallback selection, and a reactive offline-mode banner; full airplane-mode acceptance testing remains |
+| Offline operation | Implemented foundation | Cached catalog and persistent local state, explicit network-aware fallback selection, accessible offline banner, resilient bundled fallback after remote-provider failure, actionable retry messaging, and non-fatal optional metadata enrichment; full device airplane-mode acceptance testing remains |
 | Diagnostics | Partial | Sanitized report, bounded redacted event collection, lifecycle wiring, visible download errors, and a 2 MiB ZIP recovery bundle export; physical failure validation remains |
 | CI and releases | Partial | Unit tests, debug APK builds, SHA-256 artifacts, alpha release workflow, deterministic channel-readiness gating, validated APK provenance manifests with size/hash/channel metadata, rollback tag metadata, and tag/channel consistency validation, release/rollback tag existence checks, serialized production publishing, and verified asset upload; protected signed-production workflow is implemented; configuring repository signing secrets and executing the real update channel remain |
 | External storage | Partial | SAF folder selection, persisted permissions, read/write status, real filesDir/installed discovery, exact migration planning, Settings confirmation/execution with result totals, non-destructive document-tree copy execution with explicit confirmation states, safe partial-file finalization, disconnect detection, and retryable outage classification; physical unplug testing remains |
@@ -49,10 +49,12 @@ Latest verified increments: blueprint motion states now cover game cards, naviga
 - Automated unit tests covering storage/provider/release/accessibility contracts plus compiled Compose migration/accessibility instrumentation APKs, debug APK builds, self-contained Windows Companion builds, and green Android/Windows CI verification on the latest main commit with superseded-run cancellation, bounded Gradle/build steps, and executable catalog-timeout coverage
 - Friendly emulator selection with validated graphics profiles, launch-time profile handoff, and unsupported-platform guidance
 - Deterministic release manifest generation containing APK hash, size, channel, and optional rollback tag
-- Network-aware offline catalog selection with a reactive accessible offline-mode banner
+- Network-aware offline catalog selection with a reactive accessible offline-mode banner, explicit degraded refresh states, bundled recovery after provider failure, and non-fatal optional metadata enrichment
 - Release validation rejects unsupported tags and manifest channel/tag mismatches before publication
 
 ## Important remaining work for Blueprint 1.0
+
+The active implementation goal covers all remaining software work below. Physical hardware, enclosure, thermal, cabling, and fabrication validation are tracked separately and are excluded from that software goal.
 
 - Validate the bundled Galaxy Patrol handoff in RetroArch and at least one real emulator adapter for every officially supported platform group
 - Validate PPSSPP/Dolphin intent behavior and additional production emulator adapters on physical target devices
