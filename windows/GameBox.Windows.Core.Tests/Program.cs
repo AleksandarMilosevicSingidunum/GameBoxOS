@@ -20,6 +20,9 @@ try
     Require(GameLibrary.IsLaunchTargetAvailable(first), "Existing launch targets must be available.");
     File.Delete(secondPath);
     Require(!GameLibrary.IsLaunchTargetAvailable(second), "Missing launch targets must be unavailable.");
+    var relocated = GameLibrary.Relocate(first, secondPath);
+    Require(relocated.ExecutablePath == Path.GetFullPath(secondPath), "Relocation must update the launch target.");
+    Require(relocated.Id == first.Id && relocated.Title == first.Title && relocated.Favorite == first.Favorite, "Relocation must preserve entry metadata.");
 
     var store = new LibraryStore(Path.Combine(root, "data", "library.json"));
     await store.SaveAsync(ordered);

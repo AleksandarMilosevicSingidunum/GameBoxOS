@@ -99,7 +99,7 @@ public partial class MainWindow : Window
         if (dialog.ShowDialog(this) != true) return;
         try
         {
-            var replacement = game with { ExecutablePath = GameLibrary.ValidateExecutablePath(dialog.FileName) };
+            var replacement = GameLibrary.Relocate(game, dialog.FileName);
             Replace(game, replacement);
             await SaveLibraryAsync();
             StatusText.Text = "Relocated " + game.Title;
