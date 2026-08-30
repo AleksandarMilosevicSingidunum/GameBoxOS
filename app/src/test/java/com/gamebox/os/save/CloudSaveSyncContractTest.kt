@@ -10,6 +10,14 @@ class CloudSaveSyncContractTest {
         val result = CloudSaveSyncContract.validate(request.copy(endpoint = URI("https://user:pass@cloud.example/save")), true, true)
         assertEquals(CloudSaveSyncState.INVALID_ENDPOINT, result.state)
     }
+    @Test fun rejectsHttpsEndpointWithoutHost() {
+        val result = CloudSaveSyncContract.validate(
+            request.copy(endpoint = URI("https:/saves/game-1")),
+            true,
+            true,
+        )
+        assertEquals(CloudSaveSyncState.INVALID_ENDPOINT, result.state)
+    }
     @Test fun defersWhenOfflineOrCredentialsMissing() {
         assertEquals(CloudSaveSyncState.OFFLINE, CloudSaveSyncContract.validate(request, false, true).state)
         assertEquals(CloudSaveSyncState.AUTH_REQUIRED, CloudSaveSyncContract.validate(request, true, false).state)
