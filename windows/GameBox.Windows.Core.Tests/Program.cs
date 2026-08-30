@@ -47,6 +47,10 @@ try
     var health = LibraryHealthSummary.Create(ordered);
     Require(health.TotalCount == 2 && health.AvailableCount == 1 && health.MissingCount == 1, "Library health availability counts failed.");
     Require(health.FavoriteCount == 1 && health.PlatformCount == 2, "Library health favorite and platform counts failed.");
+    var cleanup = LibraryMaintenance.PlanMissingEntryCleanup(ordered);
+    Require(cleanup.RemovedCount == 1 && cleanup.RemovedEntries.Single().Id == second.Id, "Missing-entry cleanup must identify unavailable targets.");
+    Require(cleanup.RetainedEntries.Single().Id == first.Id, "Missing-entry cleanup must preserve available entries.");
+    Require(cleanup.RemovedEntries[0].Title == second.Title && cleanup.RemovedEntries[0].Platform == second.Platform, "Cleanup planning must preserve removed metadata for confirmation.");
     Require(GameLibrary.Filter(ordered, "", availableOnly: true).Single().Id == first.Id, "Available-only filtering must hide missing targets.");
     var launchTime = new DateTimeOffset(2026, 8, 30, 10, 0, 0, TimeSpan.FromHours(2));
     var played = GameLibrary.RecordLaunch(first, launchTime);
