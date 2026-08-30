@@ -22,7 +22,7 @@
             <ComboBox x:Name="PlatformBox" Grid.Column="2" Width="130" Margin="0,0,18,0" SelectionChanged="FilterChanged" AutomationProperties.Name="Platform filter"/>
             <CheckBox x:Name="FavoritesOnlyCheck" Grid.Column="3" Content="Favorites only" Margin="18,0" VerticalAlignment="Center" Checked="FilterChanged" Unchecked="FilterChanged"/>
             <CheckBox x:Name="AvailableOnlyCheck" Grid.Column="4" Content="Available only" Margin="0,0,18,0" VerticalAlignment="Center" Checked="FilterChanged" Unchecked="FilterChanged"/>
-            <Button Grid.Column="5" Content="Discover games" Click="DiscoverShortcuts_Click" Margin="0,0,10,0" AutomationProperties.Name="Discover Windows shortcuts and Steam games"/>
+            <Button Grid.Column="5" Content="Discover games" Click="DiscoverShortcuts_Click" Margin="0,0,10,0" AutomationProperties.Name="Discover Windows shortcuts, Steam games, and Epic Games"/>
             <Button Grid.Column="6" Content="+ Add local game" Click="AddGame_Click"/>
         </Grid>
         <Grid Grid.Row="2">

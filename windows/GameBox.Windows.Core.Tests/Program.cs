@@ -1,4 +1,5 @@
 using System.Net;
+using System.Text.Json;
 using GameBox.Windows.Core;
 
 var root = Path.Combine(Path.GetTempPath(), "gamebox-windows-tests-" + Guid.NewGuid().ToString("N"));
@@ -181,6 +182,55 @@ try
         steamShortcuts,
         Array.Empty<GameEntry>());
     Require(missingSteamDiscovery.ManifestCount == 0 && missingSteamDiscovery.Entries.Count == 0, "Missing Steam installations must be a safe no-op.");
+
+    var epicManifestRoot = Path.Combine(root, "EpicManifests");
+    var epicInstallRoot = Path.Combine(root, "EpicInstalled", "Epic Alpha");
+    Directory.CreateDirectory(epicManifestRoot);
+    Directory.CreateDirectory(Path.Combine(epicInstallRoot, "Binaries", "Win64"));
+    var epicExecutable = Path.Combine(epicInstallRoot, "Binaries", "Win64", "EpicAlpha.exe");
+    await File.WriteAllTextAsync(epicExecutable, "");
+    await File.WriteAllTextAsync(
+        Path.Combine(epicManifestRoot, "valid.item"),
+        JsonSerializer.Serialize(new {
+            DisplayName = "Epic Alpha",
+            InstallLocation = epicInstallRoot,
+            LaunchExecutable = "Binaries/Win64/EpicAlpha.exe"
+        }));
+    var outsideExecutable = Path.Combine(root, "outside.exe");
+    await File.WriteAllTextAsync(outsideExecutable, "");
+    await File.WriteAllTextAsync(
+        Path.Combine(epicManifestRoot, "traversal.item"),
+        JsonSerializer.Serialize(new {
+            DisplayName = "Traversal",
+            InstallLocation = epicInstallRoot,
+            LaunchExecutable = "../../outside.exe"
+        }));
+    await File.WriteAllTextAsync(
+        Path.Combine(epicManifestRoot, "missing.item"),
+        JsonSerializer.Serialize(new {
+            DisplayName = "Missing",
+            InstallLocation = epicInstallRoot,
+            LaunchExecutable = "missing.exe"
+        }));
+    await File.WriteAllTextAsync(
+        Path.Combine(epicManifestRoot, "oversized.item"),
+        new string('x', checked((int)EpicDiscovery.MaxManifestBytes + 1)));
+
+    var epicDiscovery = EpicDiscovery.Discover(
+        epicManifestRoot,
+        Array.Empty<GameEntry>());
+    Require(epicDiscovery.Entries.Count == 1 && epicDiscovery.Entries[0].Title == "Epic Alpha", "Epic discovery must import valid installed games.");
+    Require(epicDiscovery.Entries[0].ExecutablePath == Path.GetFullPath(epicExecutable), "Epic discovery must resolve the manifest launch executable.");
+    Require(epicDiscovery.Entries[0].Platform == "Epic Games", "Epic discovery must retain storefront metadata.");
+    Require(epicDiscovery.ManifestCount == 4 && epicDiscovery.InvalidManifestCount == 3, "Epic discovery must reject traversal, missing, and oversized manifests.");
+    var repeatedEpicDiscovery = EpicDiscovery.Discover(
+        epicManifestRoot,
+        epicDiscovery.Entries);
+    Require(repeatedEpicDiscovery.Entries.Count == 0 && repeatedEpicDiscovery.DuplicateCount == 1, "Epic discovery must deduplicate existing targets.");
+    var missingEpicDiscovery = EpicDiscovery.Discover(
+        Path.Combine(root, "missing-epic"),
+        Array.Empty<GameEntry>());
+    Require(missingEpicDiscovery.ManifestCount == 0 && missingEpicDiscovery.Entries.Count == 0, "Missing Epic manifests must be a safe no-op.");
 
     Console.WriteLine("GameBox Windows core tests passed.");
 }

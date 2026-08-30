@@ -100,17 +100,32 @@ public partial class MainWindow : Window
                 "storefront-shortcuts");
             var steamResult = await Task.Run(() =>
                 SteamDiscovery.Discover(steamRoot, generatedRoot, withShortcuts));
+            var withSteam = withShortcuts.Concat(steamResult.Entries).ToList();
+            var epicManifestRoot = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
+                "Epic",
+                "EpicGamesLauncher",
+                "Data",
+                "Manifests");
+            var epicResult = await Task.Run(() =>
+                EpicDiscovery.Discover(epicManifestRoot, withSteam));
 
             foreach (var game in shortcutResult.Entries) _allGames.Add(game);
             foreach (var game in steamResult.Entries) _allGames.Add(game);
-            var added = shortcutResult.Entries.Count + steamResult.Entries.Count;
+            foreach (var game in epicResult.Entries) _allGames.Add(game);
+            var added = shortcutResult.Entries.Count +
+                steamResult.Entries.Count +
+                epicResult.Entries.Count;
             if (added > 0) await SaveLibraryAsync();
             RefreshPlatformOptions();
             RefreshVisibleGames();
             StatusText.Text = added + " game(s) added; " +
-                (shortcutResult.DuplicateCount + steamResult.DuplicateCount) +
-                " duplicate(s) skipped; " + steamResult.InvalidManifestCount +
-                " invalid Steam manifest(s)";
+                (shortcutResult.DuplicateCount +
+                 steamResult.DuplicateCount +
+                 epicResult.DuplicateCount) +
+                " duplicate(s) skipped; " +
+                (steamResult.InvalidManifestCount + epicResult.InvalidManifestCount) +
+                " invalid storefront manifest(s)";
         }
         catch (Exception ex)
         {

@@ -6,6 +6,7 @@ This optional native .NET 8/WPF companion complements the Android/DeX GameBox OS
 
 - Register local EXE, LNK/URL shortcut, BAT, and CMD launch targets with duplicate-path protection.
 - Discover bounded Start Menu/desktop shortcuts and installed Steam games across primary and configured secondary Steam libraries, generating local protocol shortcuts under GameBox app data.
+- Discover installed Epic Games from bounded launcher manifests while rejecting traversal, missing executables, malformed JSON, and oversized metadata.
 - Search and filter by favorites, availability, and platform.
 - Sort by favorites/title or recent play history.
 - Edit validated titles, platforms, and command-line arguments without changing game identity or executable paths.
@@ -22,7 +23,7 @@ The companion never downloads game content, deletes installed files, reads Andro
 
 ## Remaining Windows work
 
-Additional storefront discovery beyond Steam, richer Moonlight and PC-runtime integration, installer packaging/signing, and physical Windows acceptance testing remain before the companion is considered complete.
+Additional storefront discovery beyond Steam and Epic Games, richer Moonlight and PC-runtime integration, installer packaging/signing, and physical Windows acceptance testing remain before the companion is considered complete.
 
 CI publishes the self-contained ZIP with a SHA-256 file and a validated JSON provenance manifest containing the exact artifact name, hash, byte size, runtime, self-contained flag, and source commit.
 
