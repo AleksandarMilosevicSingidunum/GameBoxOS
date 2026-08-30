@@ -52,7 +52,8 @@ public partial class MainWindow : Window
     {
         var selectedId = Selected?.Id;
         _visibleGames.Clear();
-        foreach (var game in GameLibrary.Filter(_allGames, SearchBox.Text, FavoritesOnlyCheck.IsChecked == true, AvailableOnlyCheck.IsChecked == true)) _visibleGames.Add(game);
+        var sort = SortBox.SelectedIndex == 1 ? LibrarySort.RecentlyPlayed : LibrarySort.FavoritesThenTitle;
+        foreach (var game in GameLibrary.Filter(_allGames, SearchBox.Text, FavoritesOnlyCheck.IsChecked == true, AvailableOnlyCheck.IsChecked == true, sort)) _visibleGames.Add(game);
         GamesList.SelectedItem = _visibleGames.FirstOrDefault(x => x.Id == selectedId);
     }
 
