@@ -8,6 +8,7 @@ import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.provider.Settings
 import android.view.KeyEvent as AndroidKeyEvent
+import android.view.InputDevice
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.animateColorAsState
@@ -278,6 +279,7 @@ private fun HomeScreen(
         ?.getNetworkCapabilities(context.getSystemService(ConnectivityManager::class.java)?.activeNetwork)
     val networkLabel = if (network?.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED) == true)
         "Connected" else "Offline"
+    val controllerLabel = connectedControllerLabel()
     val storage = context.filesDir
     val used = (storage.totalSpace - storage.usableSpace).coerceAtLeast(0L)
     val usedPercent = if (storage.totalSpace > 0L) (used * 100L / storage.totalSpace).toInt() else 0
@@ -389,7 +391,7 @@ private fun HomeStatusPanel(
             Text("Device status", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
             HomeStatusItem("Storage", "$storagePercent% used")
             HomeStatusItem("Network", networkLabel)
-            HomeStatusItem("Controller", "Connect in Settings")
+            HomeStatusItem("Controller", controllerLabel)
             HomeStatusItem("Device", deviceModel)
         }
     }
@@ -1675,3 +1677,16 @@ private fun formatBytes(bytes: Long): String {
 private fun DownloadStatus.displayName() = name.lowercase().replace('_', ' ')
 
 private fun InstallState.displayName() = name.lowercase().replace('_', ' ')
+
+
+private fun connectedControllerLabel(): String {
+    val controller = InputDevice.getDeviceIds()
+        .asSequence()
+        .mapNotNull(InputDevice::getDevice)
+        .firstOrNull { device ->
+            val sources = device.sources
+            sources and InputDevice.SOURCE_GAMEPAD == InputDevice.SOURCE_GAMEPAD ||
+                sources and InputDevice.SOURCE_JOYSTICK == InputDevice.SOURCE_JOYSTICK
+        }
+    return controller?.name?.takeIf { it.isNotBlank() } ?: "Not connected"
+}
