@@ -29,12 +29,14 @@ public static class GameLibrary
         string? query,
         bool favoritesOnly = false,
         bool availableOnly = false,
+        string? platform = null,
         LibrarySort sort = LibrarySort.FavoritesThenTitle)
     {
         var value = query?.Trim() ?? "";
         var filtered = Normalize(entries).Where(x =>
             (!favoritesOnly || x.Favorite) &&
             (!availableOnly || IsLaunchTargetAvailable(x)) &&
+            (string.IsNullOrWhiteSpace(platform) || x.Platform.Equals(platform.Trim(), StringComparison.CurrentCultureIgnoreCase)) &&
             (value.Length == 0 ||
              x.Title.Contains(value, StringComparison.CurrentCultureIgnoreCase) ||
              x.Platform.Contains(value, StringComparison.CurrentCultureIgnoreCase)));
