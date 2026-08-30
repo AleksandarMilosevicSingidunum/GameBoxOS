@@ -29,7 +29,8 @@ class TheGamesDbMetadataClient(
             java.net.URLEncoder.encode(key, "UTF-8") +
             "&name=" + java.net.URLEncoder.encode(game.title, "UTF-8") +
             "&fields=overview,boxart"
-        val payload = fetch(endpoint)
+        val payload = runCatching { fetch(endpoint) }.getOrNull()
+            ?: return@withContext game
         TheGamesDbMetadataParser.enrich(game, payload, json)
     }
 
