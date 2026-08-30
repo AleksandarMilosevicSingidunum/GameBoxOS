@@ -48,6 +48,18 @@ class GameContentPolicyTest {
     }
 
     @Test
+    fun supportsModernDiscAndCartridgeFormatsForAdditionalPlatforms() {
+        val ps1 = GameContentPolicy.describe("wipeout", "PS1", "https://cdn.example/wipeout.pbp")
+        val n64 = GameContentPolicy.describe("fzero-x", "N64", "https://cdn.example/fzero-x.v64")
+        val dreamcast = GameContentPolicy.describe("revolt", "Dreamcast", "https://cdn.example/revolt.gdi")
+
+        assertEquals("application/x-playstation-pbp", ps1.mimeType)
+        assertEquals("application/x-n64-rom", n64.mimeType)
+        assertEquals("application/x-dreamcast-gdi", dreamcast.mimeType)
+        assertEquals("remote/revolt/content.gdi", dreamcast.relativePath)
+    }
+
+    @Test
     fun rejectsUnsafeGameIdsBeforeBuildingStoragePath() {
         assertThrows(IllegalArgumentException::class.java) {
             GameContentPolicy.describe("../outside", "PSP", "https://cdn.example/game.iso")
