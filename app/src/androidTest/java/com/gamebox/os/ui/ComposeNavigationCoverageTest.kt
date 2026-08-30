@@ -21,13 +21,13 @@ class ComposeNavigationCoverageTest {
             val state = rememberGameBoxUiState()
             Column {
                 Text("current=" + state.destination)
-                Button(onClick = { state.openDestination("HOME") }) { Text("Home") }
-                Button(onClick = { state.openDestination("LIBRARY") }) { Text("Library") }
-                Button(onClick = { state.openDestination("STORE") }) { Text("Store") }
-                Button(onClick = { state.openDestination("DOWNLOADS") }) { Text("Downloads") }
-                Button(onClick = { state.openDestination("MEDIA") }) { Text("Media") }
+                Button(onClick = { state.openDestination("HOME") }) { Text("HOME") }
+                Button(onClick = { state.openDestination("LIBRARY") }) { Text("LIBRARY") }
+                Button(onClick = { state.openDestination("STORE") }) { Text("STORE") }
+                Button(onClick = { state.openDestination("DOWNLOADS") }) { Text("DOWNLOADS") }
+                Button(onClick = { state.openDestination("MEDIA") }) { Text("MEDIA") }
                 Button(onClick = { state.openDestination("PC") }) { Text("PC") }
-                Button(onClick = { state.openDestination("SETTINGS") }) { Text("Settings") }
+                Button(onClick = { state.openDestination("SETTINGS") }) { Text("SETTINGS") }
             }
         }
         listOf("HOME", "LIBRARY", "STORE", "DOWNLOADS", "MEDIA", "PC", "SETTINGS").forEach { label ->
