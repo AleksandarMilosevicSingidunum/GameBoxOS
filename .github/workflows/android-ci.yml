@@ -65,6 +65,7 @@ jobs:
         with:
           api-level: 35
           target: google_apis
+          device: pixel_2
           arch: x86_64
           emulator-options: -no-window -no-audio -no-boot-anim
           disable-animations: true
