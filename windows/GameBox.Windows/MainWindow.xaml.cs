@@ -57,6 +57,13 @@ public partial class MainWindow : Window
         var platform = PlatformBox.SelectedIndex <= 0 ? null : PlatformBox.SelectedItem as string;
         foreach (var game in GameLibrary.Filter(_allGames, SearchBox.Text, FavoritesOnlyCheck.IsChecked == true, AvailableOnlyCheck.IsChecked == true, platform, sort)) _visibleGames.Add(game);
         GamesList.SelectedItem = _visibleGames.FirstOrDefault(x => x.Id == selectedId);
+        UpdateLibrarySummary();
+    }
+
+    private void UpdateLibrarySummary()
+    {
+        var summary = LibraryHealthSummary.Create(_allGames);
+        LibrarySummaryText.Text = summary.TotalCount + " total · " + summary.AvailableCount + " available · " + summary.MissingCount + " missing · " + summary.FavoriteCount + " favorite(s) · " + summary.PlatformCount + " platform(s)";
     }
 
     private void RefreshPlatformOptions()
