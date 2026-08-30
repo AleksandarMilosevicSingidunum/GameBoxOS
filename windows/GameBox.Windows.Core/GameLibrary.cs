@@ -46,6 +46,13 @@ public static class GameLibrary
         });
     }
 
+    public static string GetLaunchDirectory(GameEntry entry)
+    {
+        ArgumentNullException.ThrowIfNull(entry);
+        var target = ValidateExecutablePath(entry.ExecutablePath);
+        return Path.GetDirectoryName(target) ?? throw new InvalidDataException("Launch target has no parent directory.");
+    }
+
     public static bool ContainsLaunchTarget(IEnumerable<GameEntry> entries, string executablePath, string? exceptId = null)
     {
         ArgumentNullException.ThrowIfNull(entries);
