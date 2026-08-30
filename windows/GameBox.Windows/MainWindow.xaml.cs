@@ -125,7 +125,7 @@ public partial class MainWindow : Window
             var executable = GameLibrary.ValidateExecutablePath(game.ExecutablePath);
             if (!File.Exists(executable)) throw new FileNotFoundException("The configured file is missing.", executable);
             Process.Start(new ProcessStartInfo { FileName = executable, Arguments = game.Arguments, WorkingDirectory = Path.GetDirectoryName(executable) ?? Environment.CurrentDirectory, UseShellExecute = true });
-            Replace(game, game with { LastPlayedUtc = DateTimeOffset.UtcNow });
+            Replace(game, GameLibrary.RecordLaunch(game, DateTimeOffset.UtcNow));
             await SaveLibraryAsync();
             StatusText.Text = "Launched " + game.Title;
         }
@@ -192,6 +192,16 @@ public partial class MainWindow : Window
         await SaveLibraryAsync();
     }
 
+    private async void ClearHistory_Click(object sender, RoutedEventArgs e)
+    {
+        var game = Selected;
+        if (game?.LastPlayedUtc is null) return;
+        if (MessageBox.Show("Clear the last-played history for " + game.Title + "? Favorites, launch settings, and game files will remain unchanged.", "Clear play history", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
+        Replace(game, GameLibrary.ClearPlayHistory(game));
+        await SaveLibraryAsync();
+        StatusText.Text = "Play history cleared for " + game.Title;
+    }
+
     private async void Remove_Click(object sender, RoutedEventArgs e)
     {
         var game = Selected;
@@ -215,6 +225,7 @@ public partial class MainWindow : Window
         var game = Selected;
         SelectedTitle.Text = game?.Title ?? "Choose a game";
         SelectedPath.Text = game is null ? "" : game.Platform + Environment.NewLine + game.ExecutablePath;
+        SelectedLastPlayed.Text = game is null ? "" : game.LastPlayedUtc is null ? "Last played: Never" : "Last played: " + game.LastPlayedUtc.Value.ToLocalTime().ToString("g");
         var available = game is not null && GameLibrary.IsLaunchTargetAvailable(game);
         PlayButton.IsEnabled = available;
         if (game is not null && !available)
@@ -223,6 +234,7 @@ public partial class MainWindow : Window
         RelocateButton.IsEnabled = game is not null;
         ShowFolderButton.IsEnabled = available;
         FavoriteButton.IsEnabled = game is not null;
+        ClearHistoryButton.IsEnabled = game?.LastPlayedUtc is not null;
         RemoveButton.IsEnabled = game is not null;
     }
 

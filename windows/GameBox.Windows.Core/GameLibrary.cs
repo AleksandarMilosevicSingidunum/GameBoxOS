@@ -82,6 +82,18 @@ public static class GameLibrary
         return NormalizeEntry(entry with { ExecutablePath = ValidateExecutablePath(executablePath) });
     }
 
+    public static GameEntry RecordLaunch(GameEntry entry, DateTimeOffset launchedAtUtc)
+    {
+        ArgumentNullException.ThrowIfNull(entry);
+        return NormalizeEntry(entry with { LastPlayedUtc = launchedAtUtc.ToUniversalTime() });
+    }
+
+    public static GameEntry ClearPlayHistory(GameEntry entry)
+    {
+        ArgumentNullException.ThrowIfNull(entry);
+        return NormalizeEntry(entry with { LastPlayedUtc = null });
+    }
+
     public static GameEntry UpdateLaunchMetadata(GameEntry entry, string title, string platform, string? arguments)
     {
         ArgumentNullException.ThrowIfNull(entry);
