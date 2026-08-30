@@ -110,7 +110,7 @@ public static partial class SteamDiscovery
         if (!idMatch.Success || !nameMatch.Success) return false;
         appId = idMatch.Groups["value"].Value;
         title = nameMatch.Groups["value"].Value
-            .Replace(@"\"", """, StringComparison.Ordinal)
+            .Replace("\\\"", "\"", StringComparison.Ordinal)
             .Replace(@"\\", @"\", StringComparison.Ordinal)
             .Trim();
         return appId.Length is > 0 and <= 20 &&
