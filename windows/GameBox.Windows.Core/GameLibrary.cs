@@ -44,6 +44,12 @@ public static class GameLibrary
         });
     }
 
+    public static GameEntry Relocate(GameEntry entry, string executablePath)
+    {
+        ArgumentNullException.ThrowIfNull(entry);
+        return NormalizeEntry(entry with { ExecutablePath = ValidateExecutablePath(executablePath) });
+    }
+
     public static bool IsLaunchTargetAvailable(GameEntry entry)
     {
         ArgumentNullException.ThrowIfNull(entry);
