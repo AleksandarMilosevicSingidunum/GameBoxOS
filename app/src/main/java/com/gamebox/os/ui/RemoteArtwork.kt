@@ -1,6 +1,7 @@
 package com.gamebox.os.ui
 
 import android.graphics.BitmapFactory
+import android.util.LruCache
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.fillMaxSize
@@ -15,9 +16,11 @@ import kotlinx.coroutines.withContext
 import java.net.HttpURLConnection
 import java.net.URL
 
+private val artworkCache = object : LruCache<String, android.graphics.Bitmap>(8) {}
+
 @Composable
 internal fun RemoteArtwork(url: String?, modifier: Modifier = Modifier) {
-    var bitmap by remember(url) { mutableStateOf<android.graphics.Bitmap?>(null) }
+    var bitmap by remember(url) { mutableStateOf(url?.let { artworkCache.get(it) }) }
     LaunchedEffect(url) {
         bitmap = withContext(Dispatchers.IO) {
             if (url.isNullOrBlank() || !url.startsWith("https://")) return@withContext null
@@ -36,6 +39,7 @@ internal fun RemoteArtwork(url: String?, modifier: Modifier = Modifier) {
                 }
             }.getOrNull()
         }
+        bitmap?.let { loaded -> url?.let { artworkCache.put(it, loaded) } }
     }
     if (bitmap == null) {
         androidx.compose.foundation.layout.Box(modifier.background(Color.Transparent))
