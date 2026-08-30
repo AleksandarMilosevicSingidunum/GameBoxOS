@@ -8,6 +8,7 @@ import java.io.ByteArrayOutputStream
 import java.net.HttpURLConnection
 import java.net.URI
 import java.net.URL
+import java.security.MessageDigest
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
@@ -39,8 +40,28 @@ class HttpsCloudSaveTransportClientTest {
     }
 
     @Test
+    fun verifiesUploadBeforeSendingPayload() {
+        val connection = FakeConnection(status = 204)
+        val payload = byteArrayOf(1, 2, 3, 4)
+        val error = assertThrows(CloudSaveIntegrityException::class.java) {
+            runBlocking {
+                HttpsCloudSaveTransportClient(connectionFactory = { connection }).upload(
+                    request.copy(expectedSha256 = sha256(byteArrayOf(4, 3, 2, 1))),
+                    payload,
+                    CatalogCredentials("player", "secret"),
+                )
+            }
+        }
+
+        assertEquals(sha256(payload), error.actualSha256)
+        assertEquals(0, connection.written.size())
+        assertFalse(connection.disconnected)
+    }
+
+    @Test
     fun downloadsBoundedBytesWithS3Signature() = runBlocking {
-        val connection = FakeConnection(status = 200, response = byteArrayOf(9, 8, 7))
+        val payload = byteArrayOf(9, 8, 7)
+        val connection = FakeConnection(status = 200, response = payload)
         val signer = RecordingSigner()
         val client = HttpsCloudSaveTransportClient(
             s3Signer = signer,
@@ -49,14 +70,31 @@ class HttpsCloudSaveTransportClientTest {
         )
 
         val result = client.download(
-            request.copy(payloadBytes = 0),
+            request.copy(payloadBytes = 0, expectedSha256 = sha256(payload).uppercase()),
             CatalogCredentials(accessKey = "key", secretKey = "secret"),
         )
 
-        assertArrayEquals(byteArrayOf(9, 8, 7), result)
+        assertArrayEquals(payload, result)
         assertEquals("GET", signer.method)
         assertEquals(64, signer.payloadHash.length)
         assertEquals("AWS4 signed", connection.getRequestProperty("Authorization"))
+        assertTrue(connection.disconnected)
+    }
+
+    @Test
+    fun rejectsCorruptedDownloadAndDisconnects() {
+        val payload = byteArrayOf(9, 8, 7)
+        val connection = FakeConnection(status = 200, response = payload)
+        val error = assertThrows(CloudSaveIntegrityException::class.java) {
+            runBlocking {
+                HttpsCloudSaveTransportClient(connectionFactory = { connection }).download(
+                    request.copy(payloadBytes = 0, expectedSha256 = sha256(byteArrayOf(7, 8, 9))),
+                    CatalogCredentials("player", "secret"),
+                )
+            }
+        }
+
+        assertEquals(sha256(payload), error.actualSha256)
         assertTrue(connection.disconnected)
     }
 
@@ -78,6 +116,19 @@ class HttpsCloudSaveTransportClientTest {
     }
 
     @Test
+    fun rejectsMalformedExpectedChecksum() {
+        assertThrows(IllegalArgumentException::class.java) {
+            runBlocking {
+                HttpsCloudSaveTransportClient(connectionFactory = { FakeConnection(200) })
+                    .download(
+                        request.copy(payloadBytes = 0, expectedSha256 = "not-a-sha256"),
+                        CatalogCredentials("player", "secret"),
+                    )
+            }
+        }
+    }
+
+    @Test
     fun mapsHttpFailuresToSharedRecoveryPolicy() {
         val error = assertThrows(CloudSaveTransportException::class.java) {
             runBlocking {
@@ -87,6 +138,9 @@ class HttpsCloudSaveTransportClientTest {
         }
         assertFalse(error.recovery.retryable)
     }
+
+    private fun sha256(payload: ByteArray): String =
+        MessageDigest.getInstance("SHA-256").digest(payload).joinToString("") { "%02x".format(it) }
 
     private class RecordingSigner : S3RequestSigner {
         var method = ""
