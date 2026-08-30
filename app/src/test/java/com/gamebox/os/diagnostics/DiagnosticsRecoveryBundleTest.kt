@@ -38,6 +38,19 @@ class DiagnosticsRecoveryBundleTest {
     }
 
     @Test
+    fun redactsBearerAndCommonCredentialFieldForms() {
+        val sanitized = sanitizeDiagnosticToken(
+            "Authorization: Bearer abc123 api_key=xyz access_key: qwerty password = hidden"
+        )
+
+        assertFalse(sanitized.contains("abc123"))
+        assertFalse(sanitized.contains("xyz"))
+        assertFalse(sanitized.contains("qwerty"))
+        assertFalse(sanitized.contains("hidden"))
+        assertTrue(sanitized.contains("<redacted>"))
+    }
+
+    @Test
     fun rejectsOversizedRawBundle() {
         org.junit.Assert.assertThrows(IllegalArgumentException::class.java) {
             buildDiagnosticsRecoveryBundle("x".repeat(100), emptyList(), maxBytes = 32)
