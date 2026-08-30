@@ -38,6 +38,21 @@ class LaunchAdapterTest {
         assertEquals(true, message?.contains("FCEUmm"))
     }
 
+    @Test fun registryExposesApprovedAdaptersForAdditionalPlatformGroups() {
+        val registry = EmulatorCapabilityRegistry()
+        val installed = InstallState.INSTALLED
+        val ps1 = Game(GameId("ps1-test"), "PS1 Test", "PS1", 1999, "Racing", 1, installed)
+        val n64 = Game(GameId("n64-test"), "N64 Test", "N64", 1999, "Racing", 1, installed)
+        val dreamcast = Game(GameId("dc-test"), "DC Test", "Dreamcast", 1999, "Racing", 1, installed)
+
+        assertEquals(listOf("com.github.stenzek.duckstation", "com.retroarch.aarch64"), registry.optionsFor(ps1))
+        assertEquals(listOf("org.mupen64plusae.v3.fzurita", "com.retroarch.aarch64"), registry.optionsFor(n64))
+        assertEquals(listOf("com.flycast.emulator", "com.retroarch.aarch64"), registry.optionsFor(dreamcast))
+        assertEquals("DuckStation", registry.displayName("com.github.stenzek.duckstation"))
+        assertEquals("M64Plus FZ", registry.displayName("org.mupen64plusae.v3.fzurita"))
+        assertEquals("Flycast", registry.displayName("com.flycast.emulator"))
+    }
+
     @Test fun returnTracker_recordsOneSessionAndThenClearsIt() {
         var time = 1_000L
         val tracker = ReturnTracker { time }
