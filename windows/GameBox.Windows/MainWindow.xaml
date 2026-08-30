@@ -8,7 +8,10 @@
         <DockPanel>
             <StackPanel><TextBlock Text="GAMEBOX" Foreground="{StaticResource AccentBrush}" FontWeight="Bold" FontSize="18"/>
                 <TextBlock Text="Windows Companion" FontSize="34" FontWeight="Bold"/></StackPanel>
-            <TextBlock x:Name="StatusText" DockPanel.Dock="Right" VerticalAlignment="Center" Foreground="#9EADC0" Text="Local library ready"/>
+            <StackPanel DockPanel.Dock="Right" VerticalAlignment="Center" HorizontalAlignment="Right">
+                <TextBlock x:Name="StatusText" Foreground="#9EADC0" Text="Local library ready" TextAlignment="Right"/>
+                <TextBlock x:Name="LibrarySummaryText" Foreground="#718198" TextAlignment="Right" AutomationProperties.LiveSetting="Polite"/>
+            </StackPanel>
         </DockPanel>
         <Grid Grid.Row="1" Margin="0,22,0,16">
             <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
