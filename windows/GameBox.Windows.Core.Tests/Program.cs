@@ -30,6 +30,12 @@ try
     File.Delete(secondPath);
     Require(!GameLibrary.IsLaunchTargetAvailable(second), "Missing launch targets must be unavailable.");
     Require(GameLibrary.Filter(ordered, "", availableOnly: true).Single().Id == first.Id, "Available-only filtering must hide missing targets.");
+    var launchTime = new DateTimeOffset(2026, 8, 30, 10, 0, 0, TimeSpan.FromHours(2));
+    var played = GameLibrary.RecordLaunch(first, launchTime);
+    Require(played.LastPlayedUtc == launchTime.ToUniversalTime(), "Launch history must be stored in UTC.");
+    var cleared = GameLibrary.ClearPlayHistory(played);
+    Require(cleared.LastPlayedUtc is null && cleared.Id == first.Id && cleared.Favorite == first.Favorite, "Clearing play history must preserve game metadata.");
+
     var edited = GameLibrary.UpdateLaunchMetadata(first, " Renamed ", " Handheld ", " --fullscreen ");
     Require(edited.Title == "Renamed" && edited.Platform == "Handheld" && edited.Arguments == "--fullscreen", "Launch metadata must be normalized.");
     Require(edited.Id == first.Id && edited.ExecutablePath == first.ExecutablePath && edited.Favorite == first.Favorite, "Editing metadata must preserve identity, target, and state.");
