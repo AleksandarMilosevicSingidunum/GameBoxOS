@@ -26,7 +26,9 @@ The development blueprint is guidance. Work proceeds in small, testable incremen
 - [x] Versioned manifest parser and asset provider
 - [x] Duplicate, malformed, and unsupported manifest tests
 - [x] Seed timestamp persisted in DataStore
-- [ ] Database migration and DAO integration tests
+- [x] Database migration and DAO integration tests
+
+  Android instrumentation coverage now exercises the Room DAO against an in-memory database, including rich metadata persistence and state updates.
 - [x] Durable Room download-job table and v1-to-v2 migration
 - [x] Pause, resume, cancel, and staged-transition tests
 - [x] Details and download state restoration across process restart
