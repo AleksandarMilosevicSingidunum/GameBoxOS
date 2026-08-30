@@ -30,7 +30,7 @@ class ComposeNavigationCoverageTest {
                 Button(onClick = { state.openDestination("SETTINGS") }) { Text("Settings") }
             }
         }
-        listOf("Home", "Library", "Store", "Downloads", "Media", "PC", "Settings").forEach { label ->
+        listOf("HOME", "LIBRARY", "STORE", "DOWNLOADS", "MEDIA", "PC", "SETTINGS").forEach { label ->
             composeRule.onNodeWithText(label).performClick()
             composeRule.onNodeWithText("current=$label").assertExists()
         }
