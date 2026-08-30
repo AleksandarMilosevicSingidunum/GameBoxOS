@@ -790,6 +790,27 @@ private fun DetailsScreen(
         Text(game.platform.uppercase(), color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
         Text(game.title, fontSize = if (compact) 32.sp else 44.sp, fontWeight = FontWeight.Bold)
         Text(game.genre + "  |  " + game.year + "  |  " + game.sizeMb + " MB")
+        if (game.description != null || game.players != null || game.language != null || game.region != null) {
+            Spacer(Modifier.height(12.dp))
+            Surface(
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f),
+                shape = RoundedCornerShape(14.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text("About this game", fontWeight = FontWeight.Bold)
+                    game.description?.let { Text(it, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.82f)) }
+                    val metadata = listOfNotNull(
+                        game.players?.let { "Players: $it" },
+                        game.language?.let { "Language: $it" },
+                        game.region?.let { "Region: $it" }
+                    )
+                    if (metadata.isNotEmpty()) {
+                        Text(metadata.joinToString("  •  "), color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.68f))
+                    }
+                }
+            }
+        }
         GameSettingsPanel(game = game, repository = repository)
         Spacer(Modifier.height(24.dp))
         Surface(color = MaterialTheme.colorScheme.surface, shape = RoundedCornerShape(18.dp)) {
