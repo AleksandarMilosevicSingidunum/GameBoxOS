@@ -215,7 +215,7 @@ class DefaultGameLaunchController(
             GatewayResult.HANDOFF_REJECTED -> update(
                 game.id,
                 LaunchUiState.Status.HANDOFF_REJECTED,
-                "The emulator rejected this diagnostic payload"
+                "The emulator rejected the approved game content handoff"
             )
         }
     }
