@@ -62,7 +62,7 @@ class EmulatorIntentPolicyTest {
 
     @Test
     fun adaptersWithoutDocumentedExtrasKeepActionViewFallback() {
-        val plan = EmulatorIntentPolicy.plan("com.retroarch.aarch64", uri, "Performance")
+        val plan = EmulatorIntentPolicy.plan("com.example.unknown", uri, "Performance")
 
         assertEquals(EmulatorIntentStyle.ACTION_VIEW, plan.style)
         assertTrue(plan.stringExtras.isEmpty())
