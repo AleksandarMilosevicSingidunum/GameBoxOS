@@ -24,7 +24,7 @@ The companion never downloads game content, deletes installed files, reads Andro
 
 ## Remaining Windows work
 
-Additional PC-runtime integrations, installer packaging/signing, and physical Windows acceptance testing remain before the companion is considered complete.
+Additional PC-runtime integrations, installer packaging, and physical Windows acceptance testing remain before the companion is considered complete. Authenticode signing and signed release upload are prepared through the protected `release-windows-production.yml` workflow.
 
 CI publishes the self-contained ZIP with a SHA-256 file and a validated JSON provenance manifest containing the exact artifact name, hash, byte size, runtime, self-contained flag, and source commit.
 
@@ -34,3 +34,8 @@ CI publishes the self-contained ZIP with a SHA-256 file and a validated JSON pro
 dotnet run --project windows/GameBox.Windows.Core.Tests/GameBox.Windows.Core.Tests.csproj -c Release
 dotnet publish windows/GameBox.Windows/GameBox.Windows.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true
 ```
+
+
+## Signed Windows release
+
+Configure the protected repository secrets `GAMEBOX_WINDOWS_PFX_BASE64` and `GAMEBOX_WINDOWS_PFX_PASSWORD`, create a stable `vMAJOR.MINOR.PATCH` tag, and run **Publish signed Windows companion**. The workflow checks out the exact tag, runs tests, signs and verifies `GameBox.Windows.exe`, packages it, validates signed provenance, and uploads the ZIP, SHA-256, and manifest to that release. Development CI artifacts explicitly declare `authenticodeSigned: false`.
