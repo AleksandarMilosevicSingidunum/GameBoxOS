@@ -14,6 +14,7 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import androidx.work.workDataOf
+import com.gamebox.os.content.GameContentPolicy
 import com.gamebox.os.domain.Game
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -145,10 +146,10 @@ class RemoteDownloadScheduler(context: Context) {
     fun enqueue(game: Game, replace: Boolean = false) {
         val source = requireNotNull(game.sourceUrl) { "Game has no authorized source" }
         val checksum = requireNotNull(game.expectedSha256) { "Game has no checksum" }
-        require(game.id.value.matches(Regex("^[A-Za-z0-9._-]+$"))) { "Game ID is unsafe for storage" }
+        val content = GameContentPolicy.describe(game.id.value, game.platform, source)
         val expectedBytes = game.sizeMb.toLong().coerceAtLeast(1L) * 1024L * 1024L
         val maxBytes = expectedBytes + 16L * 1024L * 1024L
-        val relativePath = "remote/" + game.id.value + "/content.bin"
+        val relativePath = content.relativePath
         val request = OneTimeWorkRequestBuilder<RemoteDownloadWorker>()
             .setConstraints(Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build())
             .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 15, TimeUnit.SECONDS)
@@ -176,10 +177,10 @@ class RemoteDownloadScheduler(context: Context) {
     }
 
     fun discardPartial(game: Game) {
-        val relativePath = "remote/" + game.id.value + "/content.bin"
+        val content = GameContentPolicy.describe(game.id.value, game.platform, game.sourceUrl)
         FileStagingTarget(
             applicationContext.filesDir.resolve(AssetDownloadWorker.INSTALL_ROOT),
-            relativePath
+            content.relativePath
         ).discard()
     }
 }
