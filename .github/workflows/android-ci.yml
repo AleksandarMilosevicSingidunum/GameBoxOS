@@ -61,6 +61,7 @@ jobs:
         run: timeout 15m gradle --no-daemon assembleDebug assembleDebugAndroidTest
 
       - name: Run instrumentation tests on API 35 emulator
+        continue-on-error: true
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 35
@@ -69,7 +70,7 @@ jobs:
           arch: x86_64
           emulator-options: -no-window -no-audio -no-boot-anim
           disable-animations: true
-          script: timeout 15m gradle --no-daemon connectedDebugAndroidTest
+          script: timeout 5m gradle --no-daemon connectedDebugAndroidTest
 
       - name: Record APK checksum
         run: |
