@@ -611,6 +611,16 @@ private fun DetailsScreen(
             Column(Modifier.fillMaxWidth().padding(24.dp)) {
                 Text("Install state", color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f))
                 Text(game.state.displayName(), fontSize = 24.sp, fontWeight = FontWeight.Bold)
+                if (game.state !in setOf(InstallState.INSTALLED, InstallState.UPDATE_AVAILABLE)) {
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        "How to play: install this authorized game, install the approved emulator shown above, then press Play after verification.",
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.78f),
+                        modifier = Modifier.semantics {
+                            contentDescription = "How to play: install the game, install the approved emulator, then press Play after verification"
+                        }
+                    )
+                }
                 if (isAuthorizedFixture && authorizedState.status != AuthorizedDownloadState.Status.IDLE) {
                     Spacer(Modifier.height(12.dp))
                     Text(
