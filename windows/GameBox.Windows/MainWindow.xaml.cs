@@ -64,6 +64,7 @@ public partial class MainWindow : Window
     {
         var summary = LibraryHealthSummary.Create(_allGames);
         LibrarySummaryText.Text = summary.TotalCount + " total · " + summary.AvailableCount + " available · " + summary.MissingCount + " missing · " + summary.FavoriteCount + " favorite(s) · " + summary.PlatformCount + " platform(s)";
+        CleanupMissingButton.IsEnabled = summary.MissingCount > 0;
     }
 
     private void RefreshPlatformOptions()
@@ -96,6 +97,20 @@ public partial class MainWindow : Window
             StatusText.Text = result.Entries.Count + " shortcut(s) added; " + result.DuplicateCount + " duplicate(s) skipped";
         }
         catch (Exception ex) { MessageBox.Show(ex.Message, "Shortcut discovery failed", MessageBoxButton.OK, MessageBoxImage.Error); }
+    }
+
+    private async void CleanupMissing_Click(object sender, RoutedEventArgs e)
+    {
+        var plan = LibraryMaintenance.PlanMissingEntryCleanup(_allGames);
+        if (plan.RemovedCount == 0) return;
+        var message = "Remove " + plan.RemovedCount + " missing entr" + (plan.RemovedCount == 1 ? "y" : "ies") + " from the companion library? This removes their metadata, favorites, and play history, but never deletes game or save files.";
+        if (MessageBox.Show(message, "Remove missing entries", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes) return;
+        _allGames.Clear();
+        foreach (var game in plan.RetainedEntries) _allGames.Add(game);
+        await SaveLibraryAsync();
+        RefreshPlatformOptions();
+        RefreshVisibleGames();
+        StatusText.Text = plan.RemovedCount + " missing entr" + (plan.RemovedCount == 1 ? "y" : "ies") + " removed";
     }
 
     private async void BackupLibrary_Click(object sender, RoutedEventArgs e)
