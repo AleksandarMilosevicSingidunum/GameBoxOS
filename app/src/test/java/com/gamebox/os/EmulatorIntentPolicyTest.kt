@@ -3,12 +3,26 @@ package com.gamebox.os
 import com.gamebox.os.launch.EmulatorIntentPolicy
 import com.gamebox.os.launch.EmulatorIntentStyle
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertThrows
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class EmulatorIntentPolicyTest {
     private val uri = "content://com.gamebox.os.files/installed/game.iso"
+
+    @Test
+    fun rejectsMalformedOrCredentialBearingContentUris() {
+        assertThrows(IllegalArgumentException::class.java) {
+            EmulatorIntentPolicy.plan(EmulatorIntentPolicy.PPSSPP_PACKAGE, "content://", "Balanced")
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+            EmulatorIntentPolicy.plan(EmulatorIntentPolicy.PPSSPP_PACKAGE, "content://user:pass@files/game.iso", "Balanced")
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+            EmulatorIntentPolicy.plan("", uri, "Balanced")
+        }
+    }
 
     @Test
     fun ppssppAppliesSupportedGraphicsProfilesToOfficialArgsExtra() {
