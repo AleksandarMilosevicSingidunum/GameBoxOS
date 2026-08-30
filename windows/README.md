@@ -21,7 +21,9 @@ The companion never downloads game content, deletes installed files, reads Andro
 
 ## Remaining Windows work
 
-Automatic storefront/runtime discovery, richer Moonlight and PC-runtime integration, installer packaging/signing, and physical Windows acceptance testing remain before the companion is considered complete.
+Automatic storefront/runtime discovery beyond bounded Start Menu/desktop shortcut import, richer Moonlight and PC-runtime integration, installer packaging/signing, and physical Windows acceptance testing remain before the companion is considered complete.
+
+CI publishes the self-contained ZIP with a SHA-256 file and a validated JSON provenance manifest containing the exact artifact name, hash, byte size, runtime, self-contained flag, and source commit.
 
 ## Build and test
 
