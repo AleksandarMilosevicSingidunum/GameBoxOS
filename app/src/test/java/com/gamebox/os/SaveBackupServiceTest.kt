@@ -91,6 +91,19 @@ class SaveBackupServiceTest {
         assertEquals("ORIGINAL", save.readText())
     }
 
+    @Test fun backupCreationHonorsSizeLimitWithoutPublishingPartialFile() {
+        val saves = temporaryFolder.newFolder("saves")
+        val backups = temporaryFolder.newFolder("backups")
+        val save = saves.resolve("retro-test/large.dat")
+        save.parentFile.mkdirs()
+        save.writeBytes(ByteArray(8) { 7 })
+        val service = SaveBackupService(saves, backups, maxBackupBytes = 3)
+
+        assertEquals(BackupResult.SIZE_LIMIT_EXCEEDED, service.createBackup("retro-test/large.dat"))
+        assertEquals(false, backups.resolve("retro-test/large.dat").exists())
+        assertEquals(false, backups.resolve("retro-test/large.dat.sha256").exists())
+    }
+
     @Test fun missingAndTraversalInputsFailClosed() {
         val service = SaveBackupService(
             temporaryFolder.newFolder("saves"),

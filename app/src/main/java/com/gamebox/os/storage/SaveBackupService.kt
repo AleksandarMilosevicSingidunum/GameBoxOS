@@ -15,8 +15,12 @@ enum class BackupResult { SUCCESS, SOURCE_MISSING, BACKUP_MISSING, CHECKSUM_MISM
 class SaveBackupService(
     savesDirectory: File,
     backupsDirectory: File,
-    private val verifier: Sha256Verifier = Sha256Verifier()
+    private val verifier: Sha256Verifier = Sha256Verifier(),
+    private val maxBackupBytes: Long = 16L * 1024L * 1024L
 ) {
+    init {
+        require(maxBackupBytes > 0L) { "Backup size limit must be positive" }
+    }
     private val savesRoot = savesDirectory.canonicalFile
     private val backupsRoot = backupsDirectory.canonicalFile
 
@@ -31,8 +35,12 @@ class SaveBackupService(
         val backup = resolveContained(backupsRoot, relativePath)
         val staged = File(requireNotNull(backup.parentFile), backup.name + ".part")
         check(backup.parentFile?.mkdirs() != false || backup.parentFile?.isDirectory == true)
-        source.inputStream().use { input ->
-            staged.outputStream().use { output -> input.copyTo(output) }
+        val copied = source.inputStream().use { input ->
+            staged.outputStream().use { output -> copyBounded(input, output, maxBackupBytes) }
+        }
+        if (!copied) {
+            staged.delete()
+            return BackupResult.SIZE_LIMIT_EXCEEDED
         }
         val checksum = staged.sha256()
         promote(staged, backup)
@@ -113,6 +121,19 @@ class SaveBackupService(
         promote(staged, backup)
         checksumFile(backup).writeText(checksum)
         return BackupResult.SUCCESS
+    }
+
+    private fun copyBounded(input: InputStream, output: OutputStream, limit: Long): Boolean {
+        var transferred = 0L
+        val buffer = ByteArray(64 * 1024)
+        while (true) {
+            val count = input.read(buffer)
+            if (count < 0) return true
+            if (count == 0) continue
+            transferred += count
+            if (transferred > limit) return false
+            output.write(buffer, 0, count)
+        }
     }
 
     private fun resolveContained(root: File, relativePath: String): File {
