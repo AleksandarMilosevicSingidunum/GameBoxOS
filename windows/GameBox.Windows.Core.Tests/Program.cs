@@ -30,6 +30,14 @@ try
     File.Delete(secondPath);
     Require(!GameLibrary.IsLaunchTargetAvailable(second), "Missing launch targets must be unavailable.");
     Require(GameLibrary.Filter(ordered, "", availableOnly: true).Single().Id == first.Id, "Available-only filtering must hide missing targets.");
+    var edited = GameLibrary.UpdateLaunchMetadata(first, " Renamed ", " Handheld ", " --fullscreen ");
+    Require(edited.Title == "Renamed" && edited.Platform == "Handheld" && edited.Arguments == "--fullscreen", "Launch metadata must be normalized.");
+    Require(edited.Id == first.Id && edited.ExecutablePath == first.ExecutablePath && edited.Favorite == first.Favorite, "Editing metadata must preserve identity, target, and state.");
+    var invalidMetadataRejected = false;
+    try { GameLibrary.UpdateLaunchMetadata(first, " ", "Windows", ""); }
+    catch (InvalidDataException) { invalidMetadataRejected = true; }
+    Require(invalidMetadataRejected, "Blank edited titles must be rejected.");
+
     var relocated = GameLibrary.Relocate(first, secondPath);
     Require(relocated.ExecutablePath == Path.GetFullPath(secondPath), "Relocation must update the launch target.");
     Require(relocated.Id == first.Id && relocated.Title == first.Title && relocated.Favorite == first.Favorite, "Relocation must preserve entry metadata.");

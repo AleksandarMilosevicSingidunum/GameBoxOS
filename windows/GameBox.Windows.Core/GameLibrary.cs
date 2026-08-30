@@ -82,6 +82,16 @@ public static class GameLibrary
         return NormalizeEntry(entry with { ExecutablePath = ValidateExecutablePath(executablePath) });
     }
 
+    public static GameEntry UpdateLaunchMetadata(GameEntry entry, string title, string platform, string? arguments)
+    {
+        ArgumentNullException.ThrowIfNull(entry);
+        return NormalizeEntry(entry with {
+            Title = title,
+            Platform = platform,
+            Arguments = arguments ?? ""
+        });
+    }
+
     public static bool IsLaunchTargetAvailable(GameEntry entry)
     {
         ArgumentNullException.ThrowIfNull(entry);

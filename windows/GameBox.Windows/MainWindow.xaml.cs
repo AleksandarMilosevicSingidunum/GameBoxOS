@@ -138,6 +138,23 @@ public partial class MainWindow : Window
         catch (Exception ex) { MessageBox.Show(ex.Message, "Relocate failed", MessageBoxButton.OK, MessageBoxImage.Error); }
     }
 
+    private async void Edit_Click(object sender, RoutedEventArgs e)
+    {
+        var game = Selected;
+        if (game is null) return;
+        var dialog = new LaunchMetadataDialog(game.Title, game.Platform, game.Arguments) { Owner = this };
+        if (dialog.ShowDialog() != true) return;
+        try
+        {
+            var replacement = GameLibrary.UpdateLaunchMetadata(game, dialog.GameTitle, dialog.Platform, dialog.Arguments);
+            Replace(game, replacement);
+            RefreshPlatformOptions();
+            await SaveLibraryAsync();
+            StatusText.Text = "Updated " + replacement.Title;
+        }
+        catch (Exception ex) { MessageBox.Show(ex.Message, "Unable to edit game", MessageBoxButton.OK, MessageBoxImage.Error); }
+    }
+
     private async void Favorite_Click(object sender, RoutedEventArgs e)
     {
         var game = Selected;
@@ -173,6 +190,7 @@ public partial class MainWindow : Window
         PlayButton.IsEnabled = available;
         if (game is not null && !available)
             SelectedPath.Text += Environment.NewLine + "Launch target is missing";
+        EditButton.IsEnabled = game is not null;
         RelocateButton.IsEnabled = game is not null;
         ShowFolderButton.IsEnabled = available;
         FavoriteButton.IsEnabled = game is not null;
