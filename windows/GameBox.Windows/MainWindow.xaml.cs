@@ -81,7 +81,7 @@ public partial class MainWindow : Window
     {
         try
         {
-            StatusText.Text = "Discovering Windows and Steam games...";
+            StatusText.Text = "Discovering Windows storefront games...";
             var roots = new[] {
                 Environment.GetFolderPath(Environment.SpecialFolder.StartMenu),
                 Environment.GetFolderPath(Environment.SpecialFolder.CommonStartMenu),
@@ -110,21 +110,33 @@ public partial class MainWindow : Window
             var epicResult = await Task.Run(() =>
                 EpicDiscovery.Discover(epicManifestRoot, withSteam));
 
+            var gogRoots = new[] {
+                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "GOG Galaxy", "Games"),
+                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86), "GOG Galaxy", "Games"),
+                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "GOG.com", "Galaxy", "Games")
+            };
+            var withEpic = withSteam.Concat(epicResult.Entries).ToList();
+            var gogResult = await Task.Run(() =>
+                GogDiscovery.Discover(gogRoots, withEpic));
+
             foreach (var game in shortcutResult.Entries) _allGames.Add(game);
             foreach (var game in steamResult.Entries) _allGames.Add(game);
             foreach (var game in epicResult.Entries) _allGames.Add(game);
+            foreach (var game in gogResult.Entries) _allGames.Add(game);
             var added = shortcutResult.Entries.Count +
                 steamResult.Entries.Count +
-                epicResult.Entries.Count;
+                epicResult.Entries.Count +
+                gogResult.Entries.Count;
             if (added > 0) await SaveLibraryAsync();
             RefreshPlatformOptions();
             RefreshVisibleGames();
             StatusText.Text = added + " game(s) added; " +
                 (shortcutResult.DuplicateCount +
                  steamResult.DuplicateCount +
-                 epicResult.DuplicateCount) +
+                 epicResult.DuplicateCount +
+                 gogResult.DuplicateCount) +
                 " duplicate(s) skipped; " +
-                (steamResult.InvalidManifestCount + epicResult.InvalidManifestCount) +
+                (steamResult.InvalidManifestCount + epicResult.InvalidManifestCount + gogResult.InvalidManifestCount) +
                 " invalid storefront manifest(s)";
         }
         catch (Exception ex)
