@@ -33,6 +33,7 @@
                     <TextBlock x:Name="SelectedTitle" Text="Choose a game" FontSize="28" FontWeight="Bold" Margin="0,8,0,4" TextWrapping="Wrap"/>
                     <TextBlock x:Name="SelectedPath" Foreground="#9EADC0" TextWrapping="Wrap" Margin="0,0,0,18"/>
                     <Button x:Name="PlayButton" Content="Play" Click="Play_Click" IsEnabled="False"/>
+                    <Button x:Name="RelocateButton" Content="Relocate game" Click="Relocate_Click" IsEnabled="False" AutomationProperties.Name="Relocate selected game"/>
                     <Button x:Name="FavoriteButton" Content="Toggle favorite" Click="Favorite_Click" IsEnabled="False"/>
                     <Button x:Name="RemoveButton" Content="Remove from library" Click="Remove_Click" IsEnabled="False"/>
                     <Separator Margin="0,22"/>

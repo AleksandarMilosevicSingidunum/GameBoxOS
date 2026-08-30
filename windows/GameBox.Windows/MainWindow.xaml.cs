@@ -87,6 +87,26 @@ public partial class MainWindow : Window
         catch (Exception ex) { MessageBox.Show(ex.Message, "Launch failed", MessageBoxButton.OK, MessageBoxImage.Error); }
     }
 
+    private async void Relocate_Click(object sender, RoutedEventArgs e)
+    {
+        var game = Selected;
+        if (game is null) return;
+        var dialog = new OpenFileDialog {
+            Title = "Relocate " + game.Title,
+            Filter = "Launchable files (*.exe;*.lnk;*.bat;*.cmd)|*.exe;*.lnk;*.bat;*.cmd",
+            CheckFileExists = true
+        };
+        if (dialog.ShowDialog(this) != true) return;
+        try
+        {
+            var replacement = game with { ExecutablePath = GameLibrary.ValidateExecutablePath(dialog.FileName) };
+            Replace(game, replacement);
+            await SaveLibraryAsync();
+            StatusText.Text = "Relocated " + game.Title;
+        }
+        catch (Exception ex) { MessageBox.Show(ex.Message, "Relocate failed", MessageBoxButton.OK, MessageBoxImage.Error); }
+    }
+
     private async void Favorite_Click(object sender, RoutedEventArgs e)
     {
         var game = Selected;
@@ -122,6 +142,7 @@ public partial class MainWindow : Window
         PlayButton.IsEnabled = available;
         if (game is not null && !available)
             SelectedPath.Text += Environment.NewLine + "Launch target is missing";
+        RelocateButton.IsEnabled = game is not null;
         FavoriteButton.IsEnabled = game is not null;
         RemoveButton.IsEnabled = game is not null;
     }
