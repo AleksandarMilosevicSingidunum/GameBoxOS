@@ -30,14 +30,14 @@ object EmulatorIntentPolicy {
                 uri.query == null &&
                 uri.fragment == null
         ) { "Emulator content must use an absolute scoped content URI" }
-        return when (packageName) {
-            PPSSPP_PACKAGE -> ppssppPlan(contentUri, graphicsProfile)
+        return when {
+            packageName == PPSSPP_PACKAGE -> ppssppPlan(contentUri, graphicsProfile)
             packageName == RETROARCH_PACKAGE ||
                 packageName.startsWith(RETROARCH_PACKAGE + ".") -> EmulatorIntentPlan(
                     style = EmulatorIntentStyle.LAUNCHER_EXTRAS,
                     stringExtras = mapOf(RETROARCH_ROM to contentUri),
                 )
-            DOLPHIN_PACKAGE -> EmulatorIntentPlan(
+            packageName == DOLPHIN_PACKAGE -> EmulatorIntentPlan(
                 style = EmulatorIntentStyle.LAUNCHER_EXTRAS,
                 stringArrayExtras = mapOf(DOLPHIN_AUTO_START_FILES to listOf(contentUri)),
             )
