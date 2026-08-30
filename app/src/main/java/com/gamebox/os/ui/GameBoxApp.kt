@@ -817,6 +817,16 @@ private fun DetailsScreen(
             Column(Modifier.fillMaxWidth().padding(24.dp)) {
                 Text("Install state", color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f))
                 Text(game.state.displayName(), fontSize = 24.sp, fontWeight = FontWeight.Bold)
+                if (game.platform.equals("Retro", ignoreCase = true) && game.id.value == "galaxy-patrol") {
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        "Required core: Nintendo - NES / Famicom (FCEUmm)",
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.semantics {
+                            contentDescription = "Required emulator core: Nintendo NES Famicom FCEUmm"
+                        }
+                    )
+                }
                 if (game.state !in setOf(InstallState.INSTALLED, InstallState.UPDATE_AVAILABLE)) {
                     Spacer(Modifier.height(8.dp))
                     Text(
