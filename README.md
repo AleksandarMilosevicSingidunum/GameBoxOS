@@ -28,7 +28,7 @@ Status as of 30 August 2026:
 | CI and releases | Partial | Unit tests, debug APK builds, SHA-256 artifacts, alpha release workflow, deterministic channel-readiness gating, validated APK provenance manifests with size/hash/channel metadata, rollback tag metadata, and tag/channel consistency validation, release/rollback tag existence checks, serialized production publishing, and verified asset upload; protected signed-production workflow is implemented; configuring repository signing secrets and executing the real update channel remain |
 | External storage | Partial | SAF folder selection, persisted permissions, read/write status, real filesDir/installed discovery, exact migration planning, Settings confirmation/execution with result totals, non-destructive document-tree copy execution with explicit confirmation states, safe partial-file finalization, disconnect detection, and retryable outage classification; physical unplug testing remains |
 | Target hardware | Not validated | Galaxy A53 controller testing and Galaxy S23 Ultra/DeX/HDMI/Ethernet/thermal/SSD soak testing require physical hardware |
-| Enclosure/handoff | Not started | Hardware enclosure, hub, cooling, cabling, and recovery-button work follows software maturity |
+| Enclosure/handoff | Handoff prepared | Blueprint-grounded entry gates, component criteria, measurement worksheet, DeX/hub/thermal/SSD validation matrix, CAD release checklist, prototype acceptance, BOM record, recovery path, and final handoff package are specified; physical measurement, CAD, fabrication, and validation remain |
 
 ## Implemented highlights
 
@@ -61,7 +61,7 @@ Status as of 30 August 2026:
 - Complete physical controller testing on Galaxy A53
 - Complete Galaxy S23 Ultra DeX/HDMI/Ethernet/charging/thermal/reconnect soak testing
 - Configure signed production builds and execute real update-channel/rollback validation using generated release manifests
-- Complete the physical enclosure and hardware handoff
+- Execute the prepared physical enclosure handoff: measure the final S23/hub/cable layout, select and validate the BOM, release CAD, fabricate, and complete prototype acceptance
 - Expand the optional Windows companion with automatic runtime discovery, richer storefront/streaming integrations, and physical Windows validation
 - Validate physical LAN/controller streaming and host-probe behavior on target devices
 
@@ -75,7 +75,7 @@ The remaining work is tracked in these concrete groups:
 - Run the compiled Compose accessibility/migration/lifecycle suite on devices and add offline/recovery scenarios.
 - Complete physical controller, DeX, HDMI, Ethernet, charging, thermal, SSD, and unplug/reattach validation.
 - Configure production signing and execute update-channel/rollback validation using generated artifact manifests.
-- Complete enclosure, cooling, cabling, and hardware handoff work.
+- Execute the repository hardware handoff specification: target measurements, BOM selection, CAD/fabrication, cooling/cabling validation, and prototype acceptance.
 
 ## Build and test
 
