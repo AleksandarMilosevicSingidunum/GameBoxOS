@@ -32,6 +32,7 @@ public partial class MainWindow : Window
         try
         {
             foreach (var game in await _store.LoadAsync()) _allGames.Add(game);
+            RefreshPlatformOptions();
             RefreshVisibleGames();
             StatusText.Text = _allGames.Count + " local game(s)";
         }
@@ -53,8 +54,19 @@ public partial class MainWindow : Window
         var selectedId = Selected?.Id;
         _visibleGames.Clear();
         var sort = SortBox.SelectedIndex == 1 ? LibrarySort.RecentlyPlayed : LibrarySort.FavoritesThenTitle;
-        foreach (var game in GameLibrary.Filter(_allGames, SearchBox.Text, FavoritesOnlyCheck.IsChecked == true, AvailableOnlyCheck.IsChecked == true, sort)) _visibleGames.Add(game);
+        var platform = PlatformBox.SelectedIndex <= 0 ? null : PlatformBox.SelectedItem as string;
+        foreach (var game in GameLibrary.Filter(_allGames, SearchBox.Text, FavoritesOnlyCheck.IsChecked == true, AvailableOnlyCheck.IsChecked == true, platform, sort)) _visibleGames.Add(game);
         GamesList.SelectedItem = _visibleGames.FirstOrDefault(x => x.Id == selectedId);
+    }
+
+    private void RefreshPlatformOptions()
+    {
+        var selected = PlatformBox.SelectedItem as string;
+        PlatformBox.Items.Clear();
+        PlatformBox.Items.Add("All platforms");
+        foreach (var platform in _allGames.Select(x => x.Platform).Distinct(StringComparer.CurrentCultureIgnoreCase).OrderBy(x => x, StringComparer.CurrentCultureIgnoreCase))
+            PlatformBox.Items.Add(platform);
+        PlatformBox.SelectedItem = selected is not null && PlatformBox.Items.Contains(selected) ? selected : "All platforms";
     }
 
     private async void AddGame_Click(object sender, RoutedEventArgs e)
@@ -67,6 +79,7 @@ public partial class MainWindow : Window
                 throw new InvalidDataException("This launch target is already in the library.");
             var game = GameLibrary.Create(Path.GetFileNameWithoutExtension(dialog.FileName), dialog.FileName);
             _allGames.Add(game);
+            RefreshPlatformOptions();
             await SaveLibraryAsync();
             RefreshVisibleGames();
             GamesList.SelectedItem = _visibleGames.FirstOrDefault(x => x.Id == game.Id);
