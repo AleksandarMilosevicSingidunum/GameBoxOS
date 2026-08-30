@@ -1,7 +1,9 @@
 param(
     [Parameter(Mandatory = $true)][string]$ArchivePath,
     [Parameter(Mandatory = $true)][string]$ChecksumPath,
-    [Parameter(Mandatory = $true)][string]$ManifestPath
+    [Parameter(Mandatory = $true)][string]$ManifestPath,
+    [switch]$RequireAuthenticode,
+    [string]$ExecutablePath
 )
 
 $archive = Get-Item -LiteralPath $ArchivePath -ErrorAction Stop
@@ -17,6 +19,13 @@ if ($manifest.sha256 -ne $actualHash) { throw 'Manifest SHA-256 does not match t
 if ([int64]$manifest.sizeBytes -ne $archive.Length) { throw 'Manifest size does not match the archive.' }
 if ($manifest.runtime -ne 'win-x64') { throw 'Manifest runtime must be win-x64.' }
 if ($manifest.selfContained -ne $true) { throw 'Manifest must identify a self-contained build.' }
+if ($manifest.authenticodeSigned -isnot [bool]) { throw 'Manifest must declare authenticodeSigned as a boolean.' }
+if ($RequireAuthenticode) {
+    if ($manifest.authenticodeSigned -ne $true) { throw 'Manifest must identify an Authenticode-signed build.' }
+    if ([string]::IsNullOrWhiteSpace($ExecutablePath)) { throw 'ExecutablePath is required when Authenticode is required.' }
+    $signature = Get-AuthenticodeSignature -LiteralPath $ExecutablePath -ErrorAction Stop
+    if ($signature.Status -ne 'Valid') { throw "Executable Authenticode signature is not valid: $($signature.Status)" }
+}
 if ($manifest.sourceCommit -notmatch '^[0-9a-f]{40}$') { throw 'Manifest source commit must be a full Git SHA.' }
 
 Write-Host "Validated Windows artifact manifest for $($archive.Name)"

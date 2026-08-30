@@ -1,0 +1,114 @@
+name: Publish signed Windows companion
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Stable release tag (vMAJOR.MINOR.PATCH)
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: windows-production-release
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - name: Validate release input and signing secrets
+        shell: pwsh
+        env:
+          RELEASE_TAG: ${{ inputs.tag }}
+          PFX_BASE64: ${{ secrets.GAMEBOX_WINDOWS_PFX_BASE64 }}
+          PFX_PASSWORD: ${{ secrets.GAMEBOX_WINDOWS_PFX_PASSWORD }}
+        run: |
+          if ($env:RELEASE_TAG -notmatch '^v[0-9]+\.[0-9]+\.[0-9]+$') { throw 'A stable vMAJOR.MINOR.PATCH tag is required.' }
+          if ([string]::IsNullOrWhiteSpace($env:PFX_BASE64)) { throw 'GAMEBOX_WINDOWS_PFX_BASE64 is required.' }
+          if ([string]::IsNullOrWhiteSpace($env:PFX_PASSWORD)) { throw 'GAMEBOX_WINDOWS_PFX_PASSWORD is required.' }
+
+      - name: Checkout tagged sources
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.tag }}
+
+      - name: Verify tag resolves to the checked-out commit
+        shell: pwsh
+        env:
+          RELEASE_TAG: ${{ inputs.tag }}
+        run: |
+          git fetch --tags --force
+          $tagCommit = (git rev-list -n 1 $env:RELEASE_TAG).Trim()
+          $headCommit = (git rev-parse HEAD).Trim()
+          if ($tagCommit -ne $headCommit) { throw 'Release tag does not resolve to the checked-out commit.' }
+
+      - name: Set up .NET 8
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Run Windows core tests
+        run: dotnet run --project windows/GameBox.Windows.Core.Tests/GameBox.Windows.Core.Tests.csproj --configuration Release
+
+      - name: Publish self-contained companion
+        run: dotnet publish windows/GameBox.Windows/GameBox.Windows.csproj --configuration Release --runtime win-x64 --self-contained true -p:PublishSingleFile=true -p:DebugType=None --output artifacts/GameBoxWindows
+
+      - name: Sign and verify executable
+        shell: pwsh
+        env:
+          PFX_BASE64: ${{ secrets.GAMEBOX_WINDOWS_PFX_BASE64 }}
+          PFX_PASSWORD: ${{ secrets.GAMEBOX_WINDOWS_PFX_PASSWORD }}
+        run: |
+          $pfx = Join-Path $env:RUNNER_TEMP 'gamebox-windows-signing.pfx'
+          [IO.File]::WriteAllBytes($pfx, [Convert]::FromBase64String($env:PFX_BASE64))
+          try {
+            $signtool = Get-ChildItem 'C:\Program Files (x86)\Windows Kits\10\bin' -Filter signtool.exe -Recurse |
+              Sort-Object FullName -Descending |
+              Select-Object -First 1
+            if ($null -eq $signtool) { throw 'signtool.exe was not found.' }
+            & $signtool.FullName sign /fd SHA256 /td SHA256 /tr http://timestamp.digicert.com /f $pfx /p $env:PFX_PASSWORD artifacts/GameBoxWindows/GameBox.Windows.exe
+            if ($LASTEXITCODE -ne 0) { throw 'Authenticode signing failed.' }
+            & $signtool.FullName verify /pa /all /v artifacts/GameBoxWindows/GameBox.Windows.exe
+            if ($LASTEXITCODE -ne 0) { throw 'Authenticode verification failed.' }
+          } finally {
+            Remove-Item -LiteralPath $pfx -Force -ErrorAction SilentlyContinue
+          }
+
+      - name: Package signed artifact and provenance
+        shell: pwsh
+        env:
+          RELEASE_TAG: ${{ inputs.tag }}
+        run: |
+          Compress-Archive -Path artifacts/GameBoxWindows/* -DestinationPath artifacts/GameBoxWindows-win-x64.zip
+          $archive = Get-Item artifacts/GameBoxWindows-win-x64.zip
+          $sha = (Get-FileHash $archive.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+          $sha | Set-Content artifacts/GameBoxWindows-win-x64.zip.sha256
+          [ordered]@{
+            schemaVersion = 1
+            artifact = $archive.Name
+            sha256 = $sha
+            sizeBytes = $archive.Length
+            runtime = 'win-x64'
+            selfContained = $true
+            authenticodeSigned = $true
+            sourceCommit = (git rev-parse HEAD).Trim()
+            releaseTag = $env:RELEASE_TAG
+          } | ConvertTo-Json | Set-Content artifacts/GameBoxWindows-win-x64.manifest.json
+
+      - name: Validate signed artifact
+        shell: pwsh
+        run: scripts/validate-windows-artifact.ps1 -ArchivePath artifacts/GameBoxWindows-win-x64.zip -ChecksumPath artifacts/GameBoxWindows-win-x64.zip.sha256 -ManifestPath artifacts/GameBoxWindows-win-x64.manifest.json -RequireAuthenticode -ExecutablePath artifacts/GameBoxWindows/GameBox.Windows.exe
+
+      - name: Upload signed release assets
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ inputs.tag }}
+          fail_on_unmatched_files: true
+          files: |
+            artifacts/GameBoxWindows-win-x64.zip
+            artifacts/GameBoxWindows-win-x64.zip.sha256
+            artifacts/GameBoxWindows-win-x64.manifest.json
