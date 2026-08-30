@@ -53,6 +53,14 @@ class EmulatorIntentPolicyTest {
     }
 
     @Test
+    fun retroArchUsesLauncherRomExtraForScopedContent() {
+        val plan = EmulatorIntentPolicy.plan("com.retroarch.aarch64", uri, "Balanced")
+
+        assertEquals(EmulatorIntentStyle.LAUNCHER_EXTRAS, plan.style)
+        assertEquals(uri, plan.stringExtras[EmulatorIntentPolicy.RETROARCH_ROM])
+    }
+
+    @Test
     fun adaptersWithoutDocumentedExtrasKeepActionViewFallback() {
         val plan = EmulatorIntentPolicy.plan("com.retroarch.aarch64", uri, "Performance")
 
