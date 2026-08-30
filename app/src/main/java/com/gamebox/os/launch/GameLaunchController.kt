@@ -45,7 +45,7 @@ class EmulatorCapabilityRegistry(
     }
 
     fun displayName(packageName: String): String = when (packageName) {
-        "com.retroarch.aarch64" -> "RetroArch"
+        "com.retroarch.aarch64", "com.retroarch", "com.retroarch.ra32" -> "RetroArch"
         "org.ppsspp.ppsspp" -> "PPSSPP"
         "org.dolphinemu.dolphinemu" -> "Dolphin"
         "xyz.aethersx2.android" -> "AetherSX2"
@@ -56,7 +56,7 @@ class EmulatorCapabilityRegistry(
     }
 
     fun optionsFor(game: Game): List<String> = when (game.platform.lowercase()) {
-        "retro", "homebrew" -> listOf("com.retroarch.aarch64")
+        "retro", "homebrew" -> retroArchPackages
         "psp" -> listOf("org.ppsspp.ppsspp")
         "ps1" -> listOf("com.github.stenzek.duckstation", "com.retroarch.aarch64")
         "n64" -> listOf("org.mupen64plusae.v3.fzurita", "com.retroarch.aarch64")
@@ -65,6 +65,8 @@ class EmulatorCapabilityRegistry(
         "ps2" -> listOf("xyz.aethersx2.android")
         else -> emptyList()
     }
+
+    private val retroArchPackages = listOf("com.retroarch.aarch64", "com.retroarch", "com.retroarch.ra32")
 
     fun forGame(gameId: GameId): EmulatorCapability? = capabilities.firstOrNull { it.gameId == gameId }
 
