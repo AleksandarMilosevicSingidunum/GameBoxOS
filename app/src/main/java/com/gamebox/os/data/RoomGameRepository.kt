@@ -1,6 +1,8 @@
 package com.gamebox.os.data
 
 import com.gamebox.os.catalog.CatalogProvider
+import com.gamebox.os.catalog.CatalogFallbackReason
+import com.gamebox.os.catalog.CatalogFallbackStatus
 import com.gamebox.os.data.local.GameDao
 import com.gamebox.os.data.local.SaveRecordDao
 import com.gamebox.os.data.local.SaveRecordEntity
@@ -43,6 +45,7 @@ class RoomGameRepository(
         scope.launch {
             if (dao.count() == 0) {
                 val snapshot = catalogProvider.load()
+                consumeFallbackReason()
                 dao.upsertAll(snapshot.games.map { it.toEntity() })
                 onCatalogSeeded(System.currentTimeMillis())
             }
@@ -59,15 +62,24 @@ class RoomGameRepository(
             refreshState.value = CatalogRefreshState.REFRESHING
             try {
                 val incoming = catalogProvider.load().games
+                val fallbackReason = consumeFallbackReason()
                 val existing = dao.getAllOnce().map { it.toDomain() }
                 dao.upsertAll(mergeCatalogPreservingLocalState(existing, incoming).map { it.toEntity() })
                 onCatalogRefreshed(System.currentTimeMillis())
-                refreshState.value = CatalogRefreshState.SUCCESS
+                refreshState.value = when (fallbackReason) {
+                    CatalogFallbackReason.OFFLINE -> CatalogRefreshState.OFFLINE_FALLBACK
+                    CatalogFallbackReason.REMOTE_FAILURE -> CatalogRefreshState.REMOTE_FALLBACK
+                    CatalogFallbackReason.NONE -> CatalogRefreshState.SUCCESS
+                }
             } catch (_: Exception) {
                 refreshState.value = CatalogRefreshState.ERROR
             }
         }
     }
+
+    private fun consumeFallbackReason(): CatalogFallbackReason =
+        (catalogProvider as? CatalogFallbackStatus)?.consumeFallbackReason()
+            ?: CatalogFallbackReason.NONE
 
     override fun setEmulatorSettings(id: GameId, packageName: String?, graphicsProfile: String) {
         scope.launch { dao.updateEmulatorSettings(id.value, packageName, graphicsProfile.takeIf { it in GraphicsProfiles.ALL } ?: GraphicsProfiles.BALANCED) }
