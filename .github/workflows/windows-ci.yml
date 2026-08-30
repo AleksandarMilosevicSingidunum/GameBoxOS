@@ -42,6 +42,7 @@ jobs:
             sizeBytes = $archive.Length
             runtime = "win-x64"
             selfContained = $true
+            authenticodeSigned = $false
             sourceCommit = "${{ github.sha }}"
           } | ConvertTo-Json | Set-Content artifacts/GameBoxWindows-win-x64.manifest.json
       - name: Validate Windows artifact provenance
