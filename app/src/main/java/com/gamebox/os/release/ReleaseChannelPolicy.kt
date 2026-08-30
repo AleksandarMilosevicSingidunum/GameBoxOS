@@ -23,7 +23,12 @@ object ReleaseReadinessEvaluator {
         val blockers = buildList {
             if (manifest.releaseTag != expectedTag) add("manifest tag does not match release tag")
             runCatching { channelForTag(expectedTag) }
-                .onSuccess { expectedChannel -> if (manifest.channel != expectedChannel) add("manifest channel does not match release tag") }
+                .onSuccess { expectedChannel ->
+                    if (manifest.channel != expectedChannel) add("manifest channel does not match release tag")
+                    if (!expectedChannel.allowsUnsignedBuilds && manifest.rollbackReleaseTag.isNullOrBlank()) {
+                        add("rollback release tag is required for signed release channels")
+                    }
+                }
                 .onFailure { add("release tag is not supported") }
             if (manifest.rollbackReleaseTag == manifest.releaseTag) add("rollback tag must differ from release tag")
         }
