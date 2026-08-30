@@ -10,6 +10,8 @@ This repository is an active pre-1.0 implementation of the August 2026 **GameBox
 
 Status as of 30 August 2026:
 
+Latest verified increments: blueprint motion states now cover game cards, navigation tabs, Home quick-launch actions, and Media/PC shortcut cards; catalog artwork and rich metadata are persisted through Room; bundled Celeste Classic and Cave Story entries exercise HTTPS artwork and details metadata; TheGamesDB enrichment is available as a composable provider; Galaxy Patrol declares the FCEUmm NES core; production tags drive APK version names; Compose navigation, fixture checksum, metadata-boundary, and release workflow tests are covered.
+
 | Blueprint area | Status | Current implementation |
 | --- | --- | --- |
 | Android/Compose shell | Implemented | Dark GameBox theme, blueprint-aligned 16:9 home hierarchy with hero/quick-launch/device-status regions, resizeable phone portrait/landscape layouts, IME-aware resizing, modern back-invoked navigation, and large DeX layouts |
