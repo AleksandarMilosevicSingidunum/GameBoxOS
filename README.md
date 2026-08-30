@@ -101,3 +101,8 @@ Each CI run produces a temporary debug APK and SHA-256 artifact. Release APKs ar
 - Cancel removes only that job's partial content.
 - Uninstall keeps saves, metadata, favorites, and play history by default.
 - Diagnostics exclude credentials, remote paths, checksums, file paths, and save contents.
+
+
+### Online metadata and box art
+
+GameBox includes an optional TheGamesDB metadata adapter (`TheGamesDbMetadataClient`). Configure an API key through the existing credential store; the adapter enriches authorized catalog entries with HTTPS artwork and descriptions only. It never downloads game binaries. TheGamesDB API requires an API key and is documented at https://api.thegamesdb.net/. Binary installation remains governed by the catalog's authorized HTTPS source and SHA-256 checksum.
