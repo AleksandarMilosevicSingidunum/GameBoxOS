@@ -141,7 +141,8 @@ fun GameBoxApp(
                 } else {
                     when (destination) {
                         Destination.HOME -> HomeScreen(
-                            games, restorableGameId, rememberGameFocus, compact
+                            games, restorableGameId, rememberGameFocus, compact,
+                            openPc = { uiState.openDestination(Destination.PC.name) }
                         ) { uiState.openGame(it.id.value) }
                         Destination.LIBRARY -> CollectionScreen(
                             "Your Library", "Installed and ready offline",
@@ -240,29 +241,137 @@ private fun HomeScreen(
     restoreGameId: GameId?,
     onFocused: (GameId) -> Unit,
     compact: Boolean,
+    openPc: () -> Unit,
     open: (Game) -> Unit
 ) {
     if (games.isEmpty()) {
         Text("Catalog is loading...")
         return
     }
+    val context = LocalContext.current
     val hero = games.first()
     val focusTarget = restoreGameId?.takeIf { id -> games.any { it.id == id } } ?: hero.id
-    Column {
+    val installed = games.filter {
+        it.state == InstallState.INSTALLED || it.state == InstallState.UPDATE_AVAILABLE
+    }
+    val recentlyAdded = installed.takeLast(8).asReversed()
+    val recentlyPlayed = games.filter { it.lastPlayed != null && it.id != hero.id }
+    val network = context.getSystemService(ConnectivityManager::class.java)
+        ?.getNetworkCapabilities(context.getSystemService(ConnectivityManager::class.java)?.activeNetwork)
+    val networkLabel = if (network?.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED) == true)
+        "Connected" else "Offline"
+    val storage = context.filesDir
+    val used = (storage.totalSpace - storage.usableSpace).coerceAtLeast(0L)
+    val usedPercent = if (storage.totalSpace > 0L) (used * 100L / storage.totalSpace).toInt() else 0
+
+    Column(Modifier.fillMaxWidth()) {
         Text("Good evening", color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.68f))
         Text("Ready to play?", fontSize = if (compact) 30.sp else 42.sp, fontWeight = FontWeight.Bold)
-        Spacer(Modifier.height(24.dp))
-        GameCard(
-            hero,
-            Modifier.fillMaxWidth().height(if (compact) 148.dp else 188.dp),
-            hero = true,
-            restoreFocus = focusTarget == hero.id,
-            onFocused = onFocused
-        ) { open(hero) }
-        Spacer(Modifier.height(24.dp))
-        Text("Recently played", fontSize = if (compact) 20.sp else 23.sp, fontWeight = FontWeight.Bold)
-        Spacer(Modifier.height(10.dp))
-        GameRow(games.filter { it.lastPlayed != null && it.id != hero.id }, focusTarget, onFocused, compact, open)
+        Spacer(Modifier.height(if (compact) 16.dp else 20.dp))
+        if (compact) {
+            GameCard(
+                hero,
+                Modifier.fillMaxWidth().height(148.dp),
+                hero = true,
+                restoreFocus = focusTarget == hero.id,
+                onFocused = onFocused
+            ) { open(hero) }
+            Spacer(Modifier.height(18.dp))
+            HomeQuickLaunchRow(openPc)
+            Spacer(Modifier.height(18.dp))
+            HomeGameSection("Recently added", recentlyAdded, focusTarget, onFocused, compact, open)
+            Spacer(Modifier.height(18.dp))
+            HomeGameSection("Recently played", recentlyPlayed, focusTarget, onFocused, compact, open)
+        } else {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(18.dp)) {
+                Column(Modifier.weight(1f)) {
+                    GameCard(
+                        hero,
+                        Modifier.fillMaxWidth().height(188.dp),
+                        hero = true,
+                        restoreFocus = focusTarget == hero.id,
+                        onFocused = onFocused
+                    ) { open(hero) }
+                    Spacer(Modifier.height(14.dp))
+                    HomeQuickLaunchRow(openPc)
+                    Spacer(Modifier.height(14.dp))
+                    HomeGameSection("Recently added", recentlyAdded, focusTarget, onFocused, compact, open)
+                    Spacer(Modifier.height(14.dp))
+                    HomeGameSection("Recently played", recentlyPlayed, focusTarget, onFocused, compact, open)
+                }
+                HomeStatusPanel(
+                    networkLabel = networkLabel,
+                    storagePercent = usedPercent,
+                    deviceModel = Build.MODEL,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun HomeGameSection(
+    title: String,
+    games: List<Game>,
+    focusTarget: GameId?,
+    onFocused: (GameId) -> Unit,
+    compact: Boolean,
+    open: (Game) -> Unit
+) {
+    Text(title, fontSize = if (compact) 20.sp else 16.sp, fontWeight = FontWeight.Bold)
+    Spacer(Modifier.height(8.dp))
+    if (games.isEmpty()) {
+        Text("Nothing here yet", color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.62f))
+    } else {
+        GameRow(games, focusTarget, onFocused, compact, open)
+    }
+}
+
+@Composable
+private fun HomeQuickLaunchRow(openPc: () -> Unit) {
+    Text("Quick launch", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+    Spacer(Modifier.height(8.dp))
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        listOf("Desktop", "Steam Library", "Epic Games").forEach { label ->
+            OutlinedButton(
+                onClick = openPc,
+                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
+                modifier = Modifier.semantics {
+                    contentDescription = "Quick launch $label; opens PC Hub"
+                }
+            ) { Text(label, maxLines = 1) }
+        }
+    }
+}
+
+@Composable
+private fun HomeStatusPanel(
+    networkLabel: String,
+    storagePercent: Int,
+    deviceModel: String,
+) {
+    Surface(
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        shape = RoundedCornerShape(16.dp),
+        modifier = Modifier.width(230.dp).semantics {
+            contentDescription = "Device status: storage $storagePercent percent used, network $networkLabel, device $deviceModel"
+        }
+    ) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Text("Device status", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+            HomeStatusItem("Storage", "$storagePercent% used")
+            HomeStatusItem("Network", networkLabel)
+            HomeStatusItem("Controller", "Connect in Settings")
+            HomeStatusItem("Device", deviceModel)
+        }
+    }
+}
+
+@Composable
+private fun HomeStatusItem(label: String, value: String) {
+    Column {
+        Text(label, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.62f))
+        Text(value, fontWeight = FontWeight.SemiBold)
     }
 }
 
