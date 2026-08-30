@@ -62,6 +62,8 @@ public partial class MainWindow : Window
         if (dialog.ShowDialog(this) != true) return;
         try
         {
+            if (GameLibrary.ContainsLaunchTarget(_allGames, dialog.FileName))
+                throw new InvalidDataException("This launch target is already in the library.");
             var game = GameLibrary.Create(Path.GetFileNameWithoutExtension(dialog.FileName), dialog.FileName);
             _allGames.Add(game);
             await SaveLibraryAsync();
@@ -99,6 +101,8 @@ public partial class MainWindow : Window
         if (dialog.ShowDialog(this) != true) return;
         try
         {
+            if (GameLibrary.ContainsLaunchTarget(_allGames, dialog.FileName, game.Id))
+                throw new InvalidDataException("Another library entry already uses this launch target.");
             var replacement = GameLibrary.Relocate(game, dialog.FileName);
             Replace(game, replacement);
             await SaveLibraryAsync();
