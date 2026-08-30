@@ -149,11 +149,12 @@ class AndroidPackageGateway(
             // Some RetroArch Android builds expose a launcher activity but reject
             // launcher extras. Retry once with the standard scoped ACTION_VIEW contract.
             if (capability.packageName.startsWith("com.retroarch")) {
-                val fallback = Intent(Intent.ACTION_VIEW)
-                    .setDataAndType(uri, capability.mimeType)
-                    .setPackage(capability.packageName)
-                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                    .setClipData(ClipData.newRawUri("GameBox content", uri))
+                val fallback = Intent(Intent.ACTION_VIEW).apply {
+                    setDataAndType(uri, capability.mimeType)
+                    setPackage(capability.packageName)
+                    clipData = ClipData.newRawUri("GameBox content", uri)
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                }
                 runCatching {
                     context.startActivity(fallback)
                     GatewayResult.LAUNCHED
