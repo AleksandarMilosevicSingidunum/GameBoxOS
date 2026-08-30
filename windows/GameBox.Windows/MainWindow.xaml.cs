@@ -81,7 +81,7 @@ public partial class MainWindow : Window
     {
         try
         {
-            StatusText.Text = "Discovering Windows shortcuts...";
+            StatusText.Text = "Discovering Windows and Steam games...";
             var roots = new[] {
                 Environment.GetFolderPath(Environment.SpecialFolder.StartMenu),
                 Environment.GetFolderPath(Environment.SpecialFolder.CommonStartMenu),
@@ -89,14 +89,33 @@ public partial class MainWindow : Window
                 Environment.GetFolderPath(Environment.SpecialFolder.CommonDesktopDirectory)
             };
             var existing = _allGames.ToList();
-            var result = await Task.Run(() => ShortcutDiscovery.Discover(roots, existing));
-            foreach (var game in result.Entries) _allGames.Add(game);
-            if (result.Entries.Count > 0) await SaveLibraryAsync();
+            var shortcutResult = await Task.Run(() => ShortcutDiscovery.Discover(roots, existing));
+            var withShortcuts = existing.Concat(shortcutResult.Entries).ToList();
+            var steamRoot = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86),
+                "Steam");
+            var generatedRoot = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "GameBoxOS",
+                "storefront-shortcuts");
+            var steamResult = await Task.Run(() =>
+                SteamDiscovery.Discover(steamRoot, generatedRoot, withShortcuts));
+
+            foreach (var game in shortcutResult.Entries) _allGames.Add(game);
+            foreach (var game in steamResult.Entries) _allGames.Add(game);
+            var added = shortcutResult.Entries.Count + steamResult.Entries.Count;
+            if (added > 0) await SaveLibraryAsync();
             RefreshPlatformOptions();
             RefreshVisibleGames();
-            StatusText.Text = result.Entries.Count + " shortcut(s) added; " + result.DuplicateCount + " duplicate(s) skipped";
+            StatusText.Text = added + " game(s) added; " +
+                (shortcutResult.DuplicateCount + steamResult.DuplicateCount) +
+                " duplicate(s) skipped; " + steamResult.InvalidManifestCount +
+                " invalid Steam manifest(s)";
         }
-        catch (Exception ex) { MessageBox.Show(ex.Message, "Shortcut discovery failed", MessageBoxButton.OK, MessageBoxImage.Error); }
+        catch (Exception ex)
+        {
+            MessageBox.Show(ex.Message, "Game discovery failed", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
     }
 
     private async void CleanupMissing_Click(object sender, RoutedEventArgs e)
@@ -144,7 +163,7 @@ public partial class MainWindow : Window
 
     private async void AddGame_Click(object sender, RoutedEventArgs e)
     {
-        var dialog = new OpenFileDialog { Title = "Add a local Windows game", Filter = "Launchable files (*.exe;*.lnk;*.bat;*.cmd)|*.exe;*.lnk;*.bat;*.cmd", CheckFileExists = true };
+        var dialog = new OpenFileDialog { Title = "Add a local Windows game", Filter = "Launchable files (*.exe;*.lnk;*.url;*.bat;*.cmd)|*.exe;*.lnk;*.url;*.bat;*.cmd", CheckFileExists = true };
         if (dialog.ShowDialog(this) != true) return;
         try
         {
@@ -195,7 +214,7 @@ public partial class MainWindow : Window
         if (game is null) return;
         var dialog = new OpenFileDialog {
             Title = "Relocate " + game.Title,
-            Filter = "Launchable files (*.exe;*.lnk;*.bat;*.cmd)|*.exe;*.lnk;*.bat;*.cmd",
+            Filter = "Launchable files (*.exe;*.lnk;*.url;*.bat;*.cmd)|*.exe;*.lnk;*.url;*.bat;*.cmd",
             CheckFileExists = true
         };
         if (dialog.ShowDialog(this) != true) return;

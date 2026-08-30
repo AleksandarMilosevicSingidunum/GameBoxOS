@@ -139,6 +139,49 @@ try
     catch (OperationCanceledException) { cancellationObserved = true; }
     Require(cancellationObserved, "Catalog synchronization timeout must cancel a blocked request.");
 
+    var steamRoot = Path.Combine(root, "Steam");
+    var secondarySteamLibrary = Path.Combine(root, "SteamLibrary");
+    var steamApps = Path.Combine(steamRoot, "steamapps");
+    var secondarySteamApps = Path.Combine(secondarySteamLibrary, "steamapps");
+    Directory.CreateDirectory(steamApps);
+    Directory.CreateDirectory(secondarySteamApps);
+    var escapedSecondary = secondarySteamLibrary.Replace(@"\", @"\\", StringComparison.Ordinal);
+    await File.WriteAllTextAsync(
+        Path.Combine(steamApps, "libraryfolders.vdf"),
+        "\"libraryfolders\"\n{\n  \"1\"\n  {\n    \"path\" \"" + escapedSecondary + "\"\n  }\n}");
+    await File.WriteAllTextAsync(
+        Path.Combine(steamApps, "appmanifest_100.acf"),
+        "\"AppState\"\n{\n  \"appid\" \"100\"\n  \"name\" \"Steam Alpha\"\n}");
+    await File.WriteAllTextAsync(
+        Path.Combine(secondarySteamApps, "appmanifest_200.acf"),
+        "\"AppState\"\n{\n  \"appid\" \"200\"\n  \"name\" \"Steam Beta\"\n}");
+    await File.WriteAllTextAsync(
+        Path.Combine(secondarySteamApps, "appmanifest_invalid.acf"),
+        "\"AppState\"\n{\n  \"name\" \"Missing ID\"\n}");
+
+    var steamShortcuts = Path.Combine(root, "generated-steam-shortcuts");
+    var steamDiscovery = SteamDiscovery.Discover(
+        steamRoot,
+        steamShortcuts,
+        Array.Empty<GameEntry>());
+    Require(steamDiscovery.Entries.Count == 2, "Steam discovery must import games from primary and secondary libraries.");
+    Require(steamDiscovery.ManifestCount == 3 && steamDiscovery.InvalidManifestCount == 1, "Steam discovery must report invalid manifests.");
+    Require(steamDiscovery.Entries.All(x => x.Platform == "Steam"), "Steam entries must retain storefront metadata.");
+    Require(steamDiscovery.Entries.All(x => File.Exists(x.ExecutablePath)), "Steam discovery must create local protocol shortcuts.");
+    var steamShortcutPayload = await File.ReadAllTextAsync(
+        steamDiscovery.Entries.Single(x => x.Title == "Steam Alpha").ExecutablePath);
+    Require(steamShortcutPayload.Contains("steam://rungameid/100", StringComparison.Ordinal), "Steam shortcut must use the validated app ID.");
+    var repeatedSteamDiscovery = SteamDiscovery.Discover(
+        steamRoot,
+        steamShortcuts,
+        steamDiscovery.Entries);
+    Require(repeatedSteamDiscovery.Entries.Count == 0 && repeatedSteamDiscovery.DuplicateCount == 2, "Steam discovery must deduplicate existing launch targets.");
+    var missingSteamDiscovery = SteamDiscovery.Discover(
+        Path.Combine(root, "missing-steam"),
+        steamShortcuts,
+        Array.Empty<GameEntry>());
+    Require(missingSteamDiscovery.ManifestCount == 0 && missingSteamDiscovery.Entries.Count == 0, "Missing Steam installations must be a safe no-op.");
+
     Console.WriteLine("GameBox Windows core tests passed.");
 }
 finally

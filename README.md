@@ -13,7 +13,7 @@ Status as of 30 August 2026:
 | Blueprint area | Status | Current implementation |
 | --- | --- | --- |
 | Android/Compose shell | Implemented | Dark GameBox theme, resizeable phone portrait/landscape layouts, IME-aware resizing, modern back-invoked navigation, and large DeX layouts |
-| Windows companion | Implemented foundation | Native .NET 8/WPF local-library launcher with search, favorites, available-only and platform filters, favorites/title and recent-play sorting, editable validated title/platform/arguments, localized play history with safe reset, atomic JSON backup/restore, visible missing-target status, metadata-preserving relocation, duplicate-target prevention, Show in folder, bounded validated HTTPS catalog synchronization, and a self-contained win-x64 CI artifact |
+| Windows companion | Implemented foundation | Native .NET 8/WPF local-library launcher with search, favorites, available-only and platform filters, favorites/title and recent-play sorting, editable validated title/platform/arguments, localized play history with safe reset, atomic JSON backup/restore, visible missing-target status, metadata-preserving relocation, duplicate-target prevention, Show in folder, bounded Start Menu/desktop and Steam-library discovery, bounded validated HTTPS catalog synchronization, and a self-contained win-x64 CI artifact |
 | Controller navigation | Partial | Focusable cards, LB/RB tabs, Back/B handling, and focus restoration; physical-device and reconnect testing remain |
 | Primary UI | Implemented foundation | Home, Library, Store, Details, Downloads, Media, PC Hub, Settings, migration confirmation UI, accessible tab/card/progress/live-region semantics, saveable navigation/detail/focus restoration, JVM UI contracts, and compiled Compose instrumentation coverage |
 | Catalog and discovery | Implemented foundation | Room-backed catalog, search, platform/genre filters, favorites, cached authorized manifests, and a pinned MIT-licensed runnable Galaxy Patrol NES fixture |
@@ -62,7 +62,7 @@ Status as of 30 August 2026:
 - Complete Galaxy S23 Ultra DeX/HDMI/Ethernet/charging/thermal/reconnect soak testing
 - Configure signed production builds and execute real update-channel/rollback validation using generated release manifests
 - Execute the prepared physical enclosure handoff: measure the final S23/hub/cable layout, select and validate the BOM, release CAD, fabricate, and complete prototype acceptance
-- Expand the optional Windows companion with automatic runtime discovery, richer storefront/streaming integrations, and physical Windows validation
+- Expand the optional Windows companion with additional storefront discovery beyond Steam, richer streaming integrations, installer signing, and physical Windows validation
 - Validate physical LAN/controller streaming and host-probe behavior on target devices
 
 ## Blueprint implementation backlog
