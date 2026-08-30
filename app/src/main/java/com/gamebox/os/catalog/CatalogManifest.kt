@@ -30,7 +30,12 @@ data class CatalogGame(
     val contentPolicy: String,
     val initialState: String = InstallState.NOT_INSTALLED.name,
     val source: String? = null,
-    val checksum: String? = null
+    val checksum: String? = null,
+    val artworkUrl: String? = null,
+    val description: String? = null,
+    val players: String? = null,
+    val language: String? = null,
+    val region: String? = null
 )
 
 data class CatalogSnapshot(
@@ -70,6 +75,11 @@ class CatalogParser(
             if ((item.source == null) != (item.checksum == null)) {
                 throw CatalogFormatException("Remote games require both source and checksum")
             }
+            item.artworkUrl?.let {
+                try { validateAuthorizedCatalogUrl(it) } catch (error: IllegalArgumentException) {
+                    throw CatalogFormatException("Artwork must be an authorized HTTPS URL", error)
+                }
+            }
             item.source?.let {
                 try {
                     validateAuthorizedCatalogUrl(it)
@@ -91,7 +101,12 @@ class CatalogParser(
                 sizeMb = item.sizeMb,
                 state = state,
                 sourceUrl = item.source,
-                expectedSha256 = item.checksum
+                expectedSha256 = item.checksum,
+                artworkUrl = item.artworkUrl,
+                description = item.description,
+                players = item.players,
+                language = item.language,
+                region = item.region
             )
         }
 

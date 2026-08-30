@@ -11,10 +11,17 @@ import android.view.KeyEvent as AndroidKeyEvent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.hoverable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsHoveredAsState
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.focusable
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
@@ -654,9 +661,25 @@ internal fun GameCard(
 ) {
     val focusRequester = remember { FocusRequester() }
     var focused by remember { mutableStateOf(false) }
+    val interactionSource = remember { MutableInteractionSource() }
+    val hovered by interactionSource.collectIsHoveredAsState()
+    val pressed by interactionSource.collectIsPressedAsState()
+    val emphasized = focused || hovered
     val border by animateColorAsState(
-        if (focused) MaterialTheme.colorScheme.primary else Color.Transparent,
+        if (emphasized) MaterialTheme.colorScheme.primary else Color.Transparent,
         label = "game-focus"
+    )
+    val scale by animateFloatAsState(
+        targetValue = when {
+            pressed -> 0.97f
+            emphasized -> 1.025f
+            else -> 1f
+        },
+        label = "game-scale"
+    )
+    val elevation by animateDpAsState(
+        targetValue = if (emphasized) 10.dp else 2.dp,
+        label = "game-elevation"
     )
     LaunchedEffect(restoreFocus) {
         if (restoreFocus) focusRequester.requestFocus()
@@ -672,20 +695,28 @@ internal fun GameCard(
                 focused = it.isFocused
                 if (it.isFocused) onFocused(game.id)
             }
+            .graphicsLayer {
+                scaleX = scale
+                scaleY = scale
+            }
+            .hoverable(interactionSource)
             .clickable(onClick = onClick)
             .focusable(),
         shape = RoundedCornerShape(18.dp),
         color = MaterialTheme.colorScheme.surface,
         border = BorderStroke(if (focused) 3.dp else 1.dp, border),
-        tonalElevation = if (focused) 8.dp else 2.dp
+        tonalElevation = elevation
     ) {
-        Column(Modifier.padding(18.dp)) {
+        Box(Modifier.fillMaxSize()) {
+            RemoteArtwork(game.artworkUrl, Modifier.fillMaxSize())
+            Column(Modifier.padding(18.dp)) {
             Text(if (hero) "CONTINUE PLAYING" else game.platform.uppercase(),
                 color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold, fontSize = 12.sp)
             Spacer(Modifier.height(10.dp))
             Text((if (game.favorite) "★ " else "") + game.title, fontSize = if (hero) 32.sp else 21.sp, fontWeight = FontWeight.Bold)
             Spacer(Modifier.weight(1f))
             Text(if (hero) "Press A for details" else game.state.displayName(), fontSize = 13.sp)
+            }
         }
     }
 }
