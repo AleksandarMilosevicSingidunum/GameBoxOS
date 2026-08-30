@@ -18,6 +18,7 @@ try
     Require(GameLibrary.Filter(ordered, "pc").Single().Id == second.Id, "Search must match platform.");
     Require(GameLibrary.Filter(ordered, "", favoritesOnly: true).Single().Id == first.Id, "Favorite filtering failed.");
     Require(GameLibrary.IsLaunchTargetAvailable(first), "Existing launch targets must be available.");
+    Require(GameLibrary.GetLaunchDirectory(first) == Path.GetFullPath(root), "Launch directory resolution failed.");
     Require(GameLibrary.ContainsLaunchTarget(ordered, firstPath), "Existing launch targets must be detected.");
     Require(!GameLibrary.ContainsLaunchTarget(ordered, firstPath, first.Id), "The excluded entry must not conflict with itself.");
     File.Delete(secondPath);

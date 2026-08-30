@@ -89,6 +89,19 @@ public partial class MainWindow : Window
         catch (Exception ex) { MessageBox.Show(ex.Message, "Launch failed", MessageBoxButton.OK, MessageBoxImage.Error); }
     }
 
+    private void ShowFolder_Click(object sender, RoutedEventArgs e)
+    {
+        var game = Selected;
+        if (game is null) return;
+        try
+        {
+            var target = GameLibrary.ValidateExecutablePath(game.ExecutablePath);
+            if (!File.Exists(target)) throw new FileNotFoundException("The configured file is missing.", target);
+            Process.Start(new ProcessStartInfo { FileName = "explorer.exe", Arguments = "/select,\"" + target + "\"", UseShellExecute = true });
+        }
+        catch (Exception ex) { MessageBox.Show(ex.Message, "Unable to show game", MessageBoxButton.OK, MessageBoxImage.Error); }
+    }
+
     private async void Relocate_Click(object sender, RoutedEventArgs e)
     {
         var game = Selected;
@@ -147,6 +160,7 @@ public partial class MainWindow : Window
         if (game is not null && !available)
             SelectedPath.Text += Environment.NewLine + "Launch target is missing";
         RelocateButton.IsEnabled = game is not null;
+        ShowFolderButton.IsEnabled = available;
         FavoriteButton.IsEnabled = game is not null;
         RemoveButton.IsEnabled = game is not null;
     }
