@@ -13,7 +13,12 @@
       "genre": "Platformer",
       "sizeMb": 32,
       "contentPolicy": "freeware",
-      "initialState": "INSTALLED"
+      "initialState": "INSTALLED",
+      "artworkUrl": "https://cdn.cloudflare.steamstatic.com/steam/apps/504230/header.jpg",
+      "description": "A precision platforming adventure.",
+      "players": "1",
+      "language": "English",
+      "region": "Worldwide"
     },
     {
       "id": "cave-story",
@@ -23,7 +28,12 @@
       "genre": "Adventure",
       "sizeMb": 18,
       "contentPolicy": "freeware",
-      "initialState": "INSTALLED"
+      "initialState": "INSTALLED",
+      "artworkUrl": "https://cdn.cloudflare.steamstatic.com/steam/apps/70300/header.jpg",
+      "description": "A compact freeware adventure classic.",
+      "players": "1",
+      "language": "English",
+      "region": "Worldwide"
     },
     {
       "id": "openarena",
