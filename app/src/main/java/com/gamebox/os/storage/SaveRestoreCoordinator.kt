@@ -33,7 +33,7 @@ class SaveRestoreCoordinator(
         return GameSaveRestoreResult(
             gameId = gameId,
             artifacts = uniquePaths.map { path ->
-                val normalized = path.replace('\\\\', '/')
+                val normalized = path.replace('\\', '/')
                 val safeForGame = normalized.startsWith(prefix) &&
                     !normalized.split('/').any { it == ".." || it.isBlank() }
                 SaveArtifactRestoreResult(
