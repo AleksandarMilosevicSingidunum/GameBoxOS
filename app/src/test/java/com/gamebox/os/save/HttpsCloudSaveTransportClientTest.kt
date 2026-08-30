@@ -129,6 +129,61 @@ class HttpsCloudSaveTransportClientTest {
     }
 
     @Test
+    fun retriesTransientUploadsWithBoundedBackoff() = runBlocking {
+        val first = FakeConnection(status = 503)
+        val second = FakeConnection(status = 204)
+        val connections = ArrayDeque(listOf(first, second))
+        val delays = mutableListOf<Long>()
+        val client = HttpsCloudSaveTransportClient(
+            maxRetries = 2,
+            retryDelay = { delays += it },
+            connectionFactory = { connections.removeFirst() },
+        )
+
+        client.upload(request, byteArrayOf(1, 2, 3, 4), CatalogCredentials("player", "secret"))
+
+        assertEquals(listOf(1_000L), delays)
+        assertTrue(first.disconnected)
+        assertTrue(second.disconnected)
+        assertArrayEquals(byteArrayOf(1, 2, 3, 4), second.written.toByteArray())
+    }
+
+    @Test
+    fun stopsAfterConfiguredRetryBudget() {
+        var attempts = 0
+        val delays = mutableListOf<Long>()
+        val error = assertThrows(CloudSaveTransportException::class.java) {
+            runBlocking {
+                HttpsCloudSaveTransportClient(
+                    maxRetries = 2,
+                    retryDelay = { delays += it },
+                    connectionFactory = {
+                        attempts++
+                        FakeConnection(status = 503)
+                    },
+                ).download(request.copy(payloadBytes = 0), CatalogCredentials("player", "secret"))
+            }
+        }
+
+        assertTrue(error.recovery.retryable)
+        assertEquals(3, attempts)
+        assertEquals(listOf(1_000L, 2_000L), delays)
+    }
+
+    @Test
+    fun rejectsDeclaredOversizedResponseBeforeOpeningBody() {
+        val connection = FakeConnection(status = 200, declaredLength = 5)
+        assertThrows(IllegalArgumentException::class.java) {
+            runBlocking {
+                HttpsCloudSaveTransportClient(maxResponseBytes = 4, connectionFactory = { connection })
+                    .download(request.copy(payloadBytes = 0), CatalogCredentials("player", "secret"))
+            }
+        }
+        assertFalse(connection.inputOpened)
+        assertTrue(connection.disconnected)
+    }
+
+    @Test
     fun mapsHttpFailuresToSharedRecoveryPolicy() {
         val error = assertThrows(CloudSaveTransportException::class.java) {
             runBlocking {
@@ -160,13 +215,19 @@ class HttpsCloudSaveTransportClientTest {
     private class FakeConnection(
         private val status: Int,
         response: ByteArray = ByteArray(0),
+        private val declaredLength: Long = -1,
     ) : HttpURLConnection(URL("https://cloud.example")) {
         val written = ByteArrayOutputStream()
         var disconnected = false
+        var inputOpened = false
         private val input = ByteArrayInputStream(response)
 
         override fun getResponseCode(): Int = status
-        override fun getInputStream() = input
+        override fun getContentLengthLong(): Long = declaredLength
+        override fun getInputStream(): ByteArrayInputStream {
+            inputOpened = true
+            return input
+        }
         override fun getOutputStream() = written
         override fun disconnect() { disconnected = true }
         override fun usingProxy(): Boolean = false
