@@ -11,10 +11,11 @@
             <TextBlock x:Name="StatusText" DockPanel.Dock="Right" VerticalAlignment="Center" Foreground="#9EADC0" Text="Local library ready"/>
         </DockPanel>
         <Grid Grid.Row="1" Margin="0,22,0,16">
-            <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+            <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
             <TextBox x:Name="SearchBox" AutomationProperties.Name="Search library" TextChanged="SearchBox_TextChanged" FontSize="16"/>
             <CheckBox x:Name="FavoritesOnlyCheck" Grid.Column="1" Content="Favorites only" Margin="18,0" VerticalAlignment="Center" Checked="FilterChanged" Unchecked="FilterChanged"/>
-            <Button Grid.Column="2" Content="+ Add local game" Click="AddGame_Click"/>
+            <CheckBox x:Name="AvailableOnlyCheck" Grid.Column="2" Content="Available only" Margin="0,0,18,0" VerticalAlignment="Center" Checked="FilterChanged" Unchecked="FilterChanged"/>
+            <Button Grid.Column="3" Content="+ Add local game" Click="AddGame_Click"/>
         </Grid>
         <Grid Grid.Row="2">
             <Grid.ColumnDefinitions><ColumnDefinition Width="2*"/><ColumnDefinition Width="1.15*"/></Grid.ColumnDefinitions>

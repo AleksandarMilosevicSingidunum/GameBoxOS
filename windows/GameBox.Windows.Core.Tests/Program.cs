@@ -22,6 +22,7 @@ try
     Require(!GameLibrary.ContainsLaunchTarget(ordered, firstPath, first.Id), "The excluded entry must not conflict with itself.");
     File.Delete(secondPath);
     Require(!GameLibrary.IsLaunchTargetAvailable(second), "Missing launch targets must be unavailable.");
+    Require(GameLibrary.Filter(ordered, "", availableOnly: true).Single().Id == first.Id, "Available-only filtering must hide missing targets.");
     var relocated = GameLibrary.Relocate(first, secondPath);
     Require(relocated.ExecutablePath == Path.GetFullPath(secondPath), "Relocation must update the launch target.");
     Require(relocated.Id == first.Id && relocated.Title == first.Title && relocated.Favorite == first.Favorite, "Relocation must preserve entry metadata.");

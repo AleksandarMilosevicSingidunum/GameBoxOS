@@ -21,11 +21,13 @@ public static class GameLibrary
     public static IReadOnlyList<GameEntry> Filter(
         IEnumerable<GameEntry> entries,
         string? query,
-        bool favoritesOnly = false)
+        bool favoritesOnly = false,
+        bool availableOnly = false)
     {
         var value = query?.Trim() ?? "";
         return Normalize(entries).Where(x =>
             (!favoritesOnly || x.Favorite) &&
+            (!availableOnly || IsLaunchTargetAvailable(x)) &&
             (value.Length == 0 ||
              x.Title.Contains(value, StringComparison.CurrentCultureIgnoreCase) ||
              x.Platform.Contains(value, StringComparison.CurrentCultureIgnoreCase)))
