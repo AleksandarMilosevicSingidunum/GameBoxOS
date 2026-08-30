@@ -257,7 +257,7 @@ class DefaultGameLaunchController(
             GatewayResult.HANDOFF_REJECTED -> update(
                 game.id,
                 LaunchUiState.Status.HANDOFF_REJECTED,
-                "RetroArch rejected the handoff. Open RetroArch > Load Content and select the installed game; verify the FCEUmm core is selected."
+                buildHandoffRejectedMessage(capability)
             )
         }
     }
@@ -268,6 +268,12 @@ class DefaultGameLaunchController(
         val session = returnTracker.returned() ?: return
         repository.recordPlaySession(session.gameId, session.endedAtMillis, session.minutesPlayed)
         update(session.gameId, LaunchUiState.Status.RETURNED, "Returned safely; play session recorded")
+    }
+
+    private fun buildHandoffRejectedMessage(capability: EmulatorCapability): String {
+        val coreHint = capability.requiredCore?.let { " Verify that the $it core is installed and selected." } ?: ""
+        return "The approved " + registry.displayName(capability.packageName) +
+            " handoff was rejected. Open the emulator and load the installed game manually." + coreHint
     }
 
     private fun update(gameId: GameId, status: LaunchUiState.Status, message: String) {
