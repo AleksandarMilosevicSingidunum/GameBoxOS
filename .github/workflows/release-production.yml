@@ -28,6 +28,7 @@ jobs:
       GAMEBOX_KEYSTORE_PASSWORD: ${{ secrets.GAMEBOX_KEYSTORE_PASSWORD }}
       GAMEBOX_KEY_ALIAS: ${{ secrets.GAMEBOX_KEY_ALIAS }}
       GAMEBOX_KEY_PASSWORD: ${{ secrets.GAMEBOX_KEY_PASSWORD }}
+      GAMEBOX_VERSION_NAME: ${{ inputs.tag }}
     steps:
       - name: Validate protected signing inputs
         shell: bash
