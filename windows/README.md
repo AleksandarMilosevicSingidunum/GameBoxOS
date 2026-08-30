@@ -1,12 +1,29 @@
 # GameBox Windows Companion
 
-This optional native Windows companion complements the Android/DeX GameBox OS product.
+This optional native .NET 8/WPF companion complements the Android/DeX GameBox OS product.
 
-It provides a GameBox-style dark library UI, local EXE/shortcut/BAT/CMD registration, persistent JSON storage under `%LOCALAPPDATA%\GameBoxOS`, search, favorites, safe missing-file handling, and explicit library-only removal. Enter plays the selected game; Ctrl+F searches; Ctrl+O adds a game.
+## Implemented capabilities
+
+- Register local EXE, shortcut, BAT, and CMD launch targets with duplicate-path protection.
+- Search and filter by favorites, availability, and platform.
+- Sort by favorites/title or recent play history.
+- Edit validated titles, platforms, and command-line arguments without changing game identity or executable paths.
+- Show launch targets in Explorer, relocate missing targets, and disable launch actions when files are unavailable.
+- Record localized last-played status and clear it without changing favorites, launch settings, or game files.
+- Persist the library atomically under `%LOCALAPPDATA%\GameBoxOS`.
+- Export normalized JSON backups and restore validated backups with explicit confirmation.
+- Enrich existing local entries from a bounded HTTPS catalog while preserving local launch trust.
+- Reject insecure endpoints, redirects, embedded credentials, oversized responses, invalid timeouts, and unsafe launch extensions.
+
+Enter plays the selected game; Ctrl+F searches; Ctrl+O adds a game.
 
 The companion never downloads game content, deletes installed files, reads Android save data, or stores streaming credentials. Moonlight and Winlator remain user-installed runtime integrations.
 
-Build and test:
+## Remaining Windows work
+
+Automatic storefront/runtime discovery, richer Moonlight and PC-runtime integration, installer packaging/signing, and physical Windows acceptance testing remain before the companion is considered complete.
+
+## Build and test
 
 ```powershell
 dotnet run --project windows/GameBox.Windows.Core.Tests/GameBox.Windows.Core.Tests.csproj -c Release
