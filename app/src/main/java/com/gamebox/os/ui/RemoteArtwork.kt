@@ -14,16 +14,26 @@ import androidx.compose.ui.layout.ContentScale
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.net.HttpURLConnection
+import java.net.URI
 import java.net.URL
 
+private const val MAX_ARTWORK_BYTES = 2L * 1024L * 1024L
 private val artworkCache = object : LruCache<String, android.graphics.Bitmap>(8) {}
+
+internal fun isSafeArtworkUrl(value: String?): Boolean {
+    val uri = runCatching { URI(value?.trim().orEmpty()) }.getOrNull() ?: return false
+    return uri.scheme.equals("https", ignoreCase = true) &&
+        !uri.host.isNullOrBlank() &&
+        uri.userInfo == null &&
+        uri.fragment == null
+}
 
 @Composable
 internal fun RemoteArtwork(url: String?, modifier: Modifier = Modifier) {
     var bitmap by remember(url) { mutableStateOf(url?.let { artworkCache.get(it) }) }
     LaunchedEffect(url) {
         bitmap = withContext(Dispatchers.IO) {
-            if (url.isNullOrBlank() || !url.startsWith("https://")) return@withContext null
+            if (!isSafeArtworkUrl(url)) return@withContext null
             runCatching {
                 val connection = (URL(url).openConnection() as HttpURLConnection).apply {
                     connectTimeout = 4_000
@@ -32,8 +42,12 @@ internal fun RemoteArtwork(url: String?, modifier: Modifier = Modifier) {
                     setRequestProperty("Accept", "image/*")
                 }
                 try {
-                    if (connection.responseCode !in 200..299 || connection.contentLengthLong > 2L * 1024L * 1024L) return@runCatching null
-                    connection.inputStream.use { stream -> BitmapFactory.decodeStream(stream) }
+                    if (connection.responseCode !in 200..299 || connection.contentLengthLong > MAX_ARTWORK_BYTES) return@runCatching null
+                    connection.inputStream.use { stream ->
+                        val bytes = stream.readNBytes(MAX_ARTWORK_BYTES.toInt() + 1)
+                        if (bytes.size > MAX_ARTWORK_BYTES) null
+                        else BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+                    }
                 } finally {
                     connection.disconnect()
                 }
