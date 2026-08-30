@@ -26,6 +26,7 @@ data class GameBoxSettings(
 )
 
 class SettingsRepository(private val context: Context) {
+    private val secretStore = AndroidKeystoreSecretStore(context.applicationContext)
     val settings: Flow<GameBoxSettings> = context.gameBoxDataStore.data.map { preferences ->
         GameBoxSettings(
             safeAreaPercent = preferences[SAFE_AREA] ?: 0.04f,
@@ -36,6 +37,14 @@ class SettingsRepository(private val context: Context) {
             catalogUrl = preferences[CATALOG_URL] ?: "",
             externalLibraryUri = preferences[EXTERNAL_LIBRARY_URI] ?: ""
         )
+    }
+
+    suspend fun theGamesDbApiKey(): String? = secretStore.get(THEGAMESDB_API_KEY)
+
+    suspend fun hasTheGamesDbApiKey(): Boolean = secretStore.contains(THEGAMESDB_API_KEY)
+
+    suspend fun setTheGamesDbApiKey(value: String?) {
+        secretStore.put(THEGAMESDB_API_KEY, value)
     }
 
     suspend fun setExternalLibraryUri(value: String) {
@@ -79,5 +88,6 @@ class SettingsRepository(private val context: Context) {
         val CATALOG_REFRESHED_AT = longPreferencesKey("catalog_refreshed_at_epoch_ms")
         val CATALOG_URL = stringPreferencesKey("catalog_url")
         val EXTERNAL_LIBRARY_URI = stringPreferencesKey("external_library_uri")
+        const val THEGAMESDB_API_KEY = "thegamesdb_api_key"
     }
 }
