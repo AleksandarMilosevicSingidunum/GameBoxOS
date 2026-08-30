@@ -40,8 +40,10 @@ class EmulatorCapabilityRegistry(
         )
     )
 ) {
-    fun readinessMessage(game: Game): String? = forGame(game)?.requiredCore?.let { core ->
-        "Install RetroArch and the $core core before launching this game."
+    fun readinessMessage(game: Game): String? = forGame(game)?.let { capability ->
+        capability.requiredCore?.let { core ->
+            "Install RetroArch (standard, ARM64, or RA32) and the $core core before launching this game."
+        }
     }
 
     fun displayName(packageName: String): String = when (packageName) {
