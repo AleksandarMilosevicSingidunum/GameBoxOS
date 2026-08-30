@@ -1,5 +1,11 @@
 namespace GameBox.Windows.Core;
 
+public enum LibrarySort
+{
+    FavoritesThenTitle,
+    RecentlyPlayed
+}
+
 public static class GameLibrary
 {
     private static readonly HashSet<string> LaunchableExtensions =
@@ -22,15 +28,21 @@ public static class GameLibrary
         IEnumerable<GameEntry> entries,
         string? query,
         bool favoritesOnly = false,
-        bool availableOnly = false)
+        bool availableOnly = false,
+        LibrarySort sort = LibrarySort.FavoritesThenTitle)
     {
         var value = query?.Trim() ?? "";
-        return Normalize(entries).Where(x =>
+        var filtered = Normalize(entries).Where(x =>
             (!favoritesOnly || x.Favorite) &&
             (!availableOnly || IsLaunchTargetAvailable(x)) &&
             (value.Length == 0 ||
              x.Title.Contains(value, StringComparison.CurrentCultureIgnoreCase) ||
-             x.Platform.Contains(value, StringComparison.CurrentCultureIgnoreCase)))
+             x.Platform.Contains(value, StringComparison.CurrentCultureIgnoreCase)));
+        return (sort == LibrarySort.RecentlyPlayed
+                ? filtered.OrderByDescending(x => x.LastPlayedUtc.HasValue)
+                    .ThenByDescending(x => x.LastPlayedUtc)
+                    .ThenBy(x => x.Title, StringComparer.CurrentCultureIgnoreCase)
+                : filtered)
             .ToList();
     }
 
