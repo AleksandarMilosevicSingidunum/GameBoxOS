@@ -1,5 +1,7 @@
 package com.gamebox.os.launch
 
+import java.net.URI
+
 enum class EmulatorIntentStyle { ACTION_VIEW, LAUNCHER_EXTRAS }
 
 data class EmulatorIntentPlan(
@@ -16,7 +18,16 @@ object EmulatorIntentPolicy {
     const val DOLPHIN_AUTO_START_FILES = "AutoStartFiles"
 
     fun plan(packageName: String, contentUri: String, graphicsProfile: String): EmulatorIntentPlan {
-        require(contentUri.startsWith("content://")) { "Emulator content must use a scoped content URI" }
+        require(packageName.isNotBlank()) { "Emulator package must not be blank" }
+        val uri = runCatching { URI(contentUri) }.getOrNull()
+        require(
+            uri != null &&
+                uri.scheme.equals("content", ignoreCase = true) &&
+                !uri.host.isNullOrBlank() &&
+                uri.userInfo == null &&
+                uri.query == null &&
+                uri.fragment == null
+        ) { "Emulator content must use an absolute scoped content URI" }
         return when (packageName) {
             PPSSPP_PACKAGE -> ppssppPlan(contentUri, graphicsProfile)
             DOLPHIN_PACKAGE -> EmulatorIntentPlan(
