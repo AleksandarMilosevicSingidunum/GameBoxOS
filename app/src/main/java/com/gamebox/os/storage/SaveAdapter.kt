@@ -2,6 +2,10 @@ package com.gamebox.os.storage
 
 import java.io.File
 
+class SaveDiscoveryLimitExceededException(
+    val limit: Int
+) : IllegalStateException("Save discovery exceeded the $limit artifact limit")
+
 data class SaveArtifact(
     val gameId: String,
     val relativePath: String,
@@ -29,9 +33,14 @@ class DirectorySaveAdapter(
         require(gameRoot.path.startsWith(root.path + File.separator)) { "game save path escapes configured root" }
         if (!gameRoot.isDirectory) return emptyList()
 
-        return gameRoot.walkTopDown()
+        val discovered = gameRoot.walkTopDown()
             .filter { it.isFile && it.canonicalPath.startsWith(gameRoot.path + File.separator) }
-            .take(maxArtifacts)
+            .take(maxArtifacts + 1)
+            .toList()
+        if (discovered.size > maxArtifacts) throw SaveDiscoveryLimitExceededException(maxArtifacts)
+
+        return discovered
+            .asSequence()
             .map { file ->
                 SaveArtifact(
                     gameId = gameId,
