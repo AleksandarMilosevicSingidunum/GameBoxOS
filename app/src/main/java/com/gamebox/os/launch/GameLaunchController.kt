@@ -4,6 +4,7 @@ import android.content.ClipData
 import android.content.Context
 import android.content.Intent
 import androidx.core.content.FileProvider
+import com.gamebox.os.content.GameContentPolicy
 import com.gamebox.os.data.GameRepository
 import com.gamebox.os.domain.Game
 import com.gamebox.os.domain.GameId
@@ -60,12 +61,17 @@ class EmulatorCapabilityRegistry(
         val checksum = game.expectedSha256 ?: return null
         val packageName = game.emulatorPackage?.takeIf { it in optionsFor(game) }
             ?: optionsFor(game).firstOrNull() ?: return null
+        val content = GameContentPolicy.describe(
+            gameId = game.id.value,
+            platform = game.platform,
+            sourceUrl = game.sourceUrl,
+        )
         return EmulatorCapability(
             id = "platform-" + game.id.value,
             gameId = game.id,
             packageName = packageName,
-            contentRelativePath = "remote/" + game.id.value + "/content.bin",
-            mimeType = "application/octet-stream",
+            contentRelativePath = content.relativePath,
+            mimeType = content.mimeType,
             expectedSha256 = checksum,
             graphicsProfile = game.graphicsProfile
         )
