@@ -69,6 +69,28 @@ public partial class MainWindow : Window
         PlatformBox.SelectedItem = selected is not null && PlatformBox.Items.Contains(selected) ? selected : "All platforms";
     }
 
+    private async void DiscoverShortcuts_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            StatusText.Text = "Discovering Windows shortcuts...";
+            var roots = new[] {
+                Environment.GetFolderPath(Environment.SpecialFolder.StartMenu),
+                Environment.GetFolderPath(Environment.SpecialFolder.CommonStartMenu),
+                Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory),
+                Environment.GetFolderPath(Environment.SpecialFolder.CommonDesktopDirectory)
+            };
+            var existing = _allGames.ToList();
+            var result = await Task.Run(() => ShortcutDiscovery.Discover(roots, existing));
+            foreach (var game in result.Entries) _allGames.Add(game);
+            if (result.Entries.Count > 0) await SaveLibraryAsync();
+            RefreshPlatformOptions();
+            RefreshVisibleGames();
+            StatusText.Text = result.Entries.Count + " shortcut(s) added; " + result.DuplicateCount + " duplicate(s) skipped";
+        }
+        catch (Exception ex) { MessageBox.Show(ex.Message, "Shortcut discovery failed", MessageBoxButton.OK, MessageBoxImage.Error); }
+    }
+
     private async void BackupLibrary_Click(object sender, RoutedEventArgs e)
     {
         var dialog = new SaveFileDialog { Title = "Back up GameBox library", Filter = "GameBox library backup (*.json)|*.json", FileName = "gamebox-windows-library.json", AddExtension = true };

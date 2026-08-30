@@ -27,6 +27,21 @@ try
     Require(GameLibrary.GetLaunchDirectory(first) == Path.GetFullPath(root), "Launch directory resolution failed.");
     Require(GameLibrary.ContainsLaunchTarget(ordered, firstPath), "Existing launch targets must be detected.");
     Require(!GameLibrary.ContainsLaunchTarget(ordered, firstPath, first.Id), "The excluded entry must not conflict with itself.");
+    var shortcutRoot = Path.Combine(root, "shortcuts");
+    Directory.CreateDirectory(Path.Combine(shortcutRoot, "nested"));
+    var discoveredPath = Path.Combine(shortcutRoot, "nested", "Gamma.lnk");
+    await File.WriteAllTextAsync(discoveredPath, "");
+    var duplicatePath = Path.Combine(shortcutRoot, "Beta.lnk");
+    File.Copy(secondPath, duplicatePath);
+    var existingDuplicate = second with { ExecutablePath = duplicatePath };
+    var discovery = ShortcutDiscovery.Discover(new[] { shortcutRoot, shortcutRoot }, new[] { existingDuplicate });
+    Require(discovery.Entries.Count == 1 && discovery.Entries[0].Title == "Gamma", "Shortcut discovery must find nested shortcuts.");
+    Require(discovery.ScannedCount == 2 && discovery.DuplicateCount == 1, "Shortcut discovery must report scanned and duplicate targets.");
+    Require(discovery.Entries[0].Platform == "Windows shortcut", "Discovered shortcuts must use the shortcut platform.");
+    var invalidDiscoveryLimitRejected = false;
+    try { ShortcutDiscovery.Discover(new[] { shortcutRoot }, Array.Empty<GameEntry>(), 0); }
+    catch (ArgumentOutOfRangeException) { invalidDiscoveryLimitRejected = true; }
+    Require(invalidDiscoveryLimitRejected, "Invalid shortcut discovery limits must be rejected.");
     File.Delete(secondPath);
     Require(!GameLibrary.IsLaunchTargetAvailable(second), "Missing launch targets must be unavailable.");
     Require(GameLibrary.Filter(ordered, "", availableOnly: true).Single().Id == first.Id, "Available-only filtering must hide missing targets.");
