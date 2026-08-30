@@ -36,12 +36,14 @@
                 <StackPanel>
                     <TextBlock Text="SELECTED GAME" Foreground="{StaticResource AccentBrush}" FontWeight="Bold"/>
                     <TextBlock x:Name="SelectedTitle" Text="Choose a game" FontSize="28" FontWeight="Bold" Margin="0,8,0,4" TextWrapping="Wrap"/>
-                    <TextBlock x:Name="SelectedPath" Foreground="#9EADC0" TextWrapping="Wrap" Margin="0,0,0,18"/>
+                    <TextBlock x:Name="SelectedPath" Foreground="#9EADC0" TextWrapping="Wrap" Margin="0,0,0,8"/>
+                    <TextBlock x:Name="SelectedLastPlayed" Foreground="#9EADC0" TextWrapping="Wrap" Margin="0,0,0,18" AutomationProperties.LiveSetting="Polite"/>
                     <Button x:Name="PlayButton" Content="Play" Click="Play_Click" IsEnabled="False"/>
                     <Button x:Name="EditButton" Content="Edit game details" Click="Edit_Click" IsEnabled="False" AutomationProperties.Name="Edit selected game details"/>
                     <Button x:Name="RelocateButton" Content="Relocate game" Click="Relocate_Click" IsEnabled="False" AutomationProperties.Name="Relocate selected game"/>
                     <Button x:Name="ShowFolderButton" Content="Show in folder" Click="ShowFolder_Click" IsEnabled="False" AutomationProperties.Name="Show selected game in folder"/>
                     <Button x:Name="FavoriteButton" Content="Toggle favorite" Click="Favorite_Click" IsEnabled="False"/>
+                    <Button x:Name="ClearHistoryButton" Content="Clear play history" Click="ClearHistory_Click" IsEnabled="False" AutomationProperties.Name="Clear selected game play history"/>
                     <Button x:Name="RemoveButton" Content="Remove from library" Click="Remove_Click" IsEnabled="False"/>
                     <Separator Margin="0,22"/>
                     <TextBlock Text="Launches only files you explicitly add. It never downloads content, deletes game files, or stores streaming credentials." Foreground="#9EADC0" TextWrapping="Wrap"/>
