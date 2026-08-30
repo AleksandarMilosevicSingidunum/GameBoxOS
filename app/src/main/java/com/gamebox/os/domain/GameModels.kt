@@ -31,7 +31,12 @@ data class Game(
     val emulatorPackage: String? = null,
     val graphicsProfile: String = "Balanced",
     val savePresent: Boolean = false,
-    val saveSizeBytes: Long = 0L
+    val saveSizeBytes: Long = 0L,
+    val artworkUrl: String? = null,
+    val description: String? = null,
+    val players: String? = null,
+    val language: String? = null,
+    val region: String? = null
 )
 
 enum class DownloadStatus {
