@@ -16,6 +16,11 @@ class CloudSaveTransportException(
     cause: Throwable? = null,
 ) : IOException(recovery.userMessage, cause)
 
+class CloudSaveIntegrityException(
+    val expectedSha256: String,
+    val actualSha256: String,
+) : IOException("Cloud save checksum mismatch")
+
 class HttpsCloudSaveTransportClient(
     private val s3Signer: S3RequestSigner? = null,
     private val maxResponseBytes: Int = CloudSaveSyncContract.MAX_PAYLOAD_BYTES.toInt(),
@@ -34,6 +39,7 @@ class HttpsCloudSaveTransportClient(
     ) {
         require(request.payloadBytes == payload.size.toLong()) { "Save payload size does not match request metadata" }
         requireReady(request, credentials)
+        verifyIntegrity(request, payload)
         execute("PUT", request.endpoint, credentials, payload) { connection ->
             val status = connection.responseCode
             if (status !in 200..299) throw transportFailure(status)
@@ -52,6 +58,7 @@ class HttpsCloudSaveTransportClient(
             if (bytes.size > maxResponseBytes) {
                 throw IllegalArgumentException("Cloud save response exceeds the 16 MiB limit")
             }
+            verifyIntegrity(request, bytes)
             bytes
         }
     }
@@ -69,6 +76,14 @@ class HttpsCloudSaveTransportClient(
             credentialsAvailable = true,
         )
         require(validation.state == CloudSaveSyncState.READY) { validation.message }
+    }
+
+    private fun verifyIntegrity(request: CloudSaveSyncRequest, payload: ByteArray) {
+        val expected = request.expectedSha256 ?: return
+        val actual = sha256(payload)
+        if (!actual.equals(expected, ignoreCase = true)) {
+            throw CloudSaveIntegrityException(expected.lowercase(), actual)
+        }
     }
 
     private fun <T> execute(
@@ -94,6 +109,8 @@ class HttpsCloudSaveTransportClient(
             if (method == "PUT") connection.outputStream.use { it.write(payload) }
             block(connection)
         } catch (error: CloudSaveTransportException) {
+            throw error
+        } catch (error: CloudSaveIntegrityException) {
             throw error
         } catch (error: IOException) {
             throw transportFailure(error = error)
