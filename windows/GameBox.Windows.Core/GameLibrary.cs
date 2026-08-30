@@ -9,7 +9,7 @@ public enum LibrarySort
 public static class GameLibrary
 {
     private static readonly HashSet<string> LaunchableExtensions =
-        new(StringComparer.OrdinalIgnoreCase) { ".exe", ".lnk", ".bat", ".cmd" };
+        new(StringComparer.OrdinalIgnoreCase) { ".exe", ".lnk", ".url", ".bat", ".cmd" };
 
     public static IReadOnlyList<GameEntry> Normalize(IEnumerable<GameEntry> entries)
     {
@@ -116,7 +116,7 @@ public static class GameLibrary
             throw new ArgumentException("Executable path is required.", nameof(executablePath));
         var fullPath = Path.GetFullPath(executablePath.Trim());
         if (!LaunchableExtensions.Contains(Path.GetExtension(fullPath)))
-            throw new InvalidDataException("Choose an EXE, shortcut, BAT, or CMD file.");
+            throw new InvalidDataException("Choose an EXE, LNK/URL shortcut, BAT, or CMD file.");
         return fullPath;
     }
 
