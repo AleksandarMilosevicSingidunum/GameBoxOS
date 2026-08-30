@@ -30,17 +30,7 @@ class TheGamesDbMetadataClient(
             "&name=" + java.net.URLEncoder.encode(game.title, "UTF-8") +
             "&fields=overview,boxart"
         val payload = fetch(endpoint)
-        val result = runCatching {
-            val data = json.parseToJsonElement(payload).jsonObject["data"]?.jsonObject
-            val first = data?.get("games")?.jsonArray?.firstOrNull()?.jsonObject ?: return@runCatching null
-            val overview = first["overview"]?.jsonPrimitive?.contentOrNull
-            val boxart = first["boxart"]?.jsonObject?.get("thumb")?.jsonPrimitive?.contentOrNull
-            game.copy(
-                artworkUrl = boxart?.takeIf { it.startsWith("https://") } ?: game.artworkUrl,
-                description = overview ?: game.description
-            )
-        }.getOrNull()
-        result ?: game
+        TheGamesDbMetadataParser.enrich(game, payload, json)
     }
 
     private fun fetch(value: String): String {
@@ -71,5 +61,51 @@ class TheGamesDbMetadataClient(
         } finally {
             connection.disconnect()
         }
+    }
+}
+
+
+internal object TheGamesDbMetadataParser {
+    fun enrich(game: Game, payload: String, json: Json = Json { ignoreUnknownKeys = true }): Game =
+        runCatching {
+            val root = json.parseToJsonElement(payload).jsonObject
+            val first = root["data"]?.jsonObject
+                ?.get("games")?.jsonArray
+                ?.firstOrNull()?.jsonObject
+                ?: return@runCatching game
+            val overview = first["overview"]?.jsonPrimitive?.contentOrNull
+                ?.trim()
+                ?.takeIf { it.isNotEmpty() }
+                ?.take(4_000)
+            val artworkPath = first["boxart"]?.jsonObject
+                ?.get("thumb")?.jsonPrimitive?.contentOrNull
+            val artworkBase = root["include"]?.jsonObject
+                ?.get("boxart")?.jsonObject
+                ?.get("base_url")?.jsonObject
+                ?.get("thumb")?.jsonPrimitive?.contentOrNull
+            game.copy(
+                artworkUrl = resolveHttpsArtwork(artworkPath, artworkBase) ?: game.artworkUrl,
+                description = overview ?: game.description,
+            )
+        }.getOrDefault(game)
+
+    private fun resolveHttpsArtwork(path: String?, base: String?): String? {
+        val value = path?.trim().orEmpty()
+        if (value.isEmpty()) return null
+        return runCatching {
+            val resolved = if (value.startsWith("https://", ignoreCase = true)) {
+                URI(value)
+            } else {
+                val baseUri = URI(base?.trim().orEmpty())
+                require(baseUri.scheme.equals("https", ignoreCase = true))
+                require(!baseUri.host.isNullOrBlank() && baseUri.userInfo == null)
+                val normalizedBase = if (baseUri.path.endsWith("/")) baseUri else URI(baseUri.toASCIIString() + "/")
+                normalizedBase.resolve(value.removePrefix("/"))
+            }
+            require(resolved.scheme.equals("https", ignoreCase = true))
+            require(!resolved.host.isNullOrBlank() && resolved.userInfo == null)
+            require(resolved.fragment == null)
+            resolved.toASCIIString()
+        }.getOrNull()
     }
 }
