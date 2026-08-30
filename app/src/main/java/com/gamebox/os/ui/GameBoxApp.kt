@@ -1682,7 +1682,7 @@ private fun InstallState.displayName() = name.lowercase().replace('_', ' ')
 private fun connectedControllerLabel(): String {
     val controller = InputDevice.getDeviceIds()
         .asSequence()
-        .mapNotNull(InputDevice::getDevice)
+        .mapNotNull { id -> InputDevice.getDevice(id) }
         .firstOrNull { device ->
             val sources = device.sources
             sources and InputDevice.SOURCE_GAMEPAD == InputDevice.SOURCE_GAMEPAD ||
