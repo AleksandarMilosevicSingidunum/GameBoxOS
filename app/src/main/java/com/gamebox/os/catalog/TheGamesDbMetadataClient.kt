@@ -7,6 +7,7 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.contentOrNull
 import java.net.URI
 import java.net.URL
 import javax.net.ssl.HttpsURLConnection
@@ -55,9 +56,17 @@ class TheGamesDbMetadataClient(
             require(connection.responseCode in 200..299) { "TheGamesDB request failed" }
             require(connection.contentLengthLong < 0 || connection.contentLengthLong <= maxResponseBytes)
             return connection.inputStream.use { input ->
-                val bytes = input.readBytes()
-                require(bytes.size <= maxResponseBytes) { "TheGamesDB response is too large" }
-                bytes.toString(Charsets.UTF_8)
+                val output = java.io.ByteArrayOutputStream()
+                val buffer = ByteArray(8_192)
+                var total = 0
+                while (true) {
+                    val count = input.read(buffer)
+                    if (count < 0) break
+                    total += count
+                    require(total <= maxResponseBytes) { "TheGamesDB response is too large" }
+                    output.write(buffer, 0, count)
+                }
+                output.toByteArray().toString(Charsets.UTF_8)
             }
         } finally {
             connection.disconnect()
