@@ -64,7 +64,7 @@ Latest verified increments: blueprint motion states now cover game cards, naviga
 - Complete Galaxy S23 Ultra DeX/HDMI/Ethernet/charging/thermal/reconnect soak testing
 - Configure signed production builds and execute real update-channel/rollback validation using generated release manifests
 - Execute the prepared physical enclosure handoff: measure the final S23/hub/cable layout, select and validate the BOM, release CAD, fabricate, and complete prototype acceptance
-- Expand the optional Windows companion with additional storefront discovery beyond Steam and Epic Games, richer streaming integrations, installer signing, and physical Windows validation
+- Expand the optional Windows companion with richer streaming integrations, installer signing, and physical Windows validation; Steam, Epic Games, and GOG discovery are implemented
 - Validate physical LAN/controller streaming and host-probe behavior on target devices
 
 ## Blueprint implementation backlog
@@ -90,7 +90,7 @@ testDebugUnitTest
 assembleDebug
 ```
 
-The optional Windows Companion runs its core test harness and publishes a self-contained `win-x64` ZIP from `.github/workflows/windows-ci.yml`.
+The optional Windows Companion discovers Windows shortcuts plus Steam, Epic Games, and GOG installations, runs its core test harness, and publishes a self-contained `win-x64` ZIP from `.github/workflows/windows-ci.yml`.
 
 Each CI run produces a temporary debug APK and SHA-256 artifact. Release APKs are debug-signed development builds until production signing is configured.
 
