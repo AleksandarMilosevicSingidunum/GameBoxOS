@@ -30,6 +30,25 @@ class CatalogParserTest {
         }
     }
 
+    @Test fun richMetadata_mapsArtworkAndDescription() {
+        val input = validManifest().replace(
+            "}] }",
+            ",\"artworkUrl\":\"https://cdn.example.test/game.jpg\",\"description\":\"A test game\",\"players\":\"1\",\"language\":\"English\",\"region\":\"Worldwide\"}] }"
+        )
+        val game = parser.parse(input).games.single()
+        assertEquals("https://cdn.example.test/game.jpg", game.artworkUrl)
+        assertEquals("A test game", game.description)
+        assertEquals("1", game.players)
+    }
+
+    @Test fun insecureArtworkUrl_isRejected() {
+        val input = validManifest().replace(
+            "}] }",
+            ",\"artworkUrl\":\"http://cdn.example.test/game.jpg\"}] }"
+        )
+        assertThrows(CatalogFormatException::class.java) { parser.parse(input) }
+    }
+
     @Test fun malformedJson_isRejected() {
         assertThrows(CatalogFormatException::class.java) { parser.parse("{not-json") }
     }
