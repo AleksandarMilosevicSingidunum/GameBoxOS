@@ -11,6 +11,25 @@ import org.junit.Test
 
 class SaveRestoreCoordinatorTest {
     @Test
+    fun rejectsCrossGameAndTraversalPathsPerArtifact() {
+        val root = createTempDirectory("gamebox-save-restore-").toFile()
+        try {
+            val service = SaveBackupService(File(root, "saves"), File(root, "backups"))
+            val result = SaveRestoreCoordinator(service).restore(
+                "game-a",
+                listOf("game-b/slot.sav", "game-a/../game-b/other.sav", "game-a/slot.sav"),
+            )
+
+            assertEquals(BackupResult.CROSS_GAME_PATH, result.artifacts[0].result)
+            assertEquals(BackupResult.CROSS_GAME_PATH, result.artifacts[1].result)
+            assertEquals(BackupResult.BACKUP_MISSING, result.artifacts[2].result)
+            assertEquals(0, result.successfulCount)
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
+    @Test
     fun restoresMultipleChecksumProtectedArtifactsAfterContentRemoval() {
         val root = createTempDirectory("gamebox-save-restore-").toFile()
         val saves = File(root, "saves")

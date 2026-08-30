@@ -27,12 +27,19 @@ class SaveRestoreCoordinator(
     }
 
     fun restore(gameId: String, relativePaths: List<String>): GameSaveRestoreResult {
-        require(gameId.isNotBlank()) { "gameId cannot be blank" }
+        require(gameId.matches(Regex("[A-Za-z0-9._-]+"))) { "gameId contains unsupported characters" }
         val uniquePaths = relativePaths.distinct()
+        val prefix = gameId + "/"
         return GameSaveRestoreResult(
             gameId = gameId,
             artifacts = uniquePaths.map { path ->
-                SaveArtifactRestoreResult(path, backupService.restore(path))
+                val normalized = path.replace('\\', '/')
+                val safeForGame = normalized.startsWith(prefix) &&
+                    !normalized.split('/').any { it == ".." || it.isBlank() }
+                SaveArtifactRestoreResult(
+                    path,
+                    if (safeForGame) backupService.restore(normalized) else BackupResult.CROSS_GAME_PATH
+                )
             },
         )
     }

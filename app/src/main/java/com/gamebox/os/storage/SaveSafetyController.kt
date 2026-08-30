@@ -35,6 +35,7 @@ fun backupResultMessage(action: String, result: BackupResult): SaveOperation = w
     BackupResult.BACKUP_MISSING -> SaveOperation("$action failed: backup is missing", false)
     BackupResult.CHECKSUM_MISMATCH -> SaveOperation("$action refused: backup checksum mismatch", false)
     BackupResult.SIZE_LIMIT_EXCEEDED -> SaveOperation("$action refused: selected file exceeds 16 MiB", false)
+    BackupResult.CROSS_GAME_PATH -> SaveOperation("$action refused: artifact belongs to another game", false)
 }
 
 interface SaveSafetyController {
