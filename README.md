@@ -12,7 +12,7 @@ Status as of 30 August 2026:
 
 | Blueprint area | Status | Current implementation |
 | --- | --- | --- |
-| Android/Compose shell | Implemented | Dark GameBox theme, resizeable phone portrait/landscape layouts, IME-aware resizing, modern back-invoked navigation, and large DeX layouts |
+| Android/Compose shell | Implemented | Dark GameBox theme, blueprint-aligned 16:9 home hierarchy with hero/quick-launch/device-status regions, resizeable phone portrait/landscape layouts, IME-aware resizing, modern back-invoked navigation, and large DeX layouts |
 | Windows companion | Implemented foundation | Native .NET 8/WPF local-library launcher with search, favorites, available-only and platform filters, favorites/title and recent-play sorting, editable validated title/platform/arguments, localized play history with safe reset, atomic JSON backup/restore, visible missing-target status, metadata-preserving relocation, duplicate-target prevention, Show in folder, bounded Start Menu/desktop, Steam-library, and Epic Games manifest discovery, bounded validated HTTPS catalog synchronization, and a self-contained win-x64 CI artifact |
 | Controller navigation | Partial | Focusable cards, LB/RB tabs, Back/B handling, and focus restoration; physical-device and reconnect testing remain |
 | Primary UI | Implemented foundation | Home, Library, Store, Details, Downloads, Media, PC Hub, Settings, migration confirmation UI, accessible tab/card/progress/live-region semantics, saveable navigation/detail/focus restoration, JVM UI contracts, and compiled Compose instrumentation coverage |
