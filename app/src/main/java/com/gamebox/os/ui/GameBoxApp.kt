@@ -323,6 +323,7 @@ private fun HomeScreen(
                     networkLabel = networkLabel,
                     storagePercent = usedPercent,
                     deviceModel = Build.MODEL,
+                    controllerLabel = controllerLabel,
                 )
             }
         }
@@ -379,6 +380,7 @@ private fun HomeStatusPanel(
     networkLabel: String,
     storagePercent: Int,
     deviceModel: String,
+    controllerLabel: String,
 ) {
     Surface(
         color = MaterialTheme.colorScheme.surfaceVariant,
