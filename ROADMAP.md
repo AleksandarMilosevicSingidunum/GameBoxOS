@@ -46,7 +46,7 @@ Browse -> details -> install an authorized test file -> verify -> Library -> lau
 - [x] Wire the authorized test install action and real worker progress into the UI
 - [x] Allowlisted RetroArch package adapter and return/play-session tracking
 - [x] Reverified, read-only FileProvider content handoff to the emulator adapter
-- [ ] Replace diagnostic text payload with an authorized runnable homebrew fixture
+- [x] Replace diagnostic text payload with an authorized runnable homebrew fixture
 - [x] Persistent save record retained through content-only uninstall and reinstall
 - [x] Restart reconciliation of WorkManager success against real content and checksum
 
@@ -71,5 +71,6 @@ Galaxy S23 Ultra and DeX validation, controller and HDMI reconnect tests, extern
 - [x] TheGamesDB metadata enrichment adapter (API key supplied out-of-band)
 - [x] Catalog artwork URL validation tests
 - [x] Clarified emulator content-handoff failure messaging
+- [x] Bundled authorized Galaxy Patrol NES fixture with pinned checksum and emulator-core requirement
 
 Physical Galaxy/DeX/controller testing, production signing credentials, and enclosure validation remain hardware/deployment gates rather than locally verifiable code tasks.
