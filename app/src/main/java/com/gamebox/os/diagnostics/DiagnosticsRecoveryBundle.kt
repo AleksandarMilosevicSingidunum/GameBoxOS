@@ -39,8 +39,11 @@ fun buildDiagnosticsRecoveryBundle(
 
 internal fun sanitizeDiagnosticToken(value: String): String = value
     .replace(Regex("https?://\\S+"), "<url>")
-    .replace(Regex("(?i)(password|secret|token|key)=\\S+")) { match ->
-        match.value.substringBefore("=") + "=<redacted>"
+    .replace(
+        Regex("(?i)(password|secret|token|api[_-]?key|access[_-]?key|secret[_-]?key)\\s*[:=]\\s*[^\\s,;]+")
+    ) { match ->
+        match.value.substringBefore("=").substringBefore(":").trimEnd() + "=<redacted>"
     }
+    .replace(Regex("(?i)\\b(?:authorization\\s*:\\s*)?bearer\\s+[^\\s,;]+"), "Bearer <redacted>")
     .replace(Regex("(?i)\\b[a-f0-9]{64}\\b"), "<checksum>")
     .replace(Regex("(?i)(?:[a-z]:\\\\|/)(?:[^\\s]+)"), "<path>")
