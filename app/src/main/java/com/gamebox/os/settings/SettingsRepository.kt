@@ -12,6 +12,8 @@ import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 private val Context.gameBoxDataStore: DataStore<Preferences> by preferencesDataStore(name = "gamebox_settings")
 
@@ -39,11 +41,15 @@ class SettingsRepository(private val context: Context) {
         )
     }
 
-    suspend fun theGamesDbApiKey(): String? = secretStore.get(THEGAMESDB_API_KEY)
+    suspend fun theGamesDbApiKey(): String? = withContext(Dispatchers.IO) {
+        secretStore.get(THEGAMESDB_API_KEY)
+    }
 
-    suspend fun hasTheGamesDbApiKey(): Boolean = secretStore.contains(THEGAMESDB_API_KEY)
+    suspend fun hasTheGamesDbApiKey(): Boolean = withContext(Dispatchers.IO) {
+        secretStore.contains(THEGAMESDB_API_KEY)
+    }
 
-    suspend fun setTheGamesDbApiKey(value: String?) {
+    suspend fun setTheGamesDbApiKey(value: String?) = withContext(Dispatchers.IO) {
         secretStore.put(THEGAMESDB_API_KEY, value)
     }
 
