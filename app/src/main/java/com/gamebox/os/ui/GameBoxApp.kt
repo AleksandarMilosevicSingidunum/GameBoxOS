@@ -351,12 +351,22 @@ private fun HomeQuickLaunchRow(openPc: () -> Unit) {
     Spacer(Modifier.height(8.dp))
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         listOf("Desktop", "Steam Library", "Epic Games").forEach { label ->
+            val interactionSource = remember(label) { MutableInteractionSource() }
+            val hovered by interactionSource.collectIsHoveredAsState()
+            val pressed by interactionSource.collectIsPressedAsState()
+            val scale by animateFloatAsState(
+                targetValue = if (pressed) 0.95f else if (hovered) 1.035f else 1f,
+                label = "quick-launch-scale"
+            )
             OutlinedButton(
                 onClick = openPc,
                 contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
-                modifier = Modifier.semantics {
-                    contentDescription = "Quick launch $label; opens PC Hub"
-                }
+                modifier = Modifier
+                    .graphicsLayer { scaleX = scale; scaleY = scale }
+                    .hoverable(interactionSource)
+                    .semantics {
+                        contentDescription = "Quick launch $label; opens PC Hub"
+                    }
             ) { Text(label, maxLines = 1) }
         }
     }
