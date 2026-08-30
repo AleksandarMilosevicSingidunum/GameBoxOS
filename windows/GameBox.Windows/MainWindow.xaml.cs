@@ -118,7 +118,10 @@ public partial class MainWindow : Window
         var game = Selected;
         SelectedTitle.Text = game?.Title ?? "Choose a game";
         SelectedPath.Text = game is null ? "" : game.Platform + Environment.NewLine + game.ExecutablePath;
-        PlayButton.IsEnabled = game is not null;
+        var available = game is not null && GameLibrary.IsLaunchTargetAvailable(game);
+        PlayButton.IsEnabled = available;
+        if (game is not null && !available)
+            SelectedPath.Text += Environment.NewLine + "Launch target is missing";
         FavoriteButton.IsEnabled = game is not null;
         RemoveButton.IsEnabled = game is not null;
     }

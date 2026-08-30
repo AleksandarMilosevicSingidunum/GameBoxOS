@@ -17,6 +17,9 @@ try
     Require(ordered[0].Id == first.Id, "Favorites must sort first.");
     Require(GameLibrary.Filter(ordered, "pc").Single().Id == second.Id, "Search must match platform.");
     Require(GameLibrary.Filter(ordered, "", favoritesOnly: true).Single().Id == first.Id, "Favorite filtering failed.");
+    Require(GameLibrary.IsLaunchTargetAvailable(first), "Existing launch targets must be available.");
+    File.Delete(secondPath);
+    Require(!GameLibrary.IsLaunchTargetAvailable(second), "Missing launch targets must be unavailable.");
 
     var store = new LibraryStore(Path.Combine(root, "data", "library.json"));
     await store.SaveAsync(ordered);

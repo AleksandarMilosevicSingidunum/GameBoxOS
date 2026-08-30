@@ -44,6 +44,12 @@ public static class GameLibrary
         });
     }
 
+    public static bool IsLaunchTargetAvailable(GameEntry entry)
+    {
+        ArgumentNullException.ThrowIfNull(entry);
+        return File.Exists(ValidateExecutablePath(entry.ExecutablePath));
+    }
+
     public static string ValidateExecutablePath(string executablePath)
     {
         if (string.IsNullOrWhiteSpace(executablePath))
