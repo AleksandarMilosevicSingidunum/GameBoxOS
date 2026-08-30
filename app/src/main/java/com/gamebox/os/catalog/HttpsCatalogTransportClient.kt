@@ -20,7 +20,16 @@ internal fun catalogTransportFailure(status: Int? = null, error: Throwable? = nu
 class HttpsCatalogTransportClient(
     private val maxResponseBytes: Int = 1_048_576,
     private val s3Signer: S3RequestSigner? = null,
+    private val maxRetries: Int = 2,
+    private val retryDelay: suspend (Long) -> Unit = { kotlinx.coroutines.delay(it) },
+    private val connectionFactory: (URI) -> HttpURLConnection = {
+        URL(it.toString()).openConnection() as HttpURLConnection
+    },
 ) : CatalogTransportClient {
+    init {
+        require(maxResponseBytes in 1..16_777_216)
+        require(maxRetries in 0..6)
+    }
     override suspend fun fetch(transport: CatalogTransport, credentials: CatalogCredentials?): String {
         val uri = when (transport) {
             is CatalogTransport.Https -> URI(transport.url)
