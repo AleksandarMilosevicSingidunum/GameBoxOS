@@ -227,7 +227,7 @@ class DefaultGameLaunchController(
             GatewayResult.HANDOFF_REJECTED -> update(
                 game.id,
                 LaunchUiState.Status.HANDOFF_REJECTED,
-                "The emulator rejected the approved game content handoff"
+                "RetroArch rejected the handoff. Open RetroArch > Load Content and select the installed game; verify the FCEUmm core is selected."
             )
         }
     }
