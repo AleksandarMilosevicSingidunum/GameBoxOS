@@ -214,7 +214,7 @@ public partial class MainWindow : Window
         if (game is null) return;
         var dialog = new OpenFileDialog {
             Title = "Relocate " + game.Title,
-            Filter = "Launchable files (*.exe;*.lnk;*.bat;*.cmd)|*.exe;*.lnk;*.bat;*.cmd",
+            Filter = "Launchable files (*.exe;*.lnk;*.url;*.bat;*.cmd)|*.exe;*.lnk;*.url;*.bat;*.cmd",
             CheckFileExists = true
         };
         if (dialog.ShowDialog(this) != true) return;
