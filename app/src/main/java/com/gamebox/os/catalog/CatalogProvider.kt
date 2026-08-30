@@ -1,6 +1,7 @@
 package com.gamebox.os.catalog
 
 import android.content.Context
+import com.gamebox.os.domain.Game
 import java.net.URI
 import java.net.URL
 import javax.net.ssl.HttpsURLConnection
@@ -114,5 +115,18 @@ class HttpsCatalogProvider(
         } finally {
             connection.disconnect()
         }
+    }
+}
+
+
+/** Enriches an authorized catalog with metadata from an external provider. */
+class MetadataEnrichingCatalogProvider(
+    private val base: CatalogProvider,
+    private val enrich: suspend (Game) -> Game
+) : CatalogProvider {
+    override suspend fun load(): CatalogSnapshot {
+        val snapshot = base.load()
+        val enriched = snapshot.games.map { game -> enrich(game) }
+        return snapshot.copy(games = enriched)
     }
 }
