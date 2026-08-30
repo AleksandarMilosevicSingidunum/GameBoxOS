@@ -7,6 +7,8 @@ import androidx.room.Room
 import com.gamebox.os.catalog.AssetCatalogProvider
 import com.gamebox.os.catalog.ConfiguredCatalogProvider
 import com.gamebox.os.catalog.HttpsCatalogProvider
+import com.gamebox.os.catalog.MetadataEnrichingCatalogProvider
+import com.gamebox.os.catalog.TheGamesDbMetadataClient
 import com.gamebox.os.data.local.GameBoxDatabase
 import com.gamebox.os.data.local.MIGRATION_1_2
 import com.gamebox.os.data.local.MIGRATION_2_3
@@ -49,11 +51,16 @@ class DefaultAppContainer(context: Context) : AppContainer {
     ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7).build()
     override val settingsRepository = SettingsRepository(applicationContext)
     private val assetCatalogProvider = AssetCatalogProvider(applicationContext)
-    private val catalogProvider = ConfiguredCatalogProvider(
+    private val configuredCatalogProvider = ConfiguredCatalogProvider(
         fallback = assetCatalogProvider,
         remote = HttpsCatalogProvider(applicationContext, settingsRepository::catalogUrl),
         configuredUrl = settingsRepository::catalogUrl,
         networkAvailable = { isNetworkAvailable(applicationContext) }
+    )
+    private val metadataClient = TheGamesDbMetadataClient(settingsRepository::theGamesDbApiKey)
+    private val catalogProvider = MetadataEnrichingCatalogProvider(
+        base = configuredCatalogProvider,
+        enrich = metadataClient::enrich,
     )
 
     override val downloadRepository: DownloadRepository =

@@ -44,6 +44,7 @@ import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.gamebox.os.data.DownloadRepository
@@ -1405,6 +1406,11 @@ private fun SettingsScreen(
     }
     var catalogUrl by remember(currentSettings.catalogUrl) { mutableStateOf(currentSettings.catalogUrl) }
     var catalogMessage by remember { mutableStateOf<String?>(null) }
+    var theGamesDbApiKey by remember { mutableStateOf("") }
+    var theGamesDbConfigured by remember { mutableStateOf(false) }
+    LaunchedEffect(settingsRepository) {
+        theGamesDbConfigured = settingsRepository.hasTheGamesDbApiKey()
+    }
     val externalStorageStatus = externalStorageController.inspect(currentSettings.externalLibraryUri)
     val installedMigration = remember(context) { com.gamebox.os.storage.InstalledContentMigration(context.filesDir.resolve("installed")) }
     val migrationPlan = remember(diagnosticGames) { installedMigration.plan() }
@@ -1639,6 +1645,55 @@ private fun SettingsScreen(
             modifier = Modifier.padding(top = 8.dp)
         ) { Text("Save catalog source") }
         catalogMessage?.let { Text(it, color = MaterialTheme.colorScheme.primary) }
+        Spacer(Modifier.height(18.dp))
+        Text("TheGamesDB metadata", fontWeight = FontWeight.Bold)
+        Text(
+            if (theGamesDbConfigured)
+                "API key configured securely. Enter a replacement key or clear it."
+            else "Optional. Adds descriptions and HTTPS box art to authorized catalog entries.",
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.62f)
+        )
+        OutlinedTextField(
+            value = theGamesDbApiKey,
+            onValueChange = { theGamesDbApiKey = it },
+            label = { Text("TheGamesDB API key") },
+            singleLine = true,
+            visualTransformation = PasswordVisualTransformation(),
+            modifier = Modifier.fillMaxWidth().semantics {
+                contentDescription = "TheGamesDB API key, hidden"
+            }
+        )
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.padding(top = 8.dp)
+        ) {
+            Button(
+                onClick = {
+                    val key = theGamesDbApiKey.trim()
+                    if (key.isEmpty()) {
+                        catalogMessage = "Enter an API key or choose Clear"
+                    } else {
+                        scope.launch {
+                            settingsRepository.setTheGamesDbApiKey(key)
+                            theGamesDbApiKey = ""
+                            theGamesDbConfigured = true
+                            catalogMessage = "TheGamesDB API key stored securely. Refresh the Store to enrich metadata."
+                        }
+                    }
+                }
+            ) { Text(if (theGamesDbConfigured) "Replace key" else "Save key") }
+            OutlinedButton(
+                onClick = {
+                    scope.launch {
+                        settingsRepository.setTheGamesDbApiKey(null)
+                        theGamesDbApiKey = ""
+                        theGamesDbConfigured = false
+                        catalogMessage = "TheGamesDB metadata key removed"
+                    }
+                },
+                enabled = theGamesDbConfigured
+            ) { Text("Clear key") }
+        }
         Spacer(Modifier.height(12.dp))
         Text(
             "Runtime providers and emulator profiles remain intentionally scoped to their dedicated screens.",
