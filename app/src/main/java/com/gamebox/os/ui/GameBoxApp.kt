@@ -707,13 +707,16 @@ internal fun GameCard(
         border = BorderStroke(if (focused) 3.dp else 1.dp, border),
         tonalElevation = elevation
     ) {
-        Column(Modifier.padding(18.dp)) {
+        Box(Modifier.fillMaxSize()) {
+            RemoteArtwork(game.artworkUrl, Modifier.fillMaxSize())
+            Column(Modifier.padding(18.dp)) {
             Text(if (hero) "CONTINUE PLAYING" else game.platform.uppercase(),
                 color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold, fontSize = 12.sp)
             Spacer(Modifier.height(10.dp))
             Text((if (game.favorite) "★ " else "") + game.title, fontSize = if (hero) 32.sp else 21.sp, fontWeight = FontWeight.Bold)
             Spacer(Modifier.weight(1f))
             Text(if (hero) "Press A for details" else game.state.displayName(), fontSize = 13.sp)
+            }
         }
     }
 }
