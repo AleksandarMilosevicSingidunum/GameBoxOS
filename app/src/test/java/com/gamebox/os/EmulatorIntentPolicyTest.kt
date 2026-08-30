@@ -61,6 +61,15 @@ class EmulatorIntentPolicyTest {
     }
 
     @Test
+    fun retroArchPackageAliasesUseTheSameRomContract() {
+        listOf("com.retroarch", "com.retroarch.aarch64", "com.retroarch.ra32").forEach { packageName ->
+            val plan = EmulatorIntentPolicy.plan(packageName, uri, "Balanced")
+            assertEquals(EmulatorIntentStyle.LAUNCHER_EXTRAS, plan.style)
+            assertEquals(uri, plan.stringExtras[EmulatorIntentPolicy.RETROARCH_ROM])
+        }
+    }
+
+    @Test
     fun adaptersWithoutDocumentedExtrasKeepActionViewFallback() {
         val plan = EmulatorIntentPolicy.plan("com.example.unknown", uri, "Performance")
 
