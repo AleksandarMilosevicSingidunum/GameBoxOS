@@ -107,6 +107,10 @@ Each CI run produces a temporary debug APK and SHA-256 artifact. Release APKs ar
 - Diagnostics exclude credentials, remote paths, checksums, file paths, and save contents.
 
 
+### Galaxy Patrol storage and launch
+
+The bundled Galaxy Patrol NES content is installed under the app-private path `filesDir/installed/retro/galaxy-patrol/content/galaxy-patrol.nes`. It is intentionally not exposed as a public filesystem path. GameBox verifies the pinned SHA-256 before launch and shares the file to RetroArch only through a temporary, read-only `content://` URI. If automatic launch is rejected, use RetroArch’s **Load Content** flow and select the installed Galaxy Patrol entry from GameBox.
+
 ### Online metadata and box art
 
 GameBox wires the optional TheGamesDB metadata adapter (`TheGamesDbMetadataClient`) into runtime catalog refresh. Configure or clear its API key in Settings; the key is AES-GCM encrypted with an Android Keystore key and never stored in DataStore, URLs, diagnostics, or logs. the adapter enriches authorized catalog entries with HTTPS artwork and descriptions only. It never downloads game binaries. Relative TheGamesDB artwork paths are resolved only against credential-free HTTPS provider bases; insecure or malformed artwork preserves the existing fallback. TheGamesDB API requires an API key and is documented at https://api.thegamesdb.net/. Binary installation remains governed by the catalog's authorized HTTPS source and SHA-256 checksum.
