@@ -232,6 +232,34 @@ try
         Array.Empty<GameEntry>());
     Require(missingEpicDiscovery.ManifestCount == 0 && missingEpicDiscovery.Entries.Count == 0, "Missing Epic manifests must be a safe no-op.");
 
+    var gogRoot = Path.Combine(root, "gog");
+    var gogInstallRoot = Path.Combine(gogRoot, "GogAlpha");
+    Directory.CreateDirectory(gogInstallRoot);
+    var gogExecutable = Path.Combine(gogInstallRoot, "GogAlpha.exe");
+    await File.WriteAllTextAsync(gogExecutable, "");
+    await File.WriteAllTextAsync(
+        Path.Combine(gogInstallRoot, "goggame-123.info"),
+        JsonSerializer.Serialize(new {
+            name = "GOG Alpha",
+            playTasks = new[] { new { path = "GogAlpha.exe", isPrimary = true } }
+        }));
+    await File.WriteAllTextAsync(
+        Path.Combine(gogInstallRoot, "goggame-124.info"),
+        JsonSerializer.Serialize(new {
+            name = "Traversal",
+            playTasks = new[] { new { path = "../outside.exe", isPrimary = true } }
+        }));
+
+    var gogDiscovery = GogDiscovery.Discover(new[] { gogRoot }, Array.Empty<GameEntry>());
+    Require(gogDiscovery.Entries.Count == 1 && gogDiscovery.Entries[0].Title == "GOG Alpha", "GOG discovery must import valid installed games.");
+    Require(gogDiscovery.Entries[0].ExecutablePath == Path.GetFullPath(gogExecutable), "GOG discovery must resolve the primary play task.");
+    Require(gogDiscovery.Entries[0].Platform == "GOG", "GOG discovery must retain storefront metadata.");
+    Require(gogDiscovery.ManifestCount == 2 && gogDiscovery.InvalidManifestCount == 1, "GOG discovery must reject traversal manifests.");
+    var repeatedGogDiscovery = GogDiscovery.Discover(new[] { gogRoot }, gogDiscovery.Entries);
+    Require(repeatedGogDiscovery.Entries.Count == 0 && repeatedGogDiscovery.DuplicateCount == 1, "GOG discovery must deduplicate existing targets.");
+    var missingGogDiscovery = GogDiscovery.Discover(new[] { Path.Combine(root, "missing-gog") }, Array.Empty<GameEntry>());
+    Require(missingGogDiscovery.ManifestCount == 0 && missingGogDiscovery.Entries.Count == 0, "Missing GOG roots must be a safe no-op.");
+
     Console.WriteLine("GameBox Windows core tests passed.");
 }
 finally
