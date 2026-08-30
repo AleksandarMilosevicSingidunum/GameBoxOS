@@ -24,12 +24,15 @@ class CloudSaveIntegrityException(
 class HttpsCloudSaveTransportClient(
     private val s3Signer: S3RequestSigner? = null,
     private val maxResponseBytes: Int = CloudSaveSyncContract.MAX_PAYLOAD_BYTES.toInt(),
+    private val maxRetries: Int = 2,
+    private val retryDelay: suspend (Long) -> Unit = { kotlinx.coroutines.delay(it) },
     private val connectionFactory: (URI) -> HttpURLConnection = {
         URL(it.toString()).openConnection() as HttpURLConnection
     },
 ) {
     init {
         require(maxResponseBytes in 1..CloudSaveSyncContract.MAX_PAYLOAD_BYTES.toInt())
+        require(maxRetries in 0..6) { "maxRetries must be between 0 and 6" }
     }
 
     suspend fun upload(
@@ -54,6 +57,10 @@ class HttpsCloudSaveTransportClient(
         return execute("GET", request.endpoint, credentials, ByteArray(0)) { connection ->
             val status = connection.responseCode
             if (status !in 200..299) throw transportFailure(status)
+            val declaredLength = connection.contentLengthLong
+            if (declaredLength > maxResponseBytes) {
+                throw IllegalArgumentException("Cloud save response exceeds the 16 MiB limit")
+            }
             val bytes = connection.inputStream.use { it.readNBytes(maxResponseBytes + 1) }
             if (bytes.size > maxResponseBytes) {
                 throw IllegalArgumentException("Cloud save response exceeds the 16 MiB limit")
@@ -86,14 +93,39 @@ class HttpsCloudSaveTransportClient(
         }
     }
 
-    private fun <T> execute(
+    private suspend fun <T> execute(
         method: String,
         endpoint: URI,
         credentials: CatalogCredentials,
         payload: ByteArray,
         block: (HttpURLConnection) -> T,
     ): T {
-        val connection = connectionFactory(endpoint)
+        var attempt = 0
+        while (true) {
+            try {
+                return executeOnce(method, endpoint, credentials, payload, block)
+            } catch (error: CloudSaveTransportException) {
+                if (!error.recovery.retryable || attempt >= maxRetries) throw error
+                val delayMillis = (error.recovery.delayMillis * (1L shl attempt))
+                    .coerceAtMost(64_000L)
+                retryDelay(delayMillis)
+                attempt++
+            }
+        }
+    }
+
+    private fun <T> executeOnce(
+        method: String,
+        endpoint: URI,
+        credentials: CatalogCredentials,
+        payload: ByteArray,
+        block: (HttpURLConnection) -> T,
+    ): T {
+        val connection = try {
+            connectionFactory(endpoint)
+        } catch (error: IOException) {
+            throw transportFailure(error = error)
+        }
         connection.instanceFollowRedirects = false
         connection.connectTimeout = 10_000
         connection.readTimeout = 15_000
