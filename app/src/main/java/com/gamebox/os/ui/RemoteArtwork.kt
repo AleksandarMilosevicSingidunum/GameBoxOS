@@ -28,9 +28,11 @@ internal fun RemoteArtwork(url: String?, modifier: Modifier = Modifier) {
                     instanceFollowRedirects = false
                     setRequestProperty("Accept", "image/*")
                 }
-                connection.use {
-                    if (it.responseCode !in 200..299 || it.contentLengthLong > 2L * 1024L * 1024L) return@runCatching null
-                    it.inputStream.use { stream -> BitmapFactory.decodeStream(stream) }
+                try {
+                    if (connection.responseCode !in 200..299 || connection.contentLengthLong > 2L * 1024L * 1024L) return@runCatching null
+                    connection.inputStream.use { stream -> BitmapFactory.decodeStream(stream) }
+                } finally {
+                    connection.disconnect()
                 }
             }.getOrNull()
         }
