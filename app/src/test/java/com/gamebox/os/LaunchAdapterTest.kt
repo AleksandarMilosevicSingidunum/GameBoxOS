@@ -1,6 +1,8 @@
 package com.gamebox.os
 
 import com.gamebox.os.domain.GameId
+import com.gamebox.os.domain.Game
+import com.gamebox.os.domain.InstallState
 import com.gamebox.os.launch.EmulatorCapability
 import com.gamebox.os.launch.EmulatorCapabilityRegistry
 import com.gamebox.os.launch.ReturnTracker
@@ -28,6 +30,12 @@ class LaunchAdapterTest {
     @Test fun capabilityContainsOnlyRelativeScopedContentPath() {
         assertEquals("retro/retro-test/content/test.txt", capability.contentRelativePath)
         assertEquals("application/octet-stream", capability.mimeType)
+    }
+
+    @Test fun galaxyPatrolDeclaresRequiredNesCore() {
+        val game = Game(GameId("galaxy-patrol"), "Galaxy Patrol", "Retro", 2018, "Arcade", 1, InstallState.INSTALLED)
+        val message = EmulatorCapabilityRegistry().readinessMessage(game)
+        assertEquals(true, message?.contains("FCEUmm"))
     }
 
     @Test fun returnTracker_recordsOneSessionAndThenClearsIt() {

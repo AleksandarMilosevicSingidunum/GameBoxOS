@@ -23,7 +23,8 @@ data class EmulatorCapability(
     val contentRelativePath: String,
     val mimeType: String,
     val expectedSha256: String,
-    val graphicsProfile: String = "Balanced"
+    val graphicsProfile: String = "Balanced",
+    val requiredCore: String? = null
 )
 
 class EmulatorCapabilityRegistry(
@@ -34,10 +35,15 @@ class EmulatorCapabilityRegistry(
             packageName = "com.retroarch.aarch64",
             contentRelativePath = "retro/galaxy-patrol/content/galaxy-patrol.nes",
             mimeType = "application/x-nes-rom",
-            expectedSha256 = "97c1757ffd6a5bc1a591809b2b0f8988741f61f6abd82889c148ecae8a2f471f"
+            expectedSha256 = "97c1757ffd6a5bc1a591809b2b0f8988741f61f6abd82889c148ecae8a2f471f",
+            requiredCore = "Nintendo - NES / Famicom (FCEUmm)"
         )
     )
 ) {
+    fun readinessMessage(game: Game): String? = forGame(game)?.requiredCore?.let { core ->
+        "Install RetroArch and the $core core before launching this game."
+    }
+
     fun displayName(packageName: String): String = when (packageName) {
         "com.retroarch.aarch64" -> "RetroArch"
         "org.ppsspp.ppsspp" -> "PPSSPP"
