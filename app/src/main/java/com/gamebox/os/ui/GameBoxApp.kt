@@ -393,19 +393,41 @@ private fun CatalogScreen(
     val focusTarget = restoreGameId?.takeIf { id -> filtered.any { it.id == id } }
         ?: filtered.firstOrNull()?.id
     Column {
-        if (compact) Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Column {
-                Text("Authorized Catalog", fontSize = if (compact) 28.sp else 38.sp, fontWeight = FontWeight.Bold)
-                Text(
-                    "Local-first cache from configured personal sources",
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.68f)
-                )
+        if (compact) {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Column {
+                    Text("Authorized Catalog", fontSize = 28.sp, fontWeight = FontWeight.Bold)
+                    Text(
+                        "Local-first cache from configured personal sources",
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.68f)
+                    )
+                }
+                Button(
+                    onClick = repository::refreshCatalog,
+                    enabled = refreshState != CatalogRefreshState.REFRESHING
+                ) {
+                    Text(if (refreshState == CatalogRefreshState.REFRESHING) "Refreshing..." else "Refresh")
+                }
             }
-            Button(
-                onClick = repository::refreshCatalog,
-                enabled = refreshState != CatalogRefreshState.REFRESHING
+        } else {
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
             ) {
-                Text(if (refreshState == CatalogRefreshState.REFRESHING) "Refreshing..." else "Refresh")
+                Column {
+                    Text("Authorized Catalog", fontSize = 38.sp, fontWeight = FontWeight.Bold)
+                    Text(
+                        "Local-first cache from configured personal sources",
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.68f)
+                    )
+                }
+                Button(
+                    onClick = repository::refreshCatalog,
+                    enabled = refreshState != CatalogRefreshState.REFRESHING
+                ) {
+                    Text(if (refreshState == CatalogRefreshState.REFRESHING) "Refreshing..." else "Refresh")
+                }
             }
         }
         if (refreshState == CatalogRefreshState.ERROR) {
@@ -453,7 +475,7 @@ private fun CollectionScreen(
     val focusTarget = restoreGameId?.takeIf { id -> filtered.any { it.id == id } }
         ?: filtered.firstOrNull()?.id
     val summary = summarizeLibrary(games)
-    Column {
+    Column(Modifier.verticalScroll(rememberScrollState())) {
         Text(title, fontSize = if (compact) 28.sp else 38.sp, fontWeight = FontWeight.Bold)
         Text(subtitle, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.68f))
         Surface(
@@ -497,8 +519,31 @@ private fun CollectionScreen(
             genre, { genre = it }, favoritesOnly, { favoritesOnly = it }
         )
         Spacer(Modifier.height(14.dp))
-        if (filtered.isEmpty()) Text("No games match these filters")
-        else GameRow(filtered, focusTarget, onFocused, compact, open)
+        if (filtered.isEmpty()) {
+            Text("No games match these filters")
+        } else if (compact) {
+            HomeGameSection("Installed games", filtered, focusTarget, onFocused, compact, open)
+        } else {
+            HomeGameSection(
+                "Recently played",
+                filtered.filter { it.lastPlayed != null },
+                focusTarget,
+                onFocused,
+                compact,
+                open
+            )
+            Spacer(Modifier.height(16.dp))
+            HomeGameSection("Installed games", filtered, focusTarget, onFocused, compact, open)
+            Spacer(Modifier.height(16.dp))
+            HomeGameSection(
+                "Ready to resume",
+                filtered.filter { it.lastPlayed != null },
+                focusTarget,
+                onFocused,
+                compact,
+                open
+            )
+        }
     }
 }
 
