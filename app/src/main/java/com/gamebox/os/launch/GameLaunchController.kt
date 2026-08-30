@@ -49,12 +49,18 @@ class EmulatorCapabilityRegistry(
         "org.ppsspp.ppsspp" -> "PPSSPP"
         "org.dolphinemu.dolphinemu" -> "Dolphin"
         "xyz.aethersx2.android" -> "AetherSX2"
+        "com.github.stenzek.duckstation" -> "DuckStation"
+        "org.mupen64plusae.v3.fzurita" -> "M64Plus FZ"
+        "com.flycast.emulator" -> "Flycast"
         else -> packageName.substringAfterLast(".")
     }
 
     fun optionsFor(game: Game): List<String> = when (game.platform.lowercase()) {
         "retro", "homebrew" -> listOf("com.retroarch.aarch64")
         "psp" -> listOf("org.ppsspp.ppsspp")
+        "ps1" -> listOf("com.github.stenzek.duckstation", "com.retroarch.aarch64")
+        "n64" -> listOf("org.mupen64plusae.v3.fzurita", "com.retroarch.aarch64")
+        "dreamcast" -> listOf("com.flycast.emulator", "com.retroarch.aarch64")
         "gamecube", "wii" -> listOf("org.dolphinemu.dolphinemu")
         "ps2" -> listOf("xyz.aethersx2.android")
         else -> emptyList()

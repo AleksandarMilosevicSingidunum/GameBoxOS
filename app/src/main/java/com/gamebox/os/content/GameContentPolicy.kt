@@ -15,6 +15,30 @@ object GameContentPolicy {
     )
 
     private val policies = mapOf(
+        "ps1" to PlatformPolicy(
+            defaultExtension = "chd",
+            extensions = mapOf(
+                "chd" to "application/x-chd",
+                "cue" to "application/x-cue",
+                "pbp" to "application/x-playstation-pbp",
+            ),
+        ),
+        "n64" to PlatformPolicy(
+            defaultExtension = "z64",
+            extensions = mapOf(
+                "n64" to "application/x-n64-rom",
+                "z64" to "application/x-n64-rom",
+                "v64" to "application/x-n64-rom",
+            ),
+        ),
+        "dreamcast" to PlatformPolicy(
+            defaultExtension = "chd",
+            extensions = mapOf(
+                "chd" to "application/x-chd",
+                "gdi" to "application/x-dreamcast-gdi",
+                "cdi" to "application/x-discjuggler-cdi",
+            ),
+        ),
         "psp" to PlatformPolicy(
             defaultExtension = "iso",
             extensions = mapOf(
