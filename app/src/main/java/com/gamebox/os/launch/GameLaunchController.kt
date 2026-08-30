@@ -103,7 +103,9 @@ class AndroidPackageGateway(
     private val verifier: Sha256Verifier = Sha256Verifier()
 ) : PackageGateway {
     override fun launch(capability: EmulatorCapability): GatewayResult {
-        val launcherIntent = context.packageManager.getLaunchIntentForPackage(capability.packageName)
+        val resolvedPackage = resolvePackageName(capability.packageName)
+            ?: return GatewayResult.EMULATOR_UNAVAILABLE
+        val launcherIntent = context.packageManager.getLaunchIntentForPackage(resolvedPackage)
             ?: return GatewayResult.EMULATOR_UNAVAILABLE
         val installRoot = context.filesDir.resolve("installed").canonicalFile
         val content = File(installRoot, capability.contentRelativePath).canonicalFile
@@ -122,7 +124,7 @@ class AndroidPackageGateway(
             content
         )
         val plan = EmulatorIntentPolicy.plan(
-            packageName = capability.packageName,
+            packageName = resolvedPackage,
             contentUri = uri.toString(),
             graphicsProfile = capability.graphicsProfile,
         )
@@ -148,7 +150,7 @@ class AndroidPackageGateway(
         }.getOrElse {
             // Some RetroArch Android builds expose a launcher activity but reject
             // launcher extras. Retry once with the standard scoped ACTION_VIEW contract.
-            if (capability.packageName.startsWith("com.retroarch")) {
+            if (resolvedPackage.startsWith("com.retroarch")) {
                 val fallback = Intent(Intent.ACTION_VIEW).apply {
                     setDataAndType(uri, capability.mimeType)
                     setPackage(capability.packageName)
@@ -162,6 +164,15 @@ class AndroidPackageGateway(
             } else {
                 GatewayResult.HANDOFF_REJECTED
             }
+        }
+    }
+
+    private fun resolvePackageName(requested: String): String? {
+        val candidates = if (requested == "com.retroarch.aarch64") {
+            listOf("com.retroarch.aarch64", "com.retroarch", "com.retroarch.ra32")
+        } else listOf(requested)
+        return candidates.firstOrNull {
+            context.packageManager.getLaunchIntentForPackage(it) != null
         }
     }
 }
