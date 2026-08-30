@@ -1345,12 +1345,22 @@ private fun ShortcutCard(
     onClick: () -> Unit
 ) {
     var focused by remember { mutableStateOf(false) }
+    val interactionSource = remember { MutableInteractionSource() }
+    val hovered by interactionSource.collectIsHoveredAsState()
+    val pressed by interactionSource.collectIsPressedAsState()
+    val emphasized = focused || hovered
     val border by animateColorAsState(
-        if (focused) MaterialTheme.colorScheme.primary else Color.Transparent,
+        if (emphasized) MaterialTheme.colorScheme.primary else Color.Transparent,
         label = "shortcut-focus"
+    )
+    val scale by animateFloatAsState(
+        targetValue = if (pressed) 0.97f else if (emphasized) 1.02f else 1f,
+        label = "shortcut-scale"
     )
     Surface(
         modifier.height(112.dp)
+            .graphicsLayer { scaleX = scale; scaleY = scale }
+            .hoverable(interactionSource)
             .semantics { contentDescription = shortcut.title + ", " + if (installed) "installed" else "not installed" }
             .onFocusChanged { focused = it.isFocused }
             .clickable(onClick = onClick)
