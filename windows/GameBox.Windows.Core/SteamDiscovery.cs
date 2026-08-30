@@ -130,12 +130,12 @@ public static partial class SteamDiscovery
         File.Move(temp, path, overwrite: true);
     }
 
-    [GeneratedRegex(""path"\\s+"(?<path>[^"]+)"", RegexOptions.IgnoreCase)]
+    [GeneratedRegex("\\\"path\\\"\\s+\\\"(?<path>[^\\\"]+)\\\"", RegexOptions.IgnoreCase)]
     private static partial Regex LibraryPathRegex();
 
-    [GeneratedRegex(""appid"\\s+"(?<value>[0-9]+)"", RegexOptions.IgnoreCase)]
+    [GeneratedRegex("\\\"appid\\\"\\s+\\\"(?<value>[0-9]+)\\\"", RegexOptions.IgnoreCase)]
     private static partial Regex AppIdRegex();
 
-    [GeneratedRegex(""name"\\s+"(?<value>(?:\\\\.|[^"])*)"", RegexOptions.IgnoreCase)]
+    [GeneratedRegex("\\\"name\\\"\\s+\\\"(?<value>(?:\\\\.|[^\\\"])*)\\\"", RegexOptions.IgnoreCase)]
     private static partial Regex NameRegex();
 }
