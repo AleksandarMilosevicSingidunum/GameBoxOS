@@ -9,6 +9,15 @@ import org.junit.Test
 
 class HttpsCatalogTransportClientTest {
     @Test
+    fun rejectsRelativeHttpsEndpointsBeforeNetworkAccess() {
+        assertThrows(IllegalArgumentException::class.java) {
+            runBlocking {
+                HttpsCatalogTransportClient().fetch(CatalogTransport.Https("https:/catalog.json"), null)
+            }
+        }
+    }
+
+    @Test
     fun unsignedS3CredentialsFailBeforeNetworkAccess() {
         assertThrows(IllegalArgumentException::class.java) {
             runBlocking { HttpsCatalogTransportClient().fetch(CatalogTransport.S3("https://example.test", "games"), CatalogCredentials(accessKey = "key", secretKey = "secret")) }
