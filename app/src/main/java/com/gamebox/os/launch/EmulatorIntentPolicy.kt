@@ -16,6 +16,8 @@ object EmulatorIntentPolicy {
     const val DOLPHIN_PACKAGE = "org.dolphinemu.dolphinemu"
     const val PPSSPP_ARGS = "org.ppsspp.ppsspp.Args"
     const val DOLPHIN_AUTO_START_FILES = "AutoStartFiles"
+    const val RETROARCH_ROM = "ROM"
+    private const val RETROARCH_PACKAGE = "com.retroarch"
 
     fun plan(packageName: String, contentUri: String, graphicsProfile: String): EmulatorIntentPlan {
         require(packageName.isNotBlank()) { "Emulator package must not be blank" }
@@ -30,6 +32,11 @@ object EmulatorIntentPolicy {
         ) { "Emulator content must use an absolute scoped content URI" }
         return when (packageName) {
             PPSSPP_PACKAGE -> ppssppPlan(contentUri, graphicsProfile)
+            packageName == RETROARCH_PACKAGE ||
+                packageName.startsWith(RETROARCH_PACKAGE + ".") -> EmulatorIntentPlan(
+                    style = EmulatorIntentStyle.LAUNCHER_EXTRAS,
+                    stringExtras = mapOf(RETROARCH_ROM to contentUri),
+                )
             DOLPHIN_PACKAGE -> EmulatorIntentPlan(
                 style = EmulatorIntentStyle.LAUNCHER_EXTRAS,
                 stringArrayExtras = mapOf(DOLPHIN_AUTO_START_FILES to listOf(contentUri)),
