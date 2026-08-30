@@ -70,5 +70,5 @@ fun InstallState.primaryAction(): String = when (this) {
 }
 
 enum class CatalogRefreshState {
-    IDLE, REFRESHING, SUCCESS, ERROR
+    IDLE, REFRESHING, SUCCESS, OFFLINE_FALLBACK, REMOTE_FALLBACK, ERROR
 }

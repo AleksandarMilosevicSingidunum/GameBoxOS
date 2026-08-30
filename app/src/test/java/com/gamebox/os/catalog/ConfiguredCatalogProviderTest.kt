@@ -19,6 +19,8 @@ class ConfiguredCatalogProviderTest {
         )
         assertEquals(fallback, provider.load())
         assertEquals(0, remoteCalls)
+        assertEquals(CatalogFallbackReason.OFFLINE, provider.consumeFallbackReason())
+        assertEquals(CatalogFallbackReason.NONE, provider.consumeFallbackReason())
     }
 
     @Test
@@ -30,5 +32,33 @@ class ConfiguredCatalogProviderTest {
             networkAvailable = { true }
         )
         assertEquals(remote, provider.load())
+        assertEquals(CatalogFallbackReason.NONE, provider.consumeFallbackReason())
+    }
+
+    @Test
+    fun remoteFailureUsesFallbackAndReportsRecovery() = runBlocking {
+        val provider = ConfiguredCatalogProvider(
+            fallback = object : CatalogProvider { override suspend fun load() = fallback },
+            remote = object : CatalogProvider {
+                override suspend fun load(): CatalogSnapshot = error("provider unavailable")
+            },
+            configuredUrl = { "https://catalog.example/games.json" },
+            networkAvailable = { true }
+        )
+
+        assertEquals(fallback, provider.load())
+        assertEquals(CatalogFallbackReason.REMOTE_FAILURE, provider.consumeFallbackReason())
+    }
+
+    @Test
+    fun blankConfigurationUsesIntentionalBundledCatalogWithoutWarning() = runBlocking {
+        val provider = ConfiguredCatalogProvider(
+            fallback = object : CatalogProvider { override suspend fun load() = fallback },
+            remote = object : CatalogProvider { override suspend fun load() = remote },
+            configuredUrl = { "" }
+        )
+
+        assertEquals(fallback, provider.load())
+        assertEquals(CatalogFallbackReason.NONE, provider.consumeFallbackReason())
     }
 }
