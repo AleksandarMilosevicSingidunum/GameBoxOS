@@ -69,6 +69,35 @@ public partial class MainWindow : Window
         PlatformBox.SelectedItem = selected is not null && PlatformBox.Items.Contains(selected) ? selected : "All platforms";
     }
 
+    private async void BackupLibrary_Click(object sender, RoutedEventArgs e)
+    {
+        var dialog = new SaveFileDialog { Title = "Back up GameBox library", Filter = "GameBox library backup (*.json)|*.json", FileName = "gamebox-windows-library.json", AddExtension = true };
+        if (dialog.ShowDialog(this) != true) return;
+        try
+        {
+            await _store.ExportAsync(dialog.FileName);
+            StatusText.Text = "Library backup created";
+        }
+        catch (Exception ex) { MessageBox.Show(ex.Message, "Backup failed", MessageBoxButton.OK, MessageBoxImage.Error); }
+    }
+
+    private async void RestoreLibrary_Click(object sender, RoutedEventArgs e)
+    {
+        var dialog = new OpenFileDialog { Title = "Restore GameBox library", Filter = "GameBox library backup (*.json)|*.json", CheckFileExists = true };
+        if (dialog.ShowDialog(this) != true) return;
+        if (MessageBox.Show("Replace the companion library with this validated backup? Game files will not be changed.", "Restore library", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
+        try
+        {
+            var restored = await _store.ImportAsync(dialog.FileName);
+            _allGames.Clear();
+            foreach (var game in restored) _allGames.Add(game);
+            RefreshPlatformOptions();
+            RefreshVisibleGames();
+            StatusText.Text = restored.Count + " game(s) restored";
+        }
+        catch (Exception ex) { MessageBox.Show(ex.Message, "Restore failed", MessageBoxButton.OK, MessageBoxImage.Error); }
+    }
+
     private async void AddGame_Click(object sender, RoutedEventArgs e)
     {
         var dialog = new OpenFileDialog { Title = "Add a local Windows game", Filter = "Launchable files (*.exe;*.lnk;*.bat;*.cmd)|*.exe;*.lnk;*.bat;*.cmd", CheckFileExists = true };

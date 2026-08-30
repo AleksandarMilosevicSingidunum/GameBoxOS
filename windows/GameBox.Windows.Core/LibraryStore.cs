@@ -25,6 +25,21 @@ public sealed class LibraryStore
         return GameLibrary.Normalize(entries);
     }
 
+    public async Task ExportAsync(string destinationPath, CancellationToken cancellationToken = default)
+    {
+        var destination = new LibraryStore(destinationPath);
+        await destination.SaveAsync(await LoadAsync(cancellationToken), cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<GameEntry>> ImportAsync(string sourcePath, CancellationToken cancellationToken = default)
+    {
+        var source = new LibraryStore(sourcePath);
+        if (!File.Exists(source.Path)) throw new FileNotFoundException("Library backup was not found.", source.Path);
+        var entries = await source.LoadAsync(cancellationToken);
+        await SaveAsync(entries, cancellationToken);
+        return entries;
+    }
+
     public async Task SaveAsync(
         IEnumerable<GameEntry> entries,
         CancellationToken cancellationToken = default)

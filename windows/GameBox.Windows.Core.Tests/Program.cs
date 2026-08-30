@@ -46,6 +46,16 @@ try
     await store.SaveAsync(ordered);
     var loaded = await store.LoadAsync();
     Require(loaded.Count == 2 && loaded.Any(x => x.Title == "Alpha"), "Atomic JSON round trip failed.");
+    var backupPath = Path.Combine(root, "backup", "library-backup.json");
+    await store.ExportAsync(backupPath);
+    Require(File.Exists(backupPath), "Library export must create a backup.");
+    await store.SaveAsync(new[] { second });
+    var restored = await store.ImportAsync(backupPath);
+    Require(restored.Count == 2 && (await store.LoadAsync()).Any(x => x.Id == first.Id), "Library import must validate and atomically restore the backup.");
+    var missingBackupRejected = false;
+    try { await store.ImportAsync(Path.Combine(root, "missing.json")); }
+    catch (FileNotFoundException) { missingBackupRejected = true; }
+    Require(missingBackupRejected, "Missing library backups must be rejected.");
 
     var duplicateRejected = false;
     try { GameLibrary.Normalize(new[] { first, first }); }
