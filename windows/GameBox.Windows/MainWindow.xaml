@@ -48,6 +48,12 @@
                 </StackPanel>
             </Border>
         </Grid>
-        <TextBlock Grid.Row="3" Margin="0,16,0,0" Foreground="#718198" Text="Enter: Play selected   Ctrl+F: Search   Ctrl+O: Add game"/>
+        <DockPanel Grid.Row="3" Margin="0,16,0,0">
+            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                <Button Content="Back up library" Click="BackupLibrary_Click" AutomationProperties.Name="Back up Windows library"/>
+                <Button Content="Restore library" Click="RestoreLibrary_Click" Margin="10,0,0,0" AutomationProperties.Name="Restore Windows library"/>
+            </StackPanel>
+            <TextBlock Foreground="#718198" VerticalAlignment="Center" Text="Enter: Play selected   Ctrl+F: Search   Ctrl+O: Add game"/>
+        </DockPanel>
     </Grid>
 </Window>
