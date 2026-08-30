@@ -15,7 +15,7 @@ The development blueprint is guidance. Work proceeds in small, testable incremen
 - [ ] Physical controller check on Galaxy A53
 - [x] Per-tab game-card focus restoration, including off-screen LazyRow items
 - [x] Focus-memory policy unit tests
-- [ ] Compose navigation instrumentation tests
+- [x] Compose navigation instrumentation tests
 
 ## 0.2 - Persistent catalog shell
 
@@ -62,3 +62,14 @@ Browse -> details -> install an authorized test file -> verify -> Library -> lau
 ## 1.0 - Target hardware release
 
 Galaxy S23 Ultra and DeX validation, controller and HDMI reconnect tests, external-storage safety, soak testing, signed build, rollback procedure, and documented hardware handoff.
+
+
+## Latest verification
+
+- [x] Blueprint-aligned focus, hover, press, and elevation motion on game cards
+- [x] Optional HTTPS artwork and rich catalog metadata fields
+- [x] TheGamesDB metadata enrichment adapter (API key supplied out-of-band)
+- [x] Catalog artwork URL validation tests
+- [x] Clarified emulator content-handoff failure messaging
+
+Physical Galaxy/DeX/controller testing, production signing credentials, and enclosure validation remain hardware/deployment gates rather than locally verifiable code tasks.
