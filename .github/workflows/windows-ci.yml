@@ -28,11 +28,25 @@ jobs:
         run: dotnet run --project windows/GameBox.Windows.Core.Tests/GameBox.Windows.Core.Tests.csproj --configuration Release
       - name: Publish self-contained Windows companion
         run: dotnet publish windows/GameBox.Windows/GameBox.Windows.csproj --configuration Release --runtime win-x64 --self-contained true -p:PublishSingleFile=true -p:DebugType=None --output artifacts/GameBoxWindows
-      - name: Package and checksum
+      - name: Package and generate provenance manifest
         shell: pwsh
         run: |
           Compress-Archive -Path artifacts/GameBoxWindows/* -DestinationPath artifacts/GameBoxWindows-win-x64.zip
-          (Get-FileHash artifacts/GameBoxWindows-win-x64.zip -Algorithm SHA256).Hash.ToLowerInvariant() | Set-Content artifacts/GameBoxWindows-win-x64.zip.sha256
+          $archive = Get-Item artifacts/GameBoxWindows-win-x64.zip
+          $sha = (Get-FileHash $archive.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+          $sha | Set-Content artifacts/GameBoxWindows-win-x64.zip.sha256
+          [ordered]@{
+            schemaVersion = 1
+            artifact = $archive.Name
+            sha256 = $sha
+            sizeBytes = $archive.Length
+            runtime = "win-x64"
+            selfContained = $true
+            sourceCommit = "${{ github.sha }}"
+          } | ConvertTo-Json | Set-Content artifacts/GameBoxWindows-win-x64.manifest.json
+      - name: Validate Windows artifact provenance
+        shell: pwsh
+        run: scripts/validate-windows-artifact.ps1 -ArchivePath artifacts/GameBoxWindows-win-x64.zip -ChecksumPath artifacts/GameBoxWindows-win-x64.zip.sha256 -ManifestPath artifacts/GameBoxWindows-win-x64.manifest.json
       - name: Upload Windows companion
         uses: actions/upload-artifact@v7
         with:
@@ -40,6 +54,7 @@ jobs:
           path: |
             artifacts/GameBoxWindows-win-x64.zip
             artifacts/GameBoxWindows-win-x64.zip.sha256
+            artifacts/GameBoxWindows-win-x64.manifest.json
           if-no-files-found: error
           retention-days: 14
           compression-level: 0
