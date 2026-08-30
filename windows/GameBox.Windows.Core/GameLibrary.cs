@@ -44,6 +44,15 @@ public static class GameLibrary
         });
     }
 
+    public static bool ContainsLaunchTarget(IEnumerable<GameEntry> entries, string executablePath, string? exceptId = null)
+    {
+        ArgumentNullException.ThrowIfNull(entries);
+        var target = ValidateExecutablePath(executablePath);
+        return entries.Any(entry =>
+            !entry.Id.Equals(exceptId, StringComparison.OrdinalIgnoreCase) &&
+            ValidateExecutablePath(entry.ExecutablePath).Equals(target, StringComparison.OrdinalIgnoreCase));
+    }
+
     public static GameEntry Relocate(GameEntry entry, string executablePath)
     {
         ArgumentNullException.ThrowIfNull(entry);
