@@ -17,6 +17,10 @@ try
     Require(ordered[0].Id == first.Id, "Favorites must sort first.");
     Require(GameLibrary.Filter(ordered, "pc").Single().Id == second.Id, "Search must match platform.");
     Require(GameLibrary.Filter(ordered, "", favoritesOnly: true).Single().Id == first.Id, "Favorite filtering failed.");
+    var olderPlayed = first with { LastPlayedUtc = DateTimeOffset.UtcNow.AddHours(-2) };
+    var newerPlayed = second with { LastPlayedUtc = DateTimeOffset.UtcNow.AddMinutes(-5) };
+    Require(GameLibrary.Filter(new[] { olderPlayed, newerPlayed }, "", sort: LibrarySort.RecentlyPlayed)[0].Id == second.Id, "Recent sorting must place the newest launch first.");
+    Require(GameLibrary.Filter(new[] { first, newerPlayed }, "", sort: LibrarySort.RecentlyPlayed)[0].Id == second.Id, "Played entries must sort ahead of never-played entries.");
     Require(GameLibrary.IsLaunchTargetAvailable(first), "Existing launch targets must be available.");
     Require(GameLibrary.GetLaunchDirectory(first) == Path.GetFullPath(root), "Launch directory resolution failed.");
     Require(GameLibrary.ContainsLaunchTarget(ordered, firstPath), "Existing launch targets must be detected.");
