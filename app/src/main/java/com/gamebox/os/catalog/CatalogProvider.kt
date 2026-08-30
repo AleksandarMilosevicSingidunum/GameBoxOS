@@ -12,6 +12,18 @@ interface CatalogProvider {
     suspend fun load(): CatalogSnapshot
 }
 
+enum class CatalogFallbackReason {
+    NONE, OFFLINE, REMOTE_FAILURE
+}
+
+/**
+ * Optional status contract for provider decorators. The reason is consumed after each load
+ * so a previous degraded refresh cannot leak into a later successful one.
+ */
+interface CatalogFallbackStatus {
+    fun consumeFallbackReason(): CatalogFallbackReason
+}
+
 class AssetCatalogProvider(
     private val context: Context,
     private val parser: CatalogParser = CatalogParser(),
@@ -39,10 +51,31 @@ class ConfiguredCatalogProvider(
     private val remote: CatalogProvider,
     private val configuredUrl: suspend () -> String,
     private val networkAvailable: suspend () -> Boolean = { true }
-) : CatalogProvider {
+) : CatalogProvider, CatalogFallbackStatus {
+    private val fallbackReason = java.util.concurrent.atomic.AtomicReference(CatalogFallbackReason.NONE)
+
     override suspend fun load(): CatalogSnapshot {
-        return if (configuredUrl().isBlank() || !networkAvailable()) fallback.load() else remote.load()
+        val url = configuredUrl()
+        if (url.isBlank()) {
+            fallbackReason.set(CatalogFallbackReason.NONE)
+            return fallback.load()
+        }
+        if (!networkAvailable()) {
+            fallbackReason.set(CatalogFallbackReason.OFFLINE)
+            return fallback.load()
+        }
+        return try {
+            val snapshot = remote.load()
+            fallbackReason.set(CatalogFallbackReason.NONE)
+            snapshot
+        } catch (_: Exception) {
+            fallbackReason.set(CatalogFallbackReason.REMOTE_FAILURE)
+            fallback.load()
+        }
     }
+
+    override fun consumeFallbackReason(): CatalogFallbackReason =
+        fallbackReason.getAndSet(CatalogFallbackReason.NONE)
 }
 
 class HttpsCatalogProvider(
@@ -123,10 +156,16 @@ class HttpsCatalogProvider(
 class MetadataEnrichingCatalogProvider(
     private val base: CatalogProvider,
     private val enrich: suspend (Game) -> Game
-) : CatalogProvider {
+) : CatalogProvider, CatalogFallbackStatus {
     override suspend fun load(): CatalogSnapshot {
         val snapshot = base.load()
-        val enriched = snapshot.games.map { game -> enrich(game) }
+        val enriched = snapshot.games.map { game ->
+            runCatching { enrich(game) }.getOrDefault(game)
+        }
         return snapshot.copy(games = enriched)
     }
+
+    override fun consumeFallbackReason(): CatalogFallbackReason =
+        (base as? CatalogFallbackStatus)?.consumeFallbackReason()
+            ?: CatalogFallbackReason.NONE
 }
