@@ -48,7 +48,10 @@ internal fun RemoteArtwork(url: String?, modifier: Modifier = Modifier) {
             bitmap = bitmap!!.asImageBitmap(),
             contentDescription = null,
             contentScale = ContentScale.Crop,
-            modifier = modifier.alpha(0.34f)
+            // Blueprint artwork is a first-class surface, not a faint watermark.
+            // Screen-level gradients provide the contrast needed for readable text.
+            modifier = modifier.alpha(0.86f)
         )
     }
 }
+

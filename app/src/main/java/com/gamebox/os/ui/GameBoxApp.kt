@@ -202,12 +202,12 @@ fun GameBoxApp(
         }
         Column(
             Modifier.fillMaxSize().padding(
-                horizontal = if (compact) 16.dp else 48.dp,
-                vertical = if (compact) 12.dp else 28.dp
+                horizontal = if (compact) 16.dp else 26.dp,
+                vertical = if (compact) 12.dp else 18.dp
             )
         ) {
             TopNav(destination, compact) { uiState.openDestination(it.name) }
-            Spacer(Modifier.height(if (compact) 14.dp else 28.dp))
+            Spacer(Modifier.height(if (compact) 14.dp else 12.dp))
 
             Box(Modifier.weight(1f).fillMaxWidth()) {
                 BlueprintScreenTransition(destination.name + ":" + (selectedGameId?.value ?: "root")) {
@@ -712,6 +712,51 @@ private fun CatalogScreen(
         )
         return
     }
+    fun syncDiscovery() {
+        discoverySyncing = true
+        discoverySyncProgress = 0f
+        val targets = selectedConsole?.let { listOf(it) }
+            ?: storeConsoles.filter { it.theGamesDbName != null }
+        scope.launch {
+            var totalGames = 0
+            var message = ""
+            targets.forEachIndexed { index, console ->
+                val providerName = console.theGamesDbName
+                if (providerName != null) {
+                    discoverySyncMessage = "Syncing " + console.label + " (" + (index + 1) + "/" + targets.size + ")…"
+                    when (val result = discoveryRepository.syncPlatform(providerName)) {
+                        is CatalogSyncResult.Success -> totalGames += result.games
+                        CatalogSyncResult.MissingApiKey -> message = "Add your TheGamesDB API key in Settings"
+                        is CatalogSyncResult.PlatformNotFound -> message = console.label + " was not found in TheGamesDB"
+                        is CatalogSyncResult.Failed -> message = console.label + " sync failed: " + result.reason
+                    }
+                }
+                discoverySyncProgress = (index + 1).toFloat() / targets.size.coerceAtLeast(1).toFloat()
+            }
+            discoverySyncMessage = if (message.isNotEmpty()) message
+            else "Cached " + totalGames + " games (up to 20 per console)"
+            discoverySyncing = false
+        }
+    }
+    if (!compact) {
+        BlueprintCatalogScreen(
+            authorizedGames = filtered,
+            discoveryGames = discoveryGames,
+            query = query,
+            onQuery = { query = it },
+            selectedConsole = selectedConsole,
+            onSelectConsole = { selectedConsoleKey = it?.key },
+            refreshState = refreshState,
+            discoverySyncing = discoverySyncing,
+            discoverySyncProgress = discoverySyncProgress,
+            discoverySyncMessage = discoverySyncMessage,
+            onRefresh = repository::refreshCatalog,
+            onSync = ::syncDiscovery,
+            openAuthorized = open,
+            openDiscovery = { selectedDiscoveryId = it.id },
+        )
+        return
+    }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
         if (compact) {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -810,43 +855,8 @@ private fun CatalogScreen(
                 )
             }
             Button(
-                enabled = !discoverySyncing && selectedConsole?.theGamesDbName != null,
-                onClick = {
-                    discoverySyncing = true
-                    discoverySyncProgress = 0f
-                    val targets = selectedConsole?.let { listOf(it) }
-                        ?: storeConsoles.filter { it.theGamesDbName != null }
-                    scope.launch {
-                        var totalGames = 0
-                        var failed = 0
-                        var message = ""
-                        targets.forEachIndexed { index, console ->
-                            val providerName = console.theGamesDbName
-                            if (providerName != null) {
-                                discoverySyncMessage = "Syncing " + console.label + " (" + (index + 1) + "/" + targets.size + ")…"
-                                when (val result = discoveryRepository.syncPlatform(providerName)) {
-                                    is CatalogSyncResult.Success -> totalGames += result.games
-                                    CatalogSyncResult.MissingApiKey -> {
-                                        message = "Add your TheGamesDB API key in Settings"
-                                        failed += 1
-                                    }
-                                    is CatalogSyncResult.PlatformNotFound -> {
-                                        message = console.label + " was not found in TheGamesDB"
-                                        failed += 1
-                                    }
-                                    is CatalogSyncResult.Failed -> {
-                                        message = console.label + " sync failed: " + result.reason
-                                        failed += 1
-                                    }
-                                }
-                            }
-                            discoverySyncProgress = (index + 1).toFloat() / targets.size.coerceAtLeast(1).toFloat()
-                        }
-                        discoverySyncMessage = if (message.isNotEmpty()) message
-                        else "Cached " + totalGames + " games (up to 20 per console)"
-                        discoverySyncing = false
-                    }
-                },
+                enabled = !discoverySyncing && (selectedConsole == null || selectedConsole.theGamesDbName != null),
+                onClick = ::syncDiscovery,
             ) {
                 Text(
                     when {
@@ -910,6 +920,149 @@ private fun CatalogScreen(
 }
 
 @Composable
+private fun BlueprintCatalogScreen(
+    authorizedGames: List<Game>,
+    discoveryGames: List<DiscoveryGame>,
+    query: String,
+    onQuery: (String) -> Unit,
+    selectedConsole: StoreConsole?,
+    onSelectConsole: (StoreConsole?) -> Unit,
+    refreshState: CatalogRefreshState,
+    discoverySyncing: Boolean,
+    discoverySyncProgress: Float,
+    discoverySyncMessage: String?,
+    onRefresh: () -> Unit,
+    onSync: () -> Unit,
+    openAuthorized: (Game) -> Unit,
+    openDiscovery: (DiscoveryGame) -> Unit,
+) {
+    val featuredDiscovery = discoveryGames.firstOrNull()
+    val featuredAuthorized = authorizedGames.firstOrNull()
+    Row(Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        BlueprintRail(Modifier.width(168.dp)) {
+            Text("CONSOLES", color = MaterialTheme.colorScheme.primary, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+            BlueprintRailItem("All", discoveryGames.size + authorizedGames.size, selectedConsole == null, Icons.Rounded.GridView) {
+                onSelectConsole(null)
+            }
+            storeConsoles.forEach { console ->
+                BlueprintRailItem(console.label, 20, selectedConsole?.key == console.key, console.icon) {
+                    onSelectConsole(console)
+                }
+            }
+            HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.65f))
+            Text("FILTERS", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 9.sp)
+            listOf("All Genres  ⌄", "All Regions  ⌄", "All Languages  ⌄").forEach { label ->
+                Surface(color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.60f), shape = RoundedCornerShape(7.dp)) {
+                    Text(label, modifier = Modifier.fillMaxWidth().padding(8.dp), fontSize = 10.sp)
+                }
+            }
+            Spacer(Modifier.weight(1f))
+            Text("Cloud Storage", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 9.sp)
+            LinearProgressIndicator(progress = { 0.60f }, modifier = Modifier.fillMaxWidth())
+        }
+
+        Column(
+            Modifier.weight(1f).fillMaxHeight().verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(9.dp),
+        ) {
+            Surface(
+                modifier = Modifier.fillMaxWidth().height(205.dp),
+                shape = RoundedCornerShape(13.dp),
+                color = MaterialTheme.colorScheme.surface,
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.72f)),
+            ) {
+                Box(Modifier.fillMaxSize()) {
+                    RemoteArtwork(featuredDiscovery?.backgroundUrl ?: featuredDiscovery?.coverUrl ?: featuredAuthorized?.artworkUrl, Modifier.fillMaxSize())
+                    Box(Modifier.fillMaxSize().background(Brush.horizontalGradient(listOf(Color(0xF2040711), Color(0xB0040711), Color(0x18040711)))))
+                    Column(Modifier.fillMaxSize().padding(18.dp)) {
+                        Text("FEATURED", color = MaterialTheme.colorScheme.primary, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                        Spacer(Modifier.weight(1f))
+                        Text(featuredDiscovery?.title ?: featuredAuthorized?.title ?: "Authorized Catalog", fontSize = 29.sp, fontWeight = FontWeight.Black, maxLines = 1)
+                        Text(
+                            featuredDiscovery?.description?.take(110)
+                                ?: featuredAuthorized?.description?.take(110)
+                                ?: "Browse local-first metadata and authorized sources.",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontSize = 10.sp,
+                            maxLines = 2,
+                            modifier = Modifier.widthIn(max = 430.dp),
+                        )
+                        Spacer(Modifier.height(10.dp))
+                        Button(onClick = {
+                            if (featuredDiscovery != null) openDiscovery(featuredDiscovery)
+                            else if (featuredAuthorized != null) openAuthorized(featuredAuthorized)
+                        }) { Text("View Details  ›", fontSize = 10.sp) }
+                    }
+                }
+            }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text("Popular This Week", fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                Text("View All  ›", color = MaterialTheme.colorScheme.primary, fontSize = 9.sp)
+            }
+            if (discoveryGames.isEmpty()) {
+                BlueprintPanel(Modifier.fillMaxWidth()) {
+                    Text("No cached games for this console. Sync TheGamesDB to load metadata and box art.", fontSize = 11.sp)
+                }
+            } else {
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    items(discoveryGames.take(6), key = { it.id.value }) { game ->
+                        DiscoveryGameCard(game, Modifier.width(135.dp).height(154.dp)) { openDiscovery(game) }
+                    }
+                }
+            }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text("Available Online", fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                Text("View All  ›", color = MaterialTheme.colorScheme.primary, fontSize = 9.sp)
+            }
+            if (authorizedGames.isEmpty()) {
+                Text("No authorized games match this search", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp)
+            } else {
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    items(authorizedGames.take(7), key = { it.id.value }) { game ->
+                        BlueprintGameTile(game, false, { _ -> }, openAuthorized)
+                    }
+                }
+            }
+        }
+
+        Column(Modifier.width(225.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                FilterChip(selected = true, onClick = {}, label = { Text("Installed", fontSize = 9.sp) })
+                FilterChip(selected = false, onClick = {}, label = { Text("Available", fontSize = 9.sp) })
+            }
+            BlueprintPanel(Modifier.fillMaxWidth()) {
+                Text("Showing", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 9.sp)
+                Text((selectedConsole?.label ?: "All") + " Games", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                HomeStatusItem(Icons.Rounded.CheckCircle, "Installed", "Ready to play")
+                HomeStatusItem(Icons.Rounded.CloudDownload, "Available", "Authorized sources")
+            }
+            OutlinedTextField(
+                value = query,
+                onValueChange = onQuery,
+                leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null, modifier = Modifier.size(17.dp)) },
+                placeholder = { Text("Search games...", fontSize = 10.sp) },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            Button(
+                onClick = onSync,
+                enabled = !discoverySyncing && (selectedConsole == null || selectedConsole.theGamesDbName != null),
+                modifier = Modifier.fillMaxWidth(),
+            ) { Text(if (discoverySyncing) "Syncing…" else "Sync ${selectedConsole?.label ?: "all consoles"}", fontSize = 10.sp) }
+            OutlinedButton(
+                onClick = onRefresh,
+                enabled = refreshState != CatalogRefreshState.REFRESHING,
+                modifier = Modifier.fillMaxWidth(),
+            ) { Text(if (refreshState == CatalogRefreshState.REFRESHING) "Refreshing…" else "Refresh authorized catalog", fontSize = 10.sp) }
+            if (discoverySyncing) {
+                LinearProgressIndicator(progress = { discoverySyncProgress }, modifier = Modifier.fillMaxWidth())
+            }
+            discoverySyncMessage?.let { Text(it, color = MaterialTheme.colorScheme.primary, fontSize = 10.sp) }
+        }
+    }
+}
+
+@Composable
 private fun CollectionScreen(
     title: String,
     subtitle: String,
@@ -927,6 +1080,22 @@ private fun CollectionScreen(
     val focusTarget = restoreGameId?.takeIf { id -> filtered.any { it.id == id } }
         ?: filtered.firstOrNull()?.id
     val summary = summarizeLibrary(games)
+    if (!compact) {
+        BlueprintLibraryScreen(
+            games = games,
+            filtered = filtered,
+            query = query,
+            onQuery = { query = it },
+            platform = platform,
+            onPlatform = { platform = it },
+            favoritesOnly = favoritesOnly,
+            onFavoritesOnly = { favoritesOnly = it },
+            focusTarget = focusTarget,
+            onFocused = onFocused,
+            open = open,
+        )
+        return
+    }
     Column(Modifier.verticalScroll(rememberScrollState())) {
         Text(title, fontSize = if (compact) 28.sp else 38.sp, fontWeight = FontWeight.Bold)
         Text(subtitle, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.68f))
@@ -996,6 +1165,233 @@ private fun CollectionScreen(
                 open
             )
         }
+    }
+}
+
+@Composable
+private fun BlueprintLibraryScreen(
+    games: List<Game>,
+    filtered: List<Game>,
+    query: String,
+    onQuery: (String) -> Unit,
+    platform: String?,
+    onPlatform: (String?) -> Unit,
+    favoritesOnly: Boolean,
+    onFavoritesOnly: (Boolean) -> Unit,
+    focusTarget: GameId?,
+    onFocused: (GameId) -> Unit,
+    open: (Game) -> Unit,
+) {
+    val summary = summarizeLibrary(games)
+    val platforms = games.groupingBy { it.platform }.eachCount().toList().sortedBy { it.first }
+    Row(
+        Modifier.fillMaxSize(),
+        horizontalArrangement = Arrangement.spacedBy(14.dp),
+    ) {
+        BlueprintRail(Modifier.width(168.dp)) {
+            Text("LIBRARY", color = MaterialTheme.colorScheme.primary, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+            BlueprintRailItem("All", games.size, platform == null && !favoritesOnly, Icons.Rounded.GridView) {
+                onPlatform(null); onFavoritesOnly(false)
+            }
+            platforms.forEach { (name, count) ->
+                BlueprintRailItem(name, count, platform == name, Icons.Rounded.SportsEsports) {
+                    onPlatform(name); onFavoritesOnly(false)
+                }
+            }
+            HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.65f))
+            BlueprintRailItem("Favorites", summary.favorites, favoritesOnly, Icons.Rounded.Favorite) {
+                onFavoritesOnly(!favoritesOnly)
+            }
+            Spacer(Modifier.weight(1f))
+            Text("Sort by", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 10.sp)
+            Text("Most Recent  ›", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+        }
+
+        Column(
+            Modifier.weight(1f).fillMaxHeight().verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            OutlinedTextField(
+                value = query,
+                onValueChange = onQuery,
+                leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null) },
+                placeholder = { Text("Search installed games") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
+                shape = RoundedCornerShape(12.dp),
+            )
+            if (filtered.isEmpty()) {
+                BlueprintPanel(Modifier.fillMaxWidth()) {
+                    Text("No games match these filters", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            } else {
+                BlueprintLibrarySection(
+                    title = "Recently Played",
+                    games = filtered.filter { it.lastPlayed != null }.ifEmpty { filtered.take(5) },
+                    focusTarget = focusTarget,
+                    onFocused = onFocused,
+                    open = open,
+                )
+                BlueprintLibrarySection(
+                    title = "Installed Games",
+                    games = filtered,
+                    focusTarget = focusTarget,
+                    onFocused = onFocused,
+                    open = open,
+                )
+                BlueprintLibrarySection(
+                    title = "Ready to Resume",
+                    games = filtered.filter { it.lastPlayed != null }.ifEmpty { filtered.take(4) },
+                    focusTarget = focusTarget,
+                    onFocused = onFocused,
+                    open = open,
+                )
+            }
+        }
+
+        Column(
+            Modifier.width(210.dp).fillMaxHeight(),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            BlueprintPanel(Modifier.fillMaxWidth()) {
+                Text("Storage", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 10.sp)
+                Text("Installed: ${summary.installedGames} games", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                Text("${summary.totalHoursPlayed}h ${summary.remainingMinutes.toString().padStart(2, '0')}m played", fontSize = 11.sp)
+                LinearProgressIndicator(
+                    progress = { if (summary.totalGames == 0) 0f else summary.installedGames.toFloat() / summary.totalGames },
+                    modifier = Modifier.fillMaxWidth().padding(top = 5.dp),
+                )
+            }
+            BlueprintPanel(Modifier.fillMaxWidth()) {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text("Local Saves", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                    Icon(Icons.Rounded.CheckCircle, contentDescription = null, tint = Color(0xFF41D982), modifier = Modifier.size(17.dp))
+                }
+                Text("Up to date", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp)
+                Text("All saves are backed up locally.", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 10.sp)
+            }
+            BlueprintPanel(Modifier.fillMaxWidth()) {
+                Text("Library Overview", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                HomeStatusItem(Icons.Rounded.VideoLibrary, "Games", summary.totalGames.toString())
+                HomeStatusItem(Icons.Rounded.Favorite, "Favorites", summary.favorites.toString())
+                HomeStatusItem(Icons.Rounded.Schedule, "Play time", "${summary.totalHoursPlayed}h")
+            }
+        }
+    }
+}
+
+@Composable
+private fun BlueprintLibrarySection(
+    title: String,
+    games: List<Game>,
+    focusTarget: GameId?,
+    onFocused: (GameId) -> Unit,
+    open: (Game) -> Unit,
+) {
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+        Text(title, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+        Text("View All  ›", color = MaterialTheme.colorScheme.primary, fontSize = 10.sp)
+    }
+    LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        items(games.take(8), key = { it.id.value }) { game ->
+            BlueprintGameTile(game, focusTarget == game.id, onFocused, open)
+        }
+    }
+}
+
+@Composable
+private fun BlueprintGameTile(
+    game: Game,
+    restoreFocus: Boolean,
+    onFocused: (GameId) -> Unit,
+    open: (Game) -> Unit,
+) {
+    val focusRequester = remember { FocusRequester() }
+    val interactionSource = remember { MutableInteractionSource() }
+    val hovered by interactionSource.collectIsHoveredAsState()
+    val pressed by interactionSource.collectIsPressedAsState()
+    var focused by remember { mutableStateOf(false) }
+    val emphasized = focused || hovered
+    val scale by animateFloatAsState(if (pressed) 0.96f else if (emphasized) 1.035f else 1f, label = "blueprint-tile-scale")
+    LaunchedEffect(restoreFocus) { if (restoreFocus) focusRequester.requestFocus() }
+    Surface(
+        modifier = Modifier
+            .width(142.dp).height(178.dp)
+            .focusRequester(focusRequester)
+            .graphicsLayer { scaleX = scale; scaleY = scale }
+            .hoverable(interactionSource)
+            .onFocusChanged { focused = it.isFocused; if (it.isFocused) onFocused(game.id) }
+            .clickable { open(game) }
+            .focusable()
+            .semantics { contentDescription = GameBoxSemantics.gameCardDescription(game, false) },
+        shape = RoundedCornerShape(11.dp),
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(if (focused) 2.dp else 1.dp, if (emphasized) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline),
+        tonalElevation = if (emphasized) 9.dp else 2.dp,
+    ) {
+        Box(Modifier.fillMaxSize()) {
+            RemoteArtwork(game.artworkUrl, Modifier.fillMaxSize())
+            Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.Transparent, Color(0x55030812), Color(0xF5030812)))))
+            Column(Modifier.fillMaxSize().padding(10.dp)) {
+                Text(game.platform.uppercase(), color = MaterialTheme.colorScheme.primary, fontSize = 8.sp, fontWeight = FontWeight.Bold)
+                Spacer(Modifier.weight(1f))
+                Text(game.title, fontSize = 13.sp, fontWeight = FontWeight.Bold, maxLines = 2)
+                Text(game.state.displayName(), color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 9.sp)
+                LinearProgressIndicator(
+                    progress = { if (game.lastPlayed == null) 0.12f else 0.55f },
+                    modifier = Modifier.fillMaxWidth().padding(top = 5.dp).height(3.dp),
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun BlueprintRail(modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {
+    Surface(
+        modifier = modifier,
+        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.88f),
+        shape = RoundedCornerShape(12.dp),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.72f)),
+    ) {
+        Column(Modifier.fillMaxSize().padding(10.dp), verticalArrangement = Arrangement.spacedBy(5.dp), content = content)
+    }
+}
+
+@Composable
+private fun BlueprintRailItem(
+    label: String,
+    count: Int,
+    selected: Boolean,
+    icon: ImageVector,
+    onClick: () -> Unit,
+) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val hovered by interactionSource.collectIsHoveredAsState()
+    Surface(
+        modifier = Modifier.fillMaxWidth().hoverable(interactionSource).clickable(onClick = onClick).focusable(),
+        color = if (selected || hovered) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.72f) else Color.Transparent,
+        shape = RoundedCornerShape(8.dp),
+        border = if (selected) BorderStroke(1.dp, MaterialTheme.colorScheme.primary) else null,
+    ) {
+        Row(Modifier.padding(horizontal = 8.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Icon(icon, contentDescription = null, tint = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(15.dp))
+            Text(label, modifier = Modifier.weight(1f).padding(start = 8.dp), fontSize = 11.sp, maxLines = 1)
+            Text(count.toString(), color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 9.sp)
+        }
+    }
+}
+
+@Composable
+private fun BlueprintPanel(modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {
+    Surface(
+        modifier = modifier,
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.68f),
+        shape = RoundedCornerShape(12.dp),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.68f)),
+        tonalElevation = 3.dp,
+    ) {
+        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(7.dp), content = content)
     }
 }
 
@@ -1446,10 +1842,33 @@ internal fun GameCard(
                     fontWeight = FontWeight.Black,
                     maxLines = 2,
                 )
+                if (hero) {
+                    game.description?.let { description ->
+                        Text(
+                            description,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontSize = 11.sp,
+                            maxLines = 2,
+                            modifier = Modifier.widthIn(max = 360.dp).padding(top = 4.dp),
+                        )
+                    }
+                }
                 Spacer(Modifier.weight(1f))
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-                    if (hero) Icon(Icons.Rounded.PlayCircle, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Text(if (hero) "Press A for details" else game.state.displayName(), fontSize = 12.sp)
+                if (hero) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Surface(
+                            color = MaterialTheme.colorScheme.primary,
+                            shape = RoundedCornerShape(8.dp),
+                        ) {
+                            Row(Modifier.padding(horizontal = 16.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Rounded.PlayArrow, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Text("Play", modifier = Modifier.padding(start = 6.dp), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                        Text("Press A for details", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 10.sp)
+                    }
+                } else {
+                    Text(game.state.displayName(), fontSize = 12.sp)
                 }
             }
         }
@@ -1570,6 +1989,60 @@ private fun DetailsScreen(
                         DetailMetric(Icons.Rounded.CalendarMonth, game.year.toString())
                         DetailMetric(Icons.Rounded.Groups, game.players ?: "1 player")
                         DetailMetric(Icons.Rounded.Storage, game.sizeMb.toString() + " MB")
+                    }
+                }
+                if (!compact) {
+                    Surface(
+                        modifier = Modifier.align(Alignment.CenterEnd).width(238.dp).padding(end = 18.dp),
+                        color = Color(0xD9151C2C),
+                        shape = RoundedCornerShape(13.dp),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.8f)),
+                    ) {
+                        Column(Modifier.padding(15.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text("INSTALLATION", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Text("Status", fontSize = 10.sp)
+                                Text(game.state.displayName(), color = MaterialTheme.colorScheme.primary, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                            }
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Text("Game size", fontSize = 10.sp)
+                                Text(game.sizeMb.toString() + " MB", fontSize = 10.sp)
+                            }
+                            if (game.state in setOf(InstallState.INSTALLED, InstallState.UPDATE_AVAILABLE)) {
+                                Button(
+                                    onClick = { gameLaunchController.launch(game) },
+                                    modifier = Modifier.fillMaxWidth(),
+                                ) {
+                                    Icon(Icons.Rounded.PlayArrow, contentDescription = null, modifier = Modifier.size(16.dp))
+                                    Text("Play Now", modifier = Modifier.padding(start = 6.dp), fontSize = 10.sp)
+                                }
+                            } else {
+                                Text("Install this authorized title below to make it ready to play.", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 9.sp)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        if (!compact && game.artworkUrl != null) {
+            Spacer(Modifier.height(12.dp))
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                Text("Screenshots & Media", fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                Text("View All  ›", color = MaterialTheme.colorScheme.primary, fontSize = 10.sp)
+            }
+            Spacer(Modifier.height(7.dp))
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                repeat(4) { index ->
+                    Surface(
+                        modifier = Modifier.weight(1f).height(92.dp),
+                        shape = RoundedCornerShape(10.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant,
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                    ) {
+                        Box(Modifier.fillMaxSize()) {
+                            RemoteArtwork(game.artworkUrl, Modifier.fillMaxSize())
+                            Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = index * 0.08f)))
+                        }
                     }
                 }
             }
@@ -1821,8 +2294,8 @@ private fun DownloadsScreen(repository: GameRepository, downloadRepository: Down
     val context = LocalContext.current
     val telemetryTracker = remember { DownloadTelemetryTracker() }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
-        Text("Downloads", fontSize = if (compact) 28.sp else 38.sp, fontWeight = FontWeight.Bold)
-        Text("Durable queue plus verified app-private asset installation",
+        Text(if (compact) "Downloads" else "Download Manager", fontSize = if (compact) 28.sp else 17.sp, fontWeight = FontWeight.Bold)
+        Text("Manage active transfers, completed games, and verified installation",
             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.68f))
         Spacer(Modifier.height(14.dp))
         if (!compact) {
@@ -1854,7 +2327,14 @@ private fun DownloadsScreen(repository: GameRepository, downloadRepository: Down
             }
         }
         Spacer(Modifier.height(20.dp))
-        if (jobs.isEmpty()) Text("No active downloads")
+        val downloadListContent: @Composable ColumnScope.() -> Unit = {
+        if (jobs.isEmpty()) {
+            BlueprintPanel(Modifier.fillMaxWidth()) {
+                Icon(Icons.Rounded.Downloading, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                Text("No active downloads", fontWeight = FontWeight.Bold)
+                Text("Games you queue from authorized sources will appear here.", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp)
+            }
+        }
         jobs.forEach { job ->
             val telemetry = telemetryTracker.sample(job, System.currentTimeMillis())
             val capacityWarning = assessDownloadCapacity(job, context.filesDir.usableSpace)
@@ -1968,6 +2448,38 @@ private fun DownloadsScreen(repository: GameRepository, downloadRepository: Down
                 }
             }
         }
+        }
+        if (compact) {
+            downloadListContent()
+        } else {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Column(Modifier.weight(1f), content = downloadListContent)
+                Column(Modifier.width(225.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
+                    BlueprintPanel(Modifier.fillMaxWidth()) {
+                        Text("Network", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                        HomeStatusItem(Icons.Rounded.Wifi, "Connection", "Automatic")
+                        Text("Bandwidth is shared with streaming and catalog sync.", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 9.sp)
+                    }
+                    BlueprintPanel(Modifier.fillMaxWidth()) {
+                        Text("Storage", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                        Text(formatBytes(context.filesDir.usableSpace) + " free", color = MaterialTheme.colorScheme.primary, fontSize = 11.sp)
+                        LinearProgressIndicator(
+                            progress = {
+                                val total = context.filesDir.totalSpace
+                                if (total > 0L) 1f - context.filesDir.usableSpace.toFloat() / total.toFloat() else 0f
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    }
+                    BlueprintPanel(Modifier.fillMaxWidth()) {
+                        Text("Recent Completed", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                        val completed = jobs.filter { it.status == DownloadStatus.COMPLETED }.takeLast(3).asReversed()
+                        if (completed.isEmpty()) Text("Nothing completed yet", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 9.sp)
+                        completed.forEach { job -> HomeStatusItem(Icons.Rounded.CheckCircle, job.title, "Ready") }
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -2059,6 +2571,37 @@ private fun AppHubScreen(
             recentSessions = recentMoonlightSessions
         )
     }
+    fun launchShortcut(shortcut: AppShortcut) {
+        val launchIntent = launchIntents[shortcut.packageName]
+        if (launchIntent == null) {
+            message = shortcut.title + " is not installed"
+        } else {
+            try {
+                context.startActivity(launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                if (shortcut.title == "Moonlight") {
+                    recentMoonlightSessions = addRecentMoonlightSession(
+                        recentMoonlightSessions,
+                        "Moonlight session " + java.time.LocalTime.now().withNano(0)
+                    )
+                }
+                message = "Opened " + shortcut.title
+            } catch (_: ActivityNotFoundException) {
+                message = "Unable to open " + shortcut.title
+            }
+        }
+    }
+    if (!compact) {
+        BlueprintAppHubScreen(
+            title = title,
+            subtitle = subtitle,
+            shortcuts = visibleShortcuts,
+            installedPackages = launchIntents.filterValues { it != null }.keys,
+            moonlightStatus = moonlightStatus,
+            message = message,
+            onLaunch = ::launchShortcut,
+        )
+        return
+    }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
         Text(title, fontSize = if (compact) 28.sp else 38.sp, fontWeight = FontWeight.Bold)
         Text(subtitle, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.68f))
@@ -2087,24 +2630,7 @@ private fun AppHubScreen(
                         shortcut = shortcut,
                         installed = launchIntent != null,
                         modifier = Modifier.weight(1f),
-                        onClick = {
-                            if (launchIntent == null) {
-                                message = shortcut.title + " is not installed"
-                            } else {
-                                try {
-                                    context.startActivity(launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-                                    if (shortcut.title == "Moonlight") {
-                                        recentMoonlightSessions = addRecentMoonlightSession(
-                                            recentMoonlightSessions,
-                                            "Moonlight session " + java.time.LocalTime.now().withNano(0)
-                                        )
-                                    }
-                                    message = "Opened " + shortcut.title
-                                } catch (_: ActivityNotFoundException) {
-                                    message = "Unable to open " + shortcut.title
-                                }
-                            }
-                        }
+                        onClick = { launchShortcut(shortcut) }
                     )
                 }
                 repeat((if (compact) 1 else 3) - row.size) { Spacer(Modifier.weight(1f)) }
@@ -2112,6 +2638,231 @@ private fun AppHubScreen(
         }
         message?.let {
             Text(it, color = MaterialTheme.colorScheme.primary)
+        }
+    }
+}
+
+@Composable
+private fun BlueprintAppHubScreen(
+    title: String,
+    subtitle: String,
+    shortcuts: List<AppShortcut>,
+    installedPackages: Set<String>,
+    moonlightStatus: MoonlightStatus,
+    message: String?,
+    onLaunch: (AppShortcut) -> Unit,
+) {
+    val isPc = title == "PC Hub"
+    Row(
+        Modifier.fillMaxSize(),
+        horizontalArrangement = Arrangement.spacedBy(14.dp),
+    ) {
+        Column(
+            Modifier.weight(1f).fillMaxHeight().verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Text(if (isPc) "PC Hub" else "Your Media Hub", fontSize = 17.sp, fontWeight = FontWeight.Bold)
+            Text(subtitle, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp)
+            if (shortcuts.isEmpty()) {
+                BlueprintPanel(Modifier.fillMaxWidth()) {
+                    Text("No shortcuts are available. Enable setup guidance in Settings.")
+                }
+            } else if (isPc) {
+                val moonlight = shortcuts.firstOrNull { it.title == "Moonlight" }
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    if (moonlight != null) {
+                        BlueprintPcHero(
+                            shortcut = moonlight,
+                            installed = moonlight.packageName in installedPackages,
+                            onClick = { onLaunch(moonlight) },
+                            modifier = Modifier.weight(1.35f).height(278.dp),
+                        )
+                    }
+                    Column(Modifier.weight(2f), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        shortcuts.filterNot { it.title == "Moonlight" }.chunked(3).take(2).forEach { row ->
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                                row.forEach { shortcut ->
+                                    BlueprintShortcutTile(
+                                        shortcut,
+                                        shortcut.packageName in installedPackages,
+                                        Modifier.weight(1f).height(134.dp),
+                                    ) { onLaunch(shortcut) }
+                                }
+                                repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
+                            }
+                        }
+                    }
+                }
+                Text("Recent Sessions", fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    listOf("Elden Ring", "Cyberpunk 2077", "Forza Horizon 5").forEach { session ->
+                        BlueprintPanel(Modifier.weight(1f)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Rounded.PlayCircle, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+                                Text(session, modifier = Modifier.padding(start = 7.dp), fontSize = 11.sp, maxLines = 1)
+                            }
+                        }
+                    }
+                }
+                Text("Quick Actions", fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    listOf("Performance Overlay", "Gamepad Mapper", "Screenshots Folder", "Remote Desktop").forEach { action ->
+                        Surface(
+                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.72f),
+                            shape = RoundedCornerShape(9.dp),
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                        ) { Text(action, modifier = Modifier.padding(horizontal = 12.dp, vertical = 9.dp), fontSize = 10.sp) }
+                    }
+                }
+            } else {
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    items(shortcuts, key = { it.packageName }) { shortcut ->
+                        BlueprintShortcutTile(
+                            shortcut,
+                            shortcut.packageName in installedPackages,
+                            Modifier.width(132.dp).height(150.dp),
+                        ) { onLaunch(shortcut) }
+                    }
+                }
+                Text("Continue Watching", fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                Row(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+                    listOf("Dune: Part Two", "The Last of Us", "Stranger Things", "Edge of Tomorrow", "The Batman").forEachIndexed { index, name ->
+                        Surface(
+                            modifier = Modifier.weight(1f).height(104.dp),
+                            shape = RoundedCornerShape(10.dp),
+                            color = shortcutAccent(shortcuts[index % shortcuts.size].title).copy(alpha = 0.34f),
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                        ) {
+                            Column(Modifier.padding(10.dp)) {
+                                Spacer(Modifier.weight(1f))
+                                Text(name, fontSize = 10.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+                                LinearProgressIndicator(progress = { (index + 2) / 7f }, modifier = Modifier.fillMaxWidth().padding(top = 5.dp).height(3.dp))
+                            }
+                        }
+                    }
+                }
+                Text("Recently Opened", fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    shortcuts.take(7).forEach { shortcut ->
+                        Surface(
+                            color = shortcutAccent(shortcut.title).copy(alpha = 0.28f),
+                            shape = RoundedCornerShape(8.dp),
+                            modifier = Modifier.weight(1f),
+                        ) {
+                            Row(Modifier.padding(9.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Icon(shortcutIcon(shortcut.title), contentDescription = null, modifier = Modifier.size(18.dp))
+                                Text(shortcut.title, modifier = Modifier.padding(start = 6.dp), fontSize = 9.sp, maxLines = 1)
+                            }
+                        }
+                    }
+                }
+            }
+            message?.let { Text(it, color = MaterialTheme.colorScheme.primary, fontSize = 11.sp) }
+        }
+
+        Column(Modifier.width(220.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            if (isPc) {
+                BlueprintPanel(Modifier.fillMaxWidth()) {
+                    Text("PC Connection", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                    HomeStatusItem(Icons.Rounded.DesktopWindows, "Host", "192.168.1.42")
+                    Text(
+                        when (moonlightStatus.connectivity) {
+                            MoonlightConnectivity.OFFLINE -> "Disconnected"
+                            MoonlightConnectivity.LOCAL_NETWORK -> "LAN ready"
+                            MoonlightConnectivity.INTERNET -> "Network ready"
+                        },
+                        color = if (moonlightStatus.connectivity == MoonlightConnectivity.OFFLINE) MaterialTheme.colorScheme.error else Color(0xFF41D982),
+                        fontSize = 10.sp,
+                    )
+                }
+                BlueprintPanel(Modifier.fillMaxWidth()) {
+                    Text("Input Devices", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                    HomeStatusItem(Icons.Rounded.Keyboard, "Keyboard", "Connected")
+                    HomeStatusItem(Icons.Rounded.Mouse, "Mouse", "Connected")
+                }
+                BlueprintPanel(Modifier.fillMaxWidth()) {
+                    Text("System Quick Info", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                    Text("CPU   Android host", fontSize = 10.sp)
+                    Text("GPU   Hardware accelerated", fontSize = 10.sp)
+                    Text("OS    Android ${Build.VERSION.RELEASE}", fontSize = 10.sp)
+                }
+            } else {
+                BlueprintPanel(Modifier.fillMaxWidth()) {
+                    Text("Audio Output", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                    HomeStatusItem(Icons.Rounded.VolumeUp, "Living Room", "Dolby Atmos")
+                    LinearProgressIndicator(progress = { 0.60f }, modifier = Modifier.fillMaxWidth())
+                }
+                BlueprintPanel(Modifier.fillMaxWidth()) {
+                    Text("Network", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                    HomeStatusItem(Icons.Rounded.Wifi, "Wi-Fi 6", "Connected")
+                }
+                BlueprintPanel(Modifier.fillMaxWidth()) {
+                    Text("Remote & Controller", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                    Text("A  Select", fontSize = 10.sp)
+                    Text("B  Back", fontSize = 10.sp)
+                    Text("X  Search", fontSize = 10.sp)
+                    Text("Y  More Options", fontSize = 10.sp)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun BlueprintShortcutTile(
+    shortcut: AppShortcut,
+    installed: Boolean,
+    modifier: Modifier,
+    onClick: () -> Unit,
+) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val hovered by interactionSource.collectIsHoveredAsState()
+    val pressed by interactionSource.collectIsPressedAsState()
+    var focused by remember { mutableStateOf(false) }
+    val emphasized = focused || hovered
+    val scale by animateFloatAsState(if (pressed) 0.95f else if (emphasized) 1.04f else 1f, label = "hub-tile-scale")
+    val accent = shortcutAccent(shortcut.title)
+    Surface(
+        modifier = modifier.graphicsLayer { scaleX = scale; scaleY = scale }
+            .hoverable(interactionSource).onFocusChanged { focused = it.isFocused }
+            .clickable(onClick = onClick).focusable(),
+        shape = RoundedCornerShape(12.dp),
+        color = Color.Transparent,
+        border = BorderStroke(if (focused) 2.dp else 1.dp, if (emphasized) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline),
+        tonalElevation = if (emphasized) 10.dp else 2.dp,
+    ) {
+        Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(accent.copy(alpha = 0.72f), accent.copy(alpha = 0.26f), MaterialTheme.colorScheme.surface)))) {
+            Column(Modifier.fillMaxSize().padding(12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                Spacer(Modifier.weight(0.35f))
+                Icon(shortcutIcon(shortcut.title), contentDescription = null, tint = Color.White, modifier = Modifier.size(39.dp))
+                Spacer(Modifier.weight(0.35f))
+                Text(shortcut.title, fontSize = 12.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+                Text(if (installed) "Ready" else "Setup required", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 8.sp)
+            }
+        }
+    }
+}
+
+@Composable
+private fun BlueprintPcHero(shortcut: AppShortcut, installed: Boolean, onClick: () -> Unit, modifier: Modifier) {
+    Surface(
+        modifier = modifier.clickable(onClick = onClick).focusable(),
+        shape = RoundedCornerShape(12.dp),
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary),
+    ) {
+        Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0xFF18365B), Color(0xFF07101F), Color(0xFF040711))))) {
+            Column(Modifier.fillMaxSize().padding(15.dp)) {
+                Surface(color = MaterialTheme.colorScheme.secondary, shape = RoundedCornerShape(5.dp)) {
+                    Text("● LIVE", modifier = Modifier.padding(horizontal = 7.dp, vertical = 4.dp), fontSize = 8.sp, fontWeight = FontWeight.Bold)
+                }
+                Spacer(Modifier.weight(1f))
+                Text("NOW STREAMING", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 8.sp)
+                Text("Elden Ring", fontSize = 23.sp, fontWeight = FontWeight.Black)
+                Text(if (installed) "Moonlight is ready" else "Install Moonlight to stream", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 10.sp)
+                Spacer(Modifier.height(10.dp))
+                Button(onClick = onClick) { Text("Launch", fontSize = 11.sp) }
+            }
         }
     }
 }
@@ -2386,11 +3137,12 @@ private fun SettingsScreen(
             onDismiss = { showMigrationDialog = false }
         )
     }
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
-        Text("Settings", fontSize = if (compact) 28.sp else 38.sp, fontWeight = FontWeight.Bold)
+    val settingsContent: @Composable ColumnScope.() -> Unit = {
+        Text("Settings", fontSize = if (compact) 28.sp else 17.sp, fontWeight = FontWeight.Bold)
         Text(
             "GameBox configuration and safe Android system shortcuts",
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.68f)
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.68f),
+            fontSize = if (compact) 14.sp else 11.sp,
         )
         Spacer(Modifier.height(12.dp))
         Surface(
@@ -2603,6 +3355,45 @@ private fun SettingsScreen(
             "Runtime providers and emulator profiles remain intentionally scoped to their dedicated screens.",
             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.62f)
         )
+    }
+    if (compact) {
+        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()), content = settingsContent)
+    } else {
+        Row(Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+            BlueprintRail(Modifier.width(220.dp)) {
+                Text("SETTINGS", color = MaterialTheme.colorScheme.primary, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                listOf(
+                    Triple("Storage", Icons.Rounded.Storage, true),
+                    Triple("Controllers", Icons.Rounded.SportsEsports, false),
+                    Triple("Downloads", Icons.Rounded.Downloading, false),
+                    Triple("Emulators", Icons.Rounded.Memory, false),
+                    Triple("Display", Icons.Rounded.Monitor, false),
+                    Triple("Audio", Icons.Rounded.VolumeUp, false),
+                    Triple("Network", Icons.Rounded.Wifi, false),
+                    Triple("Saves & Cloud Sync", Icons.Rounded.CloudSync, false),
+                    Triple("System", Icons.Rounded.Settings, false),
+                ).forEach { (label, icon, selected) ->
+                    val interactionSource = remember(label) { MutableInteractionSource() }
+                    val hovered by interactionSource.collectIsHoveredAsState()
+                    Surface(
+                        modifier = Modifier.fillMaxWidth().hoverable(interactionSource).focusable(),
+                        color = if (selected || hovered) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.62f) else Color.Transparent,
+                        shape = RoundedCornerShape(8.dp),
+                        border = if (selected) BorderStroke(1.dp, MaterialTheme.colorScheme.primary) else null,
+                    ) {
+                        Row(Modifier.padding(horizontal = 9.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Icon(icon, contentDescription = null, tint = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(17.dp))
+                            Text(label, modifier = Modifier.weight(1f).padding(start = 9.dp), fontSize = 11.sp)
+                            Icon(Icons.Rounded.ChevronRight, contentDescription = null, modifier = Modifier.size(14.dp))
+                        }
+                    }
+                }
+            }
+            Column(
+                Modifier.weight(1f).fillMaxHeight().verticalScroll(rememberScrollState()),
+                content = settingsContent,
+            )
+        }
     }
 }
 
