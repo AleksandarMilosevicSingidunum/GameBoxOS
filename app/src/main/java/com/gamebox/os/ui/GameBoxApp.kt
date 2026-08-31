@@ -49,6 +49,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.gamebox.os.data.DownloadRepository
 import com.gamebox.os.data.GameRepository
+import com.gamebox.os.data.CatalogDiscoveryRepository
+import com.gamebox.os.data.DiscoveryGame
 import com.gamebox.os.domain.Game
 import com.gamebox.os.domain.GameId
 import com.gamebox.os.domain.DownloadStatus
@@ -74,6 +76,7 @@ import com.gamebox.os.storage.ExternalStorageController
 import com.gamebox.os.storage.ExternalStorageState
 import com.gamebox.os.settings.SettingsRepository
 import com.gamebox.os.catalog.validateAuthorizedCatalogUrl
+import com.gamebox.os.catalog.CatalogSyncResult
 import com.gamebox.os.diagnostics.DiagnosticsDevice
 import com.gamebox.os.diagnostics.DiagnosticEventCollector
 import com.gamebox.os.diagnostics.buildDiagnosticsReport
@@ -93,7 +96,8 @@ fun GameBoxApp(
     remoteDownloadController: RemoteDownloadController,
     gameLaunchController: GameLaunchController,
     saveSafetyController: SaveSafetyController,
-    settingsRepository: SettingsRepository
+    settingsRepository: SettingsRepository,
+    catalogDiscoveryRepository: CatalogDiscoveryRepository
 ) {
     val games by repository.observeGames().collectAsState()
     val uiState = rememberGameBoxUiState()
@@ -161,7 +165,7 @@ fun GameBoxApp(
                             compact
                         ) { uiState.openGame(it.id.value) }
                         Destination.STORE -> CatalogScreen(
-                            repository, games, restorableGameId, rememberGameFocus, compact
+                            repository, catalogDiscoveryRepository, games, restorableGameId, rememberGameFocus, compact
                         ) { uiState.openGame(it.id.value) }
                         Destination.DOWNLOADS -> DownloadsScreen(repository, downloadRepository, remoteDownloadController, compact)
                         Destination.MEDIA -> AppHubScreen(
@@ -411,6 +415,7 @@ private fun HomeStatusItem(label: String, value: String) {
 @Composable
 private fun CatalogScreen(
     repository: GameRepository,
+    discoveryRepository: CatalogDiscoveryRepository,
     games: List<Game>,
     restoreGameId: GameId?,
     onFocused: (GameId) -> Unit,
