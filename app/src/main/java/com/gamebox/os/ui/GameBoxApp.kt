@@ -782,7 +782,48 @@ private fun DiscoveryDetailsScreen(
     game: DiscoveryGame,
     onBack: () -> Unit,
     onFavorite: () -> Unit,
+    importer: AuthorizedRomImporter,
 ) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var importing by remember(game.id) { mutableStateOf(false) }
+    var importMessage by remember(game.id) { mutableStateOf<String?>(null) }
+    val importLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        if (uri == null) {
+            importMessage = "No file selected"
+        } else {
+            val displayName = runCatching {
+                context.contentResolver.query(
+                    uri,
+                    arrayOf(OpenableColumns.DISPLAY_NAME),
+                    null,
+                    null,
+                    null,
+                )?.use { cursor ->
+                    val index = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+                    if (index >= 0 && cursor.moveToFirst()) cursor.getString(index) else null
+                }
+            }.getOrNull() ?: uri.lastPathSegment ?: "game.rom"
+            importing = true
+            importMessage = "Importing and verifying " + displayName + "…"
+            scope.launch {
+                importMessage = when (val result = importer.import(game.id, uri, displayName)) {
+                    is RomImportResult.Imported ->
+                        "Authorized copy imported. SHA-1 " + result.hashes.sha1.take(12) + "…"
+                    RomImportResult.SourceUnavailable ->
+                        "The selected file could not be opened"
+                    is RomImportResult.Rejected ->
+                        "Import rejected: " + result.reason
+                    is RomImportResult.Failed ->
+                        "Import failed: " + result.reason
+                }
+                importing = false
+            }
+        }
+    }
+
     Column(
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(16.dp),
@@ -792,6 +833,35 @@ private fun DiscoveryDetailsScreen(
             OutlinedButton(onClick = onFavorite) {
                 Text(if (game.favorite) "Remove favorite" else "Add favorite")
             }
+            Button(
+                enabled = !importing,
+                onClick = {
+                    importLauncher.launch(
+                        arrayOf(
+                            "application/octet-stream",
+                            "application/zip",
+                            "application/x-7z-compressed",
+                            "application/x-cd-image",
+                        )
+                    )
+                },
+            ) {
+                Text(if (importing) "Importing…" else "Import authorized copy")
+            }
+        }
+        importMessage?.let { message ->
+            Text(
+                message,
+                color = if (message.startsWith("Import failed") || message.startsWith("Import rejected")) {
+                    MaterialTheme.colorScheme.error
+                } else {
+                    MaterialTheme.colorScheme.primary
+                },
+                modifier = Modifier.semantics {
+                    contentDescription = message
+                    liveRegion = LiveRegionMode.Polite
+                },
+            )
         }
         Row(
             Modifier.fillMaxWidth(),
@@ -816,7 +886,7 @@ private fun DiscoveryDetailsScreen(
                     label = { Text("Discover only") },
                 )
                 Text(
-                    "TheGamesDB supplies metadata and artwork only. Select an authorized local copy in the importer to install and play this game.",
+                    "TheGamesDB supplies metadata and artwork only. Select an authorized local copy to hash and store it in app-private storage.",
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.72f),
                 )
             }
