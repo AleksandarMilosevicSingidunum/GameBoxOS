@@ -1257,7 +1257,7 @@ private fun DiscoveryGameCard(
         tonalElevation = if (emphasized) 10.dp else 2.dp,
     ) {
         Box(Modifier.fillMaxSize()) {
-            RemoteArtwork(game.artworkUrl, Modifier.fillMaxSize())
+            RemoteArtwork(game.coverUrl ?: game.backgroundUrl, Modifier.fillMaxSize())
             Column(
                 Modifier.fillMaxSize().background(
                     Brush.verticalGradient(

@@ -68,7 +68,7 @@ internal object TheGamesDbCatalogParser {
             val year = releaseDate?.take(4)?.toIntOrNull()
             val images = artworkByGame?.get(providerId)?.let { imageElement ->
                 (imageElement as? JsonArray).orEmpty()
-            }
+            } ?: emptyList()
             val coverImage = images.firstOrNull { image ->
                 image.jsonObject.text("type").equals("boxart", ignoreCase = true) &&
                     (image.jsonObject.text("side")?.equals("front", ignoreCase = true) != false)
