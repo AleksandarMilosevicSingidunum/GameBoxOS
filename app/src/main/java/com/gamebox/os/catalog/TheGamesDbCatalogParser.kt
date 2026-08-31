@@ -7,6 +7,7 @@ import com.gamebox.os.domain.GameId
 import com.gamebox.os.domain.MetadataProviderId
 import com.gamebox.os.domain.normalizeCatalogTitle
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonArray
@@ -24,12 +25,22 @@ internal object TheGamesDbCatalogParser {
     fun parsePlatforms(payload: String, json: Json = Json { ignoreUnknownKeys = true }): List<CatalogPlatform> =
         runCatching {
             val root = json.parseToJsonElement(payload).jsonObject
-            root["data"]?.jsonObject?.get("platforms")?.jsonArray.orEmpty().mapNotNull { element ->
+            val platformElement = root["data"]?.jsonObject?.get("platforms")
+            val platformItems = when (platformElement) {
+                is JsonArray -> platformElement
+                // /Platforms returns an object keyed by numeric platform id, while
+                // some API variants return the same records as an array.
+                is JsonObject -> JsonArray(platformElement.values.toList())
+                else -> JsonArray(emptyList())
+            }
+            platformItems.mapNotNull { element ->
                 val item = element.jsonObject
                 val id = item.text("id") ?: return@mapNotNull null
                 val name = item.text("name")?.trim()?.takeIf { it.isNotEmpty() } ?: return@mapNotNull null
                 CatalogPlatform(
-                    id = normalizeCatalogTitle(name),
+                    // The API names this entry "Sony Playstation 2"; keep the
+                    // provider-neutral id stable so callers can request "PlayStation 2".
+                    id = normalizeCatalogTitle(name).removePrefix("sony"),
                     name = name,
                     externalIds = mapOf(MetadataProviderId.THE_GAMES_DB to id),
                 )

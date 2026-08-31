@@ -19,6 +19,16 @@ class TheGamesDbCatalogParserTest {
     }
 
     @Test
+    fun parsesTheGamesDbKeyedPlatformMapAndCanonicalizesSonyName() {
+        val payload = """{"data":{"platforms":{"11":{"id":11,"name":"Sony Playstation 2"},"3":{"id":3,"name":"Nintendo 64"}}}}"""
+
+        val platforms = TheGamesDbCatalogParser.parsePlatforms(payload)
+
+        assertEquals("playstation2", platforms.first { it.externalIds[MetadataProviderId.THE_GAMES_DB] == "11" }.id)
+        assertEquals("Nintendo 64", platforms.first { it.externalIds[MetadataProviderId.THE_GAMES_DB] == "3" }.name)
+    }
+
+    @Test
     fun parsesPagedMetadataOnlyCatalogWithHttpsArtwork() {
         val platform = TheGamesDbCatalogParser.parsePlatforms(
             """{"data":{"platforms":[{"id":11,"name":"PlayStation 2"}]}}"""
