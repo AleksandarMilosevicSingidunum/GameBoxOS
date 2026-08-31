@@ -43,6 +43,7 @@ interface AppContainer {
     val gameLaunchController: GameLaunchController
     val saveSafetyController: SaveSafetyController
     val catalogDiscoverySync: TheGamesDbCatalogSync
+    val catalogDiscoveryRepository: CatalogDiscoveryRepository
 }
 
 class DefaultAppContainer(context: Context) : AppContainer {
@@ -67,6 +68,9 @@ class DefaultAppContainer(context: Context) : AppContainer {
         transport = HttpsTheGamesDbCatalogTransport(),
         dao = database.catalogDiscoveryDao(),
     )
+
+    override val catalogDiscoveryRepository: CatalogDiscoveryRepository =
+        RoomCatalogDiscoveryRepository(database.catalogDiscoveryDao(), catalogDiscoverySync)
 
     private val catalogProvider = MetadataEnrichingCatalogProvider(
         base = configuredCatalogProvider,
