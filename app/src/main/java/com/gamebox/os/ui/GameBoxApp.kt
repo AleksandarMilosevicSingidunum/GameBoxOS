@@ -424,13 +424,13 @@ private fun CatalogScreen(
 ) {
     val refreshState by repository.observeCatalogRefreshState().collectAsState()
     val scope = rememberCoroutineScope()
+    var query by remember { mutableStateOf("") }
     val discoveryPlatforms by discoveryRepository.observePlatforms().collectAsState(initial = emptyList())
     var discoveryPlatformId by remember { mutableStateOf<String?>(null) }
     val discoveryGames by discoveryRepository.observeGames(discoveryPlatformId, query, 100)
         .collectAsState(initial = emptyList())
     var discoverySyncMessage by remember { mutableStateOf<String?>(null) }
     var discoverySyncing by remember { mutableStateOf(false) }
-    var query by remember { mutableStateOf("") }
     var platform by remember { mutableStateOf<String?>(null) }
     var genre by remember { mutableStateOf<String?>(null) }
     var favoritesOnly by remember { mutableStateOf(false) }
