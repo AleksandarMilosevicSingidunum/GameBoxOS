@@ -34,8 +34,10 @@ class LaunchAdapterTest {
 
     @Test fun galaxyPatrolDeclaresRequiredNesCore() {
         val game = Game(GameId("galaxy-patrol"), "Galaxy Patrol", "Retro", 2018, "Arcade", 1, InstallState.INSTALLED)
-        val message = EmulatorCapabilityRegistry().readinessMessage(game)
+        val registry = EmulatorCapabilityRegistry()
+        val message = registry.readinessMessage(game)
         assertEquals(true, message?.contains("FCEUmm"))
+        assertEquals("fceumm_libretro_android.so", registry.forGame(game)?.retroArchCoreFileName)
     }
 
     @Test fun registryExposesApprovedAdaptersForAdditionalPlatformGroups() {

@@ -109,7 +109,7 @@ Each CI run produces a temporary debug APK and SHA-256 artifact. Release APKs ar
 
 ### Galaxy Patrol storage and launch
 
-The bundled Galaxy Patrol NES content is installed under the app-private path `filesDir/installed/retro/galaxy-patrol/content/galaxy-patrol.nes`. It is intentionally not exposed as a public filesystem path. GameBox verifies the pinned SHA-256 before launch and shares the file to RetroArch only through a temporary, read-only `content://` URI. If automatic launch is rejected, use RetroArch’s **Load Content** flow and select the installed Galaxy Patrol entry from GameBox.
+The bundled Galaxy Patrol NES content is installed under the app-private path `filesDir/installed/retro/galaxy-patrol/content/galaxy-patrol.nes`. It is intentionally not exposed as a public filesystem path. GameBox verifies the pinned SHA-256 before launch, grants RetroArch a temporary read-only `content://` URI, and starts RetroArch's `RetroActivityFuture` with the installed `fceumm_libretro_android.so` core path. If automatic launch is rejected, open RetroArch's **Load Core** → **Nintendo - NES / Famicom (FCEUmm)**, then use **Load Content** and choose the Galaxy Patrol entry from GameBox. The core path is explicit because current Android RetroArch builds can otherwise open a black surface when an external launcher does not provide `LIBRETRO`.
 
 ### Online metadata and box art
 
