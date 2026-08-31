@@ -47,7 +47,20 @@ class TheGamesDbCatalogParserTest {
                   "boxart": {"thumb": "covers/42.jpg"}
                 }]
               },
-              "include": {"boxart": {"base_url": {"thumb": "https://cdn.example.com/thumb/"}}}
+              "include": {"boxart": {
+                "base_url": {
+                  "thumb": "https://cdn.example.com/thumb/",
+                  "medium": "https://cdn.example.com/medium/",
+                  "large": "https://cdn.example.com/large/",
+                  "original": "https://cdn.example.com/original/"
+                },
+                "data": {"42": [
+                  {"type":"boxart", "side":"front", "filename":"covers/42.jpg"},
+                  {"type":"screenshot", "filename":"screens/42.jpg"},
+                  {"type":"fanart", "filename":"fanart/42.jpg"},
+                  {"type":"clearlogo", "filename":"logos/42.png"}
+                ]}
+              }}
             }
         """.trimIndent()
 
@@ -56,6 +69,9 @@ class TheGamesDbCatalogParserTest {
         assertEquals(2, page.nextPage)
         assertEquals("tgdb-playstation2-42", page.games.single().id.value)
         assertEquals("https://cdn.example.com/thumb/covers/42.jpg", page.games.single().media.cover)
+        assertEquals("https://cdn.example.com/large/fanart/42.jpg", page.games.single().media.background)
+        assertEquals("https://cdn.example.com/original/logos/42.png", page.games.single().media.logo)
+        assertEquals(listOf("https://cdn.example.com/medium/screens/42.jpg"), page.games.single().media.screenshots)
     }
 
     @Test
@@ -63,7 +79,7 @@ class TheGamesDbCatalogParserTest {
         val platform = TheGamesDbCatalogParser.parsePlatforms(
             """{"data":{"platforms":[{"id":11,"name":"PlayStation 2"}]}}"""
         ).single()
-        val payload = """{"data":{"games":[{"id":1,"game_title":"Safe","boxart":{"thumb":"http://bad.example/a.jpg"}},{"id":2}]} }"""
+        val payload = """{"data":{"games":[{"id":1,"game_title":"Safe"},{"id":2}]},"include":{"boxart":{"base_url":{"thumb":"https://cdn.example.com/thumb/"},"data":{"1":[{"type":"boxart","filename":"http://bad.example/a.jpg"}]}}}}"""
 
         val page = TheGamesDbCatalogParser.parsePlatformPage(payload, platform)
 

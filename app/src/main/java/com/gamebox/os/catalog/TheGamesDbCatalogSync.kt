@@ -27,10 +27,12 @@ class TheGamesDbCatalogSync(
     private val transport: TheGamesDbCatalogTransport,
     private val dao: CatalogDiscoveryDao,
     private val maxPagesPerRun: Int = 100,
+    private val maxGamesPerPlatform: Int = 20,
     private val nowMillis: () -> Long = System::currentTimeMillis,
 ) {
     init {
         require(maxPagesPerRun in 1..1_000)
+        require(maxGamesPerPlatform in 1..500)
     }
 
     suspend fun syncPlatform(platformName: String): CatalogSyncResult {
@@ -56,6 +58,7 @@ class TheGamesDbCatalogSync(
                 )
                 val page = TheGamesDbCatalogParser.parsePlatformPage(payload, platform)
                 val updatedAt = nowMillis()
+                val pageGames = page.games.take(maxGamesPerPlatform - gameCount)
                 dao.upsertPage(
                     platform = CatalogPlatformEntity(
                         id = platform.id,
@@ -63,7 +66,7 @@ class TheGamesDbCatalogSync(
                         theGamesDbId = providerPlatformId,
                         updatedAtMillis = updatedAt,
                     ),
-                    games = page.games.map { game ->
+                    games = pageGames.map { game ->
                         CatalogGameEntity(
                             id = game.id.value,
                             title = game.title,
@@ -79,11 +82,12 @@ class TheGamesDbCatalogSync(
                             coverUrl = game.media.cover,
                             backgroundUrl = game.media.background,
                             logoUrl = game.media.logo,
+                            screenshotsJson = game.media.screenshots.take(12).joinToString("\n").ifBlank { null },
                             favorite = false,
                             updatedAtMillis = updatedAt,
                         )
                     },
-                    externalIds = page.games.mapNotNull { game ->
+                    externalIds = pageGames.mapNotNull { game ->
                         game.externalIds[MetadataProviderId.THE_GAMES_DB]?.let { externalId ->
                             CatalogExternalIdEntity(
                                 gameId = game.id.value,
@@ -94,7 +98,8 @@ class TheGamesDbCatalogSync(
                     },
                 )
                 pageCount += 1
-                gameCount += page.games.size
+                gameCount += pageGames.size
+                if (gameCount >= maxGamesPerPlatform) break
                 pageNumber = page.nextPage ?: break
             }
             CatalogSyncResult.Success(platform.id, pageCount, gameCount)

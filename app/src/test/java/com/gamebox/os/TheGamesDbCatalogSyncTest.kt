@@ -43,6 +43,32 @@ class TheGamesDbCatalogSyncTest {
     }
 
     @Test
+    fun capsEachPlatformSyncAtTwentyGames() = runBlocking {
+        val dao = RecordingCatalogDao()
+        val games = (1..25).joinToString(",") { id ->
+            """{"id":$id,"game_title":"Game $id"}"""
+        }
+        val transport = TheGamesDbCatalogTransport { uri ->
+            when {
+                uri.path.endsWith("/Platforms") ->
+                    """{"data":{"platforms":[{"id":11,"name":"PlayStation 2"}]}}"""
+                else -> """{"data":{"pages":{"current":1},"games":[$games]}}"""
+            }
+        }
+        val sync = TheGamesDbCatalogSync(
+            apiKey = { "key" },
+            transport = transport,
+            dao = dao,
+            maxGamesPerPlatform = 20,
+        )
+
+        val result = sync.syncPlatform("PlayStation 2")
+
+        assertEquals(CatalogSyncResult.Success("playstation2", 1, 20), result)
+        assertEquals((1..20).map { "Game $it" }, dao.games.map { it.title })
+    }
+
+    @Test
     fun missingKeyDoesNotTouchNetworkOrDatabase() = runBlocking {
         var requests = 0
         val dao = RecordingCatalogDao()
