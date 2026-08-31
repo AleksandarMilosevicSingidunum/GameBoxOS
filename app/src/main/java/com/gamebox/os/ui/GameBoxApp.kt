@@ -437,7 +437,7 @@ private fun CatalogScreen(
     val filtered = filterGames(games, query, platform, genre, favoritesOnly)
     val focusTarget = restoreGameId?.takeIf { id -> filtered.any { it.id == id } }
         ?: filtered.firstOrNull()?.id
-    Column {
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
         if (compact) {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Column {
