@@ -27,7 +27,8 @@ class MainActivity : ComponentActivity() {
                         container.gameLaunchController,
                         container.saveSafetyController,
                         container.settingsRepository,
-                        container.catalogDiscoveryRepository
+                        container.catalogDiscoveryRepository,
+                        container.authorizedRomImporter
                     )
                 }
             }
