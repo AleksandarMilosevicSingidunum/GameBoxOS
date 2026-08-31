@@ -37,6 +37,8 @@ object GameContentPolicy {
                 "chd" to "application/x-chd",
                 "gdi" to "application/x-dreamcast-gdi",
                 "cdi" to "application/x-discjuggler-cdi",
+                "cue" to "application/x-cue",
+                "bin" to "application/octet-stream",
             ),
         ),
         "psp" to PlatformPolicy(
@@ -52,6 +54,12 @@ object GameContentPolicy {
             extensions = mapOf(
                 "iso" to "application/x-iso9660-image",
                 "chd" to "application/x-chd",
+                "cso" to "application/x-compressed-iso",
+                "bin" to "application/octet-stream",
+                "cue" to "application/x-cue",
+                "mdf" to "application/octet-stream",
+                "mds" to "application/octet-stream",
+                "nrg" to "application/octet-stream",
             ),
         ),
         "gamecube" to PlatformPolicy(
@@ -60,6 +68,9 @@ object GameContentPolicy {
                 "rvz" to "application/x-dolphin-rvz",
                 "gcm" to "application/x-gamecube-rom",
                 "iso" to "application/x-iso9660-image",
+                "gcz" to "application/x-dolphin-gcz",
+                "wia" to "application/x-dolphin-wia",
+                "ciso" to "application/x-compressed-iso",
             ),
         ),
         "wii" to PlatformPolicy(
@@ -68,6 +79,32 @@ object GameContentPolicy {
                 "rvz" to "application/x-dolphin-rvz",
                 "wbfs" to "application/x-wbfs",
                 "iso" to "application/x-iso9660-image",
+                "gcz" to "application/x-dolphin-gcz",
+                "wia" to "application/x-dolphin-wia",
+                "wad" to "application/x-wii-wad",
+                "ciso" to "application/x-compressed-iso",
+            ),
+        ),
+        "3ds" to PlatformPolicy(
+            defaultExtension = "3ds",
+            extensions = mapOf(
+                "3ds" to "application/x-nintendo-3ds-rom",
+                "cci" to "application/x-nintendo-3ds-rom",
+                "cxi" to "application/x-nintendo-3ds-cxi",
+                "cia" to "application/x-nintendo-3ds-cia",
+                "3dsx" to "application/x-nintendo-3ds-homebrew",
+            ),
+        ),
+        "switch" to PlatformPolicy(
+            defaultExtension = "xci",
+            extensions = mapOf(
+                "xci" to "application/x-nintendo-switch-xci",
+                "xcz" to "application/x-nintendo-switch-xcz",
+                "nsp" to "application/x-nintendo-switch-nsp",
+                "nsz" to "application/x-nintendo-switch-nsz",
+                "nca" to "application/x-nintendo-switch-nca",
+                "nro" to "application/x-nintendo-switch-homebrew",
+                "nso" to "application/x-nintendo-switch-object",
             ),
         ),
         "retro" to PlatformPolicy(
@@ -96,9 +133,25 @@ object GameContentPolicy {
         ),
     )
 
+    private val aliases = mapOf(
+        "playstation" to "ps1",
+        "sonyplaystation" to "ps1",
+        "playstation2" to "ps2",
+        "sonyplaystation2" to "ps2",
+        "playstationportable" to "psp",
+        "sonyplaystationportable" to "psp",
+        "nintendogamecube" to "gamecube",
+        "nintendo64" to "n64",
+        "nintendowii" to "wii",
+        "nintendo3ds" to "3ds",
+        "nintendoswitch" to "switch",
+        "segadreamcast" to "dreamcast",
+    )
+
     fun describe(gameId: String, platform: String, sourceUrl: String?): GameContentDescriptor {
         require(gameId.matches(Regex("^[A-Za-z0-9._-]+$"))) { "Game ID is unsafe for storage" }
-        val policy = policies[platform.trim().lowercase()]
+        val normalizedPlatform = platform.lowercase().filter(Char::isLetterOrDigit)
+        val policy = policies[aliases[normalizedPlatform] ?: normalizedPlatform]
         val sourceExtension = sourceUrl
             ?.let(::safePathExtension)
             ?.takeIf { extension -> policy?.extensions?.containsKey(extension) == true }
@@ -119,3 +172,4 @@ object GameContentPolicy {
             .takeIf { it.matches(Regex("^[a-z0-9]{1,8}$")) }
     }.getOrNull()
 }
+

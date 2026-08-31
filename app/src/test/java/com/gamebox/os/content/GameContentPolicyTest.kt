@@ -60,6 +60,32 @@ class GameContentPolicyTest {
     }
 
     @Test
+    fun supportsSwitchAndNintendo3dsContentDescriptors() {
+        val switch = GameContentPolicy.describe(
+            "super-mario-odyssey",
+            "Nintendo Switch",
+            "https://cdn.example/legal-copy.xci",
+        )
+        val threeDs = GameContentPolicy.describe(
+            "portable-game",
+            "Nintendo 3DS",
+            "https://cdn.example/legal-copy.cia",
+        )
+        val playStation2 = GameContentPolicy.describe(
+            "racing-game",
+            "Sony PlayStation 2",
+            "https://cdn.example/legal-copy.chd",
+        )
+
+        assertEquals("remote/super-mario-odyssey/content.xci", switch.relativePath)
+        assertEquals("application/x-nintendo-switch-xci", switch.mimeType)
+        assertEquals("remote/portable-game/content.cia", threeDs.relativePath)
+        assertEquals("application/x-nintendo-3ds-cia", threeDs.mimeType)
+        assertEquals("remote/racing-game/content.chd", playStation2.relativePath)
+        assertEquals("application/x-chd", playStation2.mimeType)
+    }
+
+    @Test
     fun rejectsUnsafeGameIdsBeforeBuildingStoragePath() {
         assertThrows(IllegalArgumentException::class.java) {
             GameContentPolicy.describe("../outside", "PSP", "https://cdn.example/game.iso")
@@ -88,3 +114,4 @@ class GameContentPolicyTest {
         assertEquals("org.dolphinemu.dolphinemu", capability.packageName)
     }
 }
+

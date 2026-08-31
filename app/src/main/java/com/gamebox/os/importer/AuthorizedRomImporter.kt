@@ -33,9 +33,10 @@ class AuthorizedRomImporter(
         gameId: GameId,
         source: Uri,
         displayName: String,
+        platform: String? = null,
     ): RomImportResult = withContext(Dispatchers.IO) {
         val relativePath = runCatching {
-            RomImportPolicy.relativePath(gameId, displayName)
+            RomImportPolicy.relativePath(gameId, displayName, platform)
         }.getOrElse { return@withContext RomImportResult.Rejected(it.message ?: "Invalid game file") }
         val root = applicationContext.filesDir.resolve("imports").canonicalFile
         val target = File(applicationContext.filesDir, relativePath).canonicalFile
@@ -81,3 +82,4 @@ class AuthorizedRomImporter(
         }
     }
 }
+

@@ -35,6 +35,47 @@ class RomImporterTest {
     }
 
     @Test
+    fun acceptsSwitchXciAndOtherPlatformSpecificLegalCopyFormats() {
+        val cases = listOf(
+            Triple("nintendoswitch", "Super Mario Odyssey.xci", "super-mario-odyssey"),
+            Triple("nintendo3ds", "Portable Game.cia", "portable-game"),
+            Triple("nintendogamecube", "Adventure.rvz", "gamecube-adventure"),
+            Triple("nintendowii", "Sports.wbfs", "wii-sports"),
+            Triple("sonyplaystation2", "Racing.chd", "ps2-racing"),
+            Triple("sonyplaystationportable", "Portable.cso", "psp-portable"),
+            Triple("segadreamcast", "Arcade.gdi", "dreamcast-arcade"),
+        )
+
+        cases.forEach { (platform, fileName, gameId) ->
+            assertEquals(
+                "imports/$gameId/$fileName",
+                RomImportPolicy.relativePath(GameId(gameId), fileName, platform),
+            )
+        }
+    }
+
+    @Test
+    fun exposesFriendlyPlatformLabelsAndFormats() {
+        assertEquals("Nintendo Switch", RomImportPolicy.profileLabel("nintendoswitch"))
+        assertEquals(
+            setOf("xci", "xcz", "nsp", "nsz", "nca", "nro", "nso"),
+            RomImportPolicy.supportedExtensions("Nintendo Switch"),
+        )
+    }
+
+    @Test
+    fun rejectsAValidConsoleFormatWhenItDoesNotMatchTheSelectedPlatform() {
+        val error = assertThrows(IllegalArgumentException::class.java) {
+            RomImportPolicy.relativePath(GameId("portable-game"), "Portable.xci", "PSP")
+        }
+
+        assertEquals(
+            ".xci is not supported for PSP. Supported formats: .CSO, .ISO, .PBP",
+            error.message,
+        )
+    }
+
+    @Test
     fun rejectsTraversalAndUnsupportedTypes() {
         assertThrows(IllegalArgumentException::class.java) {
             RomImportPolicy.relativePath(GameId("../escape"), "game.iso")
@@ -44,3 +85,4 @@ class RomImporterTest {
         }
     }
 }
+
