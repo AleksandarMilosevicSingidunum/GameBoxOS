@@ -73,3 +73,59 @@ val MIGRATION_6_7 = object : Migration(6, 7) {
         database.execSQL("ALTER TABLE games ADD COLUMN region TEXT")
     }
 }
+
+
+val MIGRATION_7_8 = object : Migration(7, 8) {
+    override fun migrate(database: SupportSQLiteDatabase) {
+        database.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS catalog_platforms (
+                id TEXT NOT NULL PRIMARY KEY,
+                name TEXT NOT NULL,
+                theGamesDbId TEXT,
+                updatedAtMillis INTEGER NOT NULL
+            )
+            """.trimIndent()
+        )
+        database.execSQL("CREATE INDEX IF NOT EXISTS index_catalog_platforms_name ON catalog_platforms(name)")
+        database.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS catalog_games (
+                id TEXT NOT NULL PRIMARY KEY,
+                title TEXT NOT NULL,
+                normalizedTitle TEXT NOT NULL,
+                platformId TEXT NOT NULL,
+                region TEXT,
+                releaseDate TEXT,
+                description TEXT,
+                developer TEXT,
+                publisher TEXT,
+                players TEXT,
+                rating REAL,
+                coverUrl TEXT,
+                backgroundUrl TEXT,
+                logoUrl TEXT,
+                favorite INTEGER NOT NULL,
+                updatedAtMillis INTEGER NOT NULL
+            )
+            """.trimIndent()
+        )
+        database.execSQL("CREATE INDEX IF NOT EXISTS index_catalog_games_platformId ON catalog_games(platformId)")
+        database.execSQL("CREATE INDEX IF NOT EXISTS index_catalog_games_normalizedTitle ON catalog_games(normalizedTitle)")
+        database.execSQL("CREATE INDEX IF NOT EXISTS index_catalog_games_platformId_normalizedTitle ON catalog_games(platformId, normalizedTitle)")
+        database.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS catalog_external_ids (
+                gameId TEXT NOT NULL,
+                provider TEXT NOT NULL,
+                externalId TEXT NOT NULL,
+                PRIMARY KEY(gameId, provider)
+            )
+            """.trimIndent()
+        )
+        database.execSQL(
+            "CREATE UNIQUE INDEX IF NOT EXISTS index_catalog_external_ids_provider_externalId " +
+                "ON catalog_external_ids(provider, externalId)"
+        )
+    }
+}
