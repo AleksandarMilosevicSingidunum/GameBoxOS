@@ -7,6 +7,7 @@ import android.content.Intent
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.provider.Settings
+import android.provider.OpenableColumns
 import android.view.KeyEvent as AndroidKeyEvent
 import android.view.InputDevice
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -51,6 +52,8 @@ import com.gamebox.os.data.DownloadRepository
 import com.gamebox.os.data.GameRepository
 import com.gamebox.os.data.CatalogDiscoveryRepository
 import com.gamebox.os.data.DiscoveryGame
+import com.gamebox.os.importer.AuthorizedRomImporter
+import com.gamebox.os.importer.RomImportResult
 import com.gamebox.os.domain.Game
 import com.gamebox.os.domain.GameId
 import com.gamebox.os.domain.DownloadStatus
@@ -97,7 +100,8 @@ fun GameBoxApp(
     gameLaunchController: GameLaunchController,
     saveSafetyController: SaveSafetyController,
     settingsRepository: SettingsRepository,
-    catalogDiscoveryRepository: CatalogDiscoveryRepository
+    catalogDiscoveryRepository: CatalogDiscoveryRepository,
+    authorizedRomImporter: AuthorizedRomImporter
 ) {
     val games by repository.observeGames().collectAsState()
     val uiState = rememberGameBoxUiState()
@@ -165,7 +169,7 @@ fun GameBoxApp(
                             compact
                         ) { uiState.openGame(it.id.value) }
                         Destination.STORE -> CatalogScreen(
-                            repository, catalogDiscoveryRepository, games, restorableGameId, rememberGameFocus, compact
+                            repository, catalogDiscoveryRepository, authorizedRomImporter, games, restorableGameId, rememberGameFocus, compact
                         ) { uiState.openGame(it.id.value) }
                         Destination.DOWNLOADS -> DownloadsScreen(repository, downloadRepository, remoteDownloadController, compact)
                         Destination.MEDIA -> AppHubScreen(
@@ -416,6 +420,7 @@ private fun HomeStatusItem(label: String, value: String) {
 private fun CatalogScreen(
     repository: GameRepository,
     discoveryRepository: CatalogDiscoveryRepository,
+    authorizedRomImporter: AuthorizedRomImporter,
     games: List<Game>,
     restoreGameId: GameId?,
     onFocused: (GameId) -> Unit,
@@ -453,6 +458,7 @@ private fun CatalogScreen(
                     )
                 }
             },
+            importer = authorizedRomImporter,
         )
         return
     }
