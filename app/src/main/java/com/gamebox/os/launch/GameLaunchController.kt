@@ -24,7 +24,8 @@ data class EmulatorCapability(
     val mimeType: String,
     val expectedSha256: String,
     val graphicsProfile: String = "Balanced",
-    val requiredCore: String? = null
+    val requiredCore: String? = null,
+    val retroArchCoreFileName: String? = null,
 )
 
 class EmulatorCapabilityRegistry(
@@ -36,7 +37,8 @@ class EmulatorCapabilityRegistry(
             contentRelativePath = "retro/galaxy-patrol/content/galaxy-patrol.nes",
             mimeType = "application/x-nes-rom",
             expectedSha256 = "97c1757ffd6a5bc1a591809b2b0f8988741f61f6abd82889c148ecae8a2f471f",
-            requiredCore = "Nintendo - NES / Famicom (FCEUmm)"
+            requiredCore = "Nintendo - NES / Famicom (FCEUmm)",
+            retroArchCoreFileName = "fceumm_libretro_android.so",
         )
     )
 ) {
@@ -131,15 +133,23 @@ class AndroidPackageGateway(
             packageName = resolvedPackage,
             contentUri = uri.toString(),
             graphicsProfile = capability.graphicsProfile,
+            retroArchCorePath = capability.retroArchCoreFileName?.let { coreFileName ->
+                "/data/user/0/$resolvedPackage/cores/$coreFileName"
+            },
         )
         val intent = when (plan.style) {
             EmulatorIntentStyle.ACTION_VIEW -> Intent(Intent.ACTION_VIEW)
                 .setDataAndType(uri, capability.mimeType)
                 .setPackage(capability.packageName)
-            EmulatorIntentStyle.LAUNCHER_EXTRAS -> Intent(launcherIntent).apply {
-                clipData = ClipData.newRawUri("GameBox content", uri)
-                plan.stringExtras.forEach { (key, value) -> putExtra(key, value) }
-                plan.stringArrayExtras.forEach { (key, values) -> putExtra(key, values.toTypedArray()) }
+            EmulatorIntentStyle.LAUNCHER_EXTRAS -> {
+                val baseIntent = plan.activityClassName?.let { activityClassName ->
+                    Intent().setClassName(resolvedPackage, activityClassName)
+                } ?: launcherIntent
+                Intent(baseIntent).apply {
+                    clipData = ClipData.newRawUri("GameBox content", uri)
+                    plan.stringExtras.forEach { (key, value) -> putExtra(key, value) }
+                    plan.stringArrayExtras.forEach { (key, values) -> putExtra(key, values.toTypedArray()) }
+                }
             }
         }
             .putExtra("gamebox.graphics_profile", capability.graphicsProfile)

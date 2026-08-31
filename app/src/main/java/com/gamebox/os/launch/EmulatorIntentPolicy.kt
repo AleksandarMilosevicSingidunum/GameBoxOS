@@ -9,6 +9,7 @@ data class EmulatorIntentPlan(
     val stringExtras: Map<String, String> = emptyMap(),
     val stringArrayExtras: Map<String, List<String>> = emptyMap(),
     val graphicsProfileApplied: Boolean = false,
+    val activityClassName: String? = null,
 )
 
 object EmulatorIntentPolicy {
@@ -17,9 +18,16 @@ object EmulatorIntentPolicy {
     const val PPSSPP_ARGS = "org.ppsspp.ppsspp.Args"
     const val DOLPHIN_AUTO_START_FILES = "AutoStartFiles"
     const val RETROARCH_ROM = "ROM"
+    const val RETROARCH_CORE = "LIBRETRO"
+    const val RETROARCH_ACTIVITY = "com.retroarch.browser.retroactivity.RetroActivityFuture"
     private const val RETROARCH_PACKAGE = "com.retroarch"
 
-    fun plan(packageName: String, contentUri: String, graphicsProfile: String): EmulatorIntentPlan {
+    fun plan(
+        packageName: String,
+        contentUri: String,
+        graphicsProfile: String,
+        retroArchCorePath: String? = null,
+    ): EmulatorIntentPlan {
         require(packageName.isNotBlank()) { "Emulator package must not be blank" }
         val uri = runCatching { URI(contentUri) }.getOrNull()
         require(
@@ -35,7 +43,13 @@ object EmulatorIntentPolicy {
             packageName == RETROARCH_PACKAGE ||
                 packageName.startsWith(RETROARCH_PACKAGE + ".") -> EmulatorIntentPlan(
                     style = EmulatorIntentStyle.LAUNCHER_EXTRAS,
-                    stringExtras = mapOf(RETROARCH_ROM to contentUri),
+                    stringExtras = buildMap {
+                        put(RETROARCH_ROM, contentUri)
+                        retroArchCorePath?.trim()?.takeIf { it.isNotEmpty() }?.let {
+                            put(RETROARCH_CORE, it)
+                        }
+                    },
+                    activityClassName = RETROARCH_ACTIVITY,
                 )
             packageName == DOLPHIN_PACKAGE -> EmulatorIntentPlan(
                 style = EmulatorIntentStyle.LAUNCHER_EXTRAS,

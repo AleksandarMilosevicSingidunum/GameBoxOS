@@ -58,6 +58,16 @@ class EmulatorIntentPolicyTest {
 
         assertEquals(EmulatorIntentStyle.LAUNCHER_EXTRAS, plan.style)
         assertEquals(uri, plan.stringExtras[EmulatorIntentPolicy.RETROARCH_ROM])
+        assertEquals(EmulatorIntentPolicy.RETROARCH_ACTIVITY, plan.activityClassName)
+    }
+
+    @Test
+    fun retroArchCanReceiveAnExplicitInstalledCorePath() {
+        val corePath = "/data/user/0/com.retroarch.aarch64/cores/fceumm_libretro_android.so"
+        val plan = EmulatorIntentPolicy.plan("com.retroarch.aarch64", uri, "Balanced", corePath)
+
+        assertEquals(corePath, plan.stringExtras[EmulatorIntentPolicy.RETROARCH_CORE])
+        assertEquals(EmulatorIntentPolicy.RETROARCH_ACTIVITY, plan.activityClassName)
     }
 
     @Test
