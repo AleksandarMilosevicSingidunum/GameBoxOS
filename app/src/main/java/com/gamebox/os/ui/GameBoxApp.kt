@@ -753,6 +753,85 @@ internal fun filterGames(
 }
 
 @Composable
+private fun DiscoveryGameRow(games: List<DiscoveryGame>, compact: Boolean) {
+    LazyRow(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+        items(games, key = { it.id.value }) { game ->
+            DiscoveryGameCard(
+                game = game,
+                modifier = Modifier
+                    .width(if (compact) 190.dp else 230.dp)
+                    .height(if (compact) 190.dp else 220.dp),
+            )
+        }
+    }
+}
+
+@Composable
+private fun DiscoveryGameCard(game: DiscoveryGame, modifier: Modifier) {
+    var focused by remember { mutableStateOf(false) }
+    val interactionSource = remember { MutableInteractionSource() }
+    val hovered by interactionSource.collectIsHoveredAsState()
+    val emphasized = focused || hovered
+    val border by animateColorAsState(
+        if (emphasized) MaterialTheme.colorScheme.primary else Color.Transparent,
+        label = "discovery-focus",
+    )
+    val scale by animateFloatAsState(
+        if (emphasized) 1.025f else 1f,
+        label = "discovery-scale",
+    )
+    Surface(
+        modifier
+            .semantics {
+                contentDescription = game.title + ", " + game.platformId +
+                    ", discover only, import an authorized copy to play"
+            }
+            .onFocusChanged { focused = it.isFocused }
+            .graphicsLayer {
+                scaleX = scale
+                scaleY = scale
+            }
+            .hoverable(interactionSource)
+            .focusable(),
+        shape = RoundedCornerShape(18.dp),
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(if (focused) 3.dp else 1.dp, border),
+        tonalElevation = if (emphasized) 10.dp else 2.dp,
+    ) {
+        Box(Modifier.fillMaxSize()) {
+            RemoteArtwork(game.coverUrl, Modifier.fillMaxSize())
+            Column(
+                Modifier.fillMaxSize().background(
+                    MaterialTheme.colorScheme.surface.copy(alpha = 0.72f)
+                ).padding(16.dp)
+            ) {
+                Text(
+                    game.platformId.uppercase(),
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 11.sp,
+                )
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    (if (game.favorite) "★ " else "") + game.title,
+                    fontSize = 19.sp,
+                    fontWeight = FontWeight.Bold,
+                )
+                game.releaseDate?.let { Text(it.take(4), fontSize = 12.sp) }
+                Spacer(Modifier.weight(1f))
+                game.rating?.let { Text("Rating " + it, fontSize = 12.sp) }
+                Text(
+                    "Discover only — import your copy",
+                    color = MaterialTheme.colorScheme.tertiary,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.SemiBold,
+                )
+            }
+        }
+    }
+}
+
+@Composable
 private fun GameRow(
     games: List<Game>,
     restoreGameId: GameId?,
