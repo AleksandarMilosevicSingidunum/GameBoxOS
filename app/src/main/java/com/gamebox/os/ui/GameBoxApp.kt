@@ -4,6 +4,7 @@ import android.Manifest
 import android.content.ActivityNotFoundException
 import android.os.Build
 import android.content.Intent
+import android.net.Uri
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.provider.Settings
@@ -91,6 +92,7 @@ import com.gamebox.os.storage.ExternalStorageState
 import com.gamebox.os.settings.SettingsRepository
 import com.gamebox.os.catalog.validateAuthorizedCatalogUrl
 import com.gamebox.os.catalog.CatalogSyncResult
+import com.gamebox.os.catalog.legalSourceLinks
 import com.gamebox.os.diagnostics.DiagnosticsDevice
 import com.gamebox.os.diagnostics.DiagnosticEventCollector
 import com.gamebox.os.diagnostics.buildDiagnosticsReport
@@ -1073,6 +1075,9 @@ private fun DiscoveryDetailsScreen(
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    val legalSources = remember(game.title, game.platformId) {
+        legalSourceLinks(game.title, game.platformId)
+    }
     var importing by remember(game.id) { mutableStateOf(false) }
     var importMessage by remember(game.id) { mutableStateOf<String?>(null) }
     val importLauncher = rememberLauncherForActivityResult(
@@ -1134,6 +1139,30 @@ private fun DiscoveryDetailsScreen(
                 },
             ) {
                 Text(if (importing) "Importing…" else "Import authorized copy")
+            }
+        }
+        if (legalSources.isNotEmpty()) {
+            Text("Find a legal copy", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+            Text(
+                "GameBox can open an official storefront or homebrew source search. It never downloads copyrighted game files from third-party ROM sites.",
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.72f),
+            )
+            legalSources.forEach { source ->
+                OutlinedButton(
+                    onClick = {
+                        try {
+                            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(source.url)))
+                        } catch (_: ActivityNotFoundException) {
+                            importMessage = "No browser is available to open ${source.label}"
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Column(Modifier.fillMaxWidth()) {
+                        Text("Find on ${source.label}", fontWeight = FontWeight.SemiBold)
+                        Text(source.description, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
             }
         }
         importMessage?.let { message ->
@@ -2657,3 +2686,4 @@ private fun connectedControllerLabel(): String {
         }
     return controller?.name?.takeIf { it.isNotBlank() } ?: "Not connected"
 }
+
