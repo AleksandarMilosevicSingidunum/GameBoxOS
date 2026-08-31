@@ -1,14 +1,17 @@
 package com.gamebox.os.ui
 
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.Column
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.ProgressBarRangeInfo
 import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.gamebox.os.domain.DownloadJob
@@ -49,4 +52,21 @@ class AccessibilitySemanticsTest {
                 ProgressBarRangeInfo(0.5f, 0f..1f),
             ))
     }
+
+    @Test
+    fun blueprintBrandMarksComposeAsScalableUiAssets() {
+        composeRule.setContent {
+            Column {
+                GameBoxBrandMark(Modifier.testTag("gamebox-brand").size(32.dp))
+                ConsoleBrandMark("switch", selected = true, modifier = Modifier.testTag("console-brand").size(24.dp))
+                AppBrandMark("YouTube", Modifier.testTag("app-brand").size(40.dp))
+            }
+        }
+
+        val renders = SemanticsMatcher("brand mark renders") { true }
+        composeRule.onNodeWithTag("gamebox-brand").assert(renders)
+        composeRule.onNodeWithTag("console-brand").assert(renders)
+        composeRule.onNodeWithTag("app-brand").assert(renders)
+    }
 }
+

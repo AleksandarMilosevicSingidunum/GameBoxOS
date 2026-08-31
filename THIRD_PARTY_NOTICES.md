@@ -15,3 +15,12 @@ Permission is hereby granted, free of charge, to any person obtaining a copy of 
 The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE.
+
+## Product and service identifiers
+
+The console and application marks displayed by GameBox are simplified, code-native
+navigation identifiers drawn by this project. Product names and trademarks such as
+PlayStation, Nintendo, Xbox, Steam, Epic Games, YouTube, Netflix, Kodi, Jellyfin,
+Plex, Spotify, VLC, Twitch, Moonlight, Chrome, and Android belong to their respective
+owners. Their appearance does not imply sponsorship, endorsement, or affiliation.
+

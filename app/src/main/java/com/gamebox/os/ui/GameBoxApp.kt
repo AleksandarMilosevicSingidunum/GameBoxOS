@@ -351,24 +351,9 @@ private fun TopNav(selected: Destination, compact: Boolean, onSelect: (Destinati
 @Composable
 private fun GameBoxLogo(selected: Destination) {
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Box(
-            Modifier
-                .size(32.dp)
-                .background(
-                    Brush.linearGradient(
-                        listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.secondary)
-                    ),
-                    RoundedCornerShape(9.dp),
-                ),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(
-                Icons.Rounded.SportsEsports,
-                contentDescription = null,
-                tint = Color.White,
-                modifier = Modifier.size(20.dp),
-            )
-        }
+        GameBoxBrandMark(
+            Modifier.size(32.dp).semantics { contentDescription = "GameBox logo" }
+        )
         Spacer(Modifier.width(9.dp))
         Column {
             Text("GameBox", fontWeight = FontWeight.Black, fontSize = 20.sp)
@@ -577,10 +562,11 @@ private fun HomeQuickLaunchRow(openPc: () -> Unit) {
     Spacer(Modifier.height(8.dp))
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         listOf(
-            Triple("Desktop", Icons.Rounded.DesktopWindows, Color(0xFF5668E8)),
-            Triple("Steam Library", Icons.Rounded.SportsEsports, Color(0xFF2475D5)),
-            Triple("Epic Games", Icons.Rounded.Storefront, Color(0xFF2A3142)),
-        ).forEach { (label, icon, accent) ->
+            "Desktop" to Color(0xFF5668E8),
+            "Steam Library" to Color(0xFF2475D5),
+            "Xbox" to Color(0xFF238636),
+            "Epic Games" to Color(0xFF2A3142),
+        ).forEach { (label, accent) ->
             val interactionSource = remember(label) { MutableInteractionSource() }
             val hovered by interactionSource.collectIsHoveredAsState()
             val pressed by interactionSource.collectIsPressedAsState()
@@ -605,7 +591,7 @@ private fun HomeQuickLaunchRow(openPc: () -> Unit) {
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    Icon(icon, contentDescription = null, modifier = Modifier.size(18.dp))
+                    AppBrandMark(label, Modifier.size(20.dp))
                     Text(label, maxLines = 1, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                 }
             }
@@ -898,7 +884,13 @@ private fun CatalogScreen(
                 FilterChip(
                     selected = selectedConsoleKey == console.key,
                     onClick = { selectedConsoleKey = console.key },
-                    leadingIcon = { Icon(console.icon, contentDescription = null, modifier = Modifier.size(15.dp)) },
+                    leadingIcon = {
+                        ConsoleBrandMark(
+                            key = console.key,
+                            selected = selectedConsoleKey == console.key,
+                            modifier = Modifier.size(17.dp),
+                        )
+                    },
                     label = { Text(console.label) },
                 )
             }
@@ -945,7 +937,13 @@ private fun BlueprintCatalogScreen(
                 onSelectConsole(null)
             }
             storeConsoles.forEach { console ->
-                BlueprintRailItem(console.label, 20, selectedConsole?.key == console.key, console.icon) {
+                BlueprintRailItem(
+                    console.label,
+                    20,
+                    selectedConsole?.key == console.key,
+                    console.icon,
+                    brandKey = console.key,
+                ) {
                     onSelectConsole(console)
                 }
             }
@@ -1194,7 +1192,13 @@ private fun BlueprintLibraryScreen(
                 onPlatform(null); onFavoritesOnly(false)
             }
             platforms.forEach { (name, count) ->
-                BlueprintRailItem(name, count, platform == name, Icons.Rounded.SportsEsports) {
+                BlueprintRailItem(
+                    name,
+                    count,
+                    platform == name,
+                    Icons.Rounded.SportsEsports,
+                    brandKey = name,
+                ) {
                     onPlatform(name); onFavoritesOnly(false)
                 }
             }
@@ -1364,6 +1368,7 @@ private fun BlueprintRailItem(
     count: Int,
     selected: Boolean,
     icon: ImageVector,
+    brandKey: String? = null,
     onClick: () -> Unit,
 ) {
     val interactionSource = remember { MutableInteractionSource() }
@@ -1375,7 +1380,11 @@ private fun BlueprintRailItem(
         border = if (selected) BorderStroke(1.dp, MaterialTheme.colorScheme.primary) else null,
     ) {
         Row(Modifier.padding(horizontal = 8.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-            Icon(icon, contentDescription = null, tint = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(15.dp))
+            if (brandKey == null) {
+                Icon(icon, contentDescription = null, tint = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(15.dp))
+            } else {
+                ConsoleBrandMark(brandKey, selected, Modifier.size(16.dp))
+            }
             Text(label, modifier = Modifier.weight(1f).padding(start = 8.dp), fontSize = 11.sp, maxLines = 1)
             Text(count.toString(), color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 9.sp)
         }
@@ -2750,7 +2759,7 @@ private fun BlueprintAppHubScreen(
                             modifier = Modifier.weight(1f),
                         ) {
                             Row(Modifier.padding(9.dp), verticalAlignment = Alignment.CenterVertically) {
-                                Icon(shortcutIcon(shortcut.title), contentDescription = null, modifier = Modifier.size(18.dp))
+                                AppBrandMark(shortcut.title, Modifier.size(18.dp))
                                 Text(shortcut.title, modifier = Modifier.padding(start = 6.dp), fontSize = 9.sp, maxLines = 1)
                             }
                         }
@@ -2834,7 +2843,7 @@ private fun BlueprintShortcutTile(
         Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(accent.copy(alpha = 0.72f), accent.copy(alpha = 0.26f), MaterialTheme.colorScheme.surface)))) {
             Column(Modifier.fillMaxSize().padding(12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                 Spacer(Modifier.weight(0.35f))
-                Icon(shortcutIcon(shortcut.title), contentDescription = null, tint = Color.White, modifier = Modifier.size(39.dp))
+                AppBrandMark(shortcut.title, Modifier.size(39.dp))
                 Spacer(Modifier.weight(0.35f))
                 Text(shortcut.title, fontSize = 12.sp, fontWeight = FontWeight.Bold, maxLines = 1)
                 Text(if (installed) "Ready" else "Setup required", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 8.sp)
@@ -2852,6 +2861,7 @@ private fun BlueprintPcHero(shortcut: AppShortcut, installed: Boolean, onClick: 
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary),
     ) {
         Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0xFF18365B), Color(0xFF07101F), Color(0xFF040711))))) {
+            AppBrandMark("Moonlight", Modifier.align(Alignment.TopEnd).padding(15.dp).size(38.dp))
             Column(Modifier.fillMaxSize().padding(15.dp)) {
                 Surface(color = MaterialTheme.colorScheme.secondary, shape = RoundedCornerShape(5.dp)) {
                     Text("● LIVE", modifier = Modifier.padding(horizontal = 7.dp, vertical = 4.dp), fontSize = 8.sp, fontWeight = FontWeight.Bold)
@@ -2917,7 +2927,6 @@ private fun ShortcutCard(
     modifier: Modifier,
     onClick: () -> Unit
 ) {
-    val icon = shortcutIcon(shortcut.title)
     val accent = shortcutAccent(shortcut.title)
     var focused by remember { mutableStateOf(false) }
     val interactionSource = remember { MutableInteractionSource() }
@@ -2958,12 +2967,9 @@ private fun ShortcutCard(
                         shape = RoundedCornerShape(13.dp),
                         color = accent.copy(alpha = 0.92f),
                     ) {
-                        Icon(
-                            icon,
-                            contentDescription = null,
-                            tint = Color.White,
-                            modifier = Modifier.padding(10.dp).size(25.dp),
-                        )
+                        Box(Modifier.padding(10.dp).size(25.dp)) {
+                            AppBrandMark(shortcut.title, Modifier.fillMaxSize())
+                        }
                     }
                     Column {
                         Text(shortcut.title, fontSize = 19.sp, fontWeight = FontWeight.Bold)
@@ -2993,21 +2999,6 @@ private fun ShortcutCard(
             }
         }
     }
-}
-
-private fun shortcutIcon(title: String): ImageVector = when (title) {
-    "YouTube" -> Icons.Rounded.PlayArrow
-    "Netflix" -> Icons.Rounded.Movie
-    "Kodi" -> Icons.Rounded.SettingsInputComponent
-    "Jellyfin", "Plex" -> Icons.Rounded.PlayCircle
-    "Spotify" -> Icons.Rounded.MusicNote
-    "VLC", "Twitch" -> Icons.Rounded.LiveTv
-    "Moonlight" -> Icons.Rounded.Cloud
-    "Winlator" -> Icons.Rounded.DesktopWindows
-    "Termux" -> Icons.Rounded.Code
-    "Files" -> Icons.Rounded.Folder
-    "Chrome" -> Icons.Rounded.Language
-    else -> Icons.Rounded.Apps
 }
 
 private fun shortcutAccent(title: String): Color = when (title) {
