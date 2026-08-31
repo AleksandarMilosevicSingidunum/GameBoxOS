@@ -9,6 +9,8 @@ import com.gamebox.os.catalog.ConfiguredCatalogProvider
 import com.gamebox.os.catalog.HttpsCatalogProvider
 import com.gamebox.os.catalog.MetadataEnrichingCatalogProvider
 import com.gamebox.os.catalog.TheGamesDbMetadataClient
+import com.gamebox.os.catalog.TheGamesDbCatalogSync
+import com.gamebox.os.catalog.HttpsTheGamesDbCatalogTransport
 import com.gamebox.os.data.local.GameBoxDatabase
 import com.gamebox.os.data.local.MIGRATION_1_2
 import com.gamebox.os.data.local.MIGRATION_2_3
@@ -40,6 +42,7 @@ interface AppContainer {
     val remoteDownloadController: RemoteDownloadController
     val gameLaunchController: GameLaunchController
     val saveSafetyController: SaveSafetyController
+    val catalogDiscoverySync: TheGamesDbCatalogSync
 }
 
 class DefaultAppContainer(context: Context) : AppContainer {
@@ -59,6 +62,12 @@ class DefaultAppContainer(context: Context) : AppContainer {
         networkAvailable = { isNetworkAvailable(applicationContext) }
     )
     private val metadataClient = TheGamesDbMetadataClient(settingsRepository::theGamesDbApiKey)
+    override val catalogDiscoverySync = TheGamesDbCatalogSync(
+        apiKey = settingsRepository::theGamesDbApiKey,
+        transport = HttpsTheGamesDbCatalogTransport(),
+        dao = database.catalogDiscoveryDao(),
+    )
+
     private val catalogProvider = MetadataEnrichingCatalogProvider(
         base = configuredCatalogProvider,
         enrich = metadataClient::enrich,
