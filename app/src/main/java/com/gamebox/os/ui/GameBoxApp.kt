@@ -423,6 +423,13 @@ private fun CatalogScreen(
     open: (Game) -> Unit
 ) {
     val refreshState by repository.observeCatalogRefreshState().collectAsState()
+    val scope = rememberCoroutineScope()
+    val discoveryPlatforms by discoveryRepository.observePlatforms().collectAsState(initial = emptyList())
+    var discoveryPlatformId by remember { mutableStateOf<String?>(null) }
+    val discoveryGames by discoveryRepository.observeGames(discoveryPlatformId, query, 100)
+        .collectAsState(initial = emptyList())
+    var discoverySyncMessage by remember { mutableStateOf<String?>(null) }
+    var discoverySyncing by remember { mutableStateOf(false) }
     var query by remember { mutableStateOf("") }
     var platform by remember { mutableStateOf<String?>(null) }
     var genre by remember { mutableStateOf<String?>(null) }
@@ -509,8 +516,82 @@ private fun CatalogScreen(
             genre, { genre = it }, favoritesOnly, { favoritesOnly = it }
         )
         Spacer(Modifier.height(16.dp))
-        if (filtered.isEmpty()) Text("No games match these filters")
+        if (filtered.isEmpty()) Text("No authorized games match these filters")
         else GameRow(filtered, focusTarget, onFocused, compact, open)
+
+        Spacer(Modifier.height(20.dp))
+        HorizontalDivider()
+        Spacer(Modifier.height(14.dp))
+        Row(
+            Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+        ) {
+            Column {
+                Text("Discover with TheGamesDB", fontSize = if (compact) 22.sp else 28.sp, fontWeight = FontWeight.Bold)
+                Text(
+                    "Metadata only — import or attach an authorized copy to play",
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.68f),
+                )
+            }
+            Button(
+                enabled = !discoverySyncing,
+                onClick = {
+                    discoverySyncing = true
+                    discoverySyncMessage = "Synchronizing PlayStation 2 catalog…"
+                    scope.launch {
+                        discoverySyncMessage = when (
+                            val result = discoveryRepository.syncPlatform("PlayStation 2")
+                        ) {
+                            is CatalogSyncResult.Success ->
+                                "Cached " + result.games + " games from " + result.pages + " page(s)"
+                            CatalogSyncResult.MissingApiKey ->
+                                "Add your TheGamesDB API key in Settings"
+                            is CatalogSyncResult.PlatformNotFound ->
+                                "TheGamesDB platform was not found"
+                            is CatalogSyncResult.Failed ->
+                                "Catalog sync failed: " + result.reason
+                        }
+                        discoverySyncing = false
+                    }
+                },
+            ) { Text(if (discoverySyncing) "Syncing…" else "Sync PS2") }
+        }
+        discoverySyncMessage?.let { message ->
+            Text(
+                message,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.semantics {
+                    liveRegion = LiveRegionMode.Polite
+                    contentDescription = message
+                },
+            )
+        }
+        if (discoveryPlatforms.isNotEmpty()) {
+            Row(
+                Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                FilterChip(
+                    selected = discoveryPlatformId == null,
+                    onClick = { discoveryPlatformId = null },
+                    label = { Text("All discovery platforms") },
+                )
+                discoveryPlatforms.forEach { item ->
+                    FilterChip(
+                        selected = discoveryPlatformId == item.id,
+                        onClick = { discoveryPlatformId = item.id },
+                        label = { Text(item.name) },
+                    )
+                }
+            }
+        }
+        Spacer(Modifier.height(10.dp))
+        if (discoveryGames.isEmpty()) {
+            Text("No cached discovery games. Add an API key in Settings, then choose Sync PS2.")
+        } else {
+            DiscoveryGameRow(discoveryGames, compact)
+        }
     }
 }
 
