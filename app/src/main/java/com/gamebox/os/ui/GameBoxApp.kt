@@ -64,6 +64,7 @@ import com.gamebox.os.data.GameRepository
 import com.gamebox.os.data.CatalogDiscoveryRepository
 import com.gamebox.os.data.DiscoveryGame
 import com.gamebox.os.importer.AuthorizedRomImporter
+import com.gamebox.os.importer.RomImportPolicy
 import com.gamebox.os.importer.RomImportResult
 import com.gamebox.os.domain.Game
 import com.gamebox.os.domain.GameId
@@ -1483,6 +1484,12 @@ private fun DiscoveryDetailsScreen(
     val legalSources = remember(game.title, game.platformId) {
         legalSourceLinks(game.title, game.platformId)
     }
+    val importPlatformLabel = remember(game.platformId) {
+        RomImportPolicy.profileLabel(game.platformId)
+    }
+    val importFormats = remember(game.platformId) {
+        RomImportPolicy.supportedExtensionsLabel(game.platformId)
+    }
     var importing by remember(game.id) { mutableStateOf(false) }
     var importMessage by remember(game.id) { mutableStateOf<String?>(null) }
     val importLauncher = rememberLauncherForActivityResult(
@@ -1506,9 +1513,10 @@ private fun DiscoveryDetailsScreen(
             importing = true
             importMessage = "Importing and verifying " + displayName + "…"
             scope.launch {
-                importMessage = when (val result = importer.import(game.id, uri, displayName)) {
+                importMessage = when (val result = importer.import(game.id, uri, displayName, game.platformId)) {
                     is RomImportResult.Imported ->
-                        "Authorized copy imported. SHA-1 " + result.hashes.sha1.take(12) + "…"
+                        "$importPlatformLabel copy imported and verified. SHA-1 " +
+                            result.hashes.sha1.take(12) + "…"
                     RomImportResult.SourceUnavailable ->
                         "The selected file could not be opened"
                     is RomImportResult.Rejected ->
@@ -1533,19 +1541,25 @@ private fun DiscoveryDetailsScreen(
             Button(
                 enabled = !importing,
                 onClick = {
-                    importLauncher.launch(
-                        arrayOf(
-                            "application/octet-stream",
-                            "application/zip",
-                            "application/x-7z-compressed",
-                            "application/x-cd-image",
-                        )
-                    )
+                    // Console dumps are commonly reported as application/octet-stream or with
+                    // vendor-specific MIME types. Let the picker show all documents, then enforce
+                    // the platform-specific extension allowlist before reading any bytes.
+                    importLauncher.launch(arrayOf("*/*"))
                 },
             ) {
                 Text(if (importing) "Importing…" else "Import authorized copy")
             }
         }
+        Text(
+            "Accepted for $importPlatformLabel: $importFormats",
+            color = MaterialTheme.colorScheme.primary,
+            fontSize = 13.sp,
+        )
+        Text(
+            "Import copies and hashes your selected file in GameBox private storage. It does not provide console keys, firmware, game content, or an emulator; Play still requires a compatible emulator adapter installed on this device.",
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.72f),
+            fontSize = 12.sp,
+        )
         if (legalSources.isNotEmpty()) {
             Text("Find a legal copy", fontSize = 20.sp, fontWeight = FontWeight.Bold)
             Text(
