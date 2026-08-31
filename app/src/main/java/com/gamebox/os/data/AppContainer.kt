@@ -30,6 +30,7 @@ import com.gamebox.os.launch.EmulatorCapabilityRegistry
 import com.gamebox.os.launch.GameLaunchController
 import com.gamebox.os.storage.DefaultSaveSafetyController
 import com.gamebox.os.storage.SaveSafetyController
+import com.gamebox.os.importer.AuthorizedRomImporter
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -44,6 +45,7 @@ interface AppContainer {
     val saveSafetyController: SaveSafetyController
     val catalogDiscoverySync: TheGamesDbCatalogSync
     val catalogDiscoveryRepository: CatalogDiscoveryRepository
+    val authorizedRomImporter: AuthorizedRomImporter
 }
 
 class DefaultAppContainer(context: Context) : AppContainer {
@@ -55,6 +57,7 @@ class DefaultAppContainer(context: Context) : AppContainer {
         "gamebox.db"
     ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8).build()
     override val settingsRepository = SettingsRepository(applicationContext)
+    override val authorizedRomImporter = AuthorizedRomImporter(applicationContext)
     private val assetCatalogProvider = AssetCatalogProvider(applicationContext)
     private val configuredCatalogProvider = ConfiguredCatalogProvider(
         fallback = assetCatalogProvider,
