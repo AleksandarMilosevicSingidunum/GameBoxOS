@@ -13,8 +13,12 @@ import android.view.InputDevice
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -32,6 +36,9 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -40,6 +47,9 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.semantics.*
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.onPreviewKeyEvent
@@ -129,9 +139,42 @@ fun GameBoxApp(
                     else -> false
                 }
             }
-            .background(MaterialTheme.colorScheme.background)
+            .background(
+                Brush.verticalGradient(
+                    listOf(
+                        Color(0xFF040711),
+                        Color(0xFF07101F),
+                        Color(0xFF050812),
+                    )
+                )
+            )
     ) {
         val compact = maxWidth < 600.dp || maxHeight < 480.dp
+        if (!compact) {
+            Box(
+                Modifier
+                    .size(620.dp)
+                    .offset(x = (-260).dp, y = (-360).dp)
+                    .background(
+                        Brush.radialGradient(
+                            listOf(Color(0x335B8CFF), Color.Transparent)
+                        ),
+                        CircleShape,
+                    )
+            )
+            Box(
+                Modifier
+                    .size(520.dp)
+                    .align(Alignment.BottomEnd)
+                    .offset(x = 260.dp, y = 260.dp)
+                    .background(
+                        Brush.radialGradient(
+                            listOf(Color(0x248B5CF6), Color.Transparent)
+                        ),
+                        CircleShape,
+                    )
+            )
+        }
         Column(
             Modifier.fillMaxSize().padding(
                 horizontal = if (compact) 16.dp else 48.dp,
@@ -142,21 +185,22 @@ fun GameBoxApp(
             Spacer(Modifier.height(if (compact) 14.dp else 28.dp))
 
             Box(Modifier.weight(1f).fillMaxWidth()) {
-                val selected = selectedGameId?.let(repository::game)
-                if (selected != null) {
-                    DetailsScreen(
-                        selected,
-                        repository,
-                        downloadRepository,
-                        authorizedDownloadController,
-                        remoteDownloadController,
-                        gameLaunchController,
-                        saveSafetyController,
-                        compact = compact,
-                        onBack = uiState::clearSelection
-                    )
-                } else {
-                    when (destination) {
+                BlueprintScreenTransition(destination.name + ":" + (selectedGameId?.value ?: "root")) {
+                    val selected = selectedGameId?.let(repository::game)
+                    if (selected != null) {
+                        DetailsScreen(
+                            selected,
+                            repository,
+                            downloadRepository,
+                            authorizedDownloadController,
+                            remoteDownloadController,
+                            gameLaunchController,
+                            saveSafetyController,
+                            compact = compact,
+                            onBack = uiState::clearSelection
+                        )
+                    } else {
+                        when (destination) {
                         Destination.HOME -> HomeScreen(
                             games, restorableGameId, rememberGameFocus, compact,
                             openPc = { uiState.openDestination(Destination.PC.name) }
@@ -187,32 +231,50 @@ fun GameBoxApp(
                             settingsRepository
                         )
                         Destination.SETTINGS -> SettingsScreen(compact, settingsRepository, repository, downloadRepository)
+                        }
                     }
                 }
             }
 
             if (!compact) {
-                Spacer(Modifier.height(12.dp))
-                Text(
-                    "A Select    B Back    LB/RB Tabs    Menu Options",
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.62f),
-                    fontSize = 14.sp
-                )
+                Spacer(Modifier.height(10.dp))
+                ControllerFooter()
             }
         }
     }
 }
 
 @Composable
+private fun BlueprintScreenTransition(screenKey: String, content: @Composable () -> Unit) {
+    key(screenKey) {
+        var visible by remember { mutableStateOf(false) }
+        LaunchedEffect(Unit) { visible = true }
+        AnimatedVisibility(
+            visible = visible,
+            enter = fadeIn(tween(220)) + slideInVertically(tween(260)) { it / 20 },
+        ) {
+            Box(Modifier.fillMaxSize()) { content() }
+        }
+    }
+}
+
+@Composable
 private fun TopNav(selected: Destination, compact: Boolean, onSelect: (Destination) -> Unit) {
+    val now = remember { java.time.LocalDateTime.now() }
     if (compact) {
         Column {
-            Text(
-                "GAMEBOX",
-                color = MaterialTheme.colorScheme.primary,
-                fontWeight = FontWeight.Black,
-                fontSize = 22.sp
-            )
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                GameBoxLogo(selected)
+                Text(
+                    now.format(java.time.format.DateTimeFormatter.ofPattern("HH:mm")),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontSize = 13.sp,
+                )
+            }
             Spacer(Modifier.height(8.dp))
             Row(
                 Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
@@ -222,15 +284,74 @@ private fun TopNav(selected: Destination, compact: Boolean, onSelect: (Destinati
             }
         }
     } else {
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text(
-                "GAMEBOX",
-                color = MaterialTheme.colorScheme.primary,
-                fontWeight = FontWeight.Black,
-                fontSize = 28.sp,
-                modifier = Modifier.padding(end = 28.dp, top = 8.dp)
+        Row(
+            Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            GameBoxLogo(selected)
+            Row(
+                Modifier.weight(1f),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Destination.entries.forEach { item -> NavButton(item, selected, onSelect) }
+            }
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                Icon(Icons.Rounded.Search, contentDescription = "Search", modifier = Modifier.size(20.dp))
+                BadgedBox(
+                    badge = { Badge(containerColor = MaterialTheme.colorScheme.secondary) },
+                ) {
+                    Icon(Icons.Rounded.NotificationsNone, contentDescription = "Notifications", modifier = Modifier.size(20.dp))
+                }
+                Column(horizontalAlignment = Alignment.End) {
+                    Text(
+                        now.format(java.time.format.DateTimeFormatter.ofPattern("h:mm a")),
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 13.sp,
+                    )
+                    Text(
+                        now.format(java.time.format.DateTimeFormatter.ofPattern("EEE, MMM d")),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontSize = 10.sp,
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun GameBoxLogo(selected: Destination) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Box(
+            Modifier
+                .size(32.dp)
+                .background(
+                    Brush.linearGradient(
+                        listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.secondary)
+                    ),
+                    RoundedCornerShape(9.dp),
+                ),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                Icons.Rounded.SportsEsports,
+                contentDescription = null,
+                tint = Color.White,
+                modifier = Modifier.size(20.dp),
             )
-            Destination.entries.forEach { item -> NavButton(item, selected, onSelect) }
+        }
+        Spacer(Modifier.width(9.dp))
+        Column {
+            Text("GameBox", fontWeight = FontWeight.Black, fontSize = 20.sp)
+            Text(
+                "Step ${selected.ordinal + 1} · ${selected.title}",
+                color = MaterialTheme.colorScheme.primary,
+                fontSize = 9.sp,
+            )
         }
     }
 }
@@ -240,27 +361,95 @@ private fun NavButton(item: Destination, selected: Destination, onSelect: (Desti
     val interactionSource = remember { MutableInteractionSource() }
     val hovered by interactionSource.collectIsHoveredAsState()
     val pressed by interactionSource.collectIsPressedAsState()
-    val emphasized = item == selected || hovered
+    var focused by remember { mutableStateOf(false) }
+    val emphasized = item == selected || hovered || focused
     val scale by animateFloatAsState(
-        targetValue = if (pressed) 0.94f else if (emphasized) 1.04f else 1f,
+        targetValue = if (pressed) 0.95f else if (emphasized) 1.035f else 1f,
         label = "nav-scale"
     )
-    Button(
-        onClick = { onSelect(item) },
-        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp),
-        colors = ButtonDefaults.buttonColors(
-            containerColor = if (item == selected) MaterialTheme.colorScheme.primary
-            else MaterialTheme.colorScheme.surface
-        ),
+    val border by animateColorAsState(
+        if (emphasized) MaterialTheme.colorScheme.primary else Color.Transparent,
+        label = "nav-border",
+    )
+    Surface(
+        color = if (item == selected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.72f)
+            else Color.Transparent,
+        shape = RoundedCornerShape(18.dp),
+        border = BorderStroke(1.dp, border),
         modifier = Modifier
             .graphicsLayer { scaleX = scale; scaleY = scale }
             .hoverable(interactionSource)
+            .onFocusChanged { focused = it.isFocused }
+            .clickable { onSelect(item) }
+            .focusable()
             .semantics {
                 contentDescription = item.title + " tab"
                 role = Role.Tab
                 this.selected = item == selected
             }
-    ) { Text(item.title, maxLines = 1) }
+    ) {
+        Row(
+            Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(destinationIcon(item), contentDescription = null, modifier = Modifier.size(16.dp))
+            Text(item.title, maxLines = 1, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+        }
+    }
+}
+
+private fun destinationIcon(item: Destination): ImageVector = when (item) {
+    Destination.HOME -> Icons.Rounded.Home
+    Destination.LIBRARY -> Icons.Rounded.VideoLibrary
+    Destination.STORE -> Icons.Rounded.Storefront
+    Destination.DOWNLOADS -> Icons.Rounded.Download
+    Destination.MEDIA -> Icons.Rounded.Movie
+    Destination.PC -> Icons.Rounded.DesktopWindows
+    Destination.SETTINGS -> Icons.Rounded.Settings
+}
+
+@Composable
+private fun ControllerFooter() {
+    Row(
+        Modifier.fillMaxWidth().height(34.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+            ControllerHint("A", "Select", Color(0xFF78D64B))
+            ControllerHint("B", "Back", Color(0xFFFF4D5E))
+            ControllerHint("X", "Search", Color(0xFF3C8DFF))
+            ControllerHint("Y", "Options", Color(0xFFFFC43D))
+            Text("LB/RB  Change tab", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp)
+        }
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Icon(
+                Icons.Rounded.AccountCircle,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(25.dp),
+            )
+            Column {
+                Text("Player One", fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                Text("Level 24", fontSize = 9.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            Icon(Icons.Rounded.AutoAwesome, contentDescription = null, tint = MaterialTheme.colorScheme.secondary, modifier = Modifier.size(14.dp))
+            Text("3,450", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 10.sp)
+        }
+    }
+}
+
+@Composable
+private fun ControllerHint(letter: String, label: String, color: Color) {
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+        Surface(shape = CircleShape, color = color, modifier = Modifier.size(17.dp)) {
+            Box(contentAlignment = Alignment.Center) {
+                Text(letter, color = Color(0xFF050812), fontSize = 9.sp, fontWeight = FontWeight.Black)
+            }
+        }
+        Text(label, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp)
+    }
 }
 
 @Composable
@@ -293,10 +482,10 @@ private fun HomeScreen(
     val used = (storage.totalSpace - storage.usableSpace).coerceAtLeast(0L)
     val usedPercent = if (storage.totalSpace > 0L) (used * 100L / storage.totalSpace).toInt() else 0
 
-    Column(Modifier.fillMaxWidth()) {
-        Text("Good evening", color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.68f))
-        Text("Ready to play?", fontSize = if (compact) 30.sp else 42.sp, fontWeight = FontWeight.Bold)
-        Spacer(Modifier.height(if (compact) 16.dp else 20.dp))
+    Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState())) {
+        Text("WELCOME BACK", color = MaterialTheme.colorScheme.primary, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+        Text("Continue Playing", fontSize = if (compact) 28.sp else 34.sp, fontWeight = FontWeight.Bold)
+        Spacer(Modifier.height(if (compact) 14.dp else 16.dp))
         if (compact) {
             GameCard(
                 hero,
@@ -316,7 +505,7 @@ private fun HomeScreen(
                 Column(Modifier.weight(1f)) {
                     GameCard(
                         hero,
-                        Modifier.fillMaxWidth().height(188.dp),
+                        Modifier.fillMaxWidth().height(230.dp),
                         hero = true,
                         restoreFocus = focusTarget == hero.id,
                         onFocused = onFocused
@@ -362,7 +551,11 @@ private fun HomeQuickLaunchRow(openPc: () -> Unit) {
     Text("Quick launch", fontSize = 16.sp, fontWeight = FontWeight.Bold)
     Spacer(Modifier.height(8.dp))
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        listOf("Desktop", "Steam Library", "Epic Games").forEach { label ->
+        listOf(
+            Triple("Desktop", Icons.Rounded.DesktopWindows, Color(0xFF5668E8)),
+            Triple("Steam Library", Icons.Rounded.SportsEsports, Color(0xFF2475D5)),
+            Triple("Epic Games", Icons.Rounded.Storefront, Color(0xFF2A3142)),
+        ).forEach { (label, icon, accent) ->
             val interactionSource = remember(label) { MutableInteractionSource() }
             val hovered by interactionSource.collectIsHoveredAsState()
             val pressed by interactionSource.collectIsPressedAsState()
@@ -370,16 +563,27 @@ private fun HomeQuickLaunchRow(openPc: () -> Unit) {
                 targetValue = if (pressed) 0.95f else if (hovered) 1.035f else 1f,
                 label = "quick-launch-scale"
             )
-            OutlinedButton(
+            Surface(
+                color = accent.copy(alpha = 0.82f),
+                shape = RoundedCornerShape(12.dp),
+                border = BorderStroke(1.dp, Color.White.copy(alpha = 0.10f)),
                 onClick = openPc,
-                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
                 modifier = Modifier
                     .graphicsLayer { scaleX = scale; scaleY = scale }
                     .hoverable(interactionSource)
                     .semantics {
                         contentDescription = "Quick launch $label; opens PC Hub"
                     }
-            ) { Text(label, maxLines = 1) }
+            ) {
+                Row(
+                    Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Icon(icon, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Text(label, maxLines = 1, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                }
+            }
         }
     }
 }
@@ -392,27 +596,39 @@ private fun HomeStatusPanel(
     controllerLabel: String,
 ) {
     Surface(
-        color = MaterialTheme.colorScheme.surfaceVariant,
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.86f),
         shape = RoundedCornerShape(16.dp),
-        modifier = Modifier.width(230.dp).semantics {
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.70f)),
+        tonalElevation = 6.dp,
+        modifier = Modifier.width(250.dp).semantics {
             contentDescription = "Device status: storage $storagePercent percent used, network $networkLabel, device $deviceModel"
         }
     ) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text("Device status", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
-            HomeStatusItem("Storage", "$storagePercent% used")
-            HomeStatusItem("Network", networkLabel)
-            HomeStatusItem("Controller", controllerLabel)
-            HomeStatusItem("Device", deviceModel)
+            HomeStatusItem(Icons.Rounded.Storage, "Storage", "$storagePercent% used")
+            HomeStatusItem(Icons.Rounded.Wifi, "Network", networkLabel)
+            HomeStatusItem(Icons.Rounded.SportsEsports, "Controller", controllerLabel)
+            HomeStatusItem(Icons.Rounded.Smartphone, "Device", deviceModel)
         }
     }
 }
 
 @Composable
-private fun HomeStatusItem(label: String, value: String) {
-    Column {
-        Text(label, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.62f))
-        Text(value, fontWeight = FontWeight.SemiBold)
+private fun HomeStatusItem(icon: ImageVector, label: String, value: String) {
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        Surface(shape = RoundedCornerShape(9.dp), color = MaterialTheme.colorScheme.primaryContainer) {
+            Icon(
+                icon,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(7.dp).size(17.dp),
+            )
+        }
+        Column {
+            Text(label, fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(value, fontWeight = FontWeight.SemiBold, fontSize = 12.sp, maxLines = 1)
+        }
     }
 }
 
@@ -958,7 +1174,13 @@ private fun DiscoveryGameCard(
             RemoteArtwork(game.coverUrl, Modifier.fillMaxSize())
             Column(
                 Modifier.fillMaxSize().background(
-                    MaterialTheme.colorScheme.surface.copy(alpha = 0.72f)
+                    Brush.verticalGradient(
+                        listOf(
+                            MaterialTheme.colorScheme.surface.copy(alpha = 0.12f),
+                            MaterialTheme.colorScheme.surface.copy(alpha = 0.58f),
+                            Color(0xF20A1020),
+                        )
+                    )
                 ).padding(16.dp)
             ) {
                 Text(
@@ -1075,13 +1297,45 @@ internal fun GameCard(
     ) {
         Box(Modifier.fillMaxSize()) {
             RemoteArtwork(game.artworkUrl, Modifier.fillMaxSize())
-            Column(Modifier.padding(18.dp)) {
-            Text(if (hero) "CONTINUE PLAYING" else game.platform.uppercase(),
-                color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold, fontSize = 12.sp)
-            Spacer(Modifier.height(10.dp))
-            Text((if (game.favorite) "★ " else "") + game.title, fontSize = if (hero) 32.sp else 21.sp, fontWeight = FontWeight.Bold)
-            Spacer(Modifier.weight(1f))
-            Text(if (hero) "Press A for details" else game.state.displayName(), fontSize = 13.sp)
+            Box(
+                Modifier.fillMaxSize().background(
+                    if (hero) {
+                        Brush.horizontalGradient(
+                            listOf(Color(0xF2070C18), Color(0xA8070C18), Color(0x18070C18))
+                        )
+                    } else {
+                        Brush.verticalGradient(
+                            listOf(Color(0x12070C18), Color(0xC9070C18), Color(0xFA070C18))
+                        )
+                    }
+                )
+            )
+            Column(Modifier.fillMaxSize().padding(if (hero) 22.dp else 16.dp)) {
+                Surface(
+                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.88f),
+                    shape = RoundedCornerShape(7.dp),
+                    modifier = Modifier.align(Alignment.Start),
+                ) {
+                    Text(
+                        if (hero) "CONTINUE PLAYING" else game.platform.uppercase(),
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 10.sp,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                    )
+                }
+                Spacer(Modifier.height(if (hero) 12.dp else 8.dp))
+                Text(
+                    (if (game.favorite) "★ " else "") + game.title,
+                    fontSize = if (hero) 34.sp else 19.sp,
+                    fontWeight = FontWeight.Black,
+                    maxLines = 2,
+                )
+                Spacer(Modifier.weight(1f))
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                    if (hero) Icon(Icons.Rounded.PlayCircle, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Text(if (hero) "Press A for details" else game.state.displayName(), fontSize = 12.sp)
+                }
             }
         }
     }
@@ -1153,9 +1407,58 @@ private fun DetailsScreen(
         )
     }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
-        Text(game.platform.uppercase(), color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
-        Text(game.title, fontSize = if (compact) 32.sp else 44.sp, fontWeight = FontWeight.Bold)
-        Text(game.genre + "  |  " + game.year + "  |  " + game.sizeMb + " MB")
+        Surface(
+            modifier = Modifier.fillMaxWidth().height(if (compact) 220.dp else 285.dp),
+            shape = RoundedCornerShape(20.dp),
+            color = MaterialTheme.colorScheme.surface,
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+            tonalElevation = 8.dp,
+        ) {
+            Box(Modifier.fillMaxSize()) {
+                RemoteArtwork(game.artworkUrl, Modifier.fillMaxSize())
+                Box(
+                    Modifier.fillMaxSize().background(
+                        Brush.horizontalGradient(
+                            listOf(Color(0xFC050812), Color(0xD1050812), Color(0x44050812))
+                        )
+                    )
+                )
+                Column(
+                    Modifier.fillMaxHeight().fillMaxWidth(if (compact) 0.92f else 0.64f)
+                        .padding(if (compact) 18.dp else 26.dp),
+                    verticalArrangement = Arrangement.Center,
+                ) {
+                    Surface(
+                        color = MaterialTheme.colorScheme.primaryContainer,
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.align(Alignment.Start),
+                    ) {
+                        Row(
+                            Modifier.padding(horizontal = 9.dp, vertical = 5.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        ) {
+                            Icon(Icons.Rounded.SportsEsports, contentDescription = null, modifier = Modifier.size(14.dp))
+                            Text(game.platform.uppercase(), color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold, fontSize = 10.sp)
+                        }
+                    }
+                    Spacer(Modifier.height(10.dp))
+                    Text(
+                        game.title,
+                        fontSize = if (compact) 31.sp else 43.sp,
+                        fontWeight = FontWeight.Black,
+                        maxLines = 2,
+                    )
+                    Text(game.genre, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp)
+                    Spacer(Modifier.height(12.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                        DetailMetric(Icons.Rounded.CalendarMonth, game.year.toString())
+                        DetailMetric(Icons.Rounded.Groups, game.players ?: "1 player")
+                        DetailMetric(Icons.Rounded.Storage, game.sizeMb.toString() + " MB")
+                    }
+                }
+            }
+        }
         if (game.description != null || game.players != null || game.language != null || game.region != null) {
             Spacer(Modifier.height(12.dp))
             Surface(
@@ -1378,6 +1681,14 @@ private fun DetailsScreen(
 }
 
 @Composable
+private fun DetailMetric(icon: ImageVector, label: String) {
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+        Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(15.dp))
+        Text(label, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
+    }
+}
+
+@Composable
 internal fun DownloadProgressIndicator(job: com.gamebox.os.domain.DownloadJob, modifier: Modifier = Modifier) {
     LinearProgressIndicator(
         progress = { job.progress },
@@ -1398,6 +1709,35 @@ private fun DownloadsScreen(repository: GameRepository, downloadRepository: Down
         Text("Downloads", fontSize = if (compact) 28.sp else 38.sp, fontWeight = FontWeight.Bold)
         Text("Durable queue plus verified app-private asset installation",
             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.68f))
+        Spacer(Modifier.height(14.dp))
+        if (!compact) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                DownloadMetricCard(
+                    Icons.Rounded.Downloading,
+                    jobs.count { it.status == DownloadStatus.DOWNLOADING }.toString(),
+                    "Active downloads",
+                    Modifier.weight(1f),
+                )
+                DownloadMetricCard(
+                    Icons.Rounded.Schedule,
+                    jobs.count { it.status == DownloadStatus.QUEUED || it.status == DownloadStatus.PAUSED }.toString(),
+                    "Queued or paused",
+                    Modifier.weight(1f),
+                )
+                DownloadMetricCard(
+                    Icons.Rounded.Verified,
+                    jobs.count { it.status == DownloadStatus.COMPLETED }.toString(),
+                    "Completed",
+                    Modifier.weight(1f),
+                )
+                DownloadMetricCard(
+                    Icons.Rounded.Storage,
+                    formatBytes(context.filesDir.usableSpace),
+                    "Free space",
+                    Modifier.weight(1f),
+                )
+            }
+        }
         Spacer(Modifier.height(20.dp))
         if (jobs.isEmpty()) Text("No active downloads")
         jobs.forEach { job ->
@@ -1511,6 +1851,28 @@ private fun DownloadsScreen(repository: GameRepository, downloadRepository: Down
                         }
                     }
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun DownloadMetricCard(icon: ImageVector, value: String, label: String, modifier: Modifier) {
+    Surface(
+        modifier = modifier,
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.80f),
+        shape = RoundedCornerShape(14.dp),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.70f)),
+    ) {
+        Row(
+            Modifier.padding(14.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(24.dp))
+            Column {
+                Text(value, fontWeight = FontWeight.Bold, fontSize = 17.sp)
+                Text(label, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 10.sp)
             }
         }
     }
@@ -1689,6 +2051,8 @@ private fun ShortcutCard(
     modifier: Modifier,
     onClick: () -> Unit
 ) {
+    val icon = shortcutIcon(shortcut.title)
+    val accent = shortcutAccent(shortcut.title)
     var focused by remember { mutableStateOf(false) }
     val interactionSource = remember { MutableInteractionSource() }
     val hovered by interactionSource.collectIsHoveredAsState()
@@ -1703,7 +2067,7 @@ private fun ShortcutCard(
         label = "shortcut-scale"
     )
     Surface(
-        modifier.height(112.dp)
+        modifier.height(146.dp)
             .graphicsLayer { scaleX = scale; scaleY = scale }
             .hoverable(interactionSource)
             .semantics { contentDescription = shortcut.title + ", " + if (installed) "installed" else "not installed" }
@@ -1711,21 +2075,89 @@ private fun ShortcutCard(
             .clickable(onClick = onClick)
             .focusable(),
         shape = RoundedCornerShape(16.dp),
-        color = MaterialTheme.colorScheme.surface,
-        border = BorderStroke(if (focused) 3.dp else 1.dp, border)
+        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.92f),
+        border = BorderStroke(if (focused) 3.dp else 1.dp, border),
+        tonalElevation = if (emphasized) 10.dp else 3.dp,
     ) {
-        Column(Modifier.padding(16.dp)) {
-            Text(shortcut.title, fontSize = 20.sp, fontWeight = FontWeight.Bold)
-            Text(shortcut.description, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.68f))
-            Spacer(Modifier.weight(1f))
-            Text(
-                if (installed) "Ready" else "Not installed",
-                color = if (installed) MaterialTheme.colorScheme.primary
-                else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
-                fontSize = 12.sp
+        Box(
+            Modifier.fillMaxSize().background(
+                Brush.linearGradient(
+                    listOf(accent.copy(alpha = 0.30f), Color.Transparent, Color.Transparent)
+                )
             )
+        ) {
+            Column(Modifier.fillMaxSize().padding(16.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Surface(
+                        shape = RoundedCornerShape(13.dp),
+                        color = accent.copy(alpha = 0.92f),
+                    ) {
+                        Icon(
+                            icon,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.padding(10.dp).size(25.dp),
+                        )
+                    }
+                    Column {
+                        Text(shortcut.title, fontSize = 19.sp, fontWeight = FontWeight.Bold)
+                        Text(
+                            shortcut.description,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontSize = 12.sp,
+                            maxLines = 1,
+                        )
+                    }
+                }
+                Spacer(Modifier.weight(1f))
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        if (installed) "READY" else "SETUP REQUIRED",
+                        color = if (installed) MaterialTheme.colorScheme.tertiary
+                            else MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                    )
+                    Icon(Icons.Rounded.ChevronRight, contentDescription = null, modifier = Modifier.size(18.dp))
+                }
+            }
         }
     }
+}
+
+private fun shortcutIcon(title: String): ImageVector = when (title) {
+    "YouTube" -> Icons.Rounded.PlayArrow
+    "Netflix" -> Icons.Rounded.Movie
+    "Kodi" -> Icons.Rounded.SettingsInputComponent
+    "Jellyfin", "Plex" -> Icons.Rounded.PlayCircle
+    "Spotify" -> Icons.Rounded.MusicNote
+    "VLC", "Twitch" -> Icons.Rounded.LiveTv
+    "Moonlight" -> Icons.Rounded.Cloud
+    "Winlator" -> Icons.Rounded.DesktopWindows
+    "Termux" -> Icons.Rounded.Code
+    "Files" -> Icons.Rounded.Folder
+    "Chrome" -> Icons.Rounded.Language
+    else -> Icons.Rounded.Apps
+}
+
+private fun shortcutAccent(title: String): Color = when (title) {
+    "YouTube", "Netflix" -> Color(0xFFE53935)
+    "Kodi" -> Color(0xFF168AD7)
+    "Jellyfin" -> Color(0xFF6D48D7)
+    "Plex" -> Color(0xFFE5A11A)
+    "Spotify" -> Color(0xFF1DB954)
+    "VLC" -> Color(0xFFF28C28)
+    "Twitch" -> Color(0xFF9146FF)
+    "Moonlight" -> Color(0xFF6C63FF)
+    "Winlator" -> Color(0xFF2475D5)
+    "Termux" -> Color(0xFF2E8B57)
+    "Files" -> Color(0xFFE6A928)
+    "Chrome" -> Color(0xFF4285F4)
+    else -> Color(0xFF5C7CFA)
 }
 
 @Composable
@@ -1813,12 +2245,12 @@ private fun SettingsScreen(
     val totalStorage = storageRoot.totalSpace
     val usableStorage = storageRoot.usableSpace
     val settings = listOf(
-        "Storage" to Settings.ACTION_INTERNAL_STORAGE_SETTINGS,
-        "Controllers" to Settings.ACTION_BLUETOOTH_SETTINGS,
-        "Display" to Settings.ACTION_DISPLAY_SETTINGS,
-        "Audio" to Settings.ACTION_SOUND_SETTINGS,
-        "Network" to Settings.ACTION_WIRELESS_SETTINGS,
-        "System" to Settings.ACTION_SETTINGS
+        Triple("Storage", Settings.ACTION_INTERNAL_STORAGE_SETTINGS, Icons.Rounded.Storage),
+        Triple("Controllers", Settings.ACTION_BLUETOOTH_SETTINGS, Icons.Rounded.SportsEsports),
+        Triple("Display", Settings.ACTION_DISPLAY_SETTINGS, Icons.Rounded.Monitor),
+        Triple("Audio", Settings.ACTION_SOUND_SETTINGS, Icons.Rounded.VolumeUp),
+        Triple("Network", Settings.ACTION_WIRELESS_SETTINGS, Icons.Rounded.Wifi),
+        Triple("System", Settings.ACTION_SETTINGS, Icons.Rounded.Settings)
     )
     if (showMigrationDialog) {
         MigrationConfirmationDialog(
@@ -1846,10 +2278,32 @@ private fun SettingsScreen(
             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.68f)
         )
         Spacer(Modifier.height(12.dp))
-        Text(
-            "App storage: " + formatBytes(usableStorage) + " free of " + formatBytes(totalStorage),
-            color = MaterialTheme.colorScheme.primary
-        )
+        Surface(
+            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.82f),
+            shape = RoundedCornerShape(14.dp),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.72f)),
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Row(
+                Modifier.padding(14.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                Icon(Icons.Rounded.Storage, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                Column(Modifier.weight(1f)) {
+                    Text("App storage", fontWeight = FontWeight.Bold)
+                    Text(
+                        formatBytes(usableStorage) + " free of " + formatBytes(totalStorage),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontSize = 12.sp,
+                    )
+                    LinearProgressIndicator(
+                        progress = { if (totalStorage > 0L) 1f - usableStorage.toFloat() / totalStorage.toFloat() else 0f },
+                        modifier = Modifier.fillMaxWidth().padding(top = 7.dp),
+                    )
+                }
+            }
+        }
         Spacer(Modifier.height(18.dp))
         Text("Interface", fontWeight = FontWeight.Bold)
         Row(
@@ -1925,18 +2379,13 @@ private fun SettingsScreen(
         }
         Spacer(Modifier.height(18.dp))
         SettingsSectionHeader("System")
-        settings.forEach { (title, action) ->
-            OutlinedButton(
-                onClick = {
-                    try {
-                        context.startActivity(Intent(action))
-                    } catch (_: ActivityNotFoundException) {
-                        context.startActivity(Intent(Settings.ACTION_SETTINGS))
-                    }
-                },
-                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
-            ) {
-                Text(title, modifier = Modifier.fillMaxWidth())
+        settings.forEach { (title, action, icon) ->
+            SettingsActionRow(title, icon) {
+                try {
+                    context.startActivity(Intent(action))
+                } catch (_: ActivityNotFoundException) {
+                    context.startActivity(Intent(Settings.ACTION_SETTINGS))
+                }
             }
         }
         Spacer(Modifier.height(12.dp))
@@ -2039,6 +2488,41 @@ private fun SettingsScreen(
             "Runtime providers and emulator profiles remain intentionally scoped to their dedicated screens.",
             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.62f)
         )
+    }
+}
+
+@Composable
+private fun SettingsActionRow(title: String, icon: ImageVector, onClick: () -> Unit) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val hovered by interactionSource.collectIsHoveredAsState()
+    var focused by remember { mutableStateOf(false) }
+    val emphasized = hovered || focused
+    val border by animateColorAsState(
+        if (emphasized) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
+        label = "settings-row-border",
+    )
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp)
+            .hoverable(interactionSource)
+            .onFocusChanged { focused = it.isFocused }
+            .clickable(onClick = onClick)
+            .focusable(),
+        color = if (emphasized) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.55f)
+            else MaterialTheme.colorScheme.surface.copy(alpha = 0.84f),
+        shape = RoundedCornerShape(13.dp),
+        border = BorderStroke(if (focused) 2.dp else 1.dp, border),
+    ) {
+        Row(
+            Modifier.padding(horizontal = 15.dp, vertical = 13.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+            Text(title, modifier = Modifier.weight(1f), fontWeight = FontWeight.SemiBold)
+            Icon(Icons.Rounded.ChevronRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
     }
 }
 
