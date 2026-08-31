@@ -17,6 +17,9 @@ data class DiscoveryGame(
     val players: String?,
     val rating: Double?,
     val coverUrl: String?,
+    val backgroundUrl: String?,
+    val logoUrl: String?,
+    val screenshots: List<String>,
     val favorite: Boolean,
 )
 
@@ -58,6 +61,12 @@ class RoomCatalogDiscoveryRepository(
                     players = row.players,
                     rating = row.rating,
                     coverUrl = row.coverUrl,
+                    backgroundUrl = row.backgroundUrl,
+                    logoUrl = row.logoUrl,
+                    screenshots = row.screenshotsJson.orEmpty()
+                        .split('\n')
+                        .map(String::trim)
+                        .filter(String::isNotEmpty),
                     favorite = row.favorite,
                 )
             }

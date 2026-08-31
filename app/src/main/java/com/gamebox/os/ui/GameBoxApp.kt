@@ -71,6 +71,7 @@ import com.gamebox.os.domain.CatalogRefreshState
 import com.gamebox.os.domain.InstallState
 import com.gamebox.os.domain.primaryAction
 import com.gamebox.os.domain.summarizeLibrary
+import com.gamebox.os.domain.normalizeCatalogTitle
 import com.gamebox.os.download.AuthorizedDownloadController
 import com.gamebox.os.download.AuthorizedDownloadState
 import com.gamebox.os.download.RemoteDownloadController
@@ -100,6 +101,28 @@ private enum class Destination(val title: String) {
     HOME("Home"), LIBRARY("Library"), STORE("Store"), DOWNLOADS("Downloads"),
     MEDIA("Media"), PC("PC"), SETTINGS("Settings")
 }
+
+private data class StoreConsole(
+    val key: String,
+    val label: String,
+    val theGamesDbName: String?,
+    val aliases: Set<String>,
+    val icon: ImageVector,
+)
+
+private val storeConsoles = listOf(
+    StoreConsole("ps2", "PS2", "Sony Playstation 2", setOf("sonyplaystation2", "playstation2", "ps2"), Icons.Rounded.SportsEsports),
+    StoreConsole("gamecube", "GameCube", "Nintendo GameCube", setOf("nintendogamecube", "gamecube"), Icons.Rounded.SportsEsports),
+    StoreConsole("wii", "Wii", "Nintendo Wii", setOf("nintendowii", "wii"), Icons.Rounded.SportsEsports),
+    StoreConsole("psp", "PSP", "Sony Playstation Portable", setOf("sonyplaystationportable", "playstationportable", "psp"), Icons.Rounded.SportsEsports),
+    StoreConsole("dreamcast", "Dreamcast", "Sega Dreamcast", setOf("segadreamcast", "dreamcast"), Icons.Rounded.SportsEsports),
+    StoreConsole("3ds", "3DS", "Nintendo 3DS", setOf("nintendo3ds", "3ds"), Icons.Rounded.SportsEsports),
+    StoreConsole("switch", "Switch", "Nintendo Switch", setOf("nintendoswitch", "switch"), Icons.Rounded.SportsEsports),
+    StoreConsole("homebrew", "Homebrew", null, emptySet(), Icons.Rounded.Code),
+)
+
+private fun storeConsoleMatches(console: StoreConsole, platformName: String): Boolean =
+    normalizeCatalogTitle(platformName) in console.aliases
 
 @Composable
 fun GameBoxApp(
@@ -647,7 +670,15 @@ private fun CatalogScreen(
     val scope = rememberCoroutineScope()
     var query by remember { mutableStateOf("") }
     val discoveryPlatforms by discoveryRepository.observePlatforms().collectAsState(initial = emptyList())
-    var discoveryPlatformId by remember { mutableStateOf<String?>(null) }
+    var selectedConsoleKey by remember { mutableStateOf<String?>(null) }
+    val selectedConsole = storeConsoles.firstOrNull { it.key == selectedConsoleKey }
+    val discoveryPlatformId = when {
+        selectedConsole == null -> null
+        selectedConsole.theGamesDbName == null -> "__homebrew__"
+        else -> discoveryPlatforms.firstOrNull { platform ->
+            storeConsoleMatches(selectedConsole, platform.name)
+        }?.id ?: "__pending_${selectedConsole.key}"
+    }
     val discoveryGames by discoveryRepository.observeGames(discoveryPlatformId, query, 100)
         .collectAsState(initial = emptyList())
     var selectedDiscoveryId by remember { mutableStateOf<GameId?>(null) }
@@ -656,6 +687,7 @@ private fun CatalogScreen(
     }
     var discoverySyncMessage by remember { mutableStateOf<String?>(null) }
     var discoverySyncing by remember { mutableStateOf(false) }
+    var discoverySyncProgress by remember { mutableStateOf(0f) }
     var platform by remember { mutableStateOf<String?>(null) }
     var genre by remember { mutableStateOf<String?>(null) }
     var favoritesOnly by remember { mutableStateOf(false) }
@@ -771,32 +803,64 @@ private fun CatalogScreen(
             Column {
                 Text("Discover with TheGamesDB", fontSize = if (compact) 22.sp else 28.sp, fontWeight = FontWeight.Bold)
                 Text(
-                    "Metadata only — import or attach an authorized copy to play",
+                    "Metadata, box art and screenshots — import an authorized copy to play",
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.68f),
                 )
             }
             Button(
-                enabled = !discoverySyncing,
+                enabled = !discoverySyncing && selectedConsole?.theGamesDbName != null,
                 onClick = {
                     discoverySyncing = true
-                    discoverySyncMessage = "Synchronizing PlayStation 2 catalog…"
+                    discoverySyncProgress = 0f
+                    val targets = selectedConsole?.let { listOf(it) }
+                        ?: storeConsoles.filter { it.theGamesDbName != null }
                     scope.launch {
-                        discoverySyncMessage = when (
-                            val result = discoveryRepository.syncPlatform("PlayStation 2")
-                        ) {
-                            is CatalogSyncResult.Success ->
-                                "Cached " + result.games + " games from " + result.pages + " page(s)"
-                            CatalogSyncResult.MissingApiKey ->
-                                "Add your TheGamesDB API key in Settings"
-                            is CatalogSyncResult.PlatformNotFound ->
-                                "TheGamesDB platform was not found"
-                            is CatalogSyncResult.Failed ->
-                                "Catalog sync failed: " + result.reason
+                        var totalGames = 0
+                        var failed = 0
+                        var message = ""
+                        targets.forEachIndexed { index, console ->
+                            val providerName = console.theGamesDbName
+                            if (providerName != null) {
+                                discoverySyncMessage = "Syncing " + console.label + " (" + (index + 1) + "/" + targets.size + ")…"
+                                when (val result = discoveryRepository.syncPlatform(providerName)) {
+                                    is CatalogSyncResult.Success -> totalGames += result.games
+                                    CatalogSyncResult.MissingApiKey -> {
+                                        message = "Add your TheGamesDB API key in Settings"
+                                        failed += 1
+                                    }
+                                    is CatalogSyncResult.PlatformNotFound -> {
+                                        message = console.label + " was not found in TheGamesDB"
+                                        failed += 1
+                                    }
+                                    is CatalogSyncResult.Failed -> {
+                                        message = console.label + " sync failed: " + result.reason
+                                        failed += 1
+                                    }
+                                }
+                            }
+                            discoverySyncProgress = (index + 1).toFloat() / targets.size.coerceAtLeast(1).toFloat()
                         }
+                        discoverySyncMessage = if (message.isNotEmpty()) message
+                        else "Cached " + totalGames + " games (up to 20 per console)"
                         discoverySyncing = false
                     }
                 },
-            ) { Text(if (discoverySyncing) "Syncing…" else "Sync PS2") }
+            ) {
+                Text(
+                    when {
+                        discoverySyncing -> "Syncing…"
+                        selectedConsole?.theGamesDbName == null && selectedConsole != null -> "Local homebrew"
+                        selectedConsole == null -> "Sync all consoles"
+                        else -> "Sync " + selectedConsole.label
+                    }
+                )
+            }
+        }
+        if (discoverySyncing) {
+            LinearProgressIndicator(
+                progress = { discoverySyncProgress },
+                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+            )
         }
         discoverySyncMessage?.let { message ->
             Text(
@@ -808,28 +872,35 @@ private fun CatalogScreen(
                 },
             )
         }
-        if (discoveryPlatforms.isNotEmpty()) {
-            Row(
-                Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
+        Text("Consoles", fontSize = 15.sp, fontWeight = FontWeight.Bold)
+        Row(
+            Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            FilterChip(
+                selected = selectedConsole == null,
+                onClick = { selectedConsoleKey = null },
+                label = { Text("All") },
+            )
+            storeConsoles.forEach { console ->
                 FilterChip(
-                    selected = discoveryPlatformId == null,
-                    onClick = { discoveryPlatformId = null },
-                    label = { Text("All discovery platforms") },
+                    selected = selectedConsoleKey == console.key,
+                    onClick = { selectedConsoleKey = console.key },
+                    leadingIcon = { Icon(console.icon, contentDescription = null, modifier = Modifier.size(15.dp)) },
+                    label = { Text(console.label) },
                 )
-                discoveryPlatforms.forEach { item ->
-                    FilterChip(
-                        selected = discoveryPlatformId == item.id,
-                        onClick = { discoveryPlatformId = item.id },
-                        label = { Text(item.name) },
-                    )
-                }
             }
         }
         Spacer(Modifier.height(10.dp))
         if (discoveryGames.isEmpty()) {
-            Text("No cached discovery games. Add an API key in Settings, then choose Sync PS2.")
+            Text(
+                if (selectedConsole?.theGamesDbName == null) {
+                    "Homebrew is local-first. Add authorized homebrew files through the Library importer."
+                } else {
+                    "No cached games for this console. Add an API key in Settings, then sync up to 20 titles."
+                },
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         } else {
             DiscoveryGameRow(discoveryGames, compact) { selectedDiscoveryId = it.id }
         }
@@ -1088,7 +1159,7 @@ private fun DiscoveryDetailsScreen(
                 shape = RoundedCornerShape(18.dp),
                 color = MaterialTheme.colorScheme.surface,
             ) {
-                RemoteArtwork(game.coverUrl, Modifier.fillMaxSize())
+                RemoteArtwork(game.backgroundUrl ?: game.coverUrl, Modifier.fillMaxSize())
             }
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Text(game.platformId.uppercase(), color = MaterialTheme.colorScheme.primary)
@@ -1102,9 +1173,24 @@ private fun DiscoveryDetailsScreen(
                     label = { Text("Discover only") },
                 )
                 Text(
-                    "TheGamesDB supplies metadata and artwork only. Select an authorized local copy to hash and store it in app-private storage.",
+                    "TheGamesDB supplies metadata, box art and screenshots only. Select an authorized local copy to hash and store it in app-private storage.",
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.72f),
                 )
+            }
+        }
+        if (game.screenshots.isNotEmpty()) {
+            Text("Screenshots", fontSize = 24.sp, fontWeight = FontWeight.Bold)
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                items(game.screenshots, key = { it }) { screenshot ->
+                    Surface(
+                        Modifier.width(if (game.screenshots.size == 1) 360.dp else 250.dp).height(142.dp),
+                        shape = RoundedCornerShape(14.dp),
+                        color = MaterialTheme.colorScheme.surface,
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                    ) {
+                        RemoteArtwork(screenshot, Modifier.fillMaxSize())
+                    }
+                }
             }
         }
         game.description?.takeIf { it.isNotBlank() }?.let {
@@ -1171,7 +1257,7 @@ private fun DiscoveryGameCard(
         tonalElevation = if (emphasized) 10.dp else 2.dp,
     ) {
         Box(Modifier.fillMaxSize()) {
-            RemoteArtwork(game.coverUrl, Modifier.fillMaxSize())
+            RemoteArtwork(game.coverUrl ?: game.backgroundUrl, Modifier.fillMaxSize())
             Column(
                 Modifier.fillMaxSize().background(
                     Brush.verticalGradient(

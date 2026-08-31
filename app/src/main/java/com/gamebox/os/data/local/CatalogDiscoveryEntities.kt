@@ -39,6 +39,7 @@ data class CatalogGameEntity(
     val coverUrl: String?,
     val backgroundUrl: String?,
     val logoUrl: String?,
+    val screenshotsJson: String?,
     val favorite: Boolean,
     val updatedAtMillis: Long,
 )

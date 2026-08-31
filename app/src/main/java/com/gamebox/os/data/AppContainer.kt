@@ -19,6 +19,7 @@ import com.gamebox.os.data.local.MIGRATION_4_5
 import com.gamebox.os.data.local.MIGRATION_5_6
 import com.gamebox.os.data.local.MIGRATION_6_7
 import com.gamebox.os.data.local.MIGRATION_7_8
+import com.gamebox.os.data.local.MIGRATION_8_9
 import com.gamebox.os.download.AuthorizedDownloadController
 import com.gamebox.os.download.WorkManagerAuthorizedDownloadController
 import com.gamebox.os.download.RemoteDownloadController
@@ -55,7 +56,7 @@ class DefaultAppContainer(context: Context) : AppContainer {
         applicationContext,
         GameBoxDatabase::class.java,
         "gamebox.db"
-    ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8).build()
+    ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9).build()
     override val settingsRepository = SettingsRepository(applicationContext)
     override val authorizedRomImporter = AuthorizedRomImporter(applicationContext)
     private val assetCatalogProvider = AssetCatalogProvider(applicationContext)

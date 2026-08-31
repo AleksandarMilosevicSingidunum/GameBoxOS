@@ -57,17 +57,36 @@ internal object TheGamesDbCatalogParser {
         val pages = data["pages"]?.jsonObject
         val current = pages?.text("current")?.toIntOrNull() ?: 1
         val next = pages?.text("next")?.toIntOrNull()?.takeIf { it > current }
-        val base = root["include"]?.jsonObject
-            ?.get("boxart")?.jsonObject
-            ?.get("base_url")?.jsonObject
-            ?.get("thumb")?.jsonPrimitive?.contentOrNull
+        val boxart = root["include"]?.jsonObject?.get("boxart")?.jsonObject
+        val baseUrls = boxart?.get("base_url")?.jsonObject
+        val artworkByGame = boxart?.get("data")?.jsonObject
         val games = data["games"]?.jsonArray.orEmpty().mapNotNull { element ->
             val item = element.jsonObject
             val providerId = item.text("id") ?: return@mapNotNull null
             val title = item.text("game_title")?.trim()?.takeIf { it.isNotEmpty() } ?: return@mapNotNull null
             val releaseDate = item.text("release_date")
             val year = releaseDate?.take(4)?.toIntOrNull()
-            val boxart = item["boxart"]?.jsonObject?.text("thumb")
+            val images = artworkByGame?.get(providerId)?.let { imageElement ->
+                (imageElement as? JsonArray).orEmpty()
+            } ?: emptyList()
+            val coverImage = images.firstOrNull { image ->
+                image.jsonObject.text("type").equals("boxart", ignoreCase = true) &&
+                    (image.jsonObject.text("side")?.equals("front", ignoreCase = true) != false)
+            } ?: images.firstOrNull { image ->
+                image.jsonObject.text("type").equals("boxart", ignoreCase = true)
+            }
+            val backgroundImage = images.firstOrNull { image ->
+                image.jsonObject.text("type").equals("fanart", ignoreCase = true) ||
+                    image.jsonObject.text("type").equals("banner", ignoreCase = true)
+            }
+            val logoImage = images.firstOrNull { image ->
+                image.jsonObject.text("type").equals("clearlogo", ignoreCase = true)
+            }
+            val screenshots = images.filter { image ->
+                image.jsonObject.text("type").equals("screenshot", ignoreCase = true)
+            }.mapNotNull { image ->
+                resolveArtwork(baseUrls, image.jsonObject.text("filename"), "medium")
+            }.distinct()
             CatalogGame(
                 id = GameId("tgdb-" + platform.id + "-" + providerId),
                 title = title,
@@ -78,7 +97,12 @@ internal object TheGamesDbCatalogParser {
                 publisher = item.text("publisher"),
                 players = item.text("players"),
                 rating = item.text("rating")?.toDoubleOrNull(),
-                media = CatalogMedia(cover = resolveHttps(base, boxart)),
+                media = CatalogMedia(
+                    cover = resolveArtwork(baseUrls, coverImage?.jsonObject?.text("filename"), "thumb"),
+                    background = resolveArtwork(baseUrls, backgroundImage?.jsonObject?.text("filename"), "large"),
+                    logo = resolveArtwork(baseUrls, logoImage?.jsonObject?.text("filename"), "original"),
+                    screenshots = screenshots,
+                ),
                 externalIds = mapOf(MetadataProviderId.THE_GAMES_DB to providerId),
             )
         }
@@ -88,9 +112,11 @@ internal object TheGamesDbCatalogParser {
     private fun JsonObject.text(name: String): String? =
         get(name)?.jsonPrimitive?.contentOrNull
 
-    private fun resolveHttps(base: String?, path: String?): String? = runCatching {
+    private fun resolveArtwork(baseUrls: JsonObject?, path: String?, size: String): String? = runCatching {
         val raw = path?.trim().orEmpty()
         if (raw.isEmpty()) return null
+        val base = baseUrls?.get(size)?.jsonPrimitive?.contentOrNull
+            ?: baseUrls?.get("thumb")?.jsonPrimitive?.contentOrNull
         val resolved = if (raw.startsWith("https://", true)) URI(raw) else {
             val root = URI(base?.trim().orEmpty())
             require(root.scheme.equals("https", true) && !root.host.isNullOrBlank() && root.userInfo == null)
