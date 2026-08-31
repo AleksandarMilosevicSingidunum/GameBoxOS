@@ -429,6 +429,10 @@ private fun CatalogScreen(
     var discoveryPlatformId by remember { mutableStateOf<String?>(null) }
     val discoveryGames by discoveryRepository.observeGames(discoveryPlatformId, query, 100)
         .collectAsState(initial = emptyList())
+    var selectedDiscoveryId by remember { mutableStateOf<GameId?>(null) }
+    val selectedDiscovery = selectedDiscoveryId?.let { id ->
+        discoveryGames.firstOrNull { it.id == id }
+    }
     var discoverySyncMessage by remember { mutableStateOf<String?>(null) }
     var discoverySyncing by remember { mutableStateOf(false) }
     var platform by remember { mutableStateOf<String?>(null) }
@@ -437,6 +441,21 @@ private fun CatalogScreen(
     val filtered = filterGames(games, query, platform, genre, favoritesOnly)
     val focusTarget = restoreGameId?.takeIf { id -> filtered.any { it.id == id } }
         ?: filtered.firstOrNull()?.id
+    if (selectedDiscovery != null) {
+        DiscoveryDetailsScreen(
+            game = selectedDiscovery,
+            onBack = { selectedDiscoveryId = null },
+            onFavorite = {
+                scope.launch {
+                    discoveryRepository.setFavorite(
+                        selectedDiscovery.id,
+                        !selectedDiscovery.favorite,
+                    )
+                }
+            },
+        )
+        return
+    }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
         if (compact) {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -590,7 +609,7 @@ private fun CatalogScreen(
         if (discoveryGames.isEmpty()) {
             Text("No cached discovery games. Add an API key in Settings, then choose Sync PS2.")
         } else {
-            DiscoveryGameRow(discoveryGames, compact)
+            DiscoveryGameRow(discoveryGames, compact) { selectedDiscoveryId = it.id }
         }
     }
 }
