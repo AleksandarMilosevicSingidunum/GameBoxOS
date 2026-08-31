@@ -49,6 +49,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.gamebox.os.data.DownloadRepository
 import com.gamebox.os.data.GameRepository
+import com.gamebox.os.data.CatalogDiscoveryRepository
+import com.gamebox.os.data.DiscoveryGame
 import com.gamebox.os.domain.Game
 import com.gamebox.os.domain.GameId
 import com.gamebox.os.domain.DownloadStatus
@@ -74,6 +76,7 @@ import com.gamebox.os.storage.ExternalStorageController
 import com.gamebox.os.storage.ExternalStorageState
 import com.gamebox.os.settings.SettingsRepository
 import com.gamebox.os.catalog.validateAuthorizedCatalogUrl
+import com.gamebox.os.catalog.CatalogSyncResult
 import com.gamebox.os.diagnostics.DiagnosticsDevice
 import com.gamebox.os.diagnostics.DiagnosticEventCollector
 import com.gamebox.os.diagnostics.buildDiagnosticsReport
@@ -93,7 +96,8 @@ fun GameBoxApp(
     remoteDownloadController: RemoteDownloadController,
     gameLaunchController: GameLaunchController,
     saveSafetyController: SaveSafetyController,
-    settingsRepository: SettingsRepository
+    settingsRepository: SettingsRepository,
+    catalogDiscoveryRepository: CatalogDiscoveryRepository
 ) {
     val games by repository.observeGames().collectAsState()
     val uiState = rememberGameBoxUiState()
@@ -161,7 +165,7 @@ fun GameBoxApp(
                             compact
                         ) { uiState.openGame(it.id.value) }
                         Destination.STORE -> CatalogScreen(
-                            repository, games, restorableGameId, rememberGameFocus, compact
+                            repository, catalogDiscoveryRepository, games, restorableGameId, rememberGameFocus, compact
                         ) { uiState.openGame(it.id.value) }
                         Destination.DOWNLOADS -> DownloadsScreen(repository, downloadRepository, remoteDownloadController, compact)
                         Destination.MEDIA -> AppHubScreen(
@@ -411,6 +415,7 @@ private fun HomeStatusItem(label: String, value: String) {
 @Composable
 private fun CatalogScreen(
     repository: GameRepository,
+    discoveryRepository: CatalogDiscoveryRepository,
     games: List<Game>,
     restoreGameId: GameId?,
     onFocused: (GameId) -> Unit,
@@ -418,14 +423,21 @@ private fun CatalogScreen(
     open: (Game) -> Unit
 ) {
     val refreshState by repository.observeCatalogRefreshState().collectAsState()
+    val scope = rememberCoroutineScope()
     var query by remember { mutableStateOf("") }
+    val discoveryPlatforms by discoveryRepository.observePlatforms().collectAsState(initial = emptyList())
+    var discoveryPlatformId by remember { mutableStateOf<String?>(null) }
+    val discoveryGames by discoveryRepository.observeGames(discoveryPlatformId, query, 100)
+        .collectAsState(initial = emptyList())
+    var discoverySyncMessage by remember { mutableStateOf<String?>(null) }
+    var discoverySyncing by remember { mutableStateOf(false) }
     var platform by remember { mutableStateOf<String?>(null) }
     var genre by remember { mutableStateOf<String?>(null) }
     var favoritesOnly by remember { mutableStateOf(false) }
     val filtered = filterGames(games, query, platform, genre, favoritesOnly)
     val focusTarget = restoreGameId?.takeIf { id -> filtered.any { it.id == id } }
         ?: filtered.firstOrNull()?.id
-    Column {
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
         if (compact) {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Column {
@@ -504,8 +516,82 @@ private fun CatalogScreen(
             genre, { genre = it }, favoritesOnly, { favoritesOnly = it }
         )
         Spacer(Modifier.height(16.dp))
-        if (filtered.isEmpty()) Text("No games match these filters")
+        if (filtered.isEmpty()) Text("No authorized games match these filters")
         else GameRow(filtered, focusTarget, onFocused, compact, open)
+
+        Spacer(Modifier.height(20.dp))
+        HorizontalDivider()
+        Spacer(Modifier.height(14.dp))
+        Row(
+            Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+        ) {
+            Column {
+                Text("Discover with TheGamesDB", fontSize = if (compact) 22.sp else 28.sp, fontWeight = FontWeight.Bold)
+                Text(
+                    "Metadata only — import or attach an authorized copy to play",
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.68f),
+                )
+            }
+            Button(
+                enabled = !discoverySyncing,
+                onClick = {
+                    discoverySyncing = true
+                    discoverySyncMessage = "Synchronizing PlayStation 2 catalog…"
+                    scope.launch {
+                        discoverySyncMessage = when (
+                            val result = discoveryRepository.syncPlatform("PlayStation 2")
+                        ) {
+                            is CatalogSyncResult.Success ->
+                                "Cached " + result.games + " games from " + result.pages + " page(s)"
+                            CatalogSyncResult.MissingApiKey ->
+                                "Add your TheGamesDB API key in Settings"
+                            is CatalogSyncResult.PlatformNotFound ->
+                                "TheGamesDB platform was not found"
+                            is CatalogSyncResult.Failed ->
+                                "Catalog sync failed: " + result.reason
+                        }
+                        discoverySyncing = false
+                    }
+                },
+            ) { Text(if (discoverySyncing) "Syncing…" else "Sync PS2") }
+        }
+        discoverySyncMessage?.let { message ->
+            Text(
+                message,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.semantics {
+                    liveRegion = LiveRegionMode.Polite
+                    contentDescription = message
+                },
+            )
+        }
+        if (discoveryPlatforms.isNotEmpty()) {
+            Row(
+                Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                FilterChip(
+                    selected = discoveryPlatformId == null,
+                    onClick = { discoveryPlatformId = null },
+                    label = { Text("All discovery platforms") },
+                )
+                discoveryPlatforms.forEach { item ->
+                    FilterChip(
+                        selected = discoveryPlatformId == item.id,
+                        onClick = { discoveryPlatformId = item.id },
+                        label = { Text(item.name) },
+                    )
+                }
+            }
+        }
+        Spacer(Modifier.height(10.dp))
+        if (discoveryGames.isEmpty()) {
+            Text("No cached discovery games. Add an API key in Settings, then choose Sync PS2.")
+        } else {
+            DiscoveryGameRow(discoveryGames, compact)
+        }
     }
 }
 
@@ -663,6 +749,85 @@ internal fun filterGames(
             (platform == null || game.platform == platform) &&
             (genre == null || game.genre == genre) &&
             (!favoritesOnly || game.favorite)
+    }
+}
+
+@Composable
+private fun DiscoveryGameRow(games: List<DiscoveryGame>, compact: Boolean) {
+    LazyRow(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+        items(games, key = { it.id.value }) { game ->
+            DiscoveryGameCard(
+                game = game,
+                modifier = Modifier
+                    .width(if (compact) 190.dp else 230.dp)
+                    .height(if (compact) 190.dp else 220.dp),
+            )
+        }
+    }
+}
+
+@Composable
+private fun DiscoveryGameCard(game: DiscoveryGame, modifier: Modifier) {
+    var focused by remember { mutableStateOf(false) }
+    val interactionSource = remember { MutableInteractionSource() }
+    val hovered by interactionSource.collectIsHoveredAsState()
+    val emphasized = focused || hovered
+    val border by animateColorAsState(
+        if (emphasized) MaterialTheme.colorScheme.primary else Color.Transparent,
+        label = "discovery-focus",
+    )
+    val scale by animateFloatAsState(
+        if (emphasized) 1.025f else 1f,
+        label = "discovery-scale",
+    )
+    Surface(
+        modifier
+            .semantics {
+                contentDescription = game.title + ", " + game.platformId +
+                    ", discover only, import an authorized copy to play"
+            }
+            .onFocusChanged { focused = it.isFocused }
+            .graphicsLayer {
+                scaleX = scale
+                scaleY = scale
+            }
+            .hoverable(interactionSource)
+            .focusable(),
+        shape = RoundedCornerShape(18.dp),
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(if (focused) 3.dp else 1.dp, border),
+        tonalElevation = if (emphasized) 10.dp else 2.dp,
+    ) {
+        Box(Modifier.fillMaxSize()) {
+            RemoteArtwork(game.coverUrl, Modifier.fillMaxSize())
+            Column(
+                Modifier.fillMaxSize().background(
+                    MaterialTheme.colorScheme.surface.copy(alpha = 0.72f)
+                ).padding(16.dp)
+            ) {
+                Text(
+                    game.platformId.uppercase(),
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 11.sp,
+                )
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    (if (game.favorite) "★ " else "") + game.title,
+                    fontSize = 19.sp,
+                    fontWeight = FontWeight.Bold,
+                )
+                game.releaseDate?.let { Text(it.take(4), fontSize = 12.sp) }
+                Spacer(Modifier.weight(1f))
+                game.rating?.let { Text("Rating " + it, fontSize = 12.sp) }
+                Text(
+                    "Discover only — import your copy",
+                    color = MaterialTheme.colorScheme.tertiary,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.SemiBold,
+                )
+            }
+        }
     }
 }
 
