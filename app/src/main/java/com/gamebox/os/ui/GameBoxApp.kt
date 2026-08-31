@@ -429,6 +429,10 @@ private fun CatalogScreen(
     var discoveryPlatformId by remember { mutableStateOf<String?>(null) }
     val discoveryGames by discoveryRepository.observeGames(discoveryPlatformId, query, 100)
         .collectAsState(initial = emptyList())
+    var selectedDiscoveryId by remember { mutableStateOf<GameId?>(null) }
+    val selectedDiscovery = selectedDiscoveryId?.let { id ->
+        discoveryGames.firstOrNull { it.id == id }
+    }
     var discoverySyncMessage by remember { mutableStateOf<String?>(null) }
     var discoverySyncing by remember { mutableStateOf(false) }
     var platform by remember { mutableStateOf<String?>(null) }
@@ -437,6 +441,21 @@ private fun CatalogScreen(
     val filtered = filterGames(games, query, platform, genre, favoritesOnly)
     val focusTarget = restoreGameId?.takeIf { id -> filtered.any { it.id == id } }
         ?: filtered.firstOrNull()?.id
+    if (selectedDiscovery != null) {
+        DiscoveryDetailsScreen(
+            game = selectedDiscovery,
+            onBack = { selectedDiscoveryId = null },
+            onFavorite = {
+                scope.launch {
+                    discoveryRepository.setFavorite(
+                        selectedDiscovery.id,
+                        !selectedDiscovery.favorite,
+                    )
+                }
+            },
+        )
+        return
+    }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
         if (compact) {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -590,7 +609,7 @@ private fun CatalogScreen(
         if (discoveryGames.isEmpty()) {
             Text("No cached discovery games. Add an API key in Settings, then choose Sync PS2.")
         } else {
-            DiscoveryGameRow(discoveryGames, compact)
+            DiscoveryGameRow(discoveryGames, compact) { selectedDiscoveryId = it.id }
         }
     }
 }
@@ -753,7 +772,62 @@ internal fun filterGames(
 }
 
 @Composable
-private fun DiscoveryGameRow(games: List<DiscoveryGame>, compact: Boolean) {
+private fun DiscoveryDetailsScreen(
+    game: DiscoveryGame,
+    onBack: () -> Unit,
+    onFavorite: () -> Unit,
+) {
+    Column(
+        Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Button(onClick = onBack) { Text("Back") }
+            OutlinedButton(onClick = onFavorite) {
+                Text(if (game.favorite) "Remove favorite" else "Add favorite")
+            }
+        }
+        Row(
+            Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(24.dp),
+        ) {
+            Surface(
+                Modifier.width(220.dp).height(300.dp),
+                shape = RoundedCornerShape(18.dp),
+                color = MaterialTheme.colorScheme.surface,
+            ) {
+                RemoteArtwork(game.coverUrl, Modifier.fillMaxSize())
+            }
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text(game.platformId.uppercase(), color = MaterialTheme.colorScheme.primary)
+                Text(game.title, fontSize = 36.sp, fontWeight = FontWeight.Bold)
+                game.releaseDate?.let { Text(it) }
+                game.players?.let { Text("Players: " + it) }
+                game.rating?.let { Text("Rating: " + it) }
+                AssistChip(
+                    onClick = {},
+                    enabled = false,
+                    label = { Text("Discover only") },
+                )
+                Text(
+                    "TheGamesDB supplies metadata and artwork only. Select an authorized local copy in the importer to install and play this game.",
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.72f),
+                )
+            }
+        }
+        game.description?.takeIf { it.isNotBlank() }?.let {
+            Text("About", fontSize = 24.sp, fontWeight = FontWeight.Bold)
+            Text(it)
+        }
+    }
+}
+
+@Composable
+private fun DiscoveryGameRow(
+    games: List<DiscoveryGame>,
+    compact: Boolean,
+    open: (DiscoveryGame) -> Unit,
+) {
     LazyRow(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
         items(games, key = { it.id.value }) { game ->
             DiscoveryGameCard(
@@ -761,13 +835,18 @@ private fun DiscoveryGameRow(games: List<DiscoveryGame>, compact: Boolean) {
                 modifier = Modifier
                     .width(if (compact) 190.dp else 230.dp)
                     .height(if (compact) 190.dp else 220.dp),
+                onClick = { open(game) },
             )
         }
     }
 }
 
 @Composable
-private fun DiscoveryGameCard(game: DiscoveryGame, modifier: Modifier) {
+private fun DiscoveryGameCard(
+    game: DiscoveryGame,
+    modifier: Modifier,
+    onClick: () -> Unit,
+) {
     var focused by remember { mutableStateOf(false) }
     val interactionSource = remember { MutableInteractionSource() }
     val hovered by interactionSource.collectIsHoveredAsState()
@@ -792,6 +871,7 @@ private fun DiscoveryGameCard(game: DiscoveryGame, modifier: Modifier) {
                 scaleY = scale
             }
             .hoverable(interactionSource)
+            .clickable(onClick = onClick)
             .focusable(),
         shape = RoundedCornerShape(18.dp),
         color = MaterialTheme.colorScheme.surface,
