@@ -43,7 +43,7 @@ class TheGamesDbCatalogSync(
         return runCatching {
             val platformsPayload = transport.get(TheGamesDbCatalogRequest.platforms(key))
             val platform = TheGamesDbCatalogParser.parsePlatforms(platformsPayload)
-                .firstOrNull { it.id == requested }
+                .firstOrNull { it.matchesRequestedName(requested) }
                 ?: return CatalogSyncResult.PlatformNotFound(platformName)
             val providerPlatformId = platform.externalIds[MetadataProviderId.THE_GAMES_DB]
                 ?: return CatalogSyncResult.PlatformNotFound(platformName)
@@ -107,4 +107,18 @@ class TheGamesDbCatalogSync(
             CatalogSyncResult.Failed(error.message?.take(200) ?: "Catalog synchronization failed")
         }
     }
+
+    /**
+     * TheGamesDB names Sony platforms with a vendor prefix (for example,
+     * "Sony Playstation 2"), while the provider-neutral id intentionally omits
+     * that prefix. Accept both forms so UI labels and API platform names resolve
+     * to the same numeric provider id.
+     */
+    private fun com.gamebox.os.domain.CatalogPlatform.matchesRequestedName(requested: String): Boolean {
+        val normalizedName = normalizeCatalogTitle(name)
+        return id == requested || normalizedName == requested ||
+            normalizedName.removePrefix("sony") == requested ||
+            id == requested.removePrefix("sony")
+    }
 }
+
