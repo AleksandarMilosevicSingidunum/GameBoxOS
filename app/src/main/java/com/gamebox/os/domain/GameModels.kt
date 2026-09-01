@@ -36,7 +36,10 @@ data class Game(
     val description: String? = null,
     val players: String? = null,
     val language: String? = null,
-    val region: String? = null
+    val region: String? = null,
+    val localContentRelativePath: String? = null,
+    val localContentSha256: String? = null,
+    val localContentMimeType: String? = null,
 )
 
 enum class DownloadStatus {

@@ -21,6 +21,7 @@ interface GameRepository {
     fun recordPlaySession(id: GameId, endedAtMillis: Long, minutesPlayed: Int)
     fun observeCatalogRefreshState(): StateFlow<CatalogRefreshState>
     fun refreshCatalog()
+    suspend fun registerImportedGame(imported: ImportedGameRegistration)
 }
 
 class FakeGameRepository : GameRepository {
@@ -82,6 +83,11 @@ class FakeGameRepository : GameRepository {
 
     override fun refreshCatalog() {
         refreshState.value = CatalogRefreshState.SUCCESS
+    }
+
+    override suspend fun registerImportedGame(imported: ImportedGameRegistration) {
+        val merged = mergeImportedGame(game(imported.id), imported)
+        games.value = games.value.filterNot { it.id == imported.id } + merged
     }
 
     private fun update(id: GameId, transform: (Game) -> Game) {

@@ -77,6 +77,11 @@ class RoomGameRepository(
         }
     }
 
+    override suspend fun registerImportedGame(imported: ImportedGameRegistration) {
+        val existing = dao.getById(imported.id.value)?.toDomain()
+        dao.upsert(mergeImportedGame(existing, imported).toEntity())
+    }
+
     private fun consumeFallbackReason(): CatalogFallbackReason =
         (catalogProvider as? CatalogFallbackStatus)?.consumeFallbackReason()
             ?: CatalogFallbackReason.NONE
@@ -153,7 +158,10 @@ fun mergeCatalogPreservingLocalState(existing: List<Game>, incoming: List<Game>)
             minutesPlayed = local.minutesPlayed,
             favorite = local.favorite,
             emulatorPackage = local.emulatorPackage,
-            graphicsProfile = local.graphicsProfile
+            graphicsProfile = local.graphicsProfile,
+            localContentRelativePath = local.localContentRelativePath,
+            localContentSha256 = local.localContentSha256,
+            localContentMimeType = local.localContentMimeType,
         )
     }
     return mergedIncoming + existing.filter { it.id !in incomingIds }

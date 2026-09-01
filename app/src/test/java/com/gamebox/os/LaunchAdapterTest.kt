@@ -5,6 +5,7 @@ import com.gamebox.os.domain.Game
 import com.gamebox.os.domain.InstallState
 import com.gamebox.os.launch.EmulatorCapability
 import com.gamebox.os.launch.EmulatorCapabilityRegistry
+import com.gamebox.os.launch.EmulatorContentRoot
 import com.gamebox.os.launch.ReturnTracker
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -53,6 +54,24 @@ class LaunchAdapterTest {
         assertEquals("DuckStation", registry.displayName("com.github.stenzek.duckstation"))
         assertEquals("M64Plus FZ", registry.displayName("org.mupen64plusae.v3.fzurita"))
         assertEquals("Flycast", registry.displayName("com.flycast.emulator"))
+        val nes = Game(GameId("nes-test"), "NES Test", "Nintendo Entertainment System", 1986, "Action", 1, installed)
+        assertEquals("com.retroarch.aarch64", registry.optionsFor(nes).first())
+    }
+
+    @Test fun importedContentUsesImportRootAndFriendlyPlatformAlias() {
+        val game = Game(
+            GameId("portable"), "Portable", "PlayStation Portable", 2008, "Racing", 512,
+            InstallState.INSTALLED,
+            localContentRelativePath = "portable/Portable.cso",
+            localContentSha256 = "b".repeat(64),
+            localContentMimeType = "application/x-compressed-iso",
+        )
+
+        val imported = requireNotNull(EmulatorCapabilityRegistry().forGame(game))
+
+        assertEquals("org.ppsspp.ppsspp", imported.packageName)
+        assertEquals("portable/Portable.cso", imported.contentRelativePath)
+        assertEquals(EmulatorContentRoot.IMPORTS, imported.contentRoot)
     }
 
     @Test fun returnTracker_recordsOneSessionAndThenClearsIt() {

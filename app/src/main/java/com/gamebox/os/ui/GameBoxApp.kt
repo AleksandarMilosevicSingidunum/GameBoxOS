@@ -63,6 +63,7 @@ import com.gamebox.os.data.DownloadRepository
 import com.gamebox.os.data.GameRepository
 import com.gamebox.os.data.CatalogDiscoveryRepository
 import com.gamebox.os.data.DiscoveryGame
+import com.gamebox.os.data.ImportedGameRegistration
 import com.gamebox.os.importer.AuthorizedRomImporter
 import com.gamebox.os.importer.RomImportPolicy
 import com.gamebox.os.importer.RomImportResult
@@ -686,6 +687,9 @@ private fun CatalogScreen(
     if (selectedDiscovery != null) {
         DiscoveryDetailsScreen(
             game = selectedDiscovery,
+            platformName = selectedConsole?.label
+                ?: discoveryPlatforms.firstOrNull { it.id == selectedDiscovery.platformId }?.name
+                ?: selectedDiscovery.platformId,
             onBack = { selectedDiscoveryId = null },
             onFavorite = {
                 scope.launch {
@@ -696,6 +700,7 @@ private fun CatalogScreen(
                 }
             },
             importer = authorizedRomImporter,
+            repository = repository,
         )
         return
     }
@@ -1475,20 +1480,22 @@ internal fun filterGames(
 @Composable
 private fun DiscoveryDetailsScreen(
     game: DiscoveryGame,
+    platformName: String,
     onBack: () -> Unit,
     onFavorite: () -> Unit,
     importer: AuthorizedRomImporter,
+    repository: GameRepository,
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val legalSources = remember(game.title, game.platformId) {
         legalSourceLinks(game.title, game.platformId)
     }
-    val importPlatformLabel = remember(game.platformId) {
-        RomImportPolicy.profileLabel(game.platformId)
+    val importPlatformLabel = remember(platformName) {
+        RomImportPolicy.profileLabel(platformName)
     }
-    val importFormats = remember(game.platformId) {
-        RomImportPolicy.supportedExtensionsLabel(game.platformId)
+    val importFormats = remember(platformName) {
+        RomImportPolicy.supportedExtensionsLabel(platformName)
     }
     var importing by remember(game.id) { mutableStateOf(false) }
     var importMessage by remember(game.id) { mutableStateOf<String?>(null) }
@@ -1513,10 +1520,32 @@ private fun DiscoveryDetailsScreen(
             importing = true
             importMessage = "Importing and verifying " + displayName + "…"
             scope.launch {
-                importMessage = when (val result = importer.import(game.id, uri, displayName, game.platformId)) {
-                    is RomImportResult.Imported ->
-                        "$importPlatformLabel copy imported and verified. SHA-1 " +
-                            result.hashes.sha1.take(12) + "…"
+                importMessage = when (val result = importer.import(game.id, uri, displayName, platformName)) {
+                    is RomImportResult.Imported -> runCatching {
+                        repository.registerImportedGame(
+                            ImportedGameRegistration(
+                                id = game.id,
+                                title = game.title,
+                                platform = importPlatformLabel,
+                                year = game.releaseDate?.let { releaseDate ->
+                                    Regex("""(?:19|20)\d{2}""").find(releaseDate)?.value?.toIntOrNull()
+                                } ?: 0,
+                                sizeBytes = result.hashes.sizeBytes,
+                                relativePath = RomImportPolicy.importRootRelativePath(game.id, result.relativePath),
+                                sha256 = result.hashes.sha256,
+                                mimeType = RomImportPolicy.mimeType(displayName),
+                                favorite = game.favorite,
+                                artworkUrl = game.coverUrl,
+                                description = game.description,
+                                players = game.players,
+                            )
+                        )
+                        "$importPlatformLabel copy verified and added to Library. SHA-256 " +
+                            result.hashes.sha256.take(12) + "…"
+                    }.getOrElse { error ->
+                        "The copy was stored, but Library registration failed: " +
+                            (error.message?.take(160) ?: "unknown error")
+                    }
                     RomImportResult.SourceUnavailable ->
                         "The selected file could not be opened"
                     is RomImportResult.Rejected ->
@@ -1556,7 +1585,7 @@ private fun DiscoveryDetailsScreen(
             fontSize = 13.sp,
         )
         Text(
-            "Import copies and hashes your selected file in GameBox private storage. It does not provide console keys, firmware, game content, or an emulator; Play still requires a compatible emulator adapter installed on this device.",
+            "Import copies, hashes, and adds your selected file to Library. It does not provide console keys, firmware, game content, or an emulator; Play still requires a compatible emulator adapter installed on this device.",
             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.72f),
             fontSize = 12.sp,
         )
@@ -3482,4 +3511,3 @@ private fun connectedControllerLabel(): String {
         }
     return controller?.name?.takeIf { it.isNotBlank() } ?: "Not connected"
 }
-
