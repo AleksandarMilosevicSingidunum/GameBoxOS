@@ -47,14 +47,18 @@ class HttpsCatalogTransportClientTest {
 
         assertEquals("{}", payload)
         assertEquals("eu-central-1", requestedRegion)
-        assertEquals("signed", connection.requestProperties["Authorization"])
-        assertEquals("20260901T000000Z", connection.requestProperties["x-amz-date"])
+        assertEquals("signed", connection.headers["Authorization"])
+        assertEquals("20260901T000000Z", connection.headers["x-amz-date"])
     }
 
     private class RecordingConnection : HttpURLConnection(URL("https://example.test")) {
+        val headers = mutableMapOf<String, String>()
         override fun disconnect() = Unit
         override fun usingProxy() = false
         override fun connect() = Unit
+        override fun setRequestProperty(key: String, value: String) {
+            headers[key] = value
+        }
         override fun getResponseCode() = HTTP_OK
         override fun getInputStream() = ByteArrayInputStream("{}".toByteArray())
     }
