@@ -83,6 +83,51 @@ object RomImportPolicy {
         return "imports/$id/" + safeFileName(fileName, platform)
     }
 
+    fun importRootRelativePath(gameId: GameId, storedRelativePath: String): String {
+        val expectedPrefix = "imports/${gameId.value}/"
+        require(storedRelativePath.startsWith(expectedPrefix)) { "Import path is outside the selected game" }
+        val relative = storedRelativePath.removePrefix("imports/")
+        require(relative.none { it == '\\' } && relative.split('/').none { it == ".." || it.isEmpty() }) {
+            "Import path is unsafe"
+        }
+        return relative
+    }
+
+    fun mimeType(fileName: String): String = when (fileName.substringAfterLast('.', "").lowercase()) {
+        "zip" -> "application/zip"
+        "7z" -> "application/x-7z-compressed"
+        "iso" -> "application/x-iso9660-image"
+        "chd" -> "application/x-chd"
+        "cue" -> "application/x-cue"
+        "cso", "ciso" -> "application/x-compressed-iso"
+        "pbp" -> "application/x-playstation-pbp"
+        "rvz" -> "application/x-dolphin-rvz"
+        "gcz" -> "application/x-dolphin-gcz"
+        "wia" -> "application/x-dolphin-wia"
+        "wbfs" -> "application/x-wbfs"
+        "gcm" -> "application/x-gamecube-rom"
+        "gdi" -> "application/x-dreamcast-gdi"
+        "cdi" -> "application/x-discjuggler-cdi"
+        "nes" -> "application/x-nes-rom"
+        "sfc", "smc" -> "application/x-snes-rom"
+        "gb" -> "application/x-gameboy-rom"
+        "gbc" -> "application/x-gameboy-color-rom"
+        "gba" -> "application/x-gba-rom"
+        "n64", "z64", "v64" -> "application/x-n64-rom"
+        "3ds", "cci" -> "application/x-nintendo-3ds-rom"
+        "cxi" -> "application/x-nintendo-3ds-cxi"
+        "cia" -> "application/x-nintendo-3ds-cia"
+        "3dsx" -> "application/x-nintendo-3ds-homebrew"
+        "xci" -> "application/x-nintendo-switch-xci"
+        "xcz" -> "application/x-nintendo-switch-xcz"
+        "nsp" -> "application/x-nintendo-switch-nsp"
+        "nsz" -> "application/x-nintendo-switch-nsz"
+        "nca" -> "application/x-nintendo-switch-nca"
+        "nro" -> "application/x-nintendo-switch-homebrew"
+        "apk" -> "application/vnd.android.package-archive"
+        else -> "application/octet-stream"
+    }
+
     private fun profileFor(platform: String?): FormatProfile? {
         val normalized = platform?.let(::normalizePlatform).orEmpty()
         return profiles.firstOrNull { normalized in it.aliases }
@@ -91,4 +136,3 @@ object RomImportPolicy {
     private fun normalizePlatform(value: String): String =
         value.lowercase().filter(Char::isLetterOrDigit)
 }
-

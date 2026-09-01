@@ -16,6 +16,7 @@ class RomImporterTest {
         assertEquals("3610a686", hashes.crc32)
         assertEquals("5d41402abc4b2a76b9719d911017c592", hashes.md5)
         assertEquals("aaf4c61ddcc5e8a2dabede0f3b482cd9aea9434d", hashes.sha1)
+        assertEquals("2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824", hashes.sha256)
         assertEquals(5L, hashes.sizeBytes)
     }
 
@@ -64,6 +65,19 @@ class RomImporterTest {
     }
 
     @Test
+    fun convertsStoredPathsAndReportsLaunchMimeTypes() {
+        assertEquals(
+            "super-mario-odyssey/Super Mario Odyssey.xci",
+            RomImportPolicy.importRootRelativePath(
+                GameId("super-mario-odyssey"),
+                "imports/super-mario-odyssey/Super Mario Odyssey.xci",
+            ),
+        )
+        assertEquals("application/x-nintendo-switch-xci", RomImportPolicy.mimeType("Mario.xci"))
+        assertEquals("application/x-dolphin-rvz", RomImportPolicy.mimeType("Metroid.rvz"))
+    }
+
+    @Test
     fun rejectsAValidConsoleFormatWhenItDoesNotMatchTheSelectedPlatform() {
         val error = assertThrows(IllegalArgumentException::class.java) {
             RomImportPolicy.relativePath(GameId("portable-game"), "Portable.xci", "PSP")
@@ -85,4 +99,3 @@ class RomImporterTest {
         }
     }
 }
-

@@ -10,7 +10,11 @@ import org.junit.Test
 
 class CatalogMergePolicyTest {
     @Test fun refresh_updatesMetadataButPreservesLocalProgress() {
-        val local = game("same", "Old title", InstallState.INSTALLED, minutes = 90)
+        val local = game("same", "Old title", InstallState.INSTALLED, minutes = 90).copy(
+            localContentRelativePath = "same/game.iso",
+            localContentSha256 = "a".repeat(64),
+            localContentMimeType = "application/x-iso9660-image",
+        )
         val remote = game("same", "New title", InstallState.NOT_INSTALLED, minutes = 0)
 
         val merged = mergeCatalogPreservingLocalState(listOf(local), listOf(remote)).single()
@@ -18,6 +22,8 @@ class CatalogMergePolicyTest {
         assertEquals("New title", merged.title)
         assertEquals(InstallState.INSTALLED, merged.state)
         assertEquals(90, merged.minutesPlayed)
+        assertEquals("same/game.iso", merged.localContentRelativePath)
+        assertEquals("a".repeat(64), merged.localContentSha256)
     }
 
     @Test fun refreshKeepsMissingLocalGamesAndAddsNewRemoteGames() {

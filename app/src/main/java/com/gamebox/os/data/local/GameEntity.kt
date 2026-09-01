@@ -26,7 +26,10 @@ data class GameEntity(
     val description: String? = null,
     val players: String? = null,
     val language: String? = null,
-    val region: String? = null
+    val region: String? = null,
+    val localContentRelativePath: String? = null,
+    val localContentSha256: String? = null,
+    val localContentMimeType: String? = null,
 )
 
 fun GameEntity.toDomain(): Game = Game(
@@ -48,7 +51,10 @@ fun GameEntity.toDomain(): Game = Game(
     description = description,
     players = players,
     language = language,
-    region = region
+    region = region,
+    localContentRelativePath = localContentRelativePath,
+    localContentSha256 = localContentSha256,
+    localContentMimeType = localContentMimeType,
 )
 
 fun Game.toEntity(): GameEntity = GameEntity(
@@ -70,5 +76,8 @@ fun Game.toEntity(): GameEntity = GameEntity(
     description = description,
     players = players,
     language = language,
-    region = region
+    region = region,
+    localContentRelativePath = localContentRelativePath,
+    localContentSha256 = localContentSha256,
+    localContentMimeType = localContentMimeType,
 )

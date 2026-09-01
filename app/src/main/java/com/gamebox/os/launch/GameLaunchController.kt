@@ -26,7 +26,13 @@ data class EmulatorCapability(
     val graphicsProfile: String = "Balanced",
     val requiredCore: String? = null,
     val retroArchCoreFileName: String? = null,
+    val contentRoot: EmulatorContentRoot = EmulatorContentRoot.INSTALLED,
 )
+
+enum class EmulatorContentRoot(val directoryName: String) {
+    INSTALLED("installed"),
+    IMPORTS("imports"),
+}
 
 class EmulatorCapabilityRegistry(
     private val capabilities: List<EmulatorCapability> = listOf(
@@ -59,23 +65,56 @@ class EmulatorCapabilityRegistry(
         else -> packageName.substringAfterLast(".")
     }
 
-    fun optionsFor(game: Game): List<String> = when (game.platform.lowercase()) {
-        "retro", "homebrew" -> retroArchPackages
-        "psp" -> listOf("org.ppsspp.ppsspp")
-        "ps1" -> listOf("com.github.stenzek.duckstation", "com.retroarch.aarch64")
-        "n64" -> listOf("org.mupen64plusae.v3.fzurita", "com.retroarch.aarch64")
-        "dreamcast" -> listOf("com.flycast.emulator", "com.retroarch.aarch64")
-        "gamecube", "wii" -> listOf("org.dolphinemu.dolphinemu")
-        "ps2" -> listOf("xyz.aethersx2.android")
+    fun optionsFor(game: Game): List<String> = when (game.platform.lowercase().filter(Char::isLetterOrDigit)) {
+        in retroArchPlatformAliases -> retroArchPackages
+        "psp", "playstationportable", "sonyplaystationportable" -> listOf("org.ppsspp.ppsspp")
+        "ps1", "psx", "playstation", "sonyplaystation" -> listOf("com.github.stenzek.duckstation", "com.retroarch.aarch64")
+        "n64", "nintendo64" -> listOf("org.mupen64plusae.v3.fzurita", "com.retroarch.aarch64")
+        "dreamcast", "segadreamcast" -> listOf("com.flycast.emulator", "com.retroarch.aarch64")
+        "gamecube", "nintendogamecube", "wii", "nintendowii" -> listOf("org.dolphinemu.dolphinemu")
+        "ps2", "playstation2", "sonyplaystation2" -> listOf("xyz.aethersx2.android")
         else -> emptyList()
     }
 
     private val retroArchPackages = listOf("com.retroarch.aarch64", "com.retroarch", "com.retroarch.ra32")
+    private val retroArchPlatformAliases = setOf(
+        "retro", "homebrew", "nes", "famicom", "nintendoentertainmentsystem",
+        "snes", "superfamicom", "supernintendo", "supernintendoentertainmentsystem",
+        "gb", "gameboy", "nintendogameboy", "gbc", "gameboycolor", "nintendogameboycolor",
+        "gba", "gameboyadvance", "nintendogameboyadvance", "nds", "nintendods",
+        "mastersystem", "segamastersystem", "gamegear", "segagamegear",
+        "genesis", "megadrive", "segagenesis", "segamegadrive", "segacd", "megacd",
+        "saturn", "segasaturn", "pcengine", "turbografx16", "neogeo", "snkneogeo",
+        "neogeopocket", "neogeopocketcolor", "atari", "atari2600", "atari5200",
+        "atari7800", "atarijaguar", "atarilynx", "wonderswan", "wonderswancolor", "arcade", "mame",
+    )
 
     fun forGame(gameId: GameId): EmulatorCapability? = capabilities.firstOrNull { it.gameId == gameId }
 
     fun forGame(game: Game): EmulatorCapability? {
-        capabilities.firstOrNull { it.gameId == game.id }?.let { return it }
+        val explicit = capabilities.firstOrNull { it.gameId == game.id }
+        val importedPath = game.localContentRelativePath
+        val importedChecksum = game.localContentSha256
+        val importedMimeType = game.localContentMimeType
+        if (importedPath != null && importedChecksum != null && importedMimeType != null) {
+            val packageName = game.emulatorPackage?.takeIf { it in optionsFor(game) }
+                ?: explicit?.packageName
+                ?: optionsFor(game).firstOrNull()
+                ?: return null
+            return EmulatorCapability(
+                id = "imported-" + game.id.value,
+                gameId = game.id,
+                packageName = packageName,
+                contentRelativePath = importedPath,
+                mimeType = importedMimeType,
+                expectedSha256 = importedChecksum,
+                graphicsProfile = game.graphicsProfile,
+                requiredCore = explicit?.requiredCore,
+                retroArchCoreFileName = explicit?.retroArchCoreFileName,
+                contentRoot = EmulatorContentRoot.IMPORTS,
+            )
+        }
+        explicit?.let { return it }
         val checksum = game.expectedSha256 ?: return null
         val packageName = game.emulatorPackage?.takeIf { it in optionsFor(game) }
             ?: optionsFor(game).firstOrNull() ?: return null
@@ -113,7 +152,7 @@ class AndroidPackageGateway(
             ?: return GatewayResult.EMULATOR_UNAVAILABLE
         val launcherIntent = context.packageManager.getLaunchIntentForPackage(resolvedPackage)
             ?: return GatewayResult.EMULATOR_UNAVAILABLE
-        val installRoot = context.filesDir.resolve("installed").canonicalFile
+        val installRoot = context.filesDir.resolve(capability.contentRoot.directoryName).canonicalFile
         val content = File(installRoot, capability.contentRelativePath).canonicalFile
         val rootPrefix = installRoot.path + File.separator
         if (!content.path.startsWith(rootPrefix) || !content.isFile) {
@@ -140,7 +179,7 @@ class AndroidPackageGateway(
         val intent = when (plan.style) {
             EmulatorIntentStyle.ACTION_VIEW -> Intent(Intent.ACTION_VIEW)
                 .setDataAndType(uri, capability.mimeType)
-                .setPackage(capability.packageName)
+                .setPackage(resolvedPackage)
             EmulatorIntentStyle.LAUNCHER_EXTRAS -> {
                 val baseIntent = plan.activityClassName?.let { activityClassName ->
                     Intent().setClassName(resolvedPackage, activityClassName)
@@ -167,7 +206,7 @@ class AndroidPackageGateway(
             if (resolvedPackage.startsWith("com.retroarch")) {
                 val fallback = Intent(Intent.ACTION_VIEW).apply {
                     setDataAndType(uri, capability.mimeType)
-                    setPackage(capability.packageName)
+                    setPackage(resolvedPackage)
                     clipData = ClipData.newRawUri("GameBox content", uri)
                     addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_GRANT_READ_URI_PERMISSION)
                 }

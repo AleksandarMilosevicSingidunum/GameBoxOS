@@ -13,11 +13,17 @@ interface GameDao {
     @Query("SELECT * FROM games")
     suspend fun getAllOnce(): List<GameEntity>
 
+    @Query("SELECT * FROM games WHERE id = :id LIMIT 1")
+    suspend fun getById(id: String): GameEntity?
+
     @Query("SELECT COUNT(*) FROM games")
     suspend fun count(): Int
 
     @Upsert
     suspend fun upsertAll(games: List<GameEntity>)
+
+    @Upsert
+    suspend fun upsert(game: GameEntity)
 
     @Query("UPDATE games SET favorite = :favorite WHERE id = :id")
     suspend fun updateFavorite(id: String, favorite: Boolean)

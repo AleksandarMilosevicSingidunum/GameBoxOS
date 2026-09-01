@@ -135,3 +135,11 @@ val MIGRATION_8_9 = object : Migration(8, 9) {
         database.execSQL("ALTER TABLE catalog_games ADD COLUMN screenshotsJson TEXT")
     }
 }
+
+val MIGRATION_9_10 = object : Migration(9, 10) {
+    override fun migrate(database: SupportSQLiteDatabase) {
+        database.execSQL("ALTER TABLE games ADD COLUMN localContentRelativePath TEXT")
+        database.execSQL("ALTER TABLE games ADD COLUMN localContentSha256 TEXT")
+        database.execSQL("ALTER TABLE games ADD COLUMN localContentMimeType TEXT")
+    }
+}

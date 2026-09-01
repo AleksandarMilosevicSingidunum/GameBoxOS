@@ -24,7 +24,10 @@ class GameEntityMappingTest {
             description = "Description",
             players = "1-2",
             language = "English",
-            region = "Worldwide"
+            region = "Worldwide",
+            localContentRelativePath = "art/Artwork.nes",
+            localContentSha256 = "a".repeat(64),
+            localContentMimeType = "application/x-nes-rom",
         )
         assertEquals(game, game.toEntity().toDomain())
     }
