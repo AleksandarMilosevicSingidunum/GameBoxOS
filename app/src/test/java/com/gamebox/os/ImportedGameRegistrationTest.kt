@@ -5,6 +5,7 @@ import com.gamebox.os.data.mergeImportedGame
 import com.gamebox.os.domain.Game
 import com.gamebox.os.domain.GameId
 import com.gamebox.os.domain.InstallState
+import com.gamebox.os.domain.LocalContentFile
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertThrows
 import org.junit.Test
@@ -19,6 +20,7 @@ class ImportedGameRegistrationTest {
         assertEquals("game/Game.iso", game.localContentRelativePath)
         assertEquals("c".repeat(64), game.localContentSha256)
         assertEquals(2, game.sizeMb)
+        assertEquals(2, game.localContentFiles.size)
     }
 
     @Test fun replacingAFilePreservesUserStateAndSettings() {
@@ -57,5 +59,8 @@ class ImportedGameRegistrationTest {
         relativePath = "game/Game.iso",
         sha256 = "c".repeat(64),
         mimeType = "application/x-iso9660-image",
+        additionalFiles = listOf(
+            LocalContentFile("game/Game.bin", "d".repeat(64), "application/octet-stream")
+        ),
     )
 }

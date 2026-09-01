@@ -3,6 +3,7 @@ package com.gamebox.os.data
 import com.gamebox.os.domain.Game
 import com.gamebox.os.domain.GameId
 import com.gamebox.os.domain.InstallState
+import com.gamebox.os.domain.LocalContentFile
 import kotlin.math.ceil
 
 data class ImportedGameRegistration(
@@ -19,6 +20,7 @@ data class ImportedGameRegistration(
     val description: String? = null,
     val players: String? = null,
     val region: String? = null,
+    val additionalFiles: List<LocalContentFile> = emptyList(),
 ) {
     init {
         require(title.isNotBlank()) { "Imported title is required" }
@@ -29,6 +31,13 @@ data class ImportedGameRegistration(
         require(relativePath.startsWith(id.value + "/")) { "Imported path is outside the selected game" }
         require(relativePath.none { it == '\\' } && relativePath.split('/').none { it == ".." || it.isEmpty() }) {
             "Imported path is unsafe"
+        }
+        val allFiles = listOf(LocalContentFile(relativePath, sha256, mimeType)) + additionalFiles
+        require(allFiles.map { it.relativePath.lowercase() }.distinct().size == allFiles.size) {
+            "Imported file paths must be unique"
+        }
+        require(allFiles.all { it.relativePath.startsWith(id.value + "/") }) {
+            "Imported companion path is outside the selected game"
         }
     }
 }
@@ -56,4 +65,7 @@ fun mergeImportedGame(existing: Game?, imported: ImportedGameRegistration): Game
     localContentRelativePath = imported.relativePath,
     localContentSha256 = imported.sha256,
     localContentMimeType = imported.mimeType,
+    localContentFiles = listOf(
+        LocalContentFile(imported.relativePath, imported.sha256, imported.mimeType)
+    ) + imported.additionalFiles,
 )

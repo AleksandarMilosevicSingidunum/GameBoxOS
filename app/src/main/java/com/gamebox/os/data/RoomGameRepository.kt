@@ -162,6 +162,7 @@ fun mergeCatalogPreservingLocalState(existing: List<Game>, incoming: List<Game>)
             localContentRelativePath = local.localContentRelativePath,
             localContentSha256 = local.localContentSha256,
             localContentMimeType = local.localContentMimeType,
+            localContentFiles = local.localContentFiles,
         )
     }
     return mergedIncoming + existing.filter { it.id !in incomingIds }

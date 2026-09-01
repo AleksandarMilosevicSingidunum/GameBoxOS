@@ -5,6 +5,7 @@ import androidx.room.PrimaryKey
 import com.gamebox.os.domain.Game
 import com.gamebox.os.domain.GameId
 import com.gamebox.os.domain.InstallState
+import com.gamebox.os.domain.LocalContentFile
 
 @Entity(tableName = "games")
 data class GameEntity(
@@ -30,6 +31,7 @@ data class GameEntity(
     val localContentRelativePath: String? = null,
     val localContentSha256: String? = null,
     val localContentMimeType: String? = null,
+    val localContentFilesJson: String? = null,
 )
 
 fun GameEntity.toDomain(): Game = Game(
@@ -55,6 +57,7 @@ fun GameEntity.toDomain(): Game = Game(
     localContentRelativePath = localContentRelativePath,
     localContentSha256 = localContentSha256,
     localContentMimeType = localContentMimeType,
+    localContentFiles = decodeLocalContentFiles(localContentFilesJson),
 )
 
 fun Game.toEntity(): GameEntity = GameEntity(
@@ -80,4 +83,21 @@ fun Game.toEntity(): GameEntity = GameEntity(
     localContentRelativePath = localContentRelativePath,
     localContentSha256 = localContentSha256,
     localContentMimeType = localContentMimeType,
+    localContentFilesJson = encodeLocalContentFiles(localContentFiles),
 )
+
+private fun encodeLocalContentFiles(files: List<LocalContentFile>): String? =
+    if (files.isEmpty()) null else files.joinToString("\n") { file ->
+        listOf(file.relativePath, file.sha256, file.mimeType).joinToString("\t")
+    }
+
+private fun decodeLocalContentFiles(value: String?): List<LocalContentFile> = value.orEmpty()
+    .lineSequence()
+    .filter(String::isNotBlank)
+    .mapNotNull { line ->
+        val fields = line.split('\t')
+        if (fields.size != 3) null else runCatching {
+            LocalContentFile(fields[0], fields[1], fields[2])
+        }.getOrNull()
+    }
+    .toList()

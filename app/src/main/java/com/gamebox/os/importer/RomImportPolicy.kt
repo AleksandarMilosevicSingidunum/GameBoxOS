@@ -25,17 +25,17 @@ object RomImportPolicy {
         profile("Nintendo Wii", setOf("Wii", "Nintendo Wii"), "iso", "wbfs", "rvz", "gcz", "wia", "wad", "ciso"),
         profile("Nintendo Wii U", setOf("Wii U", "Nintendo Wii U"), "wud", "wux", "wua", "rpx"),
         profile("Nintendo Switch", setOf("Switch", "Nintendo Switch"), "xci", "xcz", "nsp", "nsz", "nca", "nro", "nso"),
-        profile("PlayStation", setOf("PS1", "PSX", "PlayStation", "Sony PlayStation"), "cue", "bin", "chd", "pbp", "ccd", "img", "mdf", "mds"),
-        profile("PlayStation 2", setOf("PS2", "PlayStation 2", "Sony PlayStation 2"), "iso", "chd", "cso", "bin", "cue", "mdf", "mds", "nrg"),
+        profile("PlayStation", setOf("PS1", "PSX", "PlayStation", "Sony PlayStation"), "cue", "bin", "chd", "pbp", "ccd", "img", "sub", "wav", "mdf", "mds"),
+        profile("PlayStation 2", setOf("PS2", "PlayStation 2", "Sony PlayStation 2"), "iso", "chd", "cso", "bin", "cue", "wav", "mdf", "mds", "nrg"),
         profile("PlayStation 3", setOf("PS3", "PlayStation 3", "Sony PlayStation 3"), "iso", "pkg"),
         profile("PSP", setOf("PSP", "PlayStation Portable", "Sony PlayStation Portable"), "iso", "cso", "pbp"),
         profile("PlayStation Vita", setOf("PS Vita", "PlayStation Vita", "Sony PlayStation Vita"), "vpk", "pkg"),
         profile("Sega Master System", setOf("Master System", "Sega Master System"), "sms", "zip", "7z"),
         profile("Sega Game Gear", setOf("Game Gear", "Sega Game Gear"), "gg", "zip", "7z"),
         profile("Sega Genesis / Mega Drive", setOf("Genesis", "Mega Drive", "Sega Genesis", "Sega Mega Drive"), "md", "gen", "smd", "bin", "zip", "7z"),
-        profile("Sega CD", setOf("Sega CD", "Mega CD"), "cue", "bin", "chd", "iso"),
-        profile("Sega Saturn", setOf("Saturn", "Sega Saturn"), "cue", "bin", "chd", "iso", "mdf", "mds"),
-        profile("Sega Dreamcast", setOf("Dreamcast", "Sega Dreamcast"), "gdi", "cdi", "chd", "cue", "bin"),
+        profile("Sega CD", setOf("Sega CD", "Mega CD"), "cue", "bin", "raw", "wav", "chd", "iso"),
+        profile("Sega Saturn", setOf("Saturn", "Sega Saturn"), "cue", "bin", "raw", "wav", "chd", "iso", "mdf", "mds"),
+        profile("Sega Dreamcast", setOf("Dreamcast", "Sega Dreamcast"), "gdi", "cdi", "chd", "cue", "bin", "raw", "wav"),
         profile("Xbox", setOf("Xbox", "Microsoft Xbox"), "iso", "xbe"),
         profile("Xbox 360", setOf("Xbox 360", "Microsoft Xbox 360"), "iso", "xex"),
         profile("PC Engine / TurboGrafx-16", setOf("PC Engine", "TurboGrafx 16", "TurboGrafx-16"), "pce", "sgx", "cue", "bin", "chd", "zip", "7z"),
@@ -61,6 +61,9 @@ object RomImportPolicy {
         val visible = formats.take(limit).joinToString(", ") { ".${it.uppercase()}" }
         return if (formats.size > limit) "$visible, and ${formats.size - limit} more" else visible
     }
+
+    fun supportsMultiFile(platform: String?): Boolean =
+        supportedExtensions(platform).any { it in setOf("cue", "gdi", "mds", "ccd") }
 
     fun safeFileName(value: String, platform: String? = null): String {
         val name = value.trim().substringAfterLast('/').substringAfterLast('\\')

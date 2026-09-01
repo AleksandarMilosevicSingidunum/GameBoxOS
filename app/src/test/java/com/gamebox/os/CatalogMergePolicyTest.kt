@@ -4,6 +4,7 @@ import com.gamebox.os.data.mergeCatalogPreservingLocalState
 import com.gamebox.os.domain.Game
 import com.gamebox.os.domain.GameId
 import com.gamebox.os.domain.InstallState
+import com.gamebox.os.domain.LocalContentFile
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -14,6 +15,9 @@ class CatalogMergePolicyTest {
             localContentRelativePath = "same/game.iso",
             localContentSha256 = "a".repeat(64),
             localContentMimeType = "application/x-iso9660-image",
+            localContentFiles = listOf(
+                LocalContentFile("same/game.iso", "a".repeat(64), "application/x-iso9660-image")
+            ),
         )
         val remote = game("same", "New title", InstallState.NOT_INSTALLED, minutes = 0)
 
@@ -24,6 +28,7 @@ class CatalogMergePolicyTest {
         assertEquals(90, merged.minutesPlayed)
         assertEquals("same/game.iso", merged.localContentRelativePath)
         assertEquals("a".repeat(64), merged.localContentSha256)
+        assertEquals(1, merged.localContentFiles.size)
     }
 
     @Test fun refreshKeepsMissingLocalGamesAndAddsNewRemoteGames() {

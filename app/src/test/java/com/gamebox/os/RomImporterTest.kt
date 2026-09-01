@@ -62,6 +62,9 @@ class RomImporterTest {
             setOf("xci", "xcz", "nsp", "nsz", "nca", "nro", "nso"),
             RomImportPolicy.supportedExtensions("Nintendo Switch"),
         )
+        assertEquals(true, RomImportPolicy.supportsMultiFile("PlayStation"))
+        assertEquals(true, "raw" in RomImportPolicy.supportedExtensions("Dreamcast"))
+        assertEquals(false, RomImportPolicy.supportsMultiFile("Nintendo Switch"))
     }
 
     @Test

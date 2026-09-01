@@ -3,6 +3,7 @@ package com.gamebox.os
 import com.gamebox.os.domain.GameId
 import com.gamebox.os.domain.Game
 import com.gamebox.os.domain.InstallState
+import com.gamebox.os.domain.LocalContentFile
 import com.gamebox.os.launch.EmulatorCapability
 import com.gamebox.os.launch.EmulatorCapabilityRegistry
 import com.gamebox.os.launch.EmulatorContentRoot
@@ -65,6 +66,10 @@ class LaunchAdapterTest {
             localContentRelativePath = "portable/Portable.cso",
             localContentSha256 = "b".repeat(64),
             localContentMimeType = "application/x-compressed-iso",
+            localContentFiles = listOf(
+                LocalContentFile("portable/Portable.cso", "b".repeat(64), "application/x-compressed-iso"),
+                LocalContentFile("portable/Portable.sidecar", "c".repeat(64), "application/octet-stream"),
+            ),
         )
 
         val imported = requireNotNull(EmulatorCapabilityRegistry().forGame(game))
@@ -72,6 +77,7 @@ class LaunchAdapterTest {
         assertEquals("org.ppsspp.ppsspp", imported.packageName)
         assertEquals("portable/Portable.cso", imported.contentRelativePath)
         assertEquals(EmulatorContentRoot.IMPORTS, imported.contentRoot)
+        assertEquals(listOf("portable/Portable.sidecar"), imported.companionFiles.map { it.relativePath })
     }
 
     @Test fun returnTracker_recordsOneSessionAndThenClearsIt() {

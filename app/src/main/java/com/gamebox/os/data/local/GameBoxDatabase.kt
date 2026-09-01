@@ -12,7 +12,7 @@ import androidx.room.RoomDatabase
         CatalogGameEntity::class,
         CatalogExternalIdEntity::class,
     ],
-    version = 10,
+    version = 11,
     exportSchema = true
 )
 abstract class GameBoxDatabase : RoomDatabase() {
