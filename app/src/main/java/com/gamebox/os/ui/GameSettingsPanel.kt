@@ -51,7 +51,7 @@ fun GameSettingsPanel(game: Game, repository: GameRepository, modifier: Modifier
                     onClick = { repository.setEmulatorSettings(game.id, pkg, game.graphicsProfile) },
                     enabled = installed,
                     label = {
-                        Text(registry.displayName(pkg) + if (installed) " · Installed" else " · Not installed")
+                        Text(registry.optionDisplayName(pkg) + if (installed) " · Installed" else " · Not installed")
                     },
                 )
             }
