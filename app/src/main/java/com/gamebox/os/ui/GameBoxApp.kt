@@ -3181,6 +3181,12 @@ private fun SettingsScreen(
         ExternalStorageController(context, settingsRepository)
     }
     var catalogUrl by remember(currentSettings.catalogUrl) { mutableStateOf(currentSettings.catalogUrl) }
+    var catalogTransport by remember(currentSettings.catalogTransport) { mutableStateOf(currentSettings.catalogTransport) }
+    var catalogBucket by remember(currentSettings.catalogBucket) { mutableStateOf(currentSettings.catalogBucket) }
+    var catalogPrefix by remember(currentSettings.catalogPrefix) { mutableStateOf(currentSettings.catalogPrefix) }
+    var catalogRegion by remember(currentSettings.catalogRegion) { mutableStateOf(currentSettings.catalogRegion) }
+    var catalogIdentity by remember { mutableStateOf("") }
+    var catalogSecret by remember { mutableStateOf("") }
     var catalogMessage by remember { mutableStateOf<String?>(null) }
     var theGamesDbApiKey by remember { mutableStateOf("") }
     var theGamesDbConfigured by remember { mutableStateOf(false) }
@@ -3599,29 +3605,101 @@ private fun SettingsScreen(
         Spacer(Modifier.height(18.dp))
         Text("Authorized catalog provider", fontWeight = FontWeight.Bold)
         Text(
-            "Leave blank to use the bundled offline fixture. Remote catalogs must use HTTPS.",
+            "Leave the endpoint blank to use the bundled offline fixture. All remote catalog transports require HTTPS.",
             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.62f)
         )
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            listOf("HTTPS", "WEBDAV", "S3").forEach { transport ->
+                FilterChip(
+                    selected = catalogTransport == transport,
+                    onClick = { catalogTransport = transport },
+                    label = { Text(transport) }
+                )
+            }
+        }
         OutlinedTextField(
             value = catalogUrl,
             onValueChange = { catalogUrl = it },
-            label = { Text("HTTPS catalog URL") },
+            label = { Text(if (catalogTransport == "S3") "S3 HTTPS endpoint" else "Catalog HTTPS endpoint") },
             singleLine = true,
             modifier = Modifier.fillMaxWidth()
         )
+        if (catalogTransport == "S3") {
+            OutlinedTextField(
+                value = catalogBucket,
+                onValueChange = { catalogBucket = it },
+                label = { Text("S3 bucket") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth()
+            )
+            OutlinedTextField(
+                value = catalogPrefix,
+                onValueChange = { catalogPrefix = it },
+                label = { Text("Manifest prefix (optional)") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth()
+            )
+            OutlinedTextField(
+                value = catalogRegion,
+                onValueChange = { catalogRegion = it },
+                label = { Text("S3 region") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
+        if (catalogTransport != "HTTPS") {
+            OutlinedTextField(
+                value = catalogIdentity,
+                onValueChange = { catalogIdentity = it },
+                label = { Text(if (catalogTransport == "S3") "S3 access key" else "WebDAV username") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth()
+            )
+            OutlinedTextField(
+                value = catalogSecret,
+                onValueChange = { catalogSecret = it },
+                label = { Text(if (catalogTransport == "S3") "S3 secret key" else "WebDAV password") },
+                singleLine = true,
+                visualTransformation = PasswordVisualTransformation(),
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
         Button(
             onClick = {
                 val trimmed = catalogUrl.trim()
-                val validationError = if (trimmed.isEmpty()) null else
-                    runCatching { validateAuthorizedCatalogUrl(trimmed) }.exceptionOrNull()
+                val credentialError = catalogTransport != "HTTPS" &&
+                    (catalogIdentity.isBlank() != catalogSecret.isBlank())
+                val validationError = if (credentialError) {
+                    IllegalArgumentException("Enter both catalog credentials or leave both blank to keep the existing secure credentials")
+                } else if (trimmed.isEmpty()) null else
+                    runCatching {
+                        if (catalogTransport == "HTTPS") validateAuthorizedCatalogUrl(trimmed)
+                        else com.gamebox.os.catalog.CatalogProviderConfig(
+                            when (catalogTransport) {
+                                "WEBDAV" -> com.gamebox.os.catalog.CatalogTransport.WebDav(trimmed)
+                                else -> com.gamebox.os.catalog.CatalogTransport.S3(trimmed, catalogBucket, catalogPrefix, catalogRegion)
+                            }
+                        )
+                    }.exceptionOrNull()
                 if (validationError != null) {
                     catalogMessage = validationError.message ?: "Invalid catalog URL"
                 } else {
                     scope.launch {
-                        settingsRepository.setCatalogUrl(trimmed)
+                        settingsRepository.setCatalogConfiguration(
+                            transport = catalogTransport,
+                            endpoint = trimmed,
+                            bucket = catalogBucket,
+                            prefix = catalogPrefix,
+                            region = catalogRegion,
+                        )
+                        if (catalogTransport != "HTTPS" && (catalogIdentity.isNotBlank() || catalogSecret.isNotBlank())) {
+                            settingsRepository.setCatalogCredentials(catalogTransport, catalogIdentity, catalogSecret)
+                            catalogIdentity = ""
+                            catalogSecret = ""
+                        }
                         catalogMessage = if (trimmed.isEmpty())
                             "Bundled offline catalog selected"
-                        else "Catalog URL saved. Open Store and choose Refresh."
+                        else "Catalog source saved. Open Store and choose Refresh."
                     }
                 }
             },

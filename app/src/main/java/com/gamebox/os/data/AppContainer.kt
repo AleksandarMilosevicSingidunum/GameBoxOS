@@ -6,7 +6,8 @@ import android.net.NetworkCapabilities
 import androidx.room.Room
 import com.gamebox.os.catalog.AssetCatalogProvider
 import com.gamebox.os.catalog.ConfiguredCatalogProvider
-import com.gamebox.os.catalog.HttpsCatalogProvider
+import com.gamebox.os.catalog.CatalogProviderFactory
+import com.gamebox.os.catalog.SettingsCatalogCredentialStore
 import com.gamebox.os.catalog.MetadataEnrichingCatalogProvider
 import com.gamebox.os.catalog.TheGamesDbMetadataClient
 import com.gamebox.os.catalog.TheGamesDbCatalogSync
@@ -66,9 +67,12 @@ class DefaultAppContainer(context: Context) : AppContainer {
     override val settingsRepository = SettingsRepository(applicationContext)
     override val authorizedRomImporter = AuthorizedRomImporter(applicationContext)
     private val assetCatalogProvider = AssetCatalogProvider(applicationContext)
+    private val catalogCredentialStore = SettingsCatalogCredentialStore(settingsRepository::catalogCredentials)
+    private val remoteCatalogProvider = CatalogProviderFactory(credentials = catalogCredentialStore)
+        .create(settingsRepository::catalogProviderConfig)
     private val configuredCatalogProvider = ConfiguredCatalogProvider(
         fallback = assetCatalogProvider,
-        remote = HttpsCatalogProvider(applicationContext, settingsRepository::catalogUrl),
+        remote = remoteCatalogProvider,
         configuredUrl = settingsRepository::catalogUrl,
         networkAvailable = { isNetworkAvailable(applicationContext) }
     )
@@ -121,3 +125,4 @@ internal fun isNetworkAvailable(context: Context): Boolean {
     return capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) &&
         capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
 }
+
