@@ -71,6 +71,20 @@ class EmulatorIntentPolicyTest {
     }
 
     @Test
+    fun retroArchRuntimeExtrasUseOnlyTheTargetRetroArchPaths() {
+        val extras = EmulatorIntentPolicy.retroArchRuntimeExtras(
+            dataDir = "/data/user/0/com.retroarch.aarch64",
+            apkPath = "/data/app/~~token/com.retroarch.aarch64/base.apk",
+            externalDir = "/storage/emulated/0/Android/data/com.retroarch.aarch64/files",
+            storageRoot = "/storage/emulated/0",
+        )
+
+        assertEquals("/data/user/0/com.retroarch.aarch64/retroarch.cfg", extras[EmulatorIntentPolicy.RETROARCH_CONFIG])
+        assertEquals("/data/user/0/com.retroarch.aarch64", extras[EmulatorIntentPolicy.RETROARCH_DATA])
+        assertEquals("/storage/emulated/0", extras[EmulatorIntentPolicy.RETROARCH_SDCARD])
+    }
+
+    @Test
     fun retroArchPackageAliasesUseTheSameRomContract() {
         listOf("com.retroarch", "com.retroarch.aarch64", "com.retroarch.ra32").forEach { packageName ->
             val plan = EmulatorIntentPolicy.plan(packageName, uri, "Balanced")

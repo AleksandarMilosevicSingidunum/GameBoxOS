@@ -3,6 +3,7 @@ package com.gamebox.os.launch
 import android.content.ClipData
 import android.content.Context
 import android.content.Intent
+import android.os.Environment
 import androidx.core.content.FileProvider
 import com.gamebox.os.content.GameContentPolicy
 import com.gamebox.os.data.GameRepository
@@ -216,6 +217,18 @@ class AndroidPackageGateway(
                 }
             }
         })
+            .apply {
+                if (resolvedPackage.startsWith("com.retroarch")) {
+                    val target = context.packageManager.getApplicationInfo(resolvedPackage, 0)
+                    EmulatorIntentPolicy.retroArchRuntimeExtras(
+                        dataDir = target.dataDir,
+                        apkPath = target.sourceDir,
+                        externalDir = Environment.getExternalStorageDirectory().path +
+                            "/Android/data/$resolvedPackage/files",
+                        storageRoot = Environment.getExternalStorageDirectory().path,
+                    ).forEach { (key, value) -> putExtra(key, value) }
+                }
+            }
             .putExtra("gamebox.graphics_profile", capability.graphicsProfile)
             .putExtra("gamebox.graphics_profile_applied", plan.graphicsProfileApplied)
             .addFlags(
