@@ -55,6 +55,8 @@ import androidx.compose.ui.semantics.*
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
@@ -105,6 +107,7 @@ import com.gamebox.os.diagnostics.DiagnosticEventCollector
 import com.gamebox.os.diagnostics.buildDiagnosticsReport
 import com.gamebox.os.diagnostics.buildDiagnosticsRecoveryBundle
 import kotlinx.coroutines.launch
+import kotlin.math.roundToInt
 
 private enum class Destination(val title: String) {
     HOME("Home"), LIBRARY("Library"), STORE("Store"), DOWNLOADS("Downloads"),
@@ -3169,6 +3172,9 @@ private fun SettingsScreen(
     val diagnosticGames by gameRepository.observeGames().collectAsState()
     val diagnosticDownloads by downloadRepository.observeJobs().collectAsState()
     val scope = rememberCoroutineScope()
+    val scrollState = rememberScrollState()
+    val sectionOffsets = remember { mutableStateMapOf<SettingsSection, Int>() }
+    var selectedSection by remember { mutableStateOf(SettingsSection.STORAGE) }
     val diagnosticEvents = remember { DiagnosticEventCollector() }
     val externalStorageController = remember(context, settingsRepository) {
         ExternalStorageController(context, settingsRepository)
@@ -3257,14 +3263,36 @@ private fun SettingsScreen(
     }
     val totalStorage = storageRoot.totalSpace
     val usableStorage = storageRoot.usableSpace
-    val settings = listOf(
-        Triple("Storage", Settings.ACTION_INTERNAL_STORAGE_SETTINGS, Icons.Rounded.Storage),
-        Triple("Controllers", Settings.ACTION_BLUETOOTH_SETTINGS, Icons.Rounded.SportsEsports),
-        Triple("Display", Settings.ACTION_DISPLAY_SETTINGS, Icons.Rounded.Monitor),
-        Triple("Audio", Settings.ACTION_SOUND_SETTINGS, Icons.Rounded.VolumeUp),
-        Triple("Network", Settings.ACTION_WIRELESS_SETTINGS, Icons.Rounded.Wifi),
-        Triple("System", Settings.ACTION_SETTINGS, Icons.Rounded.Settings)
-    )
+    val connectedControllers = InputDevice.getDeviceIds().count { id ->
+        val sources = InputDevice.getDevice(id)?.sources ?: 0
+        sources and InputDevice.SOURCE_GAMEPAD == InputDevice.SOURCE_GAMEPAD ||
+            sources and InputDevice.SOURCE_JOYSTICK == InputDevice.SOURCE_JOYSTICK
+    }
+    val activeDownloads = diagnosticDownloads.count {
+        it.status !in setOf(DownloadStatus.COMPLETED, DownloadStatus.FAILED, DownloadStatus.CANCELLED)
+    }
+    val connectivityManager = context.getSystemService(ConnectivityManager::class.java)
+    val networkCapabilities = connectivityManager?.getNetworkCapabilities(connectivityManager.activeNetwork)
+    val networkReady = networkCapabilities?.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) == true
+
+    fun launchSystemSettings(action: String) {
+        try {
+            val intent = if (action == Settings.ACTION_APPLICATION_DETAILS_SETTINGS) {
+                Intent(action, Uri.parse("package:${context.packageName}"))
+            } else Intent(action)
+            context.startActivity(intent)
+        } catch (_: ActivityNotFoundException) {
+            context.startActivity(Intent(Settings.ACTION_SETTINGS))
+        }
+    }
+
+    fun sectionAnchor(section: SettingsSection): Modifier = Modifier.onGloballyPositioned { coordinates ->
+        sectionOffsets[section] = (coordinates.positionInParent().y + scrollState.value).roundToInt()
+    }
+
+    LaunchedEffect(scrollState.value, sectionOffsets.size) {
+        selectedSection = SettingsNavigationPolicy.selectedSection(scrollState.value, sectionOffsets)
+    }
     if (showMigrationDialog) {
         MigrationConfirmationDialog(
             plan = migrationPlan,
@@ -3343,7 +3371,7 @@ private fun SettingsScreen(
             )
         }
         Spacer(Modifier.height(18.dp))
-        SettingsSectionHeader("Storage")
+        SettingsSectionHeader("Storage", sectionAnchor(SettingsSection.STORAGE))
         Text("External game library", fontWeight = FontWeight.Bold)
         Text(
             externalStorageStatus.displayName ?: externalStorageStatus.message,
@@ -3380,6 +3408,23 @@ private fun SettingsScreen(
             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.62f),
             fontSize = 12.sp
         )
+        Spacer(Modifier.height(18.dp))
+        SettingsSectionHeader("Controllers", sectionAnchor(SettingsSection.CONTROLLERS))
+        SettingsStatusCard(
+            Icons.Rounded.SportsEsports,
+            if (connectedControllers == 1) "1 game controller connected" else "$connectedControllers game controllers connected",
+            "Pair controllers in Android, then return to GameBox. D-pad, A/B and shoulder navigation work throughout the shell.",
+        )
+        SettingsActionRow("Open Bluetooth controller settings", Icons.Rounded.Bluetooth) {
+            launchSystemSettings(Settings.ACTION_BLUETOOTH_SETTINGS)
+        }
+        Spacer(Modifier.height(18.dp))
+        SettingsSectionHeader("Downloads", sectionAnchor(SettingsSection.DOWNLOADS))
+        SettingsStatusCard(
+            Icons.Rounded.Downloading,
+            if (activeDownloads == 1) "1 active download" else "$activeDownloads active downloads",
+            "Queued transfers are durable and resume through WorkManager after an app or device restart.",
+        )
         Spacer(Modifier.height(12.dp))
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             OutlinedButton(
@@ -3392,7 +3437,39 @@ private fun SettingsScreen(
             }
         }
         Spacer(Modifier.height(18.dp))
-        SettingsSectionHeader("Saves & Cloud Sync")
+        SettingsSectionHeader("Emulators", sectionAnchor(SettingsSection.EMULATORS))
+        SettingsStatusCard(
+            Icons.Rounded.Memory,
+            "Approved emulator adapters",
+            "RetroArch, PPSSPP, Dolphin, DuckStation, M64Plus FZ and Flycast are detected at launch time. Game Details explains missing cores or adapters.",
+        )
+        SettingsActionRow("Manage installed emulator apps", Icons.Rounded.Apps) {
+            launchSystemSettings(Settings.ACTION_APPLICATION_SETTINGS)
+        }
+        Spacer(Modifier.height(18.dp))
+        SettingsSectionHeader("Display", sectionAnchor(SettingsSection.DISPLAY))
+        SettingsStatusCard(Icons.Rounded.Monitor, "Responsive display mode", if (compact) "Phone layout active" else "Wide / DeX layout active")
+        SettingsActionRow("Open Android display settings", Icons.Rounded.Monitor) {
+            launchSystemSettings(Settings.ACTION_DISPLAY_SETTINGS)
+        }
+        Spacer(Modifier.height(18.dp))
+        SettingsSectionHeader("Audio", sectionAnchor(SettingsSection.AUDIO))
+        SettingsStatusCard(Icons.Rounded.VolumeUp, "System audio", "GameBox respects Android media volume and the active output route.")
+        SettingsActionRow("Open Android sound settings", Icons.Rounded.VolumeUp) {
+            launchSystemSettings(Settings.ACTION_SOUND_SETTINGS)
+        }
+        Spacer(Modifier.height(18.dp))
+        SettingsSectionHeader("Network", sectionAnchor(SettingsSection.NETWORK))
+        SettingsStatusCard(
+            Icons.Rounded.Wifi,
+            if (networkReady) "Internet connection available" else "Offline mode active",
+            if (networkReady) "Catalog refresh, metadata, downloads and cloud saves can use the current network." else "Bundled catalog and installed games remain available.",
+        )
+        SettingsActionRow("Open Android network settings", Icons.Rounded.Wifi) {
+            launchSystemSettings(Settings.ACTION_WIRELESS_SETTINGS)
+        }
+        Spacer(Modifier.height(18.dp))
+        SettingsSectionHeader("Saves & Cloud Sync", sectionAnchor(SettingsSection.SAVES_CLOUD))
         Text("Authenticated cloud backup", fontWeight = FontWeight.Bold)
         Text(
             "Optional. GameBox encrypts credentials with Android Keystore and transfers only checksum-protected save envelopes over HTTPS.",
@@ -3500,16 +3577,10 @@ private fun SettingsScreen(
         }
         cloudMessage?.let { Text(it, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 6.dp)) }
         Spacer(Modifier.height(18.dp))
-        SettingsSectionHeader("System")
-        settings.forEach { (title, action, icon) ->
-            SettingsActionRow(title, icon) {
-                try {
-                    context.startActivity(Intent(action))
-                } catch (_: ActivityNotFoundException) {
-                    context.startActivity(Intent(Settings.ACTION_SETTINGS))
-                }
-            }
-        }
+        SettingsSectionHeader("System", sectionAnchor(SettingsSection.SYSTEM))
+        SettingsActionRow("App storage", Icons.Rounded.Storage) { launchSystemSettings(Settings.ACTION_INTERNAL_STORAGE_SETTINGS) }
+        SettingsActionRow("GameBox app details", Icons.Rounded.Info) { launchSystemSettings(Settings.ACTION_APPLICATION_DETAILS_SETTINGS) }
+        SettingsActionRow("Android system settings", Icons.Rounded.Settings) { launchSystemSettings(Settings.ACTION_SETTINGS) }
         Spacer(Modifier.height(12.dp))
         Spacer(Modifier.height(18.dp))
         SettingsSectionHeader("Developer and diagnostics")
@@ -3611,43 +3682,96 @@ private fun SettingsScreen(
             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.62f)
         )
     }
+    val navigateToSection: (SettingsSection) -> Unit = { section ->
+        selectedSection = section
+        scope.launch { scrollState.animateScrollTo(sectionOffsets[section] ?: 0) }
+    }
     if (compact) {
-        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()), content = settingsContent)
+        Column(Modifier.fillMaxSize()) {
+            SettingsSectionStrip(selectedSection, navigateToSection)
+            Column(Modifier.weight(1f).verticalScroll(scrollState), content = settingsContent)
+        }
     } else {
         Row(Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
             BlueprintRail(Modifier.width(220.dp)) {
                 Text("SETTINGS", color = MaterialTheme.colorScheme.primary, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                listOf(
-                    Triple("Storage", Icons.Rounded.Storage, true),
-                    Triple("Controllers", Icons.Rounded.SportsEsports, false),
-                    Triple("Downloads", Icons.Rounded.Downloading, false),
-                    Triple("Emulators", Icons.Rounded.Memory, false),
-                    Triple("Display", Icons.Rounded.Monitor, false),
-                    Triple("Audio", Icons.Rounded.VolumeUp, false),
-                    Triple("Network", Icons.Rounded.Wifi, false),
-                    Triple("Saves & Cloud Sync", Icons.Rounded.CloudSync, false),
-                    Triple("System", Icons.Rounded.Settings, false),
-                ).forEach { (label, icon, selected) ->
-                    val interactionSource = remember(label) { MutableInteractionSource() }
+                SettingsSection.entries.forEach { section ->
+                    val selected = section == selectedSection
+                    val icon = settingsSectionIcon(section)
+                    val interactionSource = remember(section) { MutableInteractionSource() }
                     val hovered by interactionSource.collectIsHoveredAsState()
                     Surface(
-                        modifier = Modifier.fillMaxWidth().hoverable(interactionSource).focusable(),
+                        modifier = Modifier.fillMaxWidth().hoverable(interactionSource)
+                            .clickable(role = Role.Button) { navigateToSection(section) }
+                            .focusable()
+                            .semantics {
+                                this.selected = selected
+                                contentDescription = "${section.label} settings section"
+                            },
                         color = if (selected || hovered) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.62f) else Color.Transparent,
                         shape = RoundedCornerShape(8.dp),
                         border = if (selected) BorderStroke(1.dp, MaterialTheme.colorScheme.primary) else null,
                     ) {
                         Row(Modifier.padding(horizontal = 9.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
                             Icon(icon, contentDescription = null, tint = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(17.dp))
-                            Text(label, modifier = Modifier.weight(1f).padding(start = 9.dp), fontSize = 11.sp)
+                            Text(section.label, modifier = Modifier.weight(1f).padding(start = 9.dp), fontSize = 11.sp)
                             Icon(Icons.Rounded.ChevronRight, contentDescription = null, modifier = Modifier.size(14.dp))
                         }
                     }
                 }
             }
             Column(
-                Modifier.weight(1f).fillMaxHeight().verticalScroll(rememberScrollState()),
+                Modifier.weight(1f).fillMaxHeight().verticalScroll(scrollState),
                 content = settingsContent,
             )
+        }
+    }
+}
+
+private fun settingsSectionIcon(section: SettingsSection): ImageVector = when (section) {
+    SettingsSection.STORAGE -> Icons.Rounded.Storage
+    SettingsSection.CONTROLLERS -> Icons.Rounded.SportsEsports
+    SettingsSection.DOWNLOADS -> Icons.Rounded.Downloading
+    SettingsSection.EMULATORS -> Icons.Rounded.Memory
+    SettingsSection.DISPLAY -> Icons.Rounded.Monitor
+    SettingsSection.AUDIO -> Icons.Rounded.VolumeUp
+    SettingsSection.NETWORK -> Icons.Rounded.Wifi
+    SettingsSection.SAVES_CLOUD -> Icons.Rounded.CloudSync
+    SettingsSection.SYSTEM -> Icons.Rounded.Settings
+}
+
+@Composable
+private fun SettingsSectionStrip(selected: SettingsSection, onSelect: (SettingsSection) -> Unit) {
+    LazyRow(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        contentPadding = PaddingValues(bottom = 10.dp),
+    ) {
+        items(SettingsSection.entries, key = { it.name }) { section ->
+            FilterChip(
+                selected = section == selected,
+                onClick = { onSelect(section) },
+                label = { Text(section.label) },
+                leadingIcon = { Icon(settingsSectionIcon(section), null, Modifier.size(16.dp)) },
+                modifier = Modifier.semantics { contentDescription = "${section.label} settings section" },
+            )
+        }
+    }
+}
+
+@Composable
+private fun SettingsStatusCard(icon: ImageVector, title: String, detail: String) {
+    Surface(
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.72f),
+        shape = RoundedCornerShape(13.dp),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.55f)),
+        modifier = Modifier.fillMaxWidth().padding(vertical = 5.dp),
+    ) {
+        Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+            Column {
+                Text(title, fontWeight = FontWeight.SemiBold)
+                Text(detail, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
+            }
         }
     }
 }
@@ -3688,13 +3812,13 @@ private fun SettingsActionRow(title: String, icon: ImageVector, onClick: () -> U
 }
 
 @Composable
-private fun SettingsSectionHeader(title: String) {
+private fun SettingsSectionHeader(title: String, modifier: Modifier = Modifier) {
     Text(
         title.uppercase(),
         color = MaterialTheme.colorScheme.primary,
         fontWeight = FontWeight.Bold,
         fontSize = 13.sp,
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .padding(top = 4.dp, bottom = 6.dp)
             .semantics { contentDescription = "Settings section: " + title }
@@ -3732,3 +3856,4 @@ private fun connectedControllerLabel(): String {
         }
     return controller?.name?.takeIf { it.isNotBlank() } ?: "Not connected"
 }
+
