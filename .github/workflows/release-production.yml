@@ -48,15 +48,17 @@ jobs:
             fi
           done
 
+      - name: Checkout tagged sources
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.tag }}
+          fetch-depth: 0
+
       - name: Validate release tags exist
         shell: bash
         run: |
           git ls-remote --exit-code --tags origin "refs/tags/$RELEASE_TAG" >/dev/null
           git ls-remote --exit-code --tags origin "refs/tags/$ROLLBACK_TAG" >/dev/null
-
-      - uses: actions/checkout@v6
-        with:
-          ref: ${{ inputs.tag }}
 
       - uses: actions/setup-java@v5
         with:
@@ -98,3 +100,4 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release upload "$RELEASE_TAG"             "GameBoxOS-$RELEASE_TAG.apk"             "GameBoxOS-$RELEASE_TAG.apk.sha256"             --clobber --verify-tag
+
