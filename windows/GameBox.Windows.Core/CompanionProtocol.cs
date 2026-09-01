@@ -19,7 +19,7 @@ public static class CompanionProtocol
     {
         if (!IsValidSecret(pairingSecret)) throw new ArgumentException("Pairing secret is invalid.", nameof(pairingSecret));
         if (string.IsNullOrWhiteSpace(method)) throw new ArgumentException("Method is required.", nameof(method));
-        if (!requestPath.StartsWith('/', StringComparison.Ordinal) || requestPath.Contains("..", StringComparison.Ordinal))
+        if (!requestPath.StartsWith("/", StringComparison.Ordinal) || requestPath.Contains("..", StringComparison.Ordinal))
             throw new ArgumentException("Request path must be absolute and traversal-free.", nameof(requestPath));
         if (unixTimeSeconds <= 0) throw new ArgumentOutOfRangeException(nameof(unixTimeSeconds));
 
