@@ -273,6 +273,14 @@ try
     await File.WriteAllTextAsync(nonExeMoonlight, "");
     RequireThrows<InvalidDataException>(() => MoonlightSession.Create(nonExeMoonlight, "host.local", "Desktop"), "Moonlight sessions must require an EXE target.");
 
+    var companionSecret = CompanionProtocol.CreatePairingSecret();
+    Require(companionSecret.Length == 64, "Companion pairing secrets must use 256 bits of entropy.");
+    var companionAuth = CompanionProtocol.CreateAuthorization(companionSecret, "GET", "/v1/status", 1_700_000_000);
+    Require(CompanionProtocol.VerifyAuthorization(companionSecret, "GET", "/v1/status", companionAuth, 1_700_000_030), "Companion authorization must verify a matching request.");
+    Require(!CompanionProtocol.VerifyAuthorization(companionSecret, "POST", "/v1/status", companionAuth, 1_700_000_030), "Companion authorization must bind the request method.");
+    Require(!CompanionProtocol.VerifyAuthorization(companionSecret, "GET", "/v1/status", companionAuth, 1_700_000_121), "Companion authorization must expire stale requests.");
+    RequireThrows<ArgumentException>(() => CompanionProtocol.CreateAuthorization(companionSecret, "GET", "/v1/../status", 1_700_000_000), "Companion authorization must reject path traversal.");
+
     Console.WriteLine("GameBox Windows core tests passed.");
 }
 finally
@@ -301,3 +309,4 @@ sealed class BlockingHandler : HttpMessageHandler
         throw new InvalidOperationException("unreachable");
     }
 }
+

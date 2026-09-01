@@ -19,7 +19,7 @@ internal fun catalogTransportFailure(status: Int? = null, error: Throwable? = nu
 
 class HttpsCatalogTransportClient(
     private val maxResponseBytes: Int = 1_048_576,
-    private val s3Signer: S3RequestSigner? = null,
+    private val s3SignerFactory: (String) -> S3RequestSigner = ::AwsSignatureV4Signer,
     private val maxRetries: Int = 2,
     private val retryDelay: suspend (Long) -> Unit = { kotlinx.coroutines.delay(it) },
     private val connectionFactory: (URI) -> HttpURLConnection = {
@@ -72,7 +72,7 @@ class HttpsCatalogTransportClient(
             connection.setRequestProperty("Authorization", "Basic " + token)
         }
         if (transport is CatalogTransport.S3 && credentials?.hasS3Auth() == true) {
-            val signer = s3Signer ?: throw IllegalArgumentException("S3 signer required for access-key credentials")
+            val signer = s3SignerFactory(transport.region)
             val emptyHash = MessageDigest.getInstance("SHA-256").digest(ByteArray(0))
                 .joinToString("") { "%02x".format(it) }
             val signed = signer.sign("GET", uri.toString(), emptyHash, credentials)
@@ -97,3 +97,4 @@ class HttpsCatalogTransportClient(
         }
     }
 }
+
