@@ -110,7 +110,7 @@ class DefaultAppContainer(context: Context) : AppContainer {
     )
 
     override val saveSafetyController: SaveSafetyController = DefaultSaveSafetyController(
-        applicationContext, database.saveRecordDao(), gameRepository, applicationScope
+        applicationContext, database.saveRecordDao(), gameRepository, applicationScope, settingsRepository
     )
 }
 
