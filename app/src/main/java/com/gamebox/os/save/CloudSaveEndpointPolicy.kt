@@ -25,7 +25,7 @@ object CloudSaveEndpointPolicy {
     fun requireRegion(provider: CloudSaveProvider, region: String): String {
         if (provider == CloudSaveProvider.WEBDAV) return ""
         val normalized = region.trim().lowercase()
-        require(normalized.matches(Regex("^[a-z]{2}(?:-gov)?-[a-z]+-\d$"))) { "S3 region is invalid" }
+        require(normalized.matches(Regex("""^[a-z]{2}(?:-gov)?-[a-z]+-\d$"""))) { "S3 region is invalid" }
         return normalized
     }
 }

@@ -212,7 +212,9 @@ class DefaultSaveSafetyController(
                     ByteArrayInputStream(remote.payload),
                     CloudSaveEnvelopeCodec.MAX_RAW_PAYLOAD_BYTES.toLong(),
                 )
-                require(importResult == BackupResult.SUCCESS) { backupResultMessage("Cloud download", importResult).message }
+                require(importResult == BackupResult.SUCCESS) {
+                    backupResultMessage("Cloud download", importResult).message ?: "Cloud save import failed safely"
+                }
                 require(backupService.restore(relativePath) == BackupResult.SUCCESS) { "Cloud save restore failed safely" }
                 saveRecordDao.upsert(
                     SaveRecordEntity(
