@@ -98,6 +98,8 @@ import com.gamebox.os.settings.SettingsRepository
 import com.gamebox.os.catalog.validateAuthorizedCatalogUrl
 import com.gamebox.os.catalog.CatalogSyncResult
 import com.gamebox.os.catalog.legalSourceLinks
+import com.gamebox.os.save.CloudSaveEndpointPolicy
+import com.gamebox.os.save.CloudSaveProvider
 import com.gamebox.os.diagnostics.DiagnosticsDevice
 import com.gamebox.os.diagnostics.DiagnosticEventCollector
 import com.gamebox.os.diagnostics.buildDiagnosticsReport
@@ -2358,6 +2360,28 @@ private fun DetailsScreen(
                     }
                 }
                 if (isAuthorizedFixture) {
+                    Spacer(Modifier.height(10.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Button(
+                            enabled = saveSafetyState.saveRecordPresent,
+                            onClick = saveSafetyController::uploadCloudSave,
+                        ) {
+                            Icon(Icons.Rounded.CloudUpload, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Text("Upload cloud copy", modifier = Modifier.padding(start = 6.dp))
+                        }
+                        OutlinedButton(onClick = saveSafetyController::downloadCloudSave) {
+                            Icon(Icons.Rounded.CloudDownload, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Text("Restore cloud copy", modifier = Modifier.padding(start = 6.dp))
+                        }
+                    }
+                    Text(
+                        "Cloud credentials and endpoint are configured in Settings. A conflicting local copy is preserved before restore.",
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.62f),
+                        fontSize = 11.sp,
+                        modifier = Modifier.padding(top = 6.dp),
+                    )
+                }
+                if (isAuthorizedFixture) {
                     saveSafetyState.operationMessage?.let { message ->
                         Spacer(Modifier.height(10.dp))
                         Text(
@@ -3153,8 +3177,24 @@ private fun SettingsScreen(
     var catalogMessage by remember { mutableStateOf<String?>(null) }
     var theGamesDbApiKey by remember { mutableStateOf("") }
     var theGamesDbConfigured by remember { mutableStateOf(false) }
+    var cloudProvider by remember(currentSettings.cloudSaveProvider) {
+        mutableStateOf(currentSettings.cloudSaveProvider.uppercase())
+    }
+    var cloudEndpoint by remember(currentSettings.cloudSaveEndpoint) {
+        mutableStateOf(currentSettings.cloudSaveEndpoint)
+    }
+    var cloudRegion by remember(currentSettings.cloudSaveRegion) {
+        mutableStateOf(currentSettings.cloudSaveRegion)
+    }
+    var cloudIdentity by remember { mutableStateOf("") }
+    var cloudSecret by remember { mutableStateOf("") }
+    var cloudCredentialsConfigured by remember { mutableStateOf(false) }
+    var cloudMessage by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(settingsRepository) {
         theGamesDbConfigured = settingsRepository.hasTheGamesDbApiKey()
+    }
+    LaunchedEffect(settingsRepository, cloudProvider) {
+        cloudCredentialsConfigured = settingsRepository.hasCloudSaveCredentials(cloudProvider)
     }
     val externalStorageStatus = externalStorageController.inspect(currentSettings.externalLibraryUri)
     val installedMigration = remember(context) { com.gamebox.os.storage.InstalledContentMigration(context.filesDir.resolve("installed")) }
@@ -3351,6 +3391,114 @@ private fun SettingsScreen(
                 Text("Enable download notifications", modifier = Modifier.fillMaxWidth())
             }
         }
+        Spacer(Modifier.height(18.dp))
+        SettingsSectionHeader("Saves & Cloud Sync")
+        Text("Authenticated cloud backup", fontWeight = FontWeight.Bold)
+        Text(
+            "Optional. GameBox encrypts credentials with Android Keystore and transfers only checksum-protected save envelopes over HTTPS.",
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.62f),
+            fontSize = 12.sp,
+        )
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.padding(vertical = 8.dp),
+        ) {
+            listOf("WEBDAV" to "WebDAV", "S3" to "S3-compatible").forEach { (value, label) ->
+                if (cloudProvider == value) {
+                    Button(onClick = { cloudProvider = value }) { Text(label) }
+                } else {
+                    OutlinedButton(onClick = { cloudProvider = value }) { Text(label) }
+                }
+            }
+        }
+        OutlinedTextField(
+            value = cloudEndpoint,
+            onValueChange = { cloudEndpoint = it },
+            label = { Text(if (cloudProvider == "S3") "HTTPS bucket/prefix endpoint" else "HTTPS WebDAV collection") },
+            supportingText = { Text("GameBox appends a game-scoped .gamebox-save object name") },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        if (cloudProvider == "S3") {
+            OutlinedTextField(
+                value = cloudRegion,
+                onValueChange = { cloudRegion = it },
+                label = { Text("S3 signing region") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
+            )
+        }
+        OutlinedTextField(
+            value = cloudIdentity,
+            onValueChange = { cloudIdentity = it },
+            label = { Text(if (cloudProvider == "S3") "Access key" else "Username") },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
+        )
+        OutlinedTextField(
+            value = cloudSecret,
+            onValueChange = { cloudSecret = it },
+            label = { Text(if (cloudProvider == "S3") "Secret key" else "Password") },
+            singleLine = true,
+            visualTransformation = PasswordVisualTransformation(),
+            modifier = Modifier.fillMaxWidth().padding(top = 6.dp).semantics {
+                contentDescription = "Cloud save secret, hidden"
+            },
+        )
+        Text(
+            if (cloudCredentialsConfigured) "Credentials configured securely; leave both fields blank to keep them."
+            else "Credentials are not configured for this provider.",
+            color = if (cloudCredentialsConfigured) MaterialTheme.colorScheme.primary
+            else MaterialTheme.colorScheme.onSurfaceVariant,
+            fontSize = 11.sp,
+            modifier = Modifier.padding(top = 5.dp),
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 8.dp)) {
+            Button(onClick = {
+                val provider = runCatching { CloudSaveProvider.valueOf(cloudProvider) }.getOrNull()
+                val validation = runCatching {
+                    requireNotNull(provider) { "Choose a supported cloud provider" }
+                    CloudSaveEndpointPolicy.objectUri(cloudEndpoint, "galaxy-patrol")
+                    CloudSaveEndpointPolicy.requireRegion(provider, cloudRegion)
+                    val hasNewIdentity = cloudIdentity.isNotBlank()
+                    val hasNewSecret = cloudSecret.isNotBlank()
+                    require(hasNewIdentity == hasNewSecret) { "Enter both credential fields or leave both blank" }
+                }
+                if (validation.isFailure) {
+                    cloudMessage = validation.exceptionOrNull()?.message ?: "Cloud configuration is invalid"
+                } else {
+                    scope.launch {
+                        val hasNewCredentials = cloudIdentity.isNotBlank()
+                        val hasStoredCredentials = settingsRepository.hasCloudSaveCredentials(cloudProvider)
+                        if (!hasNewCredentials && !hasStoredCredentials) {
+                            cloudMessage = "Cloud credentials are required"
+                            return@launch
+                        }
+                        settingsRepository.setCloudSaveConfiguration(cloudProvider, cloudEndpoint, cloudRegion)
+                        if (hasNewCredentials) {
+                            settingsRepository.setCloudSaveCredentials(cloudProvider, cloudIdentity, cloudSecret)
+                            cloudIdentity = ""
+                            cloudSecret = ""
+                            cloudCredentialsConfigured = true
+                        }
+                        cloudMessage = "Cloud save configuration stored securely"
+                    }
+                }
+            }) { Text("Save cloud settings") }
+            OutlinedButton(
+                enabled = cloudCredentialsConfigured,
+                onClick = {
+                    scope.launch {
+                        settingsRepository.clearCloudSaveCredentials()
+                        cloudIdentity = ""
+                        cloudSecret = ""
+                        cloudCredentialsConfigured = false
+                        cloudMessage = "Cloud save credentials removed"
+                    }
+                },
+            ) { Text("Clear credentials") }
+        }
+        cloudMessage?.let { Text(it, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 6.dp)) }
         Spacer(Modifier.height(18.dp))
         SettingsSectionHeader("System")
         settings.forEach { (title, action, icon) ->

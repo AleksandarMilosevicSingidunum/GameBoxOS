@@ -2,6 +2,9 @@ package com.gamebox.os.storage
 
 import android.content.Context
 import android.net.Uri
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
+import com.gamebox.os.catalog.AwsSignatureV4Signer
 import com.gamebox.os.data.GameRepository
 import com.gamebox.os.data.local.SaveRecordDao
 import com.gamebox.os.data.local.SaveRecordEntity
@@ -9,6 +12,12 @@ import com.gamebox.os.domain.GameId
 import com.gamebox.os.domain.InstallState
 import com.gamebox.os.download.AssetDownloadWorker
 import com.gamebox.os.download.AuthorizedHomebrewDownload
+import com.gamebox.os.save.CloudSaveEndpointPolicy
+import com.gamebox.os.save.CloudSaveEnvelopeCodec
+import com.gamebox.os.save.CloudSaveProvider
+import com.gamebox.os.save.CloudSaveSyncRequest
+import com.gamebox.os.save.HttpsCloudSaveTransportClient
+import com.gamebox.os.settings.SettingsRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -17,11 +26,16 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.io.File
+import java.io.ByteArrayInputStream
+import java.nio.file.Files
+import java.nio.file.StandardCopyOption
+import kotlinx.coroutines.flow.first
 
 data class SaveSafetyState(
     val saveRecordPresent: Boolean = false,
     val relativePath: String? = null,
     val sizeBytes: Long = 0L,
+    val updatedAtMillis: Long = 0L,
     val backupPresent: Boolean = false,
     val operationMessage: String? = null,
     val operationSuccessful: Boolean = true
@@ -47,13 +61,16 @@ interface SaveSafetyController {
     fun restoreSave()
     fun exportBackup(uri: Uri)
     fun importBackup(uri: Uri)
+    fun uploadCloudSave()
+    fun downloadCloudSave()
 }
 
 class DefaultSaveSafetyController(
     context: Context,
     private val saveRecordDao: SaveRecordDao,
     private val gameRepository: GameRepository,
-    private val scope: CoroutineScope
+    private val scope: CoroutineScope,
+    private val settingsRepository: SettingsRepository,
 ) : SaveSafetyController {
     private val applicationContext = context.applicationContext
     private val gameId = GameId("galaxy-patrol")
@@ -68,6 +85,7 @@ class DefaultSaveSafetyController(
             saveRecordPresent = record != null,
             relativePath = record?.relativePath,
             sizeBytes = record?.sizeBytes ?: 0L,
+            updatedAtMillis = record?.updatedAtMillis ?: 0L,
             backupPresent = record?.relativePath?.let {
                 runCatching { backupService.hasBackup(it) }.getOrDefault(false)
             } ?: false,
@@ -137,6 +155,87 @@ class DefaultSaveSafetyController(
         }
     }
 
+    override fun uploadCloudSave() {
+        scope.launch {
+            val relativePath = state.value.relativePath ?: return@launch noSave("Cloud upload")
+            operation.value = SaveOperation("Uploading encrypted-credential cloud save…")
+            val result = runCatching {
+                val cloud = cloudAccess()
+                val saveFile = resolveSave(relativePath)
+                require(saveFile.isFile) { "Save file is missing" }
+                require(saveFile.length() <= CloudSaveEnvelopeCodec.MAX_RAW_PAYLOAD_BYTES) {
+                    "Save exceeds the 15 MiB cloud payload limit"
+                }
+                val payload = saveFile.readBytes()
+                val envelope = CloudSaveEnvelopeCodec.encode(
+                    gameId.value,
+                    state.value.updatedAtMillis.coerceAtLeast(0L),
+                    payload,
+                )
+                val request = CloudSaveSyncRequest(
+                    gameId = gameId.value,
+                    endpoint = cloud.endpoint,
+                    payloadBytes = envelope.size.toLong(),
+                    credentialKey = "cloud-save",
+                    expectedSha256 = CloudSaveEnvelopeCodec.sha256(envelope),
+                )
+                cloud.client.upload(request, envelope, cloud.credentials)
+            }
+            operation.value = result.fold(
+                onSuccess = { SaveOperation("Cloud save uploaded and verified") },
+                onFailure = { SaveOperation("Cloud upload failed: " + safeCloudError(it), false) },
+            )
+        }
+    }
+
+    override fun downloadCloudSave() {
+        scope.launch {
+            val relativePath = state.value.relativePath ?: "galaxy-patrol/save.dat"
+            operation.value = SaveOperation("Downloading and verifying cloud save…")
+            val result = runCatching {
+                val cloud = cloudAccess()
+                val request = CloudSaveSyncRequest(
+                    gameId = gameId.value,
+                    endpoint = cloud.endpoint,
+                    payloadBytes = 0L,
+                    credentialKey = "cloud-save",
+                )
+                val encoded = cloud.client.download(request, cloud.credentials)
+                val remote = CloudSaveEnvelopeCodec.decode(gameId.value, encoded)
+                val saveFile = resolveSave(relativePath)
+                val localPayload = saveFile.takeIf(File::isFile)?.readBytes()
+                val conflictPreserved = localPayload != null &&
+                    CloudSaveEnvelopeCodec.sha256(localPayload) != remote.payloadSha256
+                if (conflictPreserved) preserveConflict(localPayload)
+                val importResult = backupService.importBackup(
+                    relativePath,
+                    ByteArrayInputStream(remote.payload),
+                    CloudSaveEnvelopeCodec.MAX_RAW_PAYLOAD_BYTES.toLong(),
+                )
+                require(importResult == BackupResult.SUCCESS) { backupResultMessage("Cloud download", importResult).message }
+                require(backupService.restore(relativePath) == BackupResult.SUCCESS) { "Cloud save restore failed safely" }
+                saveRecordDao.upsert(
+                    SaveRecordEntity(
+                        gameId.value,
+                        relativePath,
+                        remote.updatedAtMillis,
+                        remote.payload.size.toLong(),
+                    )
+                )
+                conflictPreserved
+            }
+            operation.value = result.fold(
+                onSuccess = { conflictPreserved ->
+                    SaveOperation(
+                        if (conflictPreserved) "Cloud save restored; previous local copy preserved"
+                        else "Cloud save downloaded and verified"
+                    )
+                },
+                onFailure = { SaveOperation("Cloud download failed: " + safeCloudError(it), false) },
+            )
+        }
+    }
+
     override fun uninstallPreview(): UninstallConfirmation {
         val contentFile = applicationContext.filesDir
             .resolve(AssetDownloadWorker.INSTALL_ROOT)
@@ -203,6 +302,63 @@ class DefaultSaveSafetyController(
     private fun noSave(action: String) {
         operation.value = SaveOperation("$action failed: no save record", false)
     }
+
+    private suspend fun cloudAccess(): CloudAccess {
+        require(networkAvailable()) { "Network is offline; try again when connected" }
+        val settings = settingsRepository.settings.first()
+        val provider = runCatching { CloudSaveProvider.valueOf(settings.cloudSaveProvider.uppercase()) }
+            .getOrElse { throw IllegalArgumentException("Cloud save provider is invalid") }
+        require(settings.cloudSaveEndpoint.isNotBlank()) { "Configure a cloud save endpoint in Settings" }
+        val endpoint = CloudSaveEndpointPolicy.objectUri(settings.cloudSaveEndpoint, gameId.value)
+        val region = CloudSaveEndpointPolicy.requireRegion(provider, settings.cloudSaveRegion)
+        val credentials = settingsRepository.cloudSaveCredentials(provider.name)
+            ?: throw IllegalArgumentException("Configure cloud save credentials in Settings")
+        val signer = if (provider == CloudSaveProvider.S3) AwsSignatureV4Signer(region) else null
+        return CloudAccess(endpoint, credentials, HttpsCloudSaveTransportClient(s3Signer = signer))
+    }
+
+    private fun resolveSave(relativePath: String): File {
+        val root = savesRoot.canonicalFile
+        val file = File(root, relativePath).canonicalFile
+        require(file.path.startsWith(root.path + File.separator)) { "Save path escaped app storage" }
+        return file
+    }
+
+    private fun preserveConflict(payload: ByteArray) {
+        val root = applicationContext.filesDir.resolve("save-conflicts").canonicalFile
+        val directory = root.resolve(gameId.value).canonicalFile
+        require(directory.path.startsWith(root.path + File.separator))
+        check(directory.mkdirs() || directory.isDirectory)
+        val destination = directory.resolve("local-${System.currentTimeMillis()}.save")
+        val partial = directory.resolve(destination.name + ".partial")
+        partial.writeBytes(payload)
+        runCatching {
+            Files.move(
+                partial.toPath(), destination.toPath(),
+                StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING,
+            )
+        }.getOrElse {
+            Files.move(partial.toPath(), destination.toPath(), StandardCopyOption.REPLACE_EXISTING)
+        }
+    }
+
+    private fun networkAvailable(): Boolean {
+        val manager = applicationContext.getSystemService(ConnectivityManager::class.java) ?: return false
+        val network = manager.activeNetwork ?: return false
+        val capabilities = manager.getNetworkCapabilities(network) ?: return false
+        return capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) &&
+            capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
+    }
+
+    private fun safeCloudError(error: Throwable): String =
+        error.message?.replace(Regex("https://\\S+"), "remote endpoint")?.take(180)
+            ?: "operation failed safely"
+
+    private data class CloudAccess(
+        val endpoint: java.net.URI,
+        val credentials: com.gamebox.os.catalog.CatalogCredentials,
+        val client: HttpsCloudSaveTransportClient,
+    )
 
     private fun record(relativePath: String, sizeBytes: Long) = SaveRecordEntity(
         gameId.value,

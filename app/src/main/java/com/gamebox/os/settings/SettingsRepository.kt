@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import com.gamebox.os.catalog.CatalogCredentials
 
 private val Context.gameBoxDataStore: DataStore<Preferences> by preferencesDataStore(name = "gamebox_settings")
 
@@ -24,7 +25,10 @@ data class GameBoxSettings(
     val catalogSeededAtEpochMs: Long? = null,
     val catalogRefreshedAtEpochMs: Long? = null,
     val catalogUrl: String = "",
-    val externalLibraryUri: String = ""
+    val externalLibraryUri: String = "",
+    val cloudSaveProvider: String = "WEBDAV",
+    val cloudSaveEndpoint: String = "",
+    val cloudSaveRegion: String = "us-east-1",
 )
 
 class SettingsRepository(private val context: Context) {
@@ -37,7 +41,10 @@ class SettingsRepository(private val context: Context) {
             catalogSeededAtEpochMs = preferences[CATALOG_SEEDED_AT],
             catalogRefreshedAtEpochMs = preferences[CATALOG_REFRESHED_AT],
             catalogUrl = preferences[CATALOG_URL] ?: "",
-            externalLibraryUri = preferences[EXTERNAL_LIBRARY_URI] ?: ""
+            externalLibraryUri = preferences[EXTERNAL_LIBRARY_URI] ?: "",
+            cloudSaveProvider = preferences[CLOUD_SAVE_PROVIDER] ?: "WEBDAV",
+            cloudSaveEndpoint = preferences[CLOUD_SAVE_ENDPOINT] ?: "",
+            cloudSaveRegion = preferences[CLOUD_SAVE_REGION] ?: "us-east-1",
         )
     }
 
@@ -51,6 +58,58 @@ class SettingsRepository(private val context: Context) {
 
     suspend fun setTheGamesDbApiKey(value: String?) = withContext(Dispatchers.IO) {
         secretStore.put(THEGAMESDB_API_KEY, value)
+    }
+
+    suspend fun cloudSaveCredentials(provider: String): CatalogCredentials? = withContext(Dispatchers.IO) {
+        when (provider.uppercase()) {
+            "WEBDAV" -> CatalogCredentials(
+                username = secretStore.get(CLOUD_SAVE_USERNAME),
+                password = secretStore.get(CLOUD_SAVE_PASSWORD),
+            ).takeIf(CatalogCredentials::hasBasicAuth)
+            "S3" -> CatalogCredentials(
+                accessKey = secretStore.get(CLOUD_SAVE_ACCESS_KEY),
+                secretKey = secretStore.get(CLOUD_SAVE_SECRET_KEY),
+            ).takeIf(CatalogCredentials::hasS3Auth)
+            else -> null
+        }
+    }
+
+    suspend fun hasCloudSaveCredentials(provider: String): Boolean =
+        cloudSaveCredentials(provider) != null
+
+    suspend fun setCloudSaveCredentials(provider: String, identity: String?, secret: String?) =
+        withContext(Dispatchers.IO) {
+            when (provider.uppercase()) {
+                "WEBDAV" -> {
+                    secretStore.put(CLOUD_SAVE_USERNAME, identity)
+                    secretStore.put(CLOUD_SAVE_PASSWORD, secret)
+                    secretStore.put(CLOUD_SAVE_ACCESS_KEY, null)
+                    secretStore.put(CLOUD_SAVE_SECRET_KEY, null)
+                }
+                "S3" -> {
+                    secretStore.put(CLOUD_SAVE_ACCESS_KEY, identity)
+                    secretStore.put(CLOUD_SAVE_SECRET_KEY, secret)
+                    secretStore.put(CLOUD_SAVE_USERNAME, null)
+                    secretStore.put(CLOUD_SAVE_PASSWORD, null)
+                }
+                else -> require(false) { "Unsupported cloud save provider" }
+            }
+        }
+
+    suspend fun clearCloudSaveCredentials() = withContext(Dispatchers.IO) {
+        secretStore.put(CLOUD_SAVE_USERNAME, null)
+        secretStore.put(CLOUD_SAVE_PASSWORD, null)
+        secretStore.put(CLOUD_SAVE_ACCESS_KEY, null)
+        secretStore.put(CLOUD_SAVE_SECRET_KEY, null)
+    }
+
+    suspend fun setCloudSaveConfiguration(provider: String, endpoint: String, region: String) {
+        require(provider.uppercase() in setOf("WEBDAV", "S3")) { "Unsupported cloud save provider" }
+        context.gameBoxDataStore.edit { preferences ->
+            preferences[CLOUD_SAVE_PROVIDER] = provider.uppercase()
+            preferences[CLOUD_SAVE_ENDPOINT] = endpoint.trim()
+            preferences[CLOUD_SAVE_REGION] = region.trim().ifEmpty { "us-east-1" }
+        }
     }
 
     suspend fun setExternalLibraryUri(value: String) {
@@ -94,6 +153,13 @@ class SettingsRepository(private val context: Context) {
         val CATALOG_REFRESHED_AT = longPreferencesKey("catalog_refreshed_at_epoch_ms")
         val CATALOG_URL = stringPreferencesKey("catalog_url")
         val EXTERNAL_LIBRARY_URI = stringPreferencesKey("external_library_uri")
+        val CLOUD_SAVE_PROVIDER = stringPreferencesKey("cloud_save_provider")
+        val CLOUD_SAVE_ENDPOINT = stringPreferencesKey("cloud_save_endpoint")
+        val CLOUD_SAVE_REGION = stringPreferencesKey("cloud_save_region")
         const val THEGAMESDB_API_KEY = "thegamesdb_api_key"
+        const val CLOUD_SAVE_USERNAME = "cloud_save_username"
+        const val CLOUD_SAVE_PASSWORD = "cloud_save_password"
+        const val CLOUD_SAVE_ACCESS_KEY = "cloud_save_access_key"
+        const val CLOUD_SAVE_SECRET_KEY = "cloud_save_secret_key"
     }
 }
