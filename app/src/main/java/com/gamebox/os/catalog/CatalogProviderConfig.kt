@@ -4,7 +4,12 @@ package com.gamebox.os.catalog
 sealed interface CatalogTransport {
     data class Https(val url: String) : CatalogTransport
     data class WebDav(val baseUrl: String) : CatalogTransport
-    data class S3(val endpoint: String, val bucket: String, val prefix: String = "") : CatalogTransport
+    data class S3(
+        val endpoint: String,
+        val bucket: String,
+        val prefix: String = "",
+        val region: String = "us-east-1",
+    ) : CatalogTransport
 }
 
 data class CatalogProviderConfig(
@@ -23,6 +28,8 @@ data class CatalogProviderConfig(
             require(transport.bucket.isNotBlank()) { "S3 bucket must not be blank" }
             require(!transport.bucket.contains("/") && !transport.bucket.contains(" ")) { "S3 bucket must be a single name" }
             require(!transport.prefix.split("/").any { it == ".." }) { "S3 prefix must not contain traversal segments" }
+            require(transport.region.matches(Regex("[a-z0-9-]+"))) { "S3 region is invalid" }
         }
     }
 }
+

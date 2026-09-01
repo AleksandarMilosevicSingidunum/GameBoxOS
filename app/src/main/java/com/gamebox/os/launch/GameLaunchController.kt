@@ -1,8 +1,11 @@
 package com.gamebox.os.launch
 
 import android.content.ClipData
+import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
+import android.provider.MediaStore
+import android.os.Environment
 import androidx.core.content.FileProvider
 import com.gamebox.os.content.GameContentPolicy
 import com.gamebox.os.data.GameRepository
@@ -202,6 +205,20 @@ class AndroidPackageGateway(
                 retroArchCorePath(resolvedPackage, coreFileName)
             },
         )
+        // RetroArch's native external launcher does not reliably consume a FileProvider
+        // content URI. In particular, it may leave RetroActivityFuture on a permanent
+        // black screen even though the core is installed. The bundled Galaxy Patrol
+        // fixture is explicitly redistributable, so publish that verified copy to the
+        // public Downloads collection and hand RetroArch the normal absolute path it
+        // expects. Imported/private content deliberately remains URI-based.
+        val retroArchRom = if (
+            resolvedPackage.startsWith("com.retroarch") &&
+            capability.gameId == GameId("galaxy-patrol")
+        ) {
+            publishGalaxyPatrolForRetroArch(content) ?: return GatewayResult.HANDOFF_REJECTED
+        } else {
+            uri.toString()
+        }
         val intent = (when (plan.style) {
             EmulatorIntentStyle.ACTION_VIEW -> Intent(Intent.ACTION_VIEW)
                 .setDataAndType(uri, capability.mimeType)
@@ -212,10 +229,25 @@ class AndroidPackageGateway(
                 } ?: launcherIntent
                 Intent(baseIntent).apply {
                     plan.stringExtras.forEach { (key, value) -> putExtra(key, value) }
+                    if (resolvedPackage.startsWith("com.retroarch")) {
+                        putExtra(EmulatorIntentPolicy.RETROARCH_ROM, retroArchRom)
+                    }
                     plan.stringArrayExtras.forEach { (key, values) -> putExtra(key, values.toTypedArray()) }
                 }
             }
         })
+            .apply {
+                if (resolvedPackage.startsWith("com.retroarch")) {
+                    val target = context.packageManager.getApplicationInfo(resolvedPackage, 0)
+                    EmulatorIntentPolicy.retroArchRuntimeExtras(
+                        dataDir = target.dataDir,
+                        apkPath = target.sourceDir,
+                        externalDir = Environment.getExternalStorageDirectory().path +
+                            "/Android/data/$resolvedPackage/files",
+                        storageRoot = Environment.getExternalStorageDirectory().path,
+                    ).forEach { (key, value) -> putExtra(key, value) }
+                }
+            }
             .putExtra("gamebox.graphics_profile", capability.graphicsProfile)
             .putExtra("gamebox.graphics_profile_applied", plan.graphicsProfileApplied)
             .addFlags(
@@ -254,6 +286,34 @@ class AndroidPackageGateway(
         ClipData.newRawUri("GameBox content", primary).apply {
             companions.forEach { companionUri -> addItem(ClipData.Item(companionUri)) }
         }
+
+    /**
+     * Publishes only the built-in MIT fixture. MediaStore needs no broad storage
+     * permission on Android 10+, and produces the conventional path RetroArch needs.
+     */
+    private fun publishGalaxyPatrolForRetroArch(source: File): String? = runCatching {
+        val relativePath = "Download/GameBox"
+        val values = ContentValues().apply {
+            put(MediaStore.Downloads.DISPLAY_NAME, "galaxy-patrol.nes")
+            put(MediaStore.Downloads.MIME_TYPE, "application/x-nes-rom")
+            put(MediaStore.Downloads.RELATIVE_PATH, relativePath)
+            put(MediaStore.Downloads.IS_PENDING, 1)
+        }
+        val collection = MediaStore.Downloads.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY)
+        val published = context.contentResolver.insert(collection, values) ?: return@runCatching null
+        try {
+            context.contentResolver.openOutputStream(published, "w")?.use { output ->
+                source.inputStream().use { input -> input.copyTo(output) }
+            } ?: return@runCatching null
+            values.clear()
+            values.put(MediaStore.Downloads.IS_PENDING, 0)
+            context.contentResolver.update(published, values, null, null)
+            "/storage/emulated/0/$relativePath/galaxy-patrol.nes"
+        } catch (error: Exception) {
+            context.contentResolver.delete(published, null, null)
+            throw error
+        }
+    }.getOrNull()
 
     private fun resolvePackageName(requested: String): String? {
         val candidates = if (requested == "com.retroarch.aarch64") {
