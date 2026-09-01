@@ -47,7 +47,7 @@ object CompanionProtocol {
         value.substring(index * 2, index * 2 + 2).toInt(16).toByte()
     }
 
-    private fun ByteArray.toHex(): String = joinToString("") { "%02x".format(it) }
+    private fun ByteArray.toHex(): String = joinToString("") { "%02x".format(it.toInt() and 0xff) }
 
     private fun constantTimeEquals(left: String, right: String): Boolean {
         val leftBytes = left.toByteArray(StandardCharsets.UTF_8)
