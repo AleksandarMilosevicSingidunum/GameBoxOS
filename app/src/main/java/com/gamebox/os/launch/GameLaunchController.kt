@@ -36,6 +36,13 @@ enum class EmulatorContentRoot(val directoryName: String) {
     IMPORTS("imports"),
 }
 
+/** Stable path required by RetroArch's exported Android launcher activity. */
+internal fun retroArchCorePath(packageName: String, coreFileName: String): String {
+    require(packageName.startsWith("com.retroarch")) { "RetroArch package is required" }
+    require(coreFileName.endsWith("_libretro_android.so")) { "Android libretro core is required" }
+    return "/data/data/$packageName/cores/$coreFileName"
+}
+
 class EmulatorCapabilityRegistry(
     private val capabilities: List<EmulatorCapability> = listOf(
         EmulatorCapability(
@@ -188,7 +195,11 @@ class AndroidPackageGateway(
             contentUri = uri.toString(),
             graphicsProfile = capability.graphicsProfile,
             retroArchCorePath = capability.retroArchCoreFileName?.let { coreFileName ->
-                "/data/user/0/$resolvedPackage/cores/$coreFileName"
+                // RetroArch's externally launched activity resolves an absolute core path
+                // from its app-private data directory. Using the /data/user/0 alias is
+                // not reliable across current Android/RetroArch combinations and can
+                // leave RetroActivityFuture on a black surface when the core cannot open.
+                retroArchCorePath(resolvedPackage, coreFileName)
             },
         )
         val intent = (when (plan.style) {
@@ -207,7 +218,11 @@ class AndroidPackageGateway(
         })
             .putExtra("gamebox.graphics_profile", capability.graphicsProfile)
             .putExtra("gamebox.graphics_profile_applied", plan.graphicsProfileApplied)
-            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            .addFlags(
+                Intent.FLAG_ACTIVITY_NEW_TASK or
+                    Intent.FLAG_ACTIVITY_CLEAR_TOP or
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION
+            )
         intent.clipData = contentClipData(uri, contentUris.drop(1))
         if (intent.resolveActivity(context.packageManager) == null) {
             return GatewayResult.HANDOFF_REJECTED
@@ -351,3 +366,4 @@ class DefaultGameLaunchController(
         state.value = LaunchUiState(status, gameId, message)
     }
 }
+
