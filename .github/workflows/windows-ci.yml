@@ -47,7 +47,7 @@ jobs:
           } | ConvertTo-Json | Set-Content artifacts/GameBoxWindows-win-x64.manifest.json
       - name: Validate Windows artifact provenance
         shell: pwsh
-        run: scripts/validate-windows-artifact.ps1 -ArchivePath artifacts/GameBoxWindows-win-x64.zip -ChecksumPath artifacts/GameBoxWindows-win-x64.zip.sha256 -ManifestPath artifacts/GameBoxWindows-win-x64.manifest.json
+        run: scripts/validate-windows-artifact.ps1 -ArchivePath artifacts/GameBoxWindows-win-x64.zip -ChecksumPath artifacts/GameBoxWindows-win-x64.zip.sha256 -ManifestPath artifacts/GameBoxWindows-win-x64.manifest.json -ExecutablePath artifacts/GameBoxWindows/GameBox.Windows.exe
       - name: Upload Windows companion
         uses: actions/upload-artifact@v7
         with:
@@ -59,3 +59,4 @@ jobs:
           if-no-files-found: error
           retention-days: 14
           compression-level: 0
+
