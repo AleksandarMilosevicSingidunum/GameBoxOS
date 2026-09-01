@@ -77,7 +77,7 @@ class EmulatorCapabilityRegistry(
         else -> packageName.substringAfterLast(".")
     }
 
-    fun optionsFor(game: Game): List<String> = when (game.platform.lowercase().filter(Char::isLetterOrDigit)) {
+    /** Makes otherwise identical RetroArch choices unambiguous in game settings. */\n    fun optionDisplayName(packageName: String): String = when (packageName) {\n        "com.retroarch.aarch64" -> "RetroArch ARM64"\n        "com.retroarch" -> "RetroArch standard"\n        "com.retroarch.ra32" -> "RetroArch RA32"\n        else -> displayName(packageName)\n    }\n\n    fun optionsFor(game: Game): List<String> = when (game.platform.lowercase().filter(Char::isLetterOrDigit)) {
         in retroArchPlatformAliases -> retroArchPackages
         "psp", "playstationportable", "sonyplaystationportable" -> listOf("org.ppsspp.ppsspp")
         "ps1", "psx", "playstation", "sonyplaystation" -> listOf("com.github.stenzek.duckstation", "com.retroarch.aarch64")
