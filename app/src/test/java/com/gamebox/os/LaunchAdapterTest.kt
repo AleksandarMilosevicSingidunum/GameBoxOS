@@ -8,6 +8,7 @@ import com.gamebox.os.launch.EmulatorCapability
 import com.gamebox.os.launch.EmulatorCapabilityRegistry
 import com.gamebox.os.launch.EmulatorContentRoot
 import com.gamebox.os.launch.ReturnTracker
+import com.gamebox.os.launch.retroArchCorePath
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
@@ -40,6 +41,13 @@ class LaunchAdapterTest {
         val message = registry.readinessMessage(game)
         assertEquals(true, message?.contains("FCEUmm"))
         assertEquals("fceumm_libretro_android.so", registry.forGame(game)?.retroArchCoreFileName)
+    }
+
+    @Test fun galaxyPatrolUsesRetroArchStablePrivateCorePath() {
+        assertEquals(
+            "/data/data/com.retroarch.aarch64/cores/fceumm_libretro_android.so",
+            retroArchCorePath("com.retroarch.aarch64", "fceumm_libretro_android.so")
+        )
     }
 
     @Test fun registryExposesApprovedAdaptersForAdditionalPlatformGroups() {
@@ -102,3 +110,4 @@ class LaunchAdapterTest {
         assertEquals(0, tracker.returned()?.minutesPlayed)
     }
 }
+
