@@ -39,6 +39,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.VolumeUp
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -2941,7 +2942,7 @@ private fun BlueprintAppHubScreen(
             } else {
                 BlueprintPanel(Modifier.fillMaxWidth()) {
                     Text("Audio Output", fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                    HomeStatusItem(Icons.Rounded.VolumeUp, "Living Room", "Dolby Atmos")
+                    HomeStatusItem(Icons.AutoMirrored.Rounded.VolumeUp, "Living Room", "Dolby Atmos")
                     LinearProgressIndicator(progress = { 0.60f }, modifier = Modifier.fillMaxWidth())
                 }
                 BlueprintPanel(Modifier.fillMaxWidth()) {
@@ -3454,8 +3455,8 @@ private fun SettingsScreen(
         }
         Spacer(Modifier.height(18.dp))
         SettingsSectionHeader("Audio", sectionAnchor(SettingsSection.AUDIO))
-        SettingsStatusCard(Icons.Rounded.VolumeUp, "System audio", "GameBox respects Android media volume and the active output route.")
-        SettingsActionRow("Open Android sound settings", Icons.Rounded.VolumeUp) {
+        SettingsStatusCard(Icons.AutoMirrored.Rounded.VolumeUp, "System audio", "GameBox respects Android media volume and the active output route.")
+        SettingsActionRow("Open Android sound settings", Icons.AutoMirrored.Rounded.VolumeUp) {
             launchSystemSettings(Settings.ACTION_SOUND_SETTINGS)
         }
         Spacer(Modifier.height(18.dp))
@@ -3734,7 +3735,7 @@ private fun settingsSectionIcon(section: SettingsSection): ImageVector = when (s
     SettingsSection.DOWNLOADS -> Icons.Rounded.Downloading
     SettingsSection.EMULATORS -> Icons.Rounded.Memory
     SettingsSection.DISPLAY -> Icons.Rounded.Monitor
-    SettingsSection.AUDIO -> Icons.Rounded.VolumeUp
+    SettingsSection.AUDIO -> Icons.AutoMirrored.Rounded.VolumeUp
     SettingsSection.NETWORK -> Icons.Rounded.Wifi
     SettingsSection.SAVES_CLOUD -> Icons.Rounded.CloudSync
     SettingsSection.SYSTEM -> Icons.Rounded.Settings
