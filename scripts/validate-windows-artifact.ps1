@@ -3,7 +3,8 @@ param(
     [Parameter(Mandatory = $true)][string]$ChecksumPath,
     [Parameter(Mandatory = $true)][string]$ManifestPath,
     [switch]$RequireAuthenticode,
-    [string]$ExecutablePath
+    [string]$ExecutablePath,
+    [string]$ExecutableName = 'GameBox.Windows.exe'
 )
 
 $archive = Get-Item -LiteralPath $ArchivePath -ErrorAction Stop
@@ -20,6 +21,25 @@ if ([int64]$manifest.sizeBytes -ne $archive.Length) { throw 'Manifest size does 
 if ($manifest.runtime -ne 'win-x64') { throw 'Manifest runtime must be win-x64.' }
 if ($manifest.selfContained -ne $true) { throw 'Manifest must identify a self-contained build.' }
 if ($manifest.authenticodeSigned -isnot [bool]) { throw 'Manifest must declare authenticodeSigned as a boolean.' }
+if ([string]::IsNullOrWhiteSpace($ExecutableName) -or $ExecutableName -match '[\\/]') {
+    throw 'ExecutableName must be a single file name.'
+}
+
+Add-Type -AssemblyName System.IO.Compression.FileSystem
+$zip = [System.IO.Compression.ZipFile]::OpenRead($archive.FullName)
+try {
+    $entries = @($zip.Entries | Where-Object { $_.FullName -ieq $ExecutableName })
+    if ($entries.Count -ne 1) { throw "Archive must contain exactly one $ExecutableName entry." }
+    if ($entries[0].Length -le 0) { throw "Archive executable $ExecutableName must not be empty." }
+} finally {
+    $zip.Dispose()
+}
+
+if (-not [string]::IsNullOrWhiteSpace($ExecutablePath)) {
+    $executable = Get-Item -LiteralPath $ExecutablePath -ErrorAction Stop
+    if ($executable.Name -ne $ExecutableName) { throw 'ExecutablePath file name does not match ExecutableName.' }
+    if ($executable.Length -le 0) { throw 'Published executable must not be empty.' }
+}
 if ($RequireAuthenticode) {
     if ($manifest.authenticodeSigned -ne $true) { throw 'Manifest must identify an Authenticode-signed build.' }
     if ([string]::IsNullOrWhiteSpace($ExecutablePath)) { throw 'ExecutablePath is required when Authenticode is required.' }
@@ -29,3 +49,4 @@ if ($RequireAuthenticode) {
 if ($manifest.sourceCommit -notmatch '^[0-9a-f]{40}$') { throw 'Manifest source commit must be a full Git SHA.' }
 
 Write-Host "Validated Windows artifact manifest for $($archive.Name)"
+
