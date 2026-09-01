@@ -19,6 +19,11 @@ object EmulatorIntentPolicy {
     const val DOLPHIN_AUTO_START_FILES = "AutoStartFiles"
     const val RETROARCH_ROM = "ROM"
     const val RETROARCH_CORE = "LIBRETRO"
+    const val RETROARCH_CONFIG = "CONFIGFILE"
+    const val RETROARCH_DATA = "DATADIR"
+    const val RETROARCH_APK = "APK"
+    const val RETROARCH_SDCARD = "SDCARD"
+    const val RETROARCH_EXTERNAL = "EXTERNAL"
     const val RETROARCH_ACTIVITY = "com.retroarch.browser.retroactivity.RetroActivityFuture"
     private const val RETROARCH_PACKAGE = "com.retroarch"
 
@@ -76,4 +81,23 @@ object EmulatorIntentPolicy {
 
     private fun quote(value: String): String =
         "\"" + value.replace("\\", "\\\\").replace("\"", "\\\"") + "\""
+
+    /**
+     * RetroActivityFuture reads these paths before it processes the ROM/core extras.
+     * Supplying the target app's own locations prevents it from silently starting with
+     * GameBox's process paths, which otherwise results in an unrecoverable black window.
+     */
+    fun retroArchRuntimeExtras(
+        dataDir: String,
+        apkPath: String,
+        externalDir: String,
+        storageRoot: String,
+    ): Map<String, String> = mapOf(
+        RETROARCH_CONFIG to "$dataDir/retroarch.cfg",
+        RETROARCH_DATA to dataDir,
+        RETROARCH_APK to apkPath,
+        RETROARCH_SDCARD to storageRoot,
+        RETROARCH_EXTERNAL to externalDir,
+    )
 }
+
