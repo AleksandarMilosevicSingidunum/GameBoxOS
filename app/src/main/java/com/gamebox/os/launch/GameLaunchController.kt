@@ -9,6 +9,7 @@ import com.gamebox.os.data.GameRepository
 import com.gamebox.os.domain.Game
 import com.gamebox.os.domain.GameId
 import com.gamebox.os.domain.InstallState
+import com.gamebox.os.domain.LocalContentFile
 import com.gamebox.os.download.Sha256Verifier
 import com.gamebox.os.download.VerificationResult
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -27,6 +28,7 @@ data class EmulatorCapability(
     val requiredCore: String? = null,
     val retroArchCoreFileName: String? = null,
     val contentRoot: EmulatorContentRoot = EmulatorContentRoot.INSTALLED,
+    val companionFiles: List<LocalContentFile> = emptyList(),
 )
 
 enum class EmulatorContentRoot(val directoryName: String) {
@@ -112,6 +114,9 @@ class EmulatorCapabilityRegistry(
                 requiredCore = explicit?.requiredCore,
                 retroArchCoreFileName = explicit?.retroArchCoreFileName,
                 contentRoot = EmulatorContentRoot.IMPORTS,
+                companionFiles = game.localContentFiles.filterNot { file ->
+                    file.relativePath == importedPath
+                },
             )
         }
         explicit?.let { return it }
@@ -153,21 +158,31 @@ class AndroidPackageGateway(
         val launcherIntent = context.packageManager.getLaunchIntentForPackage(resolvedPackage)
             ?: return GatewayResult.EMULATOR_UNAVAILABLE
         val installRoot = context.filesDir.resolve(capability.contentRoot.directoryName).canonicalFile
-        val content = File(installRoot, capability.contentRelativePath).canonicalFile
         val rootPrefix = installRoot.path + File.separator
-        if (!content.path.startsWith(rootPrefix) || !content.isFile) {
-            return GatewayResult.CONTENT_MISSING
+        val approvedFiles = listOf(
+            LocalContentFile(
+                capability.contentRelativePath,
+                capability.expectedSha256,
+                capability.mimeType,
+            )
+        ) + capability.companionFiles
+        val contentUris = mutableListOf<android.net.Uri>()
+        approvedFiles.forEach { approved ->
+            val content = File(installRoot, approved.relativePath).canonicalFile
+            if (!content.path.startsWith(rootPrefix) || !content.isFile) {
+                return GatewayResult.CONTENT_MISSING
+            }
+            val verified = content.inputStream().use {
+                verifier.verify(it, approved.sha256)
+            }
+            if (verified != VerificationResult.Verified) return GatewayResult.VERIFICATION_FAILED
+            contentUris += FileProvider.getUriForFile(
+                context,
+                context.packageName + ".files",
+                content,
+            )
         }
-        val verified = content.inputStream().use {
-            verifier.verify(it, capability.expectedSha256)
-        }
-        if (verified != VerificationResult.Verified) return GatewayResult.VERIFICATION_FAILED
-
-        val uri = FileProvider.getUriForFile(
-            context,
-            context.packageName + ".files",
-            content
-        )
+        val uri = contentUris.first()
         val plan = EmulatorIntentPolicy.plan(
             packageName = resolvedPackage,
             contentUri = uri.toString(),
@@ -176,7 +191,7 @@ class AndroidPackageGateway(
                 "/data/user/0/$resolvedPackage/cores/$coreFileName"
             },
         )
-        val intent = when (plan.style) {
+        val intent = (when (plan.style) {
             EmulatorIntentStyle.ACTION_VIEW -> Intent(Intent.ACTION_VIEW)
                 .setDataAndType(uri, capability.mimeType)
                 .setPackage(resolvedPackage)
@@ -185,15 +200,15 @@ class AndroidPackageGateway(
                     Intent().setClassName(resolvedPackage, activityClassName)
                 } ?: launcherIntent
                 Intent(baseIntent).apply {
-                    clipData = ClipData.newRawUri("GameBox content", uri)
                     plan.stringExtras.forEach { (key, value) -> putExtra(key, value) }
                     plan.stringArrayExtras.forEach { (key, values) -> putExtra(key, values.toTypedArray()) }
                 }
             }
-        }
+        })
             .putExtra("gamebox.graphics_profile", capability.graphicsProfile)
             .putExtra("gamebox.graphics_profile_applied", plan.graphicsProfileApplied)
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        intent.clipData = contentClipData(uri, contentUris.drop(1))
         if (intent.resolveActivity(context.packageManager) == null) {
             return GatewayResult.HANDOFF_REJECTED
         }
@@ -207,7 +222,7 @@ class AndroidPackageGateway(
                 val fallback = Intent(Intent.ACTION_VIEW).apply {
                     setDataAndType(uri, capability.mimeType)
                     setPackage(resolvedPackage)
-                    clipData = ClipData.newRawUri("GameBox content", uri)
+                    clipData = contentClipData(uri, contentUris.drop(1))
                     addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_GRANT_READ_URI_PERMISSION)
                 }
                 runCatching {
@@ -219,6 +234,11 @@ class AndroidPackageGateway(
             }
         }
     }
+
+    private fun contentClipData(primary: android.net.Uri, companions: List<android.net.Uri>): ClipData =
+        ClipData.newRawUri("GameBox content", primary).apply {
+            companions.forEach { companionUri -> addItem(ClipData.Item(companionUri)) }
+        }
 
     private fun resolvePackageName(requested: String): String? {
         val candidates = if (requested == "com.retroarch.aarch64") {

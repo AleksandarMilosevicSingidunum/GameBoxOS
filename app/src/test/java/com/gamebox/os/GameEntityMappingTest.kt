@@ -5,6 +5,7 @@ import com.gamebox.os.data.local.toEntity
 import com.gamebox.os.domain.Game
 import com.gamebox.os.domain.GameId
 import com.gamebox.os.domain.InstallState
+import com.gamebox.os.domain.LocalContentFile
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -28,6 +29,9 @@ class GameEntityMappingTest {
             localContentRelativePath = "art/Artwork.nes",
             localContentSha256 = "a".repeat(64),
             localContentMimeType = "application/x-nes-rom",
+            localContentFiles = listOf(
+                LocalContentFile("art/Artwork.nes", "a".repeat(64), "application/x-nes-rom")
+            ),
         )
         assertEquals(game, game.toEntity().toDomain())
     }

@@ -67,11 +67,14 @@ import com.gamebox.os.data.ImportedGameRegistration
 import com.gamebox.os.importer.AuthorizedRomImporter
 import com.gamebox.os.importer.RomImportPolicy
 import com.gamebox.os.importer.RomImportResult
+import com.gamebox.os.importer.RomImportSetResult
+import com.gamebox.os.importer.RomImportSource
 import com.gamebox.os.domain.Game
 import com.gamebox.os.domain.GameId
 import com.gamebox.os.domain.DownloadStatus
 import com.gamebox.os.domain.CatalogRefreshState
 import com.gamebox.os.domain.InstallState
+import com.gamebox.os.domain.LocalContentFile
 import com.gamebox.os.domain.primaryAction
 import com.gamebox.os.domain.summarizeLibrary
 import com.gamebox.os.domain.normalizeCatalogTitle
@@ -1499,24 +1502,25 @@ private fun DiscoveryDetailsScreen(
     }
     var importing by remember(game.id) { mutableStateOf(false) }
     var importMessage by remember(game.id) { mutableStateOf<String?>(null) }
+    fun queryDisplayName(uri: Uri): String = runCatching {
+        context.contentResolver.query(
+            uri,
+            arrayOf(OpenableColumns.DISPLAY_NAME),
+            null,
+            null,
+            null,
+        )?.use { cursor ->
+            val index = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+            if (index >= 0 && cursor.moveToFirst()) cursor.getString(index) else null
+        }
+    }.getOrNull() ?: uri.lastPathSegment ?: "game.rom"
     val importLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocument()
     ) { uri ->
         if (uri == null) {
             importMessage = "No file selected"
         } else {
-            val displayName = runCatching {
-                context.contentResolver.query(
-                    uri,
-                    arrayOf(OpenableColumns.DISPLAY_NAME),
-                    null,
-                    null,
-                    null,
-                )?.use { cursor ->
-                    val index = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
-                    if (index >= 0 && cursor.moveToFirst()) cursor.getString(index) else null
-                }
-            }.getOrNull() ?: uri.lastPathSegment ?: "game.rom"
+            val displayName = queryDisplayName(uri)
             importing = true
             importMessage = "Importing and verifying " + displayName + "…"
             scope.launch {
@@ -1557,26 +1561,95 @@ private fun DiscoveryDetailsScreen(
             }
         }
     }
+    val importSetLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenMultipleDocuments()
+    ) { uris ->
+        if (uris.isEmpty()) {
+            importMessage = "No files selected"
+        } else {
+            val sources = uris.map { uri -> RomImportSource(uri, queryDisplayName(uri)) }
+            importing = true
+            importMessage = "Importing and verifying ${sources.size} disc-set files…"
+            scope.launch {
+                importMessage = when (val result = importer.importSet(game.id, sources, platformName)) {
+                    is RomImportSetResult.Imported -> runCatching {
+                        val importedFiles = result.files.map { file ->
+                            LocalContentFile(
+                                relativePath = RomImportPolicy.importRootRelativePath(game.id, file.relativePath),
+                                sha256 = file.hashes.sha256,
+                                mimeType = file.mimeType,
+                            )
+                        }
+                        val launchPath = RomImportPolicy.importRootRelativePath(
+                            game.id,
+                            result.launchFile.relativePath,
+                        )
+                        val launchFile = requireNotNull(importedFiles.firstOrNull {
+                            it.relativePath == launchPath
+                        })
+                        repository.registerImportedGame(
+                            ImportedGameRegistration(
+                                id = game.id,
+                                title = game.title,
+                                platform = importPlatformLabel,
+                                year = game.releaseDate?.let { releaseDate ->
+                                    Regex("""(?:19|20)\d{2}""").find(releaseDate)?.value?.toIntOrNull()
+                                } ?: 0,
+                                sizeBytes = result.files.sumOf { it.hashes.sizeBytes },
+                                relativePath = launchFile.relativePath,
+                                sha256 = launchFile.sha256,
+                                mimeType = launchFile.mimeType,
+                                favorite = game.favorite,
+                                artworkUrl = game.coverUrl,
+                                description = game.description,
+                                players = game.players,
+                                additionalFiles = importedFiles.filterNot { it.relativePath == launchPath },
+                            )
+                        )
+                        "${result.files.size}-file disc set verified and added to Library"
+                    }.getOrElse { error ->
+                        "The disc set was stored, but Library registration failed: " +
+                            (error.message?.take(160) ?: "unknown error")
+                    }
+                    RomImportSetResult.SourceUnavailable -> "One of the selected files could not be opened"
+                    is RomImportSetResult.Rejected -> "Import rejected: " + result.reason
+                    is RomImportSetResult.Failed -> "Import failed: " + result.reason
+                }
+                importing = false
+            }
+        }
+    }
 
     Column(
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            Button(onClick = onBack) { Text("Back") }
-            OutlinedButton(onClick = onFavorite) {
-                Text(if (game.favorite) "Remove favorite" else "Add favorite")
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Button(onClick = onBack) { Text("Back") }
+                OutlinedButton(onClick = onFavorite) {
+                    Text(if (game.favorite) "Remove favorite" else "Add favorite")
+                }
             }
-            Button(
-                enabled = !importing,
-                onClick = {
-                    // Console dumps are commonly reported as application/octet-stream or with
-                    // vendor-specific MIME types. Let the picker show all documents, then enforce
-                    // the platform-specific extension allowlist before reading any bytes.
-                    importLauncher.launch(arrayOf("*/*"))
-                },
-            ) {
-                Text(if (importing) "Importing…" else "Import authorized copy")
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Button(
+                    enabled = !importing,
+                    onClick = {
+                        // Console dumps are commonly reported as application/octet-stream or with
+                        // vendor-specific MIME types. Validate extensions after document selection.
+                        importLauncher.launch(arrayOf("*/*"))
+                    },
+                ) {
+                    Text(if (importing) "Importing…" else "Import authorized copy")
+                }
+                if (RomImportPolicy.supportsMultiFile(platformName)) {
+                    OutlinedButton(
+                        enabled = !importing,
+                        onClick = { importSetLauncher.launch(arrayOf("*/*")) },
+                    ) {
+                        Text("Import multi-file disc set")
+                    }
+                }
             }
         }
         Text(

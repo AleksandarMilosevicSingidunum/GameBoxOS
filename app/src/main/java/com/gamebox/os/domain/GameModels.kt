@@ -10,6 +10,19 @@ object GraphicsProfiles {
 @JvmInline
 value class GameId(val value: String)
 
+data class LocalContentFile(
+    val relativePath: String,
+    val sha256: String,
+    val mimeType: String,
+) {
+    init {
+        require(relativePath.isNotBlank() && relativePath.none { it == '\\' })
+        require(relativePath.split('/').none { it.isEmpty() || it == "." || it == ".." })
+        require(sha256.matches(Regex("^[a-f0-9]{64}$")))
+        require(mimeType.isNotBlank())
+    }
+}
+
 enum class InstallState {
     NOT_INSTALLED, QUEUED, DOWNLOADING, PAUSED, VERIFYING,
     INSTALLING, INSTALLED, UPDATE_AVAILABLE, MISSING_FILES, FAILED
@@ -40,6 +53,7 @@ data class Game(
     val localContentRelativePath: String? = null,
     val localContentSha256: String? = null,
     val localContentMimeType: String? = null,
+    val localContentFiles: List<LocalContentFile> = emptyList(),
 )
 
 enum class DownloadStatus {
