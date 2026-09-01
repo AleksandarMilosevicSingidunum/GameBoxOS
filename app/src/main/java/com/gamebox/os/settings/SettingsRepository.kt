@@ -15,6 +15,8 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import com.gamebox.os.catalog.CatalogCredentials
+import com.gamebox.os.catalog.CatalogProviderConfig
+import com.gamebox.os.catalog.CatalogTransport
 
 private val Context.gameBoxDataStore: DataStore<Preferences> by preferencesDataStore(name = "gamebox_settings")
 
@@ -25,6 +27,10 @@ data class GameBoxSettings(
     val catalogSeededAtEpochMs: Long? = null,
     val catalogRefreshedAtEpochMs: Long? = null,
     val catalogUrl: String = "",
+    val catalogTransport: String = "HTTPS",
+    val catalogBucket: String = "",
+    val catalogPrefix: String = "",
+    val catalogRegion: String = "us-east-1",
     val externalLibraryUri: String = "",
     val cloudSaveProvider: String = "WEBDAV",
     val cloudSaveEndpoint: String = "",
@@ -41,6 +47,10 @@ class SettingsRepository(private val context: Context) {
             catalogSeededAtEpochMs = preferences[CATALOG_SEEDED_AT],
             catalogRefreshedAtEpochMs = preferences[CATALOG_REFRESHED_AT],
             catalogUrl = preferences[CATALOG_URL] ?: "",
+            catalogTransport = preferences[CATALOG_TRANSPORT] ?: "HTTPS",
+            catalogBucket = preferences[CATALOG_BUCKET] ?: "",
+            catalogPrefix = preferences[CATALOG_PREFIX] ?: "",
+            catalogRegion = preferences[CATALOG_REGION] ?: "us-east-1",
             externalLibraryUri = preferences[EXTERNAL_LIBRARY_URI] ?: "",
             cloudSaveProvider = preferences[CLOUD_SAVE_PROVIDER] ?: "WEBDAV",
             cloudSaveEndpoint = preferences[CLOUD_SAVE_ENDPOINT] ?: "",
@@ -121,8 +131,71 @@ class SettingsRepository(private val context: Context) {
 
     suspend fun catalogUrl(): String = settings.first().catalogUrl
 
+    suspend fun catalogProviderConfig(): CatalogProviderConfig {
+        val current = settings.first()
+        return when (current.catalogTransport) {
+            "WEBDAV" -> CatalogProviderConfig(
+                transport = CatalogTransport.WebDav(current.catalogUrl),
+                credentialKey = CATALOG_WEBDAV_CREDENTIAL_KEY,
+            )
+            "S3" -> CatalogProviderConfig(
+                transport = CatalogTransport.S3(
+                    endpoint = current.catalogUrl,
+                    bucket = current.catalogBucket,
+                    prefix = current.catalogPrefix,
+                    region = current.catalogRegion,
+                ),
+                credentialKey = CATALOG_S3_CREDENTIAL_KEY,
+            )
+            else -> CatalogProviderConfig(CatalogTransport.Https(current.catalogUrl))
+        }
+    }
+
+    fun catalogCredentials(key: String): CatalogCredentials? = when (key) {
+        CATALOG_WEBDAV_CREDENTIAL_KEY -> CatalogCredentials(
+            username = secretStore.get(CATALOG_WEBDAV_USERNAME),
+            password = secretStore.get(CATALOG_WEBDAV_PASSWORD),
+        ).takeIf(CatalogCredentials::hasBasicAuth)
+        CATALOG_S3_CREDENTIAL_KEY -> CatalogCredentials(
+            accessKey = secretStore.get(CATALOG_S3_ACCESS_KEY),
+            secretKey = secretStore.get(CATALOG_S3_SECRET_KEY),
+        ).takeIf(CatalogCredentials::hasS3Auth)
+        else -> null
+    }
+
+    suspend fun setCatalogConfiguration(
+        transport: String,
+        endpoint: String,
+        bucket: String = "",
+        prefix: String = "",
+        region: String = "us-east-1",
+    ) {
+        require(transport.uppercase() in setOf("HTTPS", "WEBDAV", "S3")) { "Unsupported catalog transport" }
+        context.gameBoxDataStore.edit { preferences ->
+            preferences[CATALOG_TRANSPORT] = transport.uppercase()
+            preferences[CATALOG_URL] = endpoint.trim()
+            preferences[CATALOG_BUCKET] = bucket.trim()
+            preferences[CATALOG_PREFIX] = prefix.trim().trim('/')
+            preferences[CATALOG_REGION] = region.trim().ifEmpty { "us-east-1" }
+        }
+    }
+
+    suspend fun setCatalogCredentials(transport: String, identity: String?, secret: String?) = withContext(Dispatchers.IO) {
+        when (transport.uppercase()) {
+            "WEBDAV" -> {
+                secretStore.put(CATALOG_WEBDAV_USERNAME, identity)
+                secretStore.put(CATALOG_WEBDAV_PASSWORD, secret)
+            }
+            "S3" -> {
+                secretStore.put(CATALOG_S3_ACCESS_KEY, identity)
+                secretStore.put(CATALOG_S3_SECRET_KEY, secret)
+            }
+            else -> require(false) { "Catalog credentials are only available for WebDAV and S3" }
+        }
+    }
+
     suspend fun setCatalogUrl(value: String) {
-        context.gameBoxDataStore.edit { it[CATALOG_URL] = value.trim() }
+        setCatalogConfiguration("HTTPS", value)
     }
 
     suspend fun setSafeAreaPercent(value: Float) {
@@ -152,14 +225,25 @@ class SettingsRepository(private val context: Context) {
         val CATALOG_SEEDED_AT = longPreferencesKey("catalog_seeded_at_epoch_ms")
         val CATALOG_REFRESHED_AT = longPreferencesKey("catalog_refreshed_at_epoch_ms")
         val CATALOG_URL = stringPreferencesKey("catalog_url")
+        val CATALOG_TRANSPORT = stringPreferencesKey("catalog_transport")
+        val CATALOG_BUCKET = stringPreferencesKey("catalog_bucket")
+        val CATALOG_PREFIX = stringPreferencesKey("catalog_prefix")
+        val CATALOG_REGION = stringPreferencesKey("catalog_region")
         val EXTERNAL_LIBRARY_URI = stringPreferencesKey("external_library_uri")
         val CLOUD_SAVE_PROVIDER = stringPreferencesKey("cloud_save_provider")
         val CLOUD_SAVE_ENDPOINT = stringPreferencesKey("cloud_save_endpoint")
         val CLOUD_SAVE_REGION = stringPreferencesKey("cloud_save_region")
         const val THEGAMESDB_API_KEY = "thegamesdb_api_key"
+        const val CATALOG_WEBDAV_CREDENTIAL_KEY = "catalog-webdav"
+        const val CATALOG_S3_CREDENTIAL_KEY = "catalog-s3"
+        const val CATALOG_WEBDAV_USERNAME = "catalog_webdav_username"
+        const val CATALOG_WEBDAV_PASSWORD = "catalog_webdav_password"
+        const val CATALOG_S3_ACCESS_KEY = "catalog_s3_access_key"
+        const val CATALOG_S3_SECRET_KEY = "catalog_s3_secret_key"
         const val CLOUD_SAVE_USERNAME = "cloud_save_username"
         const val CLOUD_SAVE_PASSWORD = "cloud_save_password"
         const val CLOUD_SAVE_ACCESS_KEY = "cloud_save_access_key"
         const val CLOUD_SAVE_SECRET_KEY = "cloud_save_secret_key"
     }
 }
+

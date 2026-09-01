@@ -24,3 +24,11 @@ class InMemoryCatalogCredentialStore(
     init { require(values.keys.all { it.isNotBlank() }) { "credential keys must not be blank" } }
     override fun credentials(key: String): CatalogCredentials? = values[key]
 }
+
+/** Connects the catalog transport layer to the encrypted application settings. */
+class SettingsCatalogCredentialStore(
+    private val load: (String) -> CatalogCredentials?
+) : CatalogCredentialStore {
+    override fun credentials(key: String): CatalogCredentials? = load(key)
+}
+
