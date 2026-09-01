@@ -16,6 +16,7 @@ The development blueprint is guidance. Work proceeds in small, testable incremen
 - [x] Per-tab game-card focus restoration, including off-screen LazyRow items
 - [x] Focus-memory policy unit tests
 - [x] Compose navigation instrumentation tests
+- [x] Clean API-35 emulator CI execution of Compose, Room, migration, lifecycle, navigation, and accessibility instrumentation tests
 
 ## 0.2 - Persistent catalog shell
 
@@ -75,4 +76,5 @@ Galaxy S23 Ultra and DeX validation, controller and HDMI reconnect tests, extern
 - [x] Clarified emulator content-handoff failure messaging
 - [x] Bundled authorized Galaxy Patrol NES fixture with pinned checksum and emulator-core requirement
 
-Physical Galaxy/DeX/controller testing, production signing credentials, and enclosure validation remain hardware/deployment gates rather than locally verifiable code tasks.
+Physical Galaxy/DeX/controller testing, production signing credentials, real provider/emulator integration, and enclosure validation remain hardware/deployment gates rather than locally verifiable code tasks. A clean API-35 emulator now executes the Android instrumentation suite in CI; this does not replace physical-device acceptance testing.
+

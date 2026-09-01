@@ -49,7 +49,7 @@ Latest verified increments: the primary shell now includes an original scalable 
 - Configurable Media/PC launch hubs with installed-only filtering, Moonlight network status/recent sessions, interactive PC host probing, and Android system-setting shortcuts
 - SAF external-library selection with persisted permissions, explicit migration confirmation dialog, retryable disconnect/read-only status, and non-destructive copy execution
 - Sanitized diagnostics export that excludes credentials, source URLs, checksums, paths, and save contents
-- Automated unit tests covering storage/provider/release/accessibility contracts plus compiled Compose migration/accessibility instrumentation APKs, debug APK builds, self-contained Windows Companion builds, and green Android/Windows CI verification on the latest main commit with superseded-run cancellation, bounded Gradle/build steps, and executable catalog-timeout coverage
+- Automated unit tests covering storage/provider/release/accessibility contracts plus a clean API-35 emulator run of the Compose migration, navigation, Room, lifecycle, and accessibility instrumentation suite; debug APK builds, self-contained Windows Companion builds, and green Android/Windows CI verification on the latest main commit with superseded-run cancellation, bounded Gradle/build steps, and executable catalog-timeout coverage
 - Friendly emulator selection with validated graphics profiles, launch-time profile handoff, and unsupported-platform guidance
 - Deterministic release manifest generation containing APK hash, size, channel, and optional rollback tag
 - Network-aware offline catalog selection with a reactive accessible offline-mode banner, explicit degraded refresh states, bundled recovery after provider failure, and non-fatal optional metadata enrichment
@@ -64,7 +64,7 @@ The active implementation goal covers all remaining software work below. Physica
 - Complete end-to-end authenticated WebDAV/S3 integration testing and physical recovery validation
 - Validate authenticated cloud-save byte transfer against real WebDAV/S3 endpoints and real save adapters against production emulators
 - Complete physical disconnect/unplug safety tests for confirmed SAF migrations
-- Execute Compose accessibility/lifecycle instrumentation on devices and expand airplane-mode and failure-recovery scenarios
+- Complete physical-device Compose accessibility/lifecycle validation and expand airplane-mode and failure-recovery scenarios (the hosted API-35 emulator instrumentation suite is now a required CI gate)
 - Complete physical controller testing on Galaxy A53
 - Complete Galaxy S23 Ultra DeX/HDMI/Ethernet/charging/thermal/reconnect soak testing
 - Configure signed production builds and execute real update-channel/rollback validation using generated release manifests
@@ -79,7 +79,7 @@ The remaining work is tracked in these concrete groups:
 - Complete end-to-end authenticated WebDAV/S3 provider integration and physical recovery testing.
 - Verify physical disconnect recovery for Settings-driven migrations.
 - Validate adapter-specific save discovery/import/export against production emulators and exercise authenticated cloud byte transport against real WebDAV/S3 endpoints.
-- Run the compiled Compose accessibility/migration/lifecycle suite on devices and add offline/recovery scenarios.
+- Run the Compose accessibility/migration/lifecycle suite on physical target devices and add offline/recovery scenarios; the same suite already runs on a clean API-35 emulator in CI.
 - Complete physical controller, DeX, HDMI, Ethernet, charging, thermal, SSD, and unplug/reattach validation.
 - Configure production signing and execute update-channel/rollback validation using generated artifact manifests.
 - Execute the repository hardware handoff specification: target measurements, BOM selection, CAD/fabrication, cooling/cabling validation, and prototype acceptance.
