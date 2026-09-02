@@ -60,6 +60,11 @@
                     </Grid>
                     <Button Content="Check GameBox device" Click="CheckDevice_Click" Margin="0,8,0,0" AutomationProperties.Name="Authenticate and check GameBox device"/>
                     <TextBlock x:Name="DeviceStatusText" Foreground="#9EADC0" TextWrapping="Wrap" Margin="0,6,0,0" AutomationProperties.LiveSetting="Polite" Text="Enter the pairing secret shown in GameBox Settings. It is used only for this connection check."/>
+                    <Button Content="Refresh GameBox library" Click="RefreshDeviceLibrary_Click" Margin="0,8,0,0" AutomationProperties.Name="Refresh paired GameBox library"/>
+                    <TextBlock x:Name="DeviceLibrarySummaryText" Foreground="#9EADC0" TextWrapping="Wrap" Margin="0,6,0,0" AutomationProperties.LiveSetting="Polite" Text="No paired library loaded."/>
+                    <ListBox x:Name="DeviceLibraryList" Background="Transparent" BorderThickness="0" Foreground="{StaticResource TextBrush}" MaxHeight="128" Margin="0,4,0,0" AutomationProperties.Name="Paired GameBox library">
+                        <ListBox.ItemTemplate><DataTemplate><StackPanel Margin="2"><TextBlock Text="{Binding Title}" FontWeight="SemiBold"/><TextBlock Foreground="#9EADC0" Text="{Binding Platform}"/></StackPanel></DataTemplate></ListBox.ItemTemplate>
+                    </ListBox>
                     <Separator Margin="0,22"/>
                     <TextBlock Text="Launches only files you explicitly add. It never downloads content, deletes game files, or stores streaming credentials." Foreground="#9EADC0" TextWrapping="Wrap"/>
                 </StackPanel>
