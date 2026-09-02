@@ -7,6 +7,7 @@ import android.content.Context
 import android.content.Intent
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
+import com.gamebox.os.GameBoxApplication
 import com.gamebox.os.settings.SettingsRepository
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
@@ -62,13 +63,26 @@ class CompanionEndpointService : Service() {
             val divider = line.indexOf(':')
             if (divider > 0) headers[line.substring(0, divider).trim().lowercase()] = line.substring(divider + 1).trim()
         }
-        val response = CompanionStatusRoute.handle(
-            method = parts[0], path = parts[1],
-            authorization = headers[CompanionProtocol.AUTHORIZATION_HEADER.lowercase()],
-            pairingSecret = secret,
-            deviceName = applicationInfo.loadLabel(packageManager).toString(),
-            nowUnixTimeSeconds = System.currentTimeMillis() / 1_000L,
-        )
+        val authorization = headers[CompanionProtocol.AUTHORIZATION_HEADER.lowercase()]
+        val now = System.currentTimeMillis() / 1_000L
+        val response = when (parts[1]) {
+            CompanionStatusRoute.PATH -> CompanionStatusRoute.handle(
+                method = parts[0], path = parts[1], authorization = authorization, pairingSecret = secret,
+                deviceName = applicationInfo.loadLabel(packageManager).toString(), nowUnixTimeSeconds = now,
+            )
+            CompanionLibraryRoute.PATH -> CompanionLibraryRoute.handle(
+                method = parts[0], path = parts[1], authorization = authorization, pairingSecret = secret,
+                library = (application as GameBoxApplication).container.gameRepository.observeGames().value.map { game ->
+                    CompanionLibraryItem(
+                        id = game.id.value, title = game.title, platform = game.platform,
+                        installState = game.state.name, favorite = game.favorite,
+                        minutesPlayed = game.minutesPlayed, savePresent = game.savePresent,
+                    )
+                },
+                nowUnixTimeSeconds = now,
+            )
+            else -> CompanionHttpResponse(404, """{"error":"not_found"}""")
+        }
         write(socket, response.status, response.body)
     }
 
