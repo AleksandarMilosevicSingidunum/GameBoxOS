@@ -223,7 +223,7 @@ class AndroidPackageGateway(
             resolvedPackage.startsWith("com.retroarch") &&
             capability.gameId == GameId("galaxy-patrol")
         ) {
-            publishGalaxyPatrolForRetroArch(content) ?: return GatewayResult.HANDOFF_REJECTED
+            publishGalaxyPatrolForRetroArch(File(installRoot, capability.contentRelativePath).canonicalFile) ?: return GatewayResult.HANDOFF_REJECTED
         } else {
             uri.toString()
         }
