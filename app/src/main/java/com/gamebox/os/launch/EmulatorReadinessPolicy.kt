@@ -21,43 +21,21 @@ object EmulatorReadinessPolicy {
         installedPackages: Set<String>,
         displayName: (String) -> String,
     ): EmulatorReadiness {
-        if (approvedOptions.isEmpty()) {
-            return EmulatorReadiness(
-                state = EmulatorReadinessState.UNSUPPORTED,
-                selectedPackage = null,
-                installedOptions = emptyList(),
-                message = "No approved emulator adapter is available for this platform.",
-            )
-        }
+        if (approvedOptions.isEmpty()) return EmulatorReadiness(
+            EmulatorReadinessState.UNSUPPORTED, null, emptyList(),
+            "No approved emulator adapter is available for this platform."
+        )
 
         val installed = approvedOptions.filter(installedPackages::contains)
-        val selected = selectedPackage
-            ?.takeIf(approvedOptions::contains)
-            ?: approvedOptions.first()
-
-        if (selected in installedPackages) {
-            return EmulatorReadiness(
-                state = EmulatorReadinessState.READY,
-                selectedPackage = selected,
-                installedOptions = installed,
-                message = displayName(selected) + " is installed and ready for verified content handoff.",
-            )
-        }
-
-        if (installed.isEmpty()) {
-            return EmulatorReadiness(
-                state = EmulatorReadinessState.NONE_INSTALLED,
-                selectedPackage = selected,
-                installedOptions = emptyList(),
-                message = "Install " + displayName(selected) + " before launching this game.",
-            )
-        }
-
+        val preferred = EmulatorPackageResolver.preferred(approvedOptions, selectedPackage)
+        val resolved = EmulatorPackageResolver.resolve(approvedOptions, selectedPackage, installedPackages)
+        if (resolved != null) return EmulatorReadiness(
+            EmulatorReadinessState.READY, resolved, installed,
+            displayName(resolved) + " is installed and ready for verified content handoff."
+        )
         return EmulatorReadiness(
-            state = EmulatorReadinessState.MISSING_SELECTED,
-            selectedPackage = selected,
-            installedOptions = installed,
-            message = displayName(selected) + " is not installed. Choose an installed emulator.",
+            EmulatorReadinessState.NONE_INSTALLED, preferred, emptyList(),
+            "Install " + displayName(requireNotNull(preferred)) + " before launching this game."
         )
     }
 }
