@@ -51,6 +51,16 @@
                     <Button x:Name="ClearHistoryButton" Content="Clear play history" Click="ClearHistory_Click" IsEnabled="False" AutomationProperties.Name="Clear selected game play history"/>
                     <Button x:Name="RemoveButton" Content="Remove from library" Click="Remove_Click" IsEnabled="False"/>
                     <Separator Margin="0,22"/>
+                    <TextBlock Text="GAMEBOX DEVICE" Foreground="{StaticResource AccentBrush}" FontWeight="Bold"/>
+                    <TextBox x:Name="DeviceHostBox" Text="192.168.1." Margin="0,8,0,0" AutomationProperties.Name="GameBox device host or IP"/>
+                    <Grid Margin="0,8,0,0">
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="86"/></Grid.ColumnDefinitions>
+                        <PasswordBox x:Name="DeviceSecretBox" AutomationProperties.Name="GameBox pairing secret"/>
+                        <TextBox x:Name="DevicePortBox" Grid.Column="1" Text="49500" Margin="8,0,0,0" AutomationProperties.Name="GameBox device port"/>
+                    </Grid>
+                    <Button Content="Check GameBox device" Click="CheckDevice_Click" Margin="0,8,0,0" AutomationProperties.Name="Authenticate and check GameBox device"/>
+                    <TextBlock x:Name="DeviceStatusText" Foreground="#9EADC0" TextWrapping="Wrap" Margin="0,6,0,0" AutomationProperties.LiveSetting="Polite" Text="Enter the pairing secret shown in GameBox Settings. It is used only for this connection check."/>
+                    <Separator Margin="0,22"/>
                     <TextBlock Text="Launches only files you explicitly add. It never downloads content, deletes game files, or stores streaming credentials." Foreground="#9EADC0" TextWrapping="Wrap"/>
                 </StackPanel>
             </Border>
