@@ -3197,12 +3197,14 @@ private fun SettingsScreen(
     var cloudSecret by remember { mutableStateOf("") }
     var cloudCredentialsConfigured by remember { mutableStateOf(false) }
     var cloudMessage by remember { mutableStateOf<String?>(null) }
+    var companionSecret by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(settingsRepository) {
         theGamesDbConfigured = settingsRepository.hasTheGamesDbApiKey()
     }
     LaunchedEffect(settingsRepository, cloudProvider) {
         cloudCredentialsConfigured = settingsRepository.hasCloudSaveCredentials(cloudProvider)
     }
+    LaunchedEffect(settingsRepository) { companionSecret = settingsRepository.companionPairingSecret() }
     val externalStorageStatus = externalStorageController.inspect(currentSettings.externalLibraryUri)
     val installedMigration = remember(context) { com.gamebox.os.storage.InstalledContentMigration(context.filesDir.resolve("installed")) }
     val migrationPlan = remember(diagnosticGames) { installedMigration.plan() }
@@ -3469,6 +3471,20 @@ private fun SettingsScreen(
         SettingsActionRow("Open Android network settings", Icons.Rounded.Wifi) {
             launchSystemSettings(Settings.ACTION_WIRELESS_SETTINGS)
         }
+        Text("Windows Companion", fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 12.dp))
+        Text("Enable a paired local-network status connection. The pairing secret is encrypted on this device.", color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.62f), fontSize = 12.sp)
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+            Text(if (currentSettings.companionEnabled) "Companion active on port ${currentSettings.companionPort}" else "Companion disabled")
+            Switch(checked = currentSettings.companionEnabled, onCheckedChange = { enabled ->
+                scope.launch {
+                    if (enabled && companionSecret == null) companionSecret = settingsRepository.rotateCompanionPairingSecret()
+                    settingsRepository.setCompanionConfiguration(enabled, currentSettings.companionPort)
+                    if (enabled) com.gamebox.os.companion.CompanionEndpointService.start(context) else com.gamebox.os.companion.CompanionEndpointService.stop(context)
+                }
+            })
+        }
+        OutlinedButton(onClick = { scope.launch { companionSecret = settingsRepository.rotateCompanionPairingSecret() } }, modifier = Modifier.padding(top = 6.dp)) { Text("Rotate pairing secret") }
+        companionSecret?.let { Text("Pairing secret: $it", fontSize = 11.sp, color = MaterialTheme.colorScheme.primary) }
         Spacer(Modifier.height(18.dp))
         SettingsSectionHeader("Saves & Cloud Sync", sectionAnchor(SettingsSection.SAVES_CLOUD))
         Text("Authenticated cloud backup", fontWeight = FontWeight.Bold)
