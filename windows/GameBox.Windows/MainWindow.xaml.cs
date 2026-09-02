@@ -146,6 +146,34 @@ public partial class MainWindow : Window
         }
     }
 
+    private async void RefreshDeviceLibrary_Click(object sender, RoutedEventArgs e)
+    {
+        if (!int.TryParse(DevicePortBox.Text.Trim(), out var port))
+        {
+            DeviceLibrarySummaryText.Text = "Enter a valid GameBox companion port.";
+            return;
+        }
+
+        try
+        {
+            DeviceLibrarySummaryText.Text = "Refreshing paired GameBox library…";
+            var games = await new CompanionStatusClient(new HttpClient()).GetLibraryAsync(
+                DeviceHostBox.Text, port, DeviceSecretBox.Password);
+            DeviceLibraryList.ItemsSource = games;
+            DeviceLibrarySummaryText.Text = games.Count == 0
+                ? "The paired GameBox library is empty."
+                : games.Count + " game(s) available on the paired GameBox.";
+        }
+        catch (UnauthorizedAccessException)
+        {
+            DeviceLibrarySummaryText.Text = "Pairing was rejected. Rotate or copy the secret again from GameBox Settings.";
+        }
+        catch (Exception ex)
+        {
+            DeviceLibrarySummaryText.Text = "Unable to refresh GameBox library: " + ex.Message;
+        }
+    }
+
     private async void CheckDevice_Click(object sender, RoutedEventArgs e)
     {
         if (!int.TryParse(DevicePortBox.Text.Trim(), out var port))
