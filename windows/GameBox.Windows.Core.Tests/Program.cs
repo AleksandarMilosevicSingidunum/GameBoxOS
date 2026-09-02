@@ -281,6 +281,28 @@ try
     Require(!CompanionProtocol.VerifyAuthorization(companionSecret, "GET", "/v1/status", companionAuth, 1_700_000_121), "Companion authorization must expire stale requests.");
     RequireThrows<ArgumentException>(() => CompanionProtocol.CreateAuthorization(companionSecret, "GET", "/v1/../status", 1_700_000_000), "Companion authorization must reject path traversal.");
 
+    HttpRequestMessage? companionRequest = null;
+    using var companionClient = new HttpClient(new StubHttpMessageHandler(request =>
+    {
+        companionRequest = request;
+        return new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent("{\"protocolVersion\":1,\"deviceName\":\"Living Room\",\"status\":\"ready\"}")
+        };
+    }));
+    var companionStatus = await new CompanionStatusClient(companionClient).GetStatusAsync(
+        "192.168.1.22", 49_500, companionSecret);
+    Require(companionStatus.DeviceName == "Living Room" && companionStatus.Status == "ready", "Companion status response must be parsed.");
+    Require(companionRequest?.RequestUri?.ToString() == "http://192.168.1.22:49500/v1/status", "Companion status must use the configured LAN endpoint.");
+    Require(companionRequest?.Headers.Contains(CompanionProtocol.AuthorizationHeader) == true, "Companion status must authenticate its request.");
+
+    using var rejectedCompanionClient = new HttpClient(new StubHttpMessageHandler(_ => new HttpResponseMessage(HttpStatusCode.Unauthorized)));
+    var rejectedCompanionSecret = false;
+    try { await new CompanionStatusClient(rejectedCompanionClient).GetStatusAsync("192.168.1.22", 49_500, companionSecret); }
+    catch (UnauthorizedAccessException) { rejectedCompanionSecret = true; }
+    Require(rejectedCompanionSecret, "Companion status must surface pairing rejection.");
+    RequireThrows<ArgumentException>(() => new CompanionStatusClient(new HttpClient()).GetStatusAsync("http://host", 49_500, companionSecret).GetAwaiter().GetResult(), "Companion status must reject host URLs.");
+
     Console.WriteLine("GameBox Windows core tests passed.");
 }
 finally
@@ -308,4 +330,11 @@ sealed class BlockingHandler : HttpMessageHandler
         await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
         throw new InvalidOperationException("unreachable");
     }
+}
+
+
+sealed class StubHttpMessageHandler(Func<HttpRequestMessage, HttpResponseMessage> responder) : HttpMessageHandler
+{
+    protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        => Task.FromResult(responder(request));
 }
