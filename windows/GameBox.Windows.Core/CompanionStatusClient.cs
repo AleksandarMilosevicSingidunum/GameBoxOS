@@ -4,6 +4,7 @@ using System.Text.Json;
 namespace GameBox.Windows.Core;
 
 public sealed record CompanionDeviceStatus(int ProtocolVersion, string DeviceName, string Status);
+public sealed record CompanionLibraryGame(string Id, string Title, string Platform, string InstallState, bool Favorite, int MinutesPlayed, bool SavePresent);
 
 /// <summary>
 /// Authenticated client for the Android GameBox LAN companion status endpoint.
@@ -65,6 +66,60 @@ public sealed class CompanionStatusClient
         catch (JsonException exception)
         {
             throw new InvalidDataException("GameBox returned invalid device status JSON.", exception);
+        }
+    }
+
+
+    public async Task<IReadOnlyList<CompanionLibraryGame>> GetLibraryAsync(
+        string host,
+        int port,
+        string pairingSecret,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(host)) throw new ArgumentException("Host is required.", nameof(host));
+        if (port is < 10240 or > 65535) throw new ArgumentOutOfRangeException(nameof(port));
+
+        const string requestPath = "/v1/library";
+        using var request = new HttpRequestMessage(HttpMethod.Get, CreateEndpointUri(host, port, requestPath));
+        request.Headers.TryAddWithoutValidation(
+            CompanionProtocol.AuthorizationHeader,
+            CompanionProtocol.CreateAuthorization(pairingSecret, "GET", requestPath, DateTimeOffset.UtcNow.ToUnixTimeSeconds()));
+        using var timeoutSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        timeoutSource.CancelAfter(timeout);
+        using var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, timeoutSource.Token).ConfigureAwait(false);
+        if (response.StatusCode == HttpStatusCode.Unauthorized)
+            throw new UnauthorizedAccessException("GameBox rejected the pairing secret.");
+        response.EnsureSuccessStatusCode();
+
+        await using var stream = await response.Content.ReadAsStreamAsync(timeoutSource.Token).ConfigureAwait(false);
+        var bytes = await ReadBoundedAsync(stream, timeoutSource.Token).ConfigureAwait(false);
+        try
+        {
+            using var document = JsonDocument.Parse(bytes);
+            var root = document.RootElement;
+            if (root.GetProperty("protocolVersion").GetInt32() != CompanionProtocol.Version)
+                throw new InvalidDataException("GameBox returned an incompatible library protocol.");
+            var games = new List<CompanionLibraryGame>();
+            foreach (var game in root.GetProperty("games").EnumerateArray())
+            {
+                var id = game.GetProperty("id").GetString();
+                var title = game.GetProperty("title").GetString();
+                var platform = game.GetProperty("platform").GetString();
+                var installState = game.GetProperty("installState").GetString();
+                if (string.IsNullOrWhiteSpace(id) || string.IsNullOrWhiteSpace(title) ||
+                    string.IsNullOrWhiteSpace(platform) || string.IsNullOrWhiteSpace(installState))
+                    throw new InvalidDataException("GameBox returned incomplete library metadata.");
+                games.Add(new CompanionLibraryGame(
+                    id, title, platform, installState,
+                    game.GetProperty("favorite").GetBoolean(),
+                    Math.Max(0, game.GetProperty("minutesPlayed").GetInt32()),
+                    game.GetProperty("savePresent").GetBoolean()));
+            }
+            return games;
+        }
+        catch (JsonException exception)
+        {
+            throw new InvalidDataException("GameBox returned invalid library JSON.", exception);
         }
     }
 

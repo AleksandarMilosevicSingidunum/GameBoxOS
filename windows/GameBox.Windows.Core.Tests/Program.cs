@@ -301,6 +301,13 @@ try
     try { await new CompanionStatusClient(rejectedCompanionClient).GetStatusAsync("192.168.1.22", 49_500, companionSecret); }
     catch (UnauthorizedAccessException) { rejectedCompanionSecret = true; }
     Require(rejectedCompanionSecret, "Companion status must surface pairing rejection.");
+
+    using var libraryClient = new HttpClient(new StubHttpMessageHandler(_ => new HttpResponseMessage(HttpStatusCode.OK)
+    {
+        Content = new StringContent("{\"protocolVersion\":1,\"games\":[{\"id\":\"nes-1\",\"title\":\"Galaxy Patrol\",\"platform\":\"NES\",\"installState\":\"INSTALLED\",\"favorite\":true,\"minutesPlayed\":12,\"savePresent\":true}]}")
+    }));
+    var pairedLibrary = await new CompanionStatusClient(libraryClient).GetLibraryAsync("192.168.1.22", 49_500, companionSecret);
+    Require(pairedLibrary.Count == 1 && pairedLibrary[0].Title == "Galaxy Patrol" && pairedLibrary[0].SavePresent, "Companion library must parse paired GameBox metadata.");
     RequireThrows<ArgumentException>(() => new CompanionStatusClient(new HttpClient()).GetStatusAsync("http://host", 49_500, companionSecret).GetAwaiter().GetResult(), "Companion status must reject host URLs.");
 
     Console.WriteLine("GameBox Windows core tests passed.");
