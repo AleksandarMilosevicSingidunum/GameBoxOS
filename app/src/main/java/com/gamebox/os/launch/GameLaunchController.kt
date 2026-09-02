@@ -32,6 +32,8 @@ data class EmulatorCapability(
     val retroArchCoreFileName: String? = null,
     val contentRoot: EmulatorContentRoot = EmulatorContentRoot.INSTALLED,
     val companionFiles: List<LocalContentFile> = emptyList(),
+    /** Approved alternatives only; used when the preferred package is absent. */
+    val fallbackPackages: List<String> = emptyList(),
 )
 
 enum class EmulatorContentRoot(val directoryName: String) {
@@ -171,7 +173,7 @@ class AndroidPackageGateway(
     private val verifier: Sha256Verifier = Sha256Verifier()
 ) : PackageGateway {
     override fun launch(capability: EmulatorCapability): GatewayResult {
-        val resolvedPackage = resolvePackageName(capability.packageName)
+        val resolvedPackage = resolvePackageName(capability.packageName, capability.fallbackPackages)
             ?: return GatewayResult.EMULATOR_UNAVAILABLE
         val launcherIntent = context.packageManager.getLaunchIntentForPackage(resolvedPackage)
             ?: return GatewayResult.EMULATOR_UNAVAILABLE
@@ -323,10 +325,8 @@ class AndroidPackageGateway(
         }
     }.getOrNull()
 
-    private fun resolvePackageName(requested: String): String? {
-        val candidates = if (requested == "com.retroarch.aarch64") {
-            listOf("com.retroarch.aarch64", "com.retroarch", "com.retroarch.ra32")
-        } else listOf(requested)
+    private fun resolvePackageName(requested: String, approvedFallbacks: List<String>): String? {
+        val candidates = (listOf(requested) + approvedFallbacks).distinct()
         return candidates.firstOrNull {
             context.packageManager.getLaunchIntentForPackage(it) != null
         }
@@ -391,7 +391,11 @@ class DefaultGameLaunchController(
             update(game.id, LaunchUiState.Status.UNSUPPORTED, "No approved adapter for this title")
             return
         }
-        when (gateway.launch(capability)) {
+        // The registry is the sole source of fallback packages; never probe arbitrary apps.
+        val resolvedCapability = capability.copy(
+            fallbackPackages = registry.optionsFor(game).filterNot { it == capability.packageName }
+        )
+        when (gateway.launch(resolvedCapability)) {
             GatewayResult.LAUNCHED -> {
                 returnTracker.started(game.id)
                 waitingForExternalReturn = true
@@ -400,7 +404,7 @@ class DefaultGameLaunchController(
             GatewayResult.EMULATOR_UNAVAILABLE -> update(
                 game.id,
                 LaunchUiState.Status.EMULATOR_UNAVAILABLE,
-                "Install the approved emulator package: ${capability.packageName}"
+                "Install an approved emulator package: ${registry.optionsFor(game).joinToString()}"
             )
             GatewayResult.CONTENT_MISSING -> update(
                 game.id, LaunchUiState.Status.CONTENT_MISSING, "Verified content is missing; reinstall it"
