@@ -14,14 +14,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-val GameBoxBlue = Color(0xFF5C7CFA)
+val GameBoxBlue = Color(0xFF5B8CFF)
 val GameBoxElectricBlue = Color(0xFF2F80FF)
 val GameBoxPurple = Color(0xFF8B5CF6)
 val GameBoxCyan = Color(0xFF22D3EE)
-val GameBoxBackground = Color(0xFF050812)
-val GameBoxSurface = Color(0xFF0B1220)
-val GameBoxSurfaceRaised = Color(0xFF111B2E)
-val GameBoxOutline = Color(0xFF243452)
+val GameBoxBackground = Color(0xFF05070F)
+val GameBoxSurface = Color(0xFF101827)
+val GameBoxSurfaceRaised = Color(0xFF18233A)
+val GameBoxOutline = Color(0xFF34415C)
 
 private val colors = darkColorScheme(
     primary = GameBoxBlue,
