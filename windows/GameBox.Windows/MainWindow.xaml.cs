@@ -145,6 +145,32 @@ public partial class MainWindow : Window
         }
     }
 
+    private async void CheckDevice_Click(object sender, RoutedEventArgs e)
+    {
+        if (!int.TryParse(DevicePortBox.Text.Trim(), out var port))
+        {
+            DeviceStatusText.Text = "Enter a valid GameBox companion port.";
+            return;
+        }
+
+        try
+        {
+            DeviceStatusText.Text = "Checking GameBox device…";
+            var status = await new CompanionStatusClient(new HttpClient()).GetStatusAsync(
+                DeviceHostBox.Text, port, DeviceSecretBox.Password);
+            DeviceStatusText.Text = $"{status.DeviceName} is {status.Status} (protocol v{status.ProtocolVersion}).";
+            StatusText.Text = "Connected to " + status.DeviceName;
+        }
+        catch (UnauthorizedAccessException)
+        {
+            DeviceStatusText.Text = "Pairing was rejected. Rotate or copy the secret again from GameBox Settings.";
+        }
+        catch (Exception ex)
+        {
+            DeviceStatusText.Text = "Unable to reach GameBox: " + ex.Message;
+        }
+    }
+
     private async void CleanupMissing_Click(object sender, RoutedEventArgs e)
     {
         var plan = LibraryMaintenance.PlanMissingEntryCleanup(_allGames);
