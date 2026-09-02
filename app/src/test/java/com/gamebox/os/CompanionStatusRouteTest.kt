@@ -17,7 +17,7 @@ class CompanionStatusRouteTest {
         )
 
         assertEquals(200, response.status)
-        assertTrue(response.body.contains("\\"protocolVersion\\":1"))
+        assertTrue(response.body.contains("\"protocolVersion\":1"))
     }
 
     @Test fun statusRouteRejectsUnauthenticatedAndUnknownRequests() {
