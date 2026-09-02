@@ -29,6 +29,8 @@ data class GameBoxSettings(
     val cloudSaveProvider: String = "WEBDAV",
     val cloudSaveEndpoint: String = "",
     val cloudSaveRegion: String = "us-east-1",
+    val companionEnabled: Boolean = false,
+    val companionPort: Int = 49_500,
 )
 
 class SettingsRepository(private val context: Context) {
@@ -45,6 +47,8 @@ class SettingsRepository(private val context: Context) {
             cloudSaveProvider = preferences[CLOUD_SAVE_PROVIDER] ?: "WEBDAV",
             cloudSaveEndpoint = preferences[CLOUD_SAVE_ENDPOINT] ?: "",
             cloudSaveRegion = preferences[CLOUD_SAVE_REGION] ?: "us-east-1",
+            companionEnabled = preferences[COMPANION_ENABLED] ?: false,
+            companionPort = (preferences[COMPANION_PORT] ?: 49_500).coerceIn(10_240, 65_535),
         )
     }
 
@@ -112,6 +116,25 @@ class SettingsRepository(private val context: Context) {
         }
     }
 
+    suspend fun companionPairingSecret(): String? = withContext(Dispatchers.IO) {
+        secretStore.get(COMPANION_PAIRING_SECRET)
+    }
+
+    suspend fun rotateCompanionPairingSecret(): String = withContext(Dispatchers.IO) {
+        val secret = ByteArray(32).also { SecureRandom().nextBytes(it) }
+            .joinToString("") { "%02x".format(it.toInt() and 0xff) }
+        secretStore.put(COMPANION_PAIRING_SECRET, secret)
+        secret
+    }
+
+    suspend fun setCompanionConfiguration(enabled: Boolean, port: Int = 49_500) {
+        require(port in 10_240..65_535) { "Companion port must be between 10240 and 65535" }
+        context.gameBoxDataStore.edit { preferences ->
+            preferences[COMPANION_ENABLED] = enabled
+            preferences[COMPANION_PORT] = port
+        }
+    }
+
     suspend fun setExternalLibraryUri(value: String) {
         context.gameBoxDataStore.edit { preferences ->
             if (value.isBlank()) preferences.remove(EXTERNAL_LIBRARY_URI)
@@ -156,10 +179,13 @@ class SettingsRepository(private val context: Context) {
         val CLOUD_SAVE_PROVIDER = stringPreferencesKey("cloud_save_provider")
         val CLOUD_SAVE_ENDPOINT = stringPreferencesKey("cloud_save_endpoint")
         val CLOUD_SAVE_REGION = stringPreferencesKey("cloud_save_region")
+        val COMPANION_ENABLED = booleanPreferencesKey("companion_enabled")
+        val COMPANION_PORT = androidx.datastore.preferences.core.intPreferencesKey("companion_port")
         const val THEGAMESDB_API_KEY = "thegamesdb_api_key"
         const val CLOUD_SAVE_USERNAME = "cloud_save_username"
         const val CLOUD_SAVE_PASSWORD = "cloud_save_password"
         const val CLOUD_SAVE_ACCESS_KEY = "cloud_save_access_key"
         const val CLOUD_SAVE_SECRET_KEY = "cloud_save_secret_key"
+        const val COMPANION_PAIRING_SECRET = "companion_pairing_secret"
     }
 }
