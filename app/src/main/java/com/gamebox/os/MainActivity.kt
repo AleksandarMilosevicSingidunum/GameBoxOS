@@ -5,6 +5,9 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.compose.foundation.background
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.Modifier
 import com.gamebox.os.ui.GameBoxApp
 import com.gamebox.os.ui.OfflineStatusBanner
@@ -17,7 +20,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             GameBoxTheme {
-                Column(Modifier.fillMaxSize()) {
+                Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).safeDrawingPadding()) {
                     OfflineStatusBanner(this@MainActivity)
                     GameBoxApp(
                         container.gameRepository,
