@@ -42,6 +42,13 @@ class CatalogMergePolicyTest {
         assertTrue(merged.any { it.id == GameId("remote") })
     }
 
+    @Test fun newlyDiscoveredGamesCannotClaimInstallationOrQueueWork() {
+        InstallState.entries.forEach { state ->
+            val merged = mergeCatalogPreservingLocalState(emptyList(), listOf(game("new", "New", state))).single()
+            assertEquals(InstallState.NOT_INSTALLED, merged.state)
+        }
+    }
+
     private fun game(id: String, title: String, state: InstallState, minutes: Int = 0) = Game(
         id = GameId(id),
         title = title,

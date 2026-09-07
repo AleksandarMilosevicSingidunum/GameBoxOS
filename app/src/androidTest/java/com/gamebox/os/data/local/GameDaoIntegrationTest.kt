@@ -33,6 +33,38 @@ class GameDaoIntegrationTest {
     }
 
     @Test
+    fun legacyCatalogRepairPreservesRealContentAndUserData() = runBlocking {
+        fun sample(id: String) = GameEntity(
+            id = id, title = id, platform = "Homebrew", year = 2026,
+            genre = "Test", sizeMb = 1, installState = InstallState.INSTALLED.name,
+            lastPlayed = "2026-09-01T10:00:00Z", minutesPlayed = 90, favorite = true,
+        )
+        dao.upsertAll(listOf(
+            sample("cave-story"),
+            sample("celeste").copy(localContentRelativePath = "imports/celeste/game.p8", localContentSha256 = "a".repeat(64)),
+            sample("openarena").copy(sourceUrl = "https://example.test/game.apk", expectedSha256 = "b".repeat(64)),
+            sample("supertuxkart").copy(localContentFilesJson = "retained local content"),
+            sample("galaxy-patrol"),
+            sample("user-game"),
+            sample("luanti").copy(installState = InstallState.QUEUED.name),
+            sample("openmw").copy(installState = InstallState.PAUSED.name),
+        ))
+
+        assertEquals(3, dao.clearLegacyCatalogInstallClaims())
+        assertEquals(0, dao.clearLegacyCatalogInstallClaims()) // Safe on every startup.
+        listOf("cave-story", "luanti", "openmw").forEach { id ->
+            val game = requireNotNull(dao.getById(id))
+            assertEquals(InstallState.NOT_INSTALLED.name, game.installState)
+            assertTrue(game.favorite)
+            assertEquals(90, game.minutesPlayed)
+            assertEquals("2026-09-01T10:00:00Z", game.lastPlayed)
+        }
+        listOf("celeste", "openarena", "supertuxkart", "galaxy-patrol", "user-game").forEach { id ->
+            assertEquals(InstallState.INSTALLED.name, dao.getById(id)?.installState)
+        }
+    }
+
+    @Test
     fun upsertAndUpdatePreserveRichMetadata() = runBlocking {
         dao.upsertAll(
             listOf(

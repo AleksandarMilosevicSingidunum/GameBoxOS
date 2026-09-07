@@ -504,7 +504,8 @@ BlueprintPanel(Modifier.fillMaxWidth()) {
     val context = LocalContext.current
     val installed = games.filter { it.state in setOf(InstallState.INSTALLED, InstallState.UPDATE_AVAILABLE) }
     val history = installed.filter { it.lastPlayed != null }.sortedByDescending { it.lastPlayed }
-    val hero = history.firstOrNull() ?: installed.firstOrNull() ?: games.first()
+    val hero = history.firstOrNull() ?: installed.firstOrNull()
+        ?: games.firstOrNull { it.id.value == "galaxy-patrol" } ?: games.first()
     val focusTarget = restoreGameId?.takeIf { id -> games.any { it.id == id } } ?: hero.id
     val networkService = context.getSystemService(ConnectivityManager::class.java)
     val network = networkService?.getNetworkCapabilities(networkService.activeNetwork)
@@ -2132,8 +2133,8 @@ private fun DetailsScreen(
                         Text(
                             if (!isAuthorizedFixture) game.state.primaryAction()
                             else if (authorizedState.status == AuthorizedDownloadState.Status.SUCCEEDED)
-                                "Reinstall verified test"
-                            else "Install verified test"
+                                "Reinstall game"
+                            else "Install game"
                         )
                     }
                     if (isAuthorizedFixture && workerActive) {

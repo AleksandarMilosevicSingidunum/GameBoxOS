@@ -19,6 +19,16 @@ interface GameDao {
     @Query("SELECT COUNT(*) FROM games")
     suspend fun count(): Int
 
+    @Query("""
+        UPDATE games SET installState = 'NOT_INSTALLED'
+        WHERE id IN ('celeste', 'cave-story', 'openarena', 'supertuxkart', 'luanti', 'openmw')
+          AND installState IN ('INSTALLED', 'UPDATE_AVAILABLE', 'QUEUED', 'PAUSED')
+          AND localContentRelativePath IS NULL AND localContentSha256 IS NULL
+          AND localContentFilesJson IS NULL
+          AND sourceUrl IS NULL AND expectedSha256 IS NULL
+    """)
+    suspend fun clearLegacyCatalogInstallClaims(): Int
+
     @Upsert
     suspend fun upsertAll(games: List<GameEntity>)
 

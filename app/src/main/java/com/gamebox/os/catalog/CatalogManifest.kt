@@ -90,7 +90,9 @@ class CatalogParser(
             if (item.checksum != null && !item.checksum.matches(Regex("^[a-fA-F0-9]{64}$"))) {
                 throw CatalogFormatException("Game checksum must be SHA-256")
             }
-            val state = runCatching { InstallState.valueOf(item.initialState) }
+            // Retain schema compatibility, but a provider cannot attest to local files
+            // or enqueue work on this device through catalog metadata.
+            runCatching { InstallState.valueOf(item.initialState) }
                 .getOrElse { throw CatalogFormatException("Unknown install state: " + item.initialState) }
             Game(
                 id = GameId(item.id),
@@ -99,7 +101,7 @@ class CatalogParser(
                 year = item.year,
                 genre = item.genre,
                 sizeMb = item.sizeMb,
-                state = state,
+                state = InstallState.NOT_INSTALLED,
                 sourceUrl = item.source,
                 expectedSha256 = item.checksum,
                 artworkUrl = item.artworkUrl,

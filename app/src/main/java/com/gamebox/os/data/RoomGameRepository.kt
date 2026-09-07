@@ -43,10 +43,13 @@ class RoomGameRepository(
 
     init {
         scope.launch {
+            // Repair only known legacy demo records. SQL guards protect imports and
+            // real download sources, and no files, saves or user metadata are removed.
+            dao.clearLegacyCatalogInstallClaims()
             if (dao.count() == 0) {
                 val snapshot = catalogProvider.load()
                 consumeFallbackReason()
-                dao.upsertAll(snapshot.games.map { it.toEntity() })
+                dao.upsertAll(snapshot.games.map { it.copy(state = InstallState.NOT_INSTALLED).toEntity() })
                 onCatalogSeeded(System.currentTimeMillis())
             }
         }
@@ -152,7 +155,7 @@ fun mergeCatalogPreservingLocalState(existing: List<Game>, incoming: List<Game>)
     val incomingIds = incoming.mapTo(mutableSetOf()) { it.id }
     val mergedIncoming = incoming.map { remote ->
         val local = existingById[remote.id]
-        if (local == null) remote else remote.copy(
+        if (local == null) remote.copy(state = InstallState.NOT_INSTALLED) else remote.copy(
             state = local.state,
             lastPlayed = local.lastPlayed,
             minutesPlayed = local.minutesPlayed,
