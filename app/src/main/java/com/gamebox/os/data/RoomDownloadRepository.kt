@@ -20,7 +20,6 @@ interface DownloadRepository {
     fun pause(id: GameId)
     fun resume(id: GameId)
     fun cancel(id: GameId)
-    fun advance(id: GameId)
     fun updateState(id: GameId, status: DownloadStatus, downloadedBytes: Long, errorReason: String? = null)
 }
 
@@ -61,20 +60,6 @@ class RoomDownloadRepository(
             downloadedBytes = downloadedBytes.coerceIn(0L, job.totalBytes.coerceAtLeast(downloadedBytes)),
             errorReason = errorReason
         )
-    }
-
-    override fun advance(id: GameId) = update(id) { job ->
-        when (job.status) {
-            DownloadStatus.QUEUED -> job.copy(status = DownloadStatus.DOWNLOADING)
-            DownloadStatus.DOWNLOADING -> job.copy(
-                status = DownloadStatus.VERIFYING,
-                downloadedBytes = job.totalBytes
-            )
-            DownloadStatus.PAUSED -> job
-            DownloadStatus.VERIFYING -> job.copy(status = DownloadStatus.INSTALLING)
-            DownloadStatus.INSTALLING -> job.copy(status = DownloadStatus.COMPLETED)
-            else -> job
-        }
     }
 
     private fun update(id: GameId, transform: (DownloadJob) -> DownloadJob) {

@@ -8,7 +8,7 @@ not prove working emulators, providers, saves or release signing.
 | P0 | Honest first-run library and installation state | Catalog state trust and legacy demo-state repair implemented; parser/merge tests and real Room repair test added. Verify CI before merging. |
 | P0 | One complete authorized game journey | Galaxy Patrol is bundled and hash-pinned. Install → real RetroArch execution/input → save → return → uninstall/reinstall preservation is not yet proven end-to-end. |
 | P0 | Reproducible signed release and upgrade | Debug APK and API-35 UI tests pass. Production signing, clean install/upgrade and rollback validation remain separate gates. |
-| P1 | Remove simulated installation controls | Room repository still has advanceInstall; Downloads exposes Next test stage for non-remote jobs. Replace with worker-owned transitions before production. |
+| P1 | Remove simulated installation controls | Manual completion APIs removed; fake repository moved to unit-test sources. Details pause/resume uses the real download controller; in-progress actions open Downloads. Unavailable-source jobs report recovery guidance rather than simulate progress. Automated validation pending. |
 | P1 | General game lifecycle | Generalized emulator/save/uninstall adapters need full supported-console validation. Parser support is not emulator compatibility. |
 | P1 | Real providers | TheGamesDB transport/enrichment exists; live authenticated discovery/media, limits and failures require provider evidence. |
 | P1 | Windows communication journey | Pairing/authentication, transfer/synchronization and recovery require a complete Android↔Windows integration run, not only independent builds. |

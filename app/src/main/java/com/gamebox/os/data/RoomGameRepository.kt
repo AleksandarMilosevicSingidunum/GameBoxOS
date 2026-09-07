@@ -97,33 +97,6 @@ class RoomGameRepository(
         scope.launch { dao.updateFavorite(id.value, favorite) }
     }
 
-    override fun advanceInstall(id: GameId) {
-        val game = game(id) ?: return
-        val next = when (game.state) {
-            InstallState.NOT_INSTALLED, InstallState.FAILED, InstallState.MISSING_FILES -> InstallState.QUEUED
-            InstallState.QUEUED -> InstallState.DOWNLOADING
-            InstallState.DOWNLOADING, InstallState.PAUSED -> InstallState.VERIFYING
-            InstallState.VERIFYING -> InstallState.INSTALLING
-            InstallState.INSTALLING -> InstallState.INSTALLED
-            else -> game.state
-        }
-        setInstallState(id, next)
-    }
-
-    override fun pauseOrResume(id: GameId) {
-        val game = game(id) ?: return
-        val next = when (game.state) {
-            InstallState.DOWNLOADING -> InstallState.PAUSED
-            InstallState.PAUSED -> InstallState.DOWNLOADING
-            else -> game.state
-        }
-        setInstallState(id, next)
-    }
-
-    override fun cancelInstall(id: GameId) {
-        setInstallState(id, InstallState.NOT_INSTALLED)
-    }
-
     override fun setInstallState(id: GameId, state: InstallState) {
         scope.launch { dao.updateInstallState(id.value, state.name) }
     }

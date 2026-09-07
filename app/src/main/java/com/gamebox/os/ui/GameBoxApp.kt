@@ -241,6 +241,7 @@ fun GameBoxApp(
                             gameLaunchController,
                             saveSafetyController,
                             compact = compact,
+                            onDownloads = { uiState.openDestination(Destination.DOWNLOADS.name) },
                             onBack = uiState::clearSelection
                         )
                     } else {
@@ -1910,6 +1911,7 @@ private fun DetailsScreen(
     gameLaunchController: GameLaunchController,
     saveSafetyController: SaveSafetyController,
     compact: Boolean,
+    onDownloads: () -> Unit,
     onBack: () -> Unit
 ) {
     val isAuthorizedFixture = game.id.value == "galaxy-patrol"
@@ -2113,8 +2115,11 @@ private fun DetailsScreen(
                                         } else {
                                             repository.setInstallState(game.id, InstallState.FAILED)
                                         }
+                                    InstallState.PAUSED ->
+                                        if (game.sourceUrl != null && game.expectedSha256 != null) remoteDownloadController.resume(game)
+                                        else onDownloads()
                                     InstallState.QUEUED, InstallState.DOWNLOADING, InstallState.VERIFYING,
-                                    InstallState.INSTALLING, InstallState.PAUSED -> Unit
+                                    InstallState.INSTALLING -> onDownloads()
                                     InstallState.INSTALLED, InstallState.UPDATE_AVAILABLE ->
                                         gameLaunchController.launch(game)
                                 }
@@ -2157,11 +2162,11 @@ private fun DetailsScreen(
                             Text("Create test save")
                         }
                     }
-                    if (game.state == InstallState.DOWNLOADING || game.state == InstallState.PAUSED) {
-                        OutlinedButton(onClick = { if (game.state == InstallState.PAUSED) downloadRepository.resume(game.id)
-                            else downloadRepository.pause(game.id)
-                            repository.pauseOrResume(game.id) }) {
-                            Text(if (game.state == InstallState.PAUSED) "Resume" else "Pause")
+                    if (!isAuthorizedFixture && game.state == InstallState.DOWNLOADING &&
+                        game.sourceUrl != null && game.expectedSha256 != null
+                    ) {
+                        OutlinedButton(onClick = { remoteDownloadController.pause(game) }) {
+                            Text("Pause")
                         }
                     }
                     OutlinedButton(
@@ -2421,7 +2426,7 @@ private fun DownloadsScreen(repository: GameRepository, downloadRepository: Down
                         Text(reason, color = MaterialTheme.colorScheme.error, fontSize = 12.sp)
                     }
                     Spacer(Modifier.height(10.dp))
-                    val remoteGame = repository.game(job.gameId)?.takeIf { it.sourceUrl != null }
+                    val remoteGame = repository.game(job.gameId)?.takeIf { it.sourceUrl != null && it.expectedSha256 != null }
                     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         if (remoteGame != null) {
                             if (job.status == DownloadStatus.DOWNLOADING) {
@@ -2449,33 +2454,21 @@ private fun DownloadsScreen(repository: GameRepository, downloadRepository: Down
                                     Text("Cancel")
                                 }
                             }
-                        } else {
-                            if (job.status == DownloadStatus.DOWNLOADING) {
-                                OutlinedButton(onClick = {
-                                    downloadRepository.pause(job.gameId)
-                                    repository.pauseOrResume(job.gameId)
-                                }) { Text("Pause") }
-                            }
-                            if (job.status == DownloadStatus.PAUSED) {
-                                OutlinedButton(onClick = {
-                                    downloadRepository.resume(job.gameId)
-                                    repository.pauseOrResume(job.gameId)
-                                }) { Text("Resume") }
-                            }
-                            if (job.status !in setOf(
-                                    DownloadStatus.COMPLETED,
-                                    DownloadStatus.FAILED,
-                                    DownloadStatus.CANCELLED
-                                )
-                            ) {
-                                Button(onClick = {
-                                    downloadRepository.advance(job.gameId)
-                                    repository.advanceInstall(job.gameId)
-                                }) { Text("Next test stage") }
+                        } else if (job.status !in setOf(
+                            DownloadStatus.COMPLETED, DownloadStatus.FAILED, DownloadStatus.CANCELLED
+                        )) {
+                            Column {
+                                Text("This transfer has no available source. Open the game to choose a source or import a copy.",
+                                    color = MaterialTheme.colorScheme.error, fontSize = 12.sp)
                                 OutlinedButton(onClick = {
                                     downloadRepository.cancel(job.gameId)
-                                    repository.cancelInstall(job.gameId)
-                                }) { Text("Cancel") }
+                                    if (repository.game(job.gameId)?.state in setOf(
+                                        InstallState.QUEUED, InstallState.DOWNLOADING, InstallState.PAUSED,
+                                        InstallState.VERIFYING, InstallState.INSTALLING
+                                    )) repository.setInstallState(job.gameId, InstallState.FAILED)
+                                }) {
+                                    Text("Dismiss unavailable transfer")
+                                }
                             }
                         }
                     }

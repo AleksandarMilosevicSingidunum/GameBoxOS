@@ -9,21 +9,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
-interface GameRepository {
-    fun observeGames(): StateFlow<List<Game>>
-    fun game(id: GameId): Game?
-    fun setFavorite(id: GameId, favorite: Boolean)
-    fun setEmulatorSettings(id: GameId, packageName: String?, graphicsProfile: String)
-    fun advanceInstall(id: GameId)
-    fun pauseOrResume(id: GameId)
-    fun cancelInstall(id: GameId)
-    fun setInstallState(id: GameId, state: InstallState)
-    fun recordPlaySession(id: GameId, endedAtMillis: Long, minutesPlayed: Int)
-    fun observeCatalogRefreshState(): StateFlow<CatalogRefreshState>
-    fun refreshCatalog()
-    suspend fun registerImportedGame(imported: ImportedGameRegistration)
-}
-
 class FakeGameRepository : GameRepository {
     private val games = MutableStateFlow(fixtures)
     private val refreshState = MutableStateFlow(CatalogRefreshState.IDLE)
@@ -39,7 +24,7 @@ class FakeGameRepository : GameRepository {
         update(id) { it.copy(favorite = favorite) }
     }
 
-    override fun advanceInstall(id: GameId) {
+    fun advanceInstall(id: GameId) {
         update(id) { game ->
             game.copy(state = when (game.state) {
                 InstallState.NOT_INSTALLED, InstallState.FAILED, InstallState.MISSING_FILES -> InstallState.QUEUED
@@ -52,7 +37,7 @@ class FakeGameRepository : GameRepository {
         }
     }
 
-    override fun pauseOrResume(id: GameId) {
+    fun pauseOrResume(id: GameId) {
         update(id) { game ->
             when (game.state) {
                 InstallState.DOWNLOADING -> game.copy(state = InstallState.PAUSED)
@@ -62,7 +47,7 @@ class FakeGameRepository : GameRepository {
         }
     }
 
-    override fun cancelInstall(id: GameId) {
+    fun cancelInstall(id: GameId) {
         setInstallState(id, InstallState.NOT_INSTALLED)
     }
 
