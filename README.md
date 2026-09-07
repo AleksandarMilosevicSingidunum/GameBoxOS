@@ -6,6 +6,12 @@ GameBox is an Android/DeX application, not a custom ROM or emulator. Game source
 
 ## Current development status
 
+Android UI update (7 September 2026): a new Blueprint-focused pass refines the
+dashboard proportions, artwork, console rails, game details, phone safe areas
+and input feedback. See [UI changes and visual QA profiles](docs/android-ui-blueprint-pass.md).
+The workflow captures the real app on phone and DeX-sized Android emulators;
+these captures do not replace physical-device acceptance testing.
+
 This repository is an active pre-1.0 implementation of the August 2026 **GameBox Development Blueprint**. The blueprint is a six-month working plan, not a claim that every item is already complete.
 
 Status as of 31 August 2026:
@@ -127,4 +133,3 @@ Import support means safe file acceptance, persistent Library registration, and 
 ### Cloud save setup
 
 Open **Settings → Saves & Cloud Sync**, choose WebDAV or S3-compatible storage, and enter an existing HTTPS collection/bucket-prefix endpoint. GameBox appends a game-scoped `.gamebox-save` object name; do not put credentials, query parameters, or a filename in the endpoint. WebDAV uses Basic authentication, while S3-compatible storage uses AWS Signature V4 with the configured region. Credentials are AES-GCM encrypted with an Android Keystore key and are excluded from DataStore and diagnostics. In Galaxy Patrol Details, **Upload cloud copy** creates a checksum-protected envelope and **Restore cloud copy** verifies it before replacement; a different local save is first retained under app-private conflict storage. Real provider behavior still depends on server permissions and must be validated against the chosen endpoint.
-

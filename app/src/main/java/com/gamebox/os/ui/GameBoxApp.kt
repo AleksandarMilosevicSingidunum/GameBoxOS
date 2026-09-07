@@ -523,7 +523,7 @@ BlueprintPanel(Modifier.fillMaxWidth()) {
             if (!compact) HomeStatusPanel(networkLabel, usedPercent, Build.MODEL, connectedControllerLabel())
         }
         if (compact) {
-            HomeGameSection("In your library", installed, focusTarget, onFocused, true, open)
+            HomeGameSection("In your library", installed, focusTarget.takeIf { it != hero.id }, onFocused, true, open)
             HomeQuickLaunchRow(openPc)
         } else {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(18.dp)) {
@@ -536,6 +536,7 @@ BlueprintPanel(Modifier.fillMaxWidth()) {
                         LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp), contentPadding = PaddingValues(3.dp)) {
                             items(installed.take(8), key = { it.id.value }) { game ->
                                 GameCard(game, Modifier.width(116.dp).height(140.dp), poster = true,
+                                    restoreFocus = focusTarget == game.id && game.id != hero.id,
                                     onFocused = onFocused) { open(game) }
                             }
                         }
@@ -545,7 +546,9 @@ BlueprintPanel(Modifier.fillMaxWidth()) {
             }
         }
         HomeGameSection(if (history.isEmpty()) "Explore games" else "Recently played",
-            if (history.isEmpty()) games else history, focusTarget, onFocused, compact, open)
+            if (history.isEmpty()) games else history,
+            focusTarget.takeIf { id -> id != hero.id && (if (compact) installed else installed.take(8)).none { it.id == id } },
+            onFocused, compact, open)
     }
 }
 
