@@ -123,9 +123,9 @@ jobs:
             adb shell settings put system accelerometer_rotation 0
             adb install -r app-debug.apk
             adb install -r app-debug-androidTest.apk
-            adb shell am instrument -w -e class com.gamebox.os.ui.BlueprintScreenshotsTest com.gamebox.os.test/androidx.test.runner.AndroidJUnitRunner > instrumentation.txt
-            adb pull /sdcard/Android/data/com.gamebox.os/files/ui-captures ui-captures
+            adb shell am instrument -w -e class com.gamebox.os.ui.BlueprintScreenshotsTest com.gamebox.os.test/androidx.test.runner.AndroidJUnitRunner > instrumentation.txt || true
             adb logcat -d > logcat.txt
+            adb pull /sdcard/Android/data/com.gamebox.os/files/ui-captures ui-captures || true
             cat instrumentation.txt
             grep -q 'OK (1 test)' instrumentation.txt
       - name: Upload UI evidence

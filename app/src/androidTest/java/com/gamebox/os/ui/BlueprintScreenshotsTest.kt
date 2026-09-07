@@ -22,12 +22,13 @@ class BlueprintScreenshotsTest {
         rule.waitUntil(15_000) {
             rule.onAllNodesWithContentDescription("Home tab").fetchSemanticsNodes().isNotEmpty()
         }
-        capture("01-home")
         val hero = rule.onAllNodes(hasContentDescription("continue playing", substring = true))
-        if (hero.fetchSemanticsNodes().isNotEmpty()) {
-            hero.onFirst().performClick()
-            capture("02-game-details")
+        rule.waitUntil(15_000) {
+            hero.fetchSemanticsNodes().isNotEmpty()
         }
+        capture("01-home")
+        hero.onFirst().performClick()
+        capture("02-game-details")
         listOf("Library", "Store", "Downloads", "Media", "PC", "Settings").forEachIndexed { index, title ->
             val tab = rule.onNodeWithContentDescription("$title tab")
             // A scrolling tab row is used on phones; desktop tabs have no scroll parent.

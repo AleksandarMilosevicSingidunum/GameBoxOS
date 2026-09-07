@@ -561,7 +561,7 @@ private fun HomeGameSection(
         }
         Spacer(Modifier.height(8.dp))
         if (games.isEmpty()) Text("Your games will appear here.", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
-        else GameRow(games, null, onFocused, compact, open)
+        else GameRow(games, focusTarget, onFocused, compact, open)
     }
 }
 
@@ -938,6 +938,7 @@ private fun BlueprintCatalogScreen(
     val featuredAuthorized = visibleAuthorized.firstOrNull()
     BoxWithConstraints(Modifier.fillMaxSize()) {
     val railWidth = (maxWidth * 0.15f).coerceIn(124.dp, 166.dp)
+    val sidebarWidth = (maxWidth * 0.18f).coerceIn(160.dp, 206.dp)
     Row(Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         BlueprintRail(Modifier.width(railWidth)) {
             Text("CONSOLES", color = MaterialTheme.colorScheme.primary, fontSize = 10.sp, fontWeight = FontWeight.Bold)
@@ -1014,7 +1015,7 @@ private fun BlueprintCatalogScreen(
                     }
                 }
             }
-            Column(Modifier.width((maxWidth * 0.18f).coerceIn(160.dp, 206.dp)), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Column(Modifier.width(sidebarWidth), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
                     FilterChip(selected = !installedOnly, onClick = { installedOnly = false }, label = { Text("All", fontSize = 10.sp) })
                     FilterChip(selected = installedOnly, onClick = { installedOnly = true }, label = { Text("Installed", fontSize = 10.sp) })
@@ -1217,6 +1218,7 @@ private fun BlueprintLibraryScreen(
     val history = filtered.filter { it.lastPlayed != null }.sortedByDescending { it.lastPlayed }
     BoxWithConstraints(Modifier.fillMaxSize()) {
     val railWidth = (maxWidth * 0.15f).coerceIn(124.dp, 166.dp)
+    val sidebarWidth = (maxWidth * 0.19f).coerceIn(155.dp, 200.dp)
     Row(
         Modifier.fillMaxSize(),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -1300,7 +1302,7 @@ private fun BlueprintLibraryScreen(
         }
 
         Column(
-            Modifier.width((maxWidth * 0.19f).coerceIn(155.dp, 200.dp)).fillMaxHeight().verticalScroll(rememberScrollState()),
+            Modifier.width(sidebarWidth).fillMaxHeight().verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             BlueprintPanel(Modifier.fillMaxWidth()) {
@@ -1640,132 +1642,103 @@ private fun DiscoveryDetailsScreen(
         }
     }
 
-    Column(
-        Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
-    ) {
-        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Button(onClick = onBack) { Text("Back") }
-                OutlinedButton(onClick = onFavorite) {
-                    Text(if (game.favorite) "Remove favorite" else "Add favorite")
-                }
-            }
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Button(
-                    enabled = !importing,
-                    onClick = {
-                        // Console dumps are commonly reported as application/octet-stream or with
-                        // vendor-specific MIME types. Validate extensions after document selection.
-                        importLauncher.launch(arrayOf("*/*"))
-                    },
-                ) {
-                    Text(if (importing) "Importing…" else "Import authorized copy")
-                }
-                if (RomImportPolicy.supportsMultiFile(platformName)) {
-                    OutlinedButton(
-                        enabled = !importing,
-                        onClick = { importSetLauncher.launch(arrayOf("*/*")) },
-                    ) {
-                        Text("Import multi-file disc set")
-                    }
-                }
-            }
-        }
-        Text(
-            "Accepted for $importPlatformLabel: $importFormats",
-            color = MaterialTheme.colorScheme.primary,
-            fontSize = 13.sp,
+    var selectedScreenshot by remember(game.id) { mutableStateOf<String?>(null) }
+    selectedScreenshot?.let { screenshot ->
+        AlertDialog(
+            onDismissRequest = { selectedScreenshot = null },
+            title = { Text(game.title, maxLines = 2) },
+            text = { RemoteArtwork(screenshot, Modifier.fillMaxWidth().height(300.dp), contentScale = androidx.compose.ui.layout.ContentScale.Fit) },
+            confirmButton = { TextButton(onClick = { selectedScreenshot = null }) { Text("Close") } },
         )
-        Text(
-            "Import copies, hashes, and adds your selected file to Library. It does not provide console keys, firmware, game content, or an emulator; Play still requires a compatible emulator adapter installed on this device.",
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.72f),
-            fontSize = 12.sp,
-        )
-        if (legalSources.isNotEmpty()) {
-            Text("Find a legal copy", fontSize = 20.sp, fontWeight = FontWeight.Bold)
-            Text(
-                "GameBox can open an official storefront or homebrew source search. It never downloads copyrighted game files from third-party ROM sites.",
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.72f),
-            )
-            legalSources.forEach { source ->
-                OutlinedButton(
-                    onClick = {
-                        try {
-                            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(source.url)))
-                        } catch (_: ActivityNotFoundException) {
-                            importMessage = "No browser is available to open ${source.label}"
+    }
+    BoxWithConstraints(Modifier.fillMaxSize()) {
+        val narrow = maxWidth < 700.dp
+        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+            Surface(Modifier.fillMaxWidth().height(if (narrow) 320.dp else 300.dp),
+                shape = RoundedCornerShape(9.dp), color = MaterialTheme.colorScheme.surface,
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)) {
+                Box(Modifier.fillMaxSize()) {
+                    RemoteArtwork(game.backgroundUrl ?: game.screenshots.firstOrNull() ?: game.coverUrl, Modifier.fillMaxSize(), fallbackKey = game.title)
+                    Box(Modifier.fillMaxSize().background(Brush.horizontalGradient(listOf(Color(0xF5030810), Color(0xA5030810), Color(0x30030810)))))
+                    Column(Modifier.fillMaxSize().padding(if (narrow) 18.dp else 24.dp), verticalArrangement = Arrangement.Bottom) {
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            ConsoleBrandMark(platformName, true, Modifier.size(23.dp))
+                            Text(platformName.uppercase(), color = MaterialTheme.colorScheme.primary, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                         }
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Column(Modifier.fillMaxWidth()) {
-                        Text("Find on ${source.label}", fontWeight = FontWeight.SemiBold)
-                        Text(source.description, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Spacer(Modifier.height(10.dp))
+                        Text(game.title, fontSize = if (narrow) 28.sp else 38.sp, fontWeight = FontWeight.Bold,
+                            maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.fillMaxWidth(if (narrow) 1f else .75f))
+                        FlowRow(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                            game.releaseDate?.let { DetailMetric(Icons.Rounded.CalendarMonth, it.take(4)) }
+                            game.players?.let { DetailMetric(Icons.Rounded.Groups, "$it players") }
+                            game.rating?.let { DetailMetric(Icons.Rounded.Star, it.toString()) }
+                        }
+                        Text(game.description ?: "Discover this title and import your own copy to play.",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp, maxLines = 2, overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.widthIn(max = 540.dp).padding(top = 9.dp))
+                        Spacer(Modifier.height(12.dp))
+                        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Button(enabled = !importing, onClick = { importLauncher.launch(arrayOf("*/*")) }) {
+                                Icon(Icons.Rounded.FileOpen, null, Modifier.size(16.dp))
+                                Text(if (importing) "Importing…" else "Import your copy", Modifier.padding(start = 6.dp), fontSize = 12.sp)
+                            }
+                            OutlinedButton(onClick = onFavorite) {
+                                Icon(if (game.favorite) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder, null, Modifier.size(16.dp))
+                                Text(if (game.favorite) "Favorited" else "Favorite", Modifier.padding(start = 6.dp), fontSize = 12.sp)
+                            }
+                            TextButton(onClick = onBack) { Text("Back", fontSize = 12.sp) }
+                        }
                     }
                 }
             }
-        }
-        importMessage?.let { message ->
-            Text(
-                message,
-                color = if (message.startsWith("Import failed") || message.startsWith("Import rejected")) {
-                    MaterialTheme.colorScheme.error
-                } else {
-                    MaterialTheme.colorScheme.primary
-                },
-                modifier = Modifier.semantics {
-                    contentDescription = message
-                    liveRegion = LiveRegionMode.Polite
-                },
-            )
-        }
-        Row(
-            Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(24.dp),
-        ) {
-            Surface(
-                Modifier.width(220.dp).height(300.dp),
-                shape = RoundedCornerShape(9.dp),
-                color = MaterialTheme.colorScheme.surface,
-            ) {
-                RemoteArtwork(game.backgroundUrl ?: game.coverUrl, Modifier.fillMaxSize())
+            importMessage?.let { message ->
+                Text(message, color = if (message.startsWith("Import failed") || message.startsWith("Import rejected")) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.semantics { contentDescription = message; liveRegion = LiveRegionMode.Polite })
             }
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text(game.platformId.uppercase(), color = MaterialTheme.colorScheme.primary)
-                Text(game.title, fontSize = 36.sp, fontWeight = FontWeight.Bold)
-                game.releaseDate?.let { Text(it) }
-                game.players?.let { Text("Players: " + it) }
-                game.rating?.let { Text("Rating: " + it) }
-                AssistChip(
-                    onClick = {},
-                    enabled = false,
-                    label = { Text("Discover only") },
-                )
-                Text(
-                    "TheGamesDB supplies metadata, box art and screenshots only. Select an authorized local copy to hash and store it in app-private storage.",
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.72f),
-                )
-            }
-        }
-        if (game.screenshots.isNotEmpty()) {
-            Text("Screenshots", fontSize = 24.sp, fontWeight = FontWeight.Bold)
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                items(game.screenshots, key = { it }) { screenshot ->
-                    Surface(
-                        Modifier.width(if (game.screenshots.size == 1) 360.dp else 250.dp).height(142.dp),
-                        shape = RoundedCornerShape(8.dp),
-                        color = MaterialTheme.colorScheme.surface,
-                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-                    ) {
-                        RemoteArtwork(screenshot, Modifier.fillMaxSize())
+            if (game.screenshots.isNotEmpty()) {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text("Screenshots", fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                    Text("Select to enlarge · ${game.screenshots.size}", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 10.sp)
+                }
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp), contentPadding = PaddingValues(3.dp)) {
+                    items(game.screenshots.distinct(), key = { it }) { screenshot ->
+                        Surface(Modifier.width(if (narrow) 236.dp else 260.dp).height(146.dp)
+                            .blueprintClick { selectedScreenshot = screenshot }.semantics { contentDescription = "Enlarge screenshot of ${game.title}" },
+                            shape = RoundedCornerShape(7.dp), border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)) {
+                            RemoteArtwork(screenshot, Modifier.fillMaxSize(), fallbackKey = game.title)
+                        }
                     }
                 }
             }
-        }
-        game.description?.takeIf { it.isNotBlank() }?.let {
-            Text("About", fontSize = 24.sp, fontWeight = FontWeight.Bold)
-            Text(it)
+            BlueprintPanel(Modifier.fillMaxWidth()) {
+                Text("Bring your game", fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                Text("Accepted for $importPlatformLabel: $importFormats", color = MaterialTheme.colorScheme.primary, fontSize = 11.sp)
+                Text("TheGamesDB supplies metadata and artwork, not game files. Import copies and verifies your selected file into Library. You still need a compatible emulator and any required firmware or keys.",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp)
+                if (RomImportPolicy.supportsMultiFile(platformName)) {
+                    OutlinedButton(enabled = !importing, onClick = { importSetLauncher.launch(arrayOf("*/*")) }) { Text("Import multi-file disc set", fontSize = 11.sp) }
+                }
+            }
+            if (legalSources.isNotEmpty()) {
+                Text("Find a legal copy", fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(9.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    legalSources.forEach { source ->
+                        OutlinedButton(onClick = {
+                            try { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(source.url))) }
+                            catch (_: ActivityNotFoundException) { importMessage = "No browser is available to open ${source.label}" }
+                        }) {
+                            Icon(Icons.Rounded.OpenInNew, null, Modifier.size(15.dp))
+                            Text(source.label, Modifier.padding(start = 7.dp), fontSize = 11.sp)
+                        }
+                    }
+                }
+            }
+            game.description?.takeIf { it.isNotBlank() }?.let {
+                BlueprintPanel(Modifier.fillMaxWidth()) {
+                    Text("About this game", fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                    Text(it, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
+                }
+            }
         }
     }
 }
@@ -1881,6 +1854,7 @@ internal fun GameCard(
         shadowElevation = if (emphasized) 8.dp else 0.dp,
     ) {
         BoxWithConstraints(Modifier.fillMaxSize()) {
+            val cardWidth = maxWidth
             RemoteArtwork(game.artworkUrl, Modifier.fillMaxSize(), fallbackKey = game.title)
             Box(Modifier.fillMaxSize().background(
                 if (hero) Brush.horizontalGradient(listOf(Color(0xF0060B12), Color(0xB0060B12), Color.Transparent))
@@ -1890,8 +1864,9 @@ internal fun GameCard(
                 Column(Modifier.fillMaxSize().padding(22.dp), verticalArrangement = Arrangement.Bottom) {
                     Text(game.platform.uppercase(), color = MaterialTheme.colorScheme.primary, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                     Spacer(Modifier.height(8.dp))
-                    Text(game.title, fontSize = if (maxWidth < 450.dp) 28.sp else 38.sp,
-                        fontWeight = FontWeight.Bold, maxLines = 2, overflow = TextOverflow.Ellipsis,
+                    Text(game.title, fontSize = if (cardWidth < 450.dp) 28.sp else 38.sp,
+                        lineHeight = if (cardWidth < 450.dp) 32.sp else 44.sp,
+                        fontWeight = FontWeight.Bold, maxLines = if (cardWidth < 450.dp) 2 else 1, overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.fillMaxWidth(.84f))
                     Text(game.description ?: game.genre, color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontSize = 11.sp, maxLines = 2, overflow = TextOverflow.Ellipsis,
@@ -1911,9 +1886,9 @@ internal fun GameCard(
                 if (game.favorite) Icon(Icons.Rounded.Favorite, null, tint = MaterialTheme.colorScheme.secondary,
                     modifier = Modifier.align(Alignment.TopEnd).padding(8.dp).size(14.dp))
                 Column(Modifier.align(Alignment.BottomStart).fillMaxWidth().padding(if (poster) 9.dp else 11.dp)) {
-                    Text(game.title, fontSize = if (poster || maxWidth < 170.dp) 12.sp else 14.sp,
+                    Text(game.title, fontSize = if (poster || cardWidth < 170.dp) 12.sp else 14.sp,
                         fontWeight = FontWeight.SemiBold, maxLines = 2, lineHeight = 16.sp, overflow = TextOverflow.Ellipsis)
-                    Text(if (poster) game.platform else game.state.displayName(),
+                    Text(if (poster) game.platform + " · " + game.state.displayName() else game.state.displayName(),
                         color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 9.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
             }
@@ -2936,8 +2911,7 @@ private fun ShortcutCard(
             .hoverable(interactionSource)
             .semantics { contentDescription = shortcut.title + ", " + if (installed) "installed" else "not installed" }
             .onFocusChanged { focused = it.isFocused }
-            .clickable(onClick = onClick)
-            .focusable(),
+            .clickable(interactionSource = interactionSource, indication = null, onClick = onClick),
         shape = RoundedCornerShape(16.dp),
         color = MaterialTheme.colorScheme.surface.copy(alpha = 0.92f),
         border = BorderStroke(if (focused) 3.dp else 1.dp, border),
@@ -3660,8 +3634,7 @@ private fun SettingsActionRow(title: String, icon: ImageVector, onClick: () -> U
             .padding(vertical = 4.dp)
             .hoverable(interactionSource)
             .onFocusChanged { focused = it.isFocused }
-            .clickable(onClick = onClick)
-            .focusable(),
+            .clickable(interactionSource = interactionSource, indication = null, onClick = onClick),
         color = if (emphasized) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.55f)
             else MaterialTheme.colorScheme.surface.copy(alpha = 0.84f),
         shape = RoundedCornerShape(8.dp),
