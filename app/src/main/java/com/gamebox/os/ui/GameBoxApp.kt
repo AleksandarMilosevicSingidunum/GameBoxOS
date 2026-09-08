@@ -1925,6 +1925,9 @@ private fun DetailsScreen(
     val exportBackupLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("application/octet-stream")
     ) { uri -> uri?.let(saveSafetyController::exportBackup) }
+    val initialSaveLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri -> uri?.let(saveSafetyController::importInitialSave) }
     val importBackupLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocument()
     ) { uri -> uri?.let(saveSafetyController::importBackup) }
@@ -2158,8 +2161,8 @@ private fun DetailsScreen(
                         }
                     }
                     if (isAuthorizedFixture && !saveSafetyState.saveRecordPresent) {
-                        OutlinedButton(onClick = saveSafetyController::createTestSaveRecord) {
-                            Text("Create test save")
+                        OutlinedButton(onClick = { initialSaveLauncher.launch(arrayOf("*/*")) }) {
+                            Text("Import save file")
                         }
                     }
                     if (!isAuthorizedFixture && game.state == InstallState.DOWNLOADING &&

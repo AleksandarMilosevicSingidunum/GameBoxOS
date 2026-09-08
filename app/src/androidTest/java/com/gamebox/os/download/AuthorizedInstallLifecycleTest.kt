@@ -97,11 +97,14 @@ class AuthorizedInstallLifecycleTest {
             restoredWrites.close()
         }
 
-        container.saveSafetyController.createTestSaveRecord()
+        val selectedSave = java.io.File.createTempFile("selected-save-", ".dat", app.cacheDir)
+        selectedSave.writeText("SAVE")
+        container.saveSafetyController.importInitialSave(android.net.Uri.fromFile(selectedSave))
         withTimeout(10_000) {
             container.saveSafetyController.observeState().first { it.saveRecordPresent }
         }
         val originalSave = save.readBytes()
+        selectedSave.delete()
         assertTrue(originalSave.isNotEmpty())
         container.saveSafetyController.backupSave()
         withTimeout(10_000) {
