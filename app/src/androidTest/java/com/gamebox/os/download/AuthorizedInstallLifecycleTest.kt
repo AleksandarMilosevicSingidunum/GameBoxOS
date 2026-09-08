@@ -43,11 +43,22 @@ class AuthorizedInstallLifecycleTest {
 
         suspend fun installAndVerify() {
             container.authorizedDownloadController.install()
-            withTimeout(30_000) {
+            try { withTimeout(30_000) {
                 while (!content.isFile ||
                     container.authorizedDownloadController.observeState().value.status != AuthorizedDownloadState.Status.SUCCEEDED ||
                     container.gameRepository.game(gameId)?.state != InstallState.INSTALLED
                 ) delay(50)
+            } } catch (timeout: kotlinx.coroutines.TimeoutCancellationException) {
+                val work = androidx.work.WorkManager.getInstance(app)
+                    .getWorkInfosForUniqueWork(AuthorizedHomebrewDownload.UNIQUE_WORK_NAME)
+                    .get(5, java.util.concurrent.TimeUnit.SECONDS)
+                throw AssertionError(
+                    "Install did not settle: file=" + content.isFile + ", bytes=" + content.length() +
+                        ", controller=" + container.authorizedDownloadController.observeState().value +
+                        ", game=" + container.gameRepository.game(gameId)?.state +
+                        ", work=" + work.map { it.id.toString() + ":" + it.state + ":" + it.outputData },
+                    timeout
+                )
             }
             assertEquals(AuthorizedHomebrewDownload.SIZE_BYTES, content.length())
             assertEquals(InstalledContentStatus.VERIFIED,
