@@ -10,6 +10,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -18,7 +19,10 @@ data class AuthorizedDownloadState(
     val status: Status = Status.IDLE,
     val bytesTransferred: Long = 0L,
     val totalBytes: Long = AuthorizedHomebrewDownload.SIZE_BYTES,
-    val error: String? = null
+    val error: String? = null,
+    // A fast reinstall can finish between observations. Its identical terminal
+    // payload must still be reconciled as a new installation.
+    val workId: java.util.UUID? = null
 ) {
     enum class Status { IDLE, QUEUED, RUNNING, SUCCEEDED, MISSING_CONTENT, ALTERED_CONTENT, FAILED, CANCELLED }
     val progress: Float
@@ -50,6 +54,11 @@ class WorkManagerAuthorizedDownloadController(
 
     init {
         scope.launch {
+            // Room seeding and WorkManager restoration race on a cold start.
+            // StateFlow retains the latest work state while we wait for its target row.
+            gameRepository.observeGames().first { games ->
+                games.any { it.id == HOMEBREW_GAME_ID }
+            }
             state.collect { current ->
                 current.status.toInstallState()?.let {
                     gameRepository.setInstallState(HOMEBREW_GAME_ID, it)
@@ -81,6 +90,7 @@ class WorkManagerAuthorizedDownloadController(
             AuthorizedHomebrewDownload.SIZE_BYTES
         ).takeIf { it > 0L } ?: AuthorizedHomebrewDownload.SIZE_BYTES
         return AuthorizedDownloadState(
+            workId = id,
             status = when (state) {
                 WorkInfo.State.ENQUEUED, WorkInfo.State.BLOCKED -> AuthorizedDownloadState.Status.QUEUED
                 WorkInfo.State.RUNNING -> AuthorizedDownloadState.Status.RUNNING
