@@ -57,6 +57,17 @@ jobs:
       - name: Compile and run unit tests
         run: timeout 15m gradle --no-daemon testDebugUnitTest
 
+      - name: Preserve unit test reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: android-unit-results-${{ github.sha }}
+          path: |
+            app/build/test-results/testDebugUnitTest/
+            app/build/reports/tests/testDebugUnitTest/
+          if-no-files-found: warn
+          retention-days: 14
+
       - name: Build debug APK and instrumentation test APK
         run: timeout 15m gradle --no-daemon assembleDebug assembleDebugAndroidTest
 
@@ -166,6 +177,13 @@ jobs:
           gradle-version: "9.5.0"
           cache-provider: basic
 
+      - name: Enable KVM for instrumentation
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+          test -r /dev/kvm && test -w /dev/kvm
+
       - name: Run Compose, Room, and accessibility instrumentation tests
         uses: reactivecircus/android-emulator-runner@v2
         with:
@@ -175,3 +193,14 @@ jobs:
           emulator-options: -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect
           disable-animations: true
           script: gradle --no-daemon connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.notClass=com.gamebox.os.ui.BlueprintScreenshotsTest
+
+      - name: Preserve instrumentation test reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: android-instrumentation-results-${{ github.sha }}
+          path: |
+            app/build/outputs/androidTest-results/
+            app/build/reports/androidTests/
+          if-no-files-found: warn
+          retention-days: 14
