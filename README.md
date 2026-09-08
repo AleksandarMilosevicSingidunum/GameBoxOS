@@ -12,6 +12,10 @@ and input feedback. See [UI changes and visual QA profiles](docs/android-ui-blue
 The workflow captures the real app on phone and DeX-sized Android emulators;
 these captures do not replace physical-device acceptance testing.
 
+See the [production critical path](docs/production-critical-path.md) for current
+release blockers. Starter catalog entries are discovery metadata, not preinstalled
+games; installation state must come from local operations.
+
 This repository is an active pre-1.0 implementation of the August 2026 **GameBox Development Blueprint**. The blueprint is a six-month working plan, not a claim that every item is already complete.
 
 Status as of 31 August 2026:

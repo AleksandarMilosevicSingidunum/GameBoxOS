@@ -43,10 +43,13 @@ class RoomGameRepository(
 
     init {
         scope.launch {
+            // Repair only known legacy demo records. SQL guards protect imports and
+            // real download sources, and no files, saves or user metadata are removed.
+            dao.clearLegacyCatalogInstallClaims()
             if (dao.count() == 0) {
                 val snapshot = catalogProvider.load()
                 consumeFallbackReason()
-                dao.upsertAll(snapshot.games.map { it.toEntity() })
+                dao.upsertAll(snapshot.games.map { it.copy(state = InstallState.NOT_INSTALLED).toEntity() })
                 onCatalogSeeded(System.currentTimeMillis())
             }
         }
@@ -94,33 +97,6 @@ class RoomGameRepository(
         scope.launch { dao.updateFavorite(id.value, favorite) }
     }
 
-    override fun advanceInstall(id: GameId) {
-        val game = game(id) ?: return
-        val next = when (game.state) {
-            InstallState.NOT_INSTALLED, InstallState.FAILED, InstallState.MISSING_FILES -> InstallState.QUEUED
-            InstallState.QUEUED -> InstallState.DOWNLOADING
-            InstallState.DOWNLOADING, InstallState.PAUSED -> InstallState.VERIFYING
-            InstallState.VERIFYING -> InstallState.INSTALLING
-            InstallState.INSTALLING -> InstallState.INSTALLED
-            else -> game.state
-        }
-        setInstallState(id, next)
-    }
-
-    override fun pauseOrResume(id: GameId) {
-        val game = game(id) ?: return
-        val next = when (game.state) {
-            InstallState.DOWNLOADING -> InstallState.PAUSED
-            InstallState.PAUSED -> InstallState.DOWNLOADING
-            else -> game.state
-        }
-        setInstallState(id, next)
-    }
-
-    override fun cancelInstall(id: GameId) {
-        setInstallState(id, InstallState.NOT_INSTALLED)
-    }
-
     override fun setInstallState(id: GameId, state: InstallState) {
         scope.launch { dao.updateInstallState(id.value, state.name) }
     }
@@ -152,7 +128,7 @@ fun mergeCatalogPreservingLocalState(existing: List<Game>, incoming: List<Game>)
     val incomingIds = incoming.mapTo(mutableSetOf()) { it.id }
     val mergedIncoming = incoming.map { remote ->
         val local = existingById[remote.id]
-        if (local == null) remote else remote.copy(
+        if (local == null) remote.copy(state = InstallState.NOT_INSTALLED) else remote.copy(
             state = local.state,
             lastPlayed = local.lastPlayed,
             minutesPlayed = local.minutesPlayed,

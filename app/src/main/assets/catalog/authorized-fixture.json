@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "provider": {
     "id": "gamebox-fixture",
-    "displayName": "GameBox Authorized Test Catalog"
+    "displayName": "GameBox Starter Catalog"
   },
   "games": [
     {
@@ -13,8 +13,6 @@
       "genre": "Platformer",
       "sizeMb": 32,
       "contentPolicy": "freeware",
-      "initialState": "INSTALLED",
-      "artworkUrl": "https://cdn.cloudflare.steamstatic.com/steam/apps/504230/header.jpg",
       "description": "A precision platforming adventure.",
       "players": "1",
       "language": "English",
@@ -28,8 +26,6 @@
       "genre": "Adventure",
       "sizeMb": 18,
       "contentPolicy": "freeware",
-      "initialState": "INSTALLED",
-      "artworkUrl": "https://cdn.cloudflare.steamstatic.com/steam/apps/70300/header.jpg",
       "description": "A compact freeware adventure classic.",
       "players": "1",
       "language": "English",
@@ -42,8 +38,7 @@
       "year": 2012,
       "genre": "Arena FPS",
       "sizeMb": 480,
-      "contentPolicy": "open-source",
-      "initialState": "INSTALLED"
+      "contentPolicy": "open-source"
     },
     {
       "id": "supertuxkart",
@@ -52,8 +47,7 @@
       "year": 2025,
       "genre": "Racing",
       "sizeMb": 820,
-      "contentPolicy": "open-source",
-      "initialState": "UPDATE_AVAILABLE"
+      "contentPolicy": "open-source"
     },
     {
       "id": "freedoom",
@@ -71,8 +65,7 @@
       "year": 2026,
       "genre": "Sandbox",
       "sizeMb": 210,
-      "contentPolicy": "open-source",
-      "initialState": "QUEUED"
+      "contentPolicy": "open-source"
     },
     {
       "id": "openmw",
@@ -81,8 +74,7 @@
       "year": 2026,
       "genre": "RPG",
       "sizeMb": 155,
-      "contentPolicy": "open-source",
-      "initialState": "PAUSED"
+      "contentPolicy": "open-source"
     },
     {
       "id": "galaxy-patrol",

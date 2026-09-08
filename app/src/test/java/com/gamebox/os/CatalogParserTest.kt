@@ -10,10 +10,23 @@ import org.junit.Test
 class CatalogParserTest {
     private val parser = CatalogParser()
 
-    @Test fun validManifest_mapsExplicitState() {
+    @Test fun validManifest_doesNotTrustProviderInstallState() {
         val snapshot = parser.parse(validManifest())
         assertEquals("fixture", snapshot.providerId)
-        assertEquals(InstallState.QUEUED, snapshot.games.single().state)
+        assertEquals(InstallState.NOT_INSTALLED, snapshot.games.single().state)
+    }
+
+    @Test fun everyProviderStateStartsAsMetadataOnly() {
+        InstallState.entries.forEach { state ->
+            val game = parser.parse(validManifest().replace("QUEUED", state.name)).games.single()
+            assertEquals(InstallState.NOT_INSTALLED, game.state)
+        }
+    }
+
+    @Test fun unknownLegacyStateIsStillRejected() {
+        assertThrows(CatalogFormatException::class.java) {
+            parser.parse(validManifest().replace("QUEUED", "UNKNOWN"))
+        }
     }
 
     @Test fun duplicateGameIds_areRejected() {
