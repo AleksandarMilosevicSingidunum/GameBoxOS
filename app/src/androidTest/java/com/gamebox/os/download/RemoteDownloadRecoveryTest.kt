@@ -39,7 +39,7 @@ class RemoteDownloadRecoveryTest {
         }
         val workId = UUID.randomUUID()
         val tags = setOf(RemoteDownloadWorker.TAG, RemoteDownloadWorker.TAG + ":" + id.value)
-        fun info(state: WorkInfo.State) = WorkInfo(workId, state, Data.EMPTY, tags, Data.EMPTY, 0)
+        fun info(state: WorkInfo.State) = WorkInfo(workId, state, tags, Data.EMPTY, Data.EMPTY, 0)
         val work = MutableStateFlow(listOf(info(WorkInfo.State.SUCCEEDED)))
         val scope = CoroutineScope(SupervisorJob() + Dispatchers.Unconfined)
         try {
@@ -61,7 +61,7 @@ class RemoteDownloadRecoveryTest {
             assertEquals(1, jobWrites.size)
 
             work.value = listOf(WorkInfo(UUID.randomUUID(), WorkInfo.State.RUNNING,
-                Data.EMPTY, tags, Data.EMPTY, 0))
+                tags, Data.EMPTY, Data.EMPTY, 0))
             yield()
             assertEquals(InstallState.DOWNLOADING, gameWrites.last())
             assertEquals(2, gameWrites.size)
