@@ -32,4 +32,17 @@ gameplay or emulator-produced saves.
 
 The follow-up startup fix waits for Galaxy Patrol's database row before applying
 restored WorkManager state. Its regression extends the lifecycle test by delaying
-library availability while observing actual completed work; validation pending.
+library availability while observing actual completed work. Subsequent runs exposed
+a fast-reinstall failure: verified content and WorkManager success coexisted with
+a QUEUED library row. PR #270 now retains work identity in observable download
+state and serializes installation-state writes. Commit 008fd131 passed all 12
+API-35 instrumentation tests with zero skips/failures; this is automated lifecycle
+evidence, not proof of RetroArch gameplay or emulator-produced saves.
+
+PR #271 additionally defers remote-work reconciliation until both database rows
+exist and preserves a completed download's later uninstall across controller
+restart. Its injected-work regression is not a live provider transfer test.
+PR #272 resolves the actual MediaStore export path rather than guessing a filename
+that Android may rename, and marks missing/altered launch content for reinstall
+without invalidating valid content when emulator setup fails. These changes still
+require their branch checks and integration before being considered merged work.
