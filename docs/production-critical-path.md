@@ -9,7 +9,7 @@ not prove working emulators, providers, saves or release signing.
 | P0 | One complete authorized game journey | Galaxy Patrol is bundled and hash-pinned. Install → real RetroArch execution/input → save → return → uninstall/reinstall preservation is not yet proven end-to-end. |
 | P0 | Reproducible signed release and upgrade | Debug APK and API-35 UI tests pass. Production signing, clean install/upgrade and rollback validation remain separate gates. |
 | P1 | Remove simulated installation controls | Merged and automated checks passed in PR #267. Manual completion APIs removed; fake repository moved to unit-test sources. Details pause/resume uses the real download controller; in-progress actions open Downloads. Unavailable-source jobs report recovery guidance rather than simulate progress. |
-| P1 | Durable download updates | PR #269 merged after all five checks passed; instrumentation completed 11 tests with zero skips/failures. Ordered Room writes read persisted rows, not the UI snapshot. Remote WorkManager startup reconciliation remains a separate gap. |
+| P1 | Durable download updates | PRs #269–#271 merged after their checks passed. Ordered Room writes read persisted rows, startup waits for database records, work identity distinguishes fast reinstalls, and remote recovery verifies current content while preserving uninstall state. Live provider transfer/recovery still needs separate evidence. |
 | P1 | General game lifecycle | Generalized emulator/save/uninstall adapters need full supported-console validation. Parser support is not emulator compatibility. |
 | P1 | Real providers | TheGamesDB transport/enrichment exists; live authenticated discovery/media, limits and failures require provider evidence. |
 | P1 | Windows communication journey | Pairing/authentication, transfer/synchronization and recovery require a complete Android↔Windows integration run, not only independent builds. |
@@ -44,5 +44,14 @@ exist and preserves a completed download's later uninstall across controller
 restart. Its injected-work regression is not a live provider transfer test.
 PR #272 resolves the actual MediaStore export path rather than guessing a filename
 that Android may rename, and marks missing/altered launch content for reinstall
-without invalidating valid content when emulator setup fails. These changes still
-require their branch checks and integration before being considered merged work.
+without invalidating valid content when emulator setup fails. PRs #271 and #272
+are merged after all five checks passed on each; their API-35 instrumentation runs
+completed 13 tests each. MediaStore export validation does not prove RetroArch
+execution or resolve every possible black-screen cause.
+
+PR #273 is merged after build, unit, instrumentation and phone/DeX screenshot
+checks passed. It replaces production synthetic save creation with a real
+document-picker import, rejecting empty/oversized files and existing-save
+overwrites. The lifecycle test imports test-only bytes through that API before
+backup, uninstall, reinstall and restore. See [managed save import](save-import.md)
+for the current Galaxy Patrol scope and the separate emulator synchronization gap.
