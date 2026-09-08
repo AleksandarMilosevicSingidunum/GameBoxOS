@@ -10,6 +10,7 @@ import com.gamebox.os.domain.DownloadJob
 import com.gamebox.os.domain.Game
 import com.gamebox.os.domain.GameId
 import com.gamebox.os.domain.InstallState
+import com.gamebox.os.content.GameContentPolicy
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.combine
@@ -33,6 +34,9 @@ class WorkManagerRemoteDownloadController(
         .getWorkInfosByTagFlow(RemoteDownloadWorker.TAG)
 ) : RemoteDownloadController {
     private val scheduler = RemoteDownloadScheduler(context.applicationContext)
+    private val contentValidator = InstalledContentValidator(
+        context.applicationContext.filesDir.resolve(AssetDownloadWorker.INSTALL_ROOT)
+    )
     private val pausedGameIds = ConcurrentHashMap.newKeySet<String>()
 
     init {
@@ -69,7 +73,7 @@ class WorkManagerRemoteDownloadController(
                         // Defer early WorkManager snapshots until both Room rows exist.
                         // Cache only applied work snapshots, not UI/database emissions:
                         // otherwise our own writes (or an uninstall) replay old success.
-                        reconcile(info, job)
+                        reconcile(info, job, game)
                         applied[id] = info
                     }
             }
@@ -115,8 +119,30 @@ class WorkManagerRemoteDownloadController(
         gameRepository.setInstallState(game.id, InstallState.NOT_INSTALLED)
     }
 
-    private fun reconcile(info: WorkInfo, job: DownloadJob) {
+    private fun reconcile(info: WorkInfo, job: DownloadJob, game: Game) {
         val gameId = gameIdFrom(info) ?: return
+        if (info.state == WorkInfo.State.SUCCEEDED) {
+            val contentStatus = try {
+                val checksum = requireNotNull(game.expectedSha256)
+                val content = GameContentPolicy.describe(game.id.value, game.platform, game.sourceUrl)
+                contentValidator.validate(content.relativePath, checksum)
+            } catch (_: java.io.IOException) {
+                InstalledContentStatus.ALTERED
+            } catch (_: SecurityException) {
+                InstalledContentStatus.ALTERED
+            } catch (_: IllegalArgumentException) {
+                InstalledContentStatus.ALTERED
+            }
+            if (contentStatus != InstalledContentStatus.VERIFIED) {
+                val missing = contentStatus == InstalledContentStatus.MISSING
+                downloadRepository.updateState(gameId, DownloadStatus.FAILED, 0L,
+                    if (missing) "Installed content is missing; reinstall required"
+                    else "Installed content could not be verified; reinstall required")
+                gameRepository.setInstallState(gameId,
+                    if (missing) InstallState.MISSING_FILES else InstallState.FAILED)
+                return
+            }
+        }
         val bytes = when (info.state) {
             WorkInfo.State.SUCCEEDED -> info.outputData.getLong(RemoteDownloadWorker.KEY_BYTES_TRANSFERRED, job.totalBytes)
             else -> info.progress.getLong(RemoteDownloadWorker.KEY_BYTES_TRANSFERRED, job.downloadedBytes)

@@ -20,8 +20,16 @@ import org.junit.runner.RunWith
 class RemoteDownloadRecoveryTest {
     @Test fun waitsForBothRowsAndDoesNotReplayUnchangedWork() = runBlocking {
         val app = ApplicationProvider.getApplicationContext<GameBoxApplication>()
-        val id = GameId("recovery-test")
-        val game = Game(id, "Recovery", "Homebrew", 2026, "Test", 1, InstallState.QUEUED)
+        val id = GameId("recovery-test-" + UUID.randomUUID())
+        val payload = "authorized regression content".toByteArray()
+        val checksum = java.security.MessageDigest.getInstance("SHA-256")
+            .digest(payload).joinToString("") { "%02x".format(it) }
+        val game = Game(id, "Recovery", "Homebrew", 2026, "Test", 1, InstallState.QUEUED,
+            sourceUrl = "https://example.com/recovery.nes", expectedSha256 = checksum)
+        val descriptor = com.gamebox.os.content.GameContentPolicy.describe(id.value, game.platform, game.sourceUrl)
+        val content = app.filesDir.resolve(AssetDownloadWorker.INSTALL_ROOT).resolve(descriptor.relativePath)
+        content.parentFile?.mkdirs()
+        content.writeBytes(payload)
         val job = DownloadJob(id.value, id, game.title, DownloadStatus.QUEUED, 1024, 0)
         val games = MutableStateFlow<List<Game>>(emptyList())
         val jobs = MutableStateFlow<List<DownloadJob>>(emptyList())
@@ -75,11 +83,27 @@ class RemoteDownloadRecoveryTest {
                 yield()
                 assertEquals(InstallState.DOWNLOADING, gameWrites.last())
                 assertEquals(2, gameWrites.size)
+
+                games.value = listOf(game.copy(state = InstallState.INSTALLED))
+                content.delete()
+                work.value = listOf(WorkInfo(UUID.randomUUID(), WorkInfo.State.SUCCEEDED,
+                    tags, Data.EMPTY, Data.EMPTY, 0))
+                yield()
+                assertEquals(InstallState.MISSING_FILES, gameWrites.last())
+                assertEquals(DownloadStatus.FAILED, jobWrites.last())
+
+                content.writeText("changed content")
+                work.value = listOf(WorkInfo(UUID.randomUUID(), WorkInfo.State.SUCCEEDED,
+                    tags, Data.EMPTY, Data.EMPTY, 0))
+                yield()
+                assertEquals(InstallState.FAILED, gameWrites.last())
+                assertEquals(DownloadStatus.FAILED, jobWrites.last())
             } finally {
                 restartedScope.coroutineContext[Job]?.cancelAndJoin()
             }
         } finally {
             scope.coroutineContext[Job]?.cancelAndJoin()
+            content.delete()
         }
     }
 }
