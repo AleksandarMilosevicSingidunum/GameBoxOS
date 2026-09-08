@@ -54,7 +54,7 @@ fun backupResultMessage(action: String, result: BackupResult): SaveOperation = w
 
 interface SaveSafetyController {
     fun observeState(): StateFlow<SaveSafetyState>
-    fun createTestSaveRecord()
+    fun importInitialSave(uri: Uri)
     fun uninstallPreview(): UninstallConfirmation
     fun uninstallTestContent()
     fun backupSave()
@@ -75,6 +75,7 @@ class DefaultSaveSafetyController(
     private val applicationContext = context.applicationContext
     private val gameId = GameId("galaxy-patrol")
     private val savesRoot = applicationContext.filesDir.resolve("saves")
+    private val initialSaveImporter = InitialSaveImporter(savesRoot)
     private val backupService = SaveBackupService(
         savesRoot,
         applicationContext.filesDir.resolve("save-backups")
@@ -96,20 +97,18 @@ class DefaultSaveSafetyController(
 
     override fun observeState(): StateFlow<SaveSafetyState> = state
 
-    override fun createTestSaveRecord() {
+    override fun importInitialSave(uri: Uri) {
         scope.launch {
             runCatching {
                 val relativePath = "galaxy-patrol/save.dat"
-                val root = savesRoot.canonicalFile
-                val saveFile = File(root, relativePath).canonicalFile
-                require(saveFile.path.startsWith(root.path + File.separator))
-                check(saveFile.parentFile?.mkdirs() != false || saveFile.parentFile?.isDirectory == true)
-                if (!saveFile.exists()) saveFile.writeText("SAVE")
-                saveRecordDao.upsert(record(relativePath, saveFile.length()))
+                val bytes = applicationContext.contentResolver.openInputStream(uri)?.use {
+                    initialSaveImporter.importNew(relativePath, it)
+                } ?: error("Selected document could not be opened")
+                saveRecordDao.upsert(record(relativePath, bytes))
             }.onSuccess {
-                operation.value = SaveOperation("Test save created")
+                operation.value = SaveOperation("Save imported into GameBox storage; emulator save synchronization must be configured separately")
             }.onFailure {
-                operation.value = SaveOperation("Unable to create test save", false)
+                operation.value = SaveOperation("Save import failed; existing save retained. Select a non-empty save up to 16 MiB, or use restore if a save already exists.", false)
             }
         }
     }
