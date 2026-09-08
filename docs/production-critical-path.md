@@ -1,14 +1,15 @@
-# Production critical path — 7 September 2026
+# Production critical path — 8 September 2026
 
 Implementation and validation are tracked separately. Green UI/build checks do
 not prove working emulators, providers, saves or release signing.
 
 | Priority | Work | Current evidence / next gate |
 | --- | --- | --- |
-| P0 | Honest first-run library and installation state | Catalog state trust and legacy demo-state repair implemented; parser/merge tests and real Room repair test added. Verify CI before merging. |
+| P0 | Honest first-run library and installation state | Merged in PR #267 after Android unit/instrumentation, phone/DeX screenshot and Windows build checks passed. Catalog claims no longer create installed or queued games. |
 | P0 | One complete authorized game journey | Galaxy Patrol is bundled and hash-pinned. Install → real RetroArch execution/input → save → return → uninstall/reinstall preservation is not yet proven end-to-end. |
 | P0 | Reproducible signed release and upgrade | Debug APK and API-35 UI tests pass. Production signing, clean install/upgrade and rollback validation remain separate gates. |
-| P1 | Remove simulated installation controls | Manual completion APIs removed; fake repository moved to unit-test sources. Details pause/resume uses the real download controller; in-progress actions open Downloads. Unavailable-source jobs report recovery guidance rather than simulate progress. Automated validation pending. |
+| P1 | Remove simulated installation controls | Merged and automated checks passed in PR #267. Manual completion APIs removed; fake repository moved to unit-test sources. Details pause/resume uses the real download controller; in-progress actions open Downloads. Unavailable-source jobs report recovery guidance rather than simulate progress. |
+| P1 | Durable download updates | Ordered Room writes now read stored rows rather than a possibly empty UI snapshot. Regression test holds observation while enqueue/progress/pause/resume/completion commands arrive; execution pending. WorkManager startup reconciliation still needs separate validation. |
 | P1 | General game lifecycle | Generalized emulator/save/uninstall adapters need full supported-console validation. Parser support is not emulator compatibility. |
 | P1 | Real providers | TheGamesDB transport/enrichment exists; live authenticated discovery/media, limits and failures require provider evidence. |
 | P1 | Windows communication journey | Pairing/authentication, transfer/synchronization and recovery require a complete Android↔Windows integration run, not only independent builds. |

@@ -10,6 +10,9 @@ interface DownloadJobDao {
     @Query("SELECT * FROM download_jobs ORDER BY title COLLATE NOCASE")
     fun observeAll(): Flow<List<DownloadJobEntity>>
 
+    @Query("SELECT * FROM download_jobs WHERE gameId = :gameId LIMIT 1")
+    suspend fun getByGameId(gameId: String): DownloadJobEntity?
+
     @Upsert
     suspend fun upsert(job: DownloadJobEntity)
 
