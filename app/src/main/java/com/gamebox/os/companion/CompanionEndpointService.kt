@@ -13,7 +13,6 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import java.net.InetSocketAddress
 import java.net.ServerSocket
-import java.net.Socket
 import java.util.concurrent.Executors
 
 /** Opt-in LAN listener for a paired Windows companion. */
@@ -44,34 +43,25 @@ class CompanionEndpointService : Service() {
                 server = listener
                 listener.reuseAddress = true
                 listener.bind(InetSocketAddress(port))
-                while (!Thread.currentThread().isInterrupted) listener.accept().use { socket -> handle(socket, secret) }
+                val connection = CompanionHttpConnection()
+                while (!Thread.currentThread().isInterrupted) listener.accept().use { socket ->
+                    connection.handle(socket) { request -> route(request, secret) }
+                }
             }
         }
         server = null
         stopSelf()
     }
 
-    private fun handle(socket: Socket, secret: String) {
-        socket.soTimeout = 5_000
-        val reader = socket.getInputStream().bufferedReader(Charsets.US_ASCII)
-        val parts = reader.readLine()?.trim()?.split(' ') ?: emptyList()
-        if (parts.size < 2) return write(socket, 400, """{"error":"bad_request"}""")
-        val headers = mutableMapOf<String, String>()
-        repeat(32) {
-            val line = reader.readLine() ?: return@repeat
-            if (line.isBlank()) return@repeat
-            val divider = line.indexOf(':')
-            if (divider > 0) headers[line.substring(0, divider).trim().lowercase()] = line.substring(divider + 1).trim()
-        }
-        val authorization = headers[CompanionProtocol.AUTHORIZATION_HEADER.lowercase()]
+    private fun route(request: CompanionHttpRequest, secret: String): CompanionHttpResponse {
         val now = System.currentTimeMillis() / 1_000L
-        val response = when (parts[1]) {
+        return when (request.path) {
             CompanionStatusRoute.PATH -> CompanionStatusRoute.handle(
-                method = parts[0], path = parts[1], authorization = authorization, pairingSecret = secret,
+                method = request.method, path = request.path, authorization = request.authorization, pairingSecret = secret,
                 deviceName = applicationInfo.loadLabel(packageManager).toString(), nowUnixTimeSeconds = now,
             )
             CompanionLibraryRoute.PATH -> CompanionLibraryRoute.handle(
-                method = parts[0], path = parts[1], authorization = authorization, pairingSecret = secret,
+                method = request.method, path = request.path, authorization = request.authorization, pairingSecret = secret,
                 library = (application as GameBoxApplication).container.gameRepository.observeGames().value.map { game ->
                     CompanionLibraryItem(
                         id = game.id.value, title = game.title, platform = game.platform,
@@ -82,17 +72,6 @@ class CompanionEndpointService : Service() {
                 nowUnixTimeSeconds = now,
             )
             else -> CompanionHttpResponse(404, """{"error":"not_found"}""")
-        }
-        write(socket, response.status, response.body)
-    }
-
-    private fun write(socket: Socket, status: Int, body: String) {
-        val reason = when (status) { 200 -> "OK"; 400 -> "Bad Request"; 401 -> "Unauthorized"; else -> "Not Found" }
-        val bytes = body.toByteArray(Charsets.UTF_8)
-        socket.getOutputStream().apply {
-            write("HTTP/1.1 $status $reason\r\nContent-Type: application/json\r\nContent-Length: ${bytes.size}\r\nConnection: close\r\n\r\n".toByteArray(Charsets.US_ASCII))
-            write(bytes)
-            flush()
         }
     }
 
