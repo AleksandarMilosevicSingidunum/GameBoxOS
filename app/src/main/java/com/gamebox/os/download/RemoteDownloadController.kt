@@ -6,11 +6,14 @@ import androidx.work.WorkManager
 import com.gamebox.os.data.DownloadRepository
 import com.gamebox.os.data.GameRepository
 import com.gamebox.os.domain.DownloadStatus
+import com.gamebox.os.domain.DownloadJob
 import com.gamebox.os.domain.Game
 import com.gamebox.os.domain.GameId
 import com.gamebox.os.domain.InstallState
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
 import java.util.concurrent.ConcurrentHashMap
 
@@ -25,21 +28,40 @@ class WorkManagerRemoteDownloadController(
     context: Context,
     private val gameRepository: GameRepository,
     private val downloadRepository: DownloadRepository,
-    scope: CoroutineScope
+    scope: CoroutineScope,
+    workInfoFlow: Flow<List<WorkInfo>> = WorkManager.getInstance(context.applicationContext)
+        .getWorkInfosByTagFlow(RemoteDownloadWorker.TAG)
 ) : RemoteDownloadController {
-    private val workManager = WorkManager.getInstance(context.applicationContext)
     private val scheduler = RemoteDownloadScheduler(context.applicationContext)
     private val pausedGameIds = ConcurrentHashMap.newKeySet<String>()
 
     init {
         scope.launch {
-            workManager.getWorkInfosByTagFlow(RemoteDownloadWorker.TAG).collect { workInfos ->
+            val applied = mutableMapOf<GameId, WorkInfo>()
+            combine(
+                workInfoFlow,
+                downloadRepository.observeJobs(),
+                gameRepository.observeGames()
+            ) { workInfos, jobs, games -> Triple(workInfos, jobs, games.map { it.id }.toSet()) }
+                .collect { (workInfos, jobs, gameIds) ->
+                val jobsByGame = jobs.associateBy { it.gameId }
+                val presentGameIds = workInfos.mapNotNull(::gameIdFrom).toSet()
+                applied.keys.retainAll(presentGameIds)
                 workInfos
                     .mapNotNull { info -> gameIdFrom(info)?.let { it.value to info } }
                     .groupBy({ it.first }, { it.second })
                     .values
                     .mapNotNull { it.lastOrNull() }
-                    .forEach(::reconcile)
+                    .forEach { info ->
+                        val id = gameIdFrom(info) ?: return@forEach
+                        val job = jobsByGame[id] ?: return@forEach
+                        if (id !in gameIds || applied[id] == info) return@forEach
+                        // Defer early WorkManager snapshots until both Room rows exist.
+                        // Cache only applied work snapshots, not UI/database emissions:
+                        // otherwise our own writes (or an uninstall) replay old success.
+                        reconcile(info, job)
+                        applied[id] = info
+                    }
             }
         }
     }
@@ -83,9 +105,8 @@ class WorkManagerRemoteDownloadController(
         gameRepository.setInstallState(game.id, InstallState.NOT_INSTALLED)
     }
 
-    private fun reconcile(info: WorkInfo) {
+    private fun reconcile(info: WorkInfo, job: DownloadJob) {
         val gameId = gameIdFrom(info) ?: return
-        val job = downloadRepository.observeJobs().value.firstOrNull { it.gameId == gameId } ?: return
         val bytes = when (info.state) {
             WorkInfo.State.SUCCEEDED -> info.outputData.getLong(RemoteDownloadWorker.KEY_BYTES_TRANSFERRED, job.totalBytes)
             else -> info.progress.getLong(RemoteDownloadWorker.KEY_BYTES_TRANSFERRED, job.downloadedBytes)
