@@ -14,6 +14,32 @@ import org.junit.Assert.assertNull
 import org.junit.Test
 
 class LaunchAdapterTest {
+    @Test fun launchFailuresInvalidateOnlyBrokenContent() {
+        val cases = listOf(
+            com.gamebox.os.launch.GatewayResult.CONTENT_MISSING to InstallState.MISSING_FILES,
+            com.gamebox.os.launch.GatewayResult.VERIFICATION_FAILED to InstallState.FAILED,
+            com.gamebox.os.launch.GatewayResult.EMULATOR_UNAVAILABLE to InstallState.INSTALLED,
+            com.gamebox.os.launch.GatewayResult.HANDOFF_REJECTED to InstallState.INSTALLED,
+        )
+        cases.forEach { (result, expected) ->
+            val repository = com.gamebox.os.data.FakeGameRepository()
+            val original = repository.observeGames().value.first()
+            repository.setInstallState(original.id, InstallState.INSTALLED)
+            val installed = requireNotNull(repository.game(original.id))
+            val registry = EmulatorCapabilityRegistry(listOf(capability.copy(gameId = installed.id)))
+            val gateway = object : com.gamebox.os.launch.PackageGateway {
+                override fun launch(capability: EmulatorCapability) = result
+            }
+            val controller = com.gamebox.os.launch.DefaultGameLaunchController(registry, gateway, repository)
+            controller.launch(installed)
+            controller.onHostResumed()
+            val after = requireNotNull(repository.game(original.id))
+            assertEquals(expected, after.state)
+            assertEquals(original.minutesPlayed, after.minutesPlayed)
+            assertEquals(original.favorite, after.favorite)
+        }
+    }
+
     private val capability = EmulatorCapability(
         "approved",
         GameId("retro-test"),
@@ -110,4 +136,3 @@ class LaunchAdapterTest {
         assertEquals(0, tracker.returned()?.minutesPlayed)
     }
 }
-

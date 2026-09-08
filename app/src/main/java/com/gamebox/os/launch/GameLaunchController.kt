@@ -417,12 +417,14 @@ class DefaultGameLaunchController(
                 LaunchUiState.Status.EMULATOR_UNAVAILABLE,
                 "Install the approved emulator package: ${capability.packageName}"
             )
-            GatewayResult.CONTENT_MISSING -> update(
-                game.id, LaunchUiState.Status.CONTENT_MISSING, "Verified content is missing; reinstall it"
-            )
-            GatewayResult.VERIFICATION_FAILED -> update(
-                game.id, LaunchUiState.Status.VERIFICATION_FAILED, "Content changed after installation; reinstall it"
-            )
+            GatewayResult.CONTENT_MISSING -> {
+                repository.setInstallState(game.id, InstallState.MISSING_FILES)
+                update(game.id, LaunchUiState.Status.CONTENT_MISSING, "Verified content is missing; reinstall it")
+            }
+            GatewayResult.VERIFICATION_FAILED -> {
+                repository.setInstallState(game.id, InstallState.FAILED)
+                update(game.id, LaunchUiState.Status.VERIFICATION_FAILED, "Content changed after installation; reinstall it")
+            }
             GatewayResult.HANDOFF_REJECTED -> update(
                 game.id,
                 LaunchUiState.Status.HANDOFF_REJECTED,
