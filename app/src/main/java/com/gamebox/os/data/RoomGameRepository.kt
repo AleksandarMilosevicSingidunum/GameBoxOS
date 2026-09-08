@@ -14,6 +14,9 @@ import com.gamebox.os.domain.GameId
 import com.gamebox.os.domain.InstallState
 import com.gamebox.os.domain.GraphicsProfiles
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -30,6 +33,7 @@ class RoomGameRepository(
     private val onCatalogSeeded: suspend (Long) -> Unit,
     private val onCatalogRefreshed: suspend (Long) -> Unit
 ) : GameRepository {
+    private val installStateWrites = Mutex()
     private val games: StateFlow<List<Game>> = combine(
         dao.observeAll(),
         saveRecordDao.observeAll()
@@ -98,7 +102,11 @@ class RoomGameRepository(
     }
 
     override fun setInstallState(id: GameId, state: InstallState) {
-        scope.launch { dao.updateInstallState(id.value, state.name) }
+        // Enter the queue before returning so a delayed QUEUED write cannot
+        // overwrite the successful result of a small, fast installation.
+        scope.launch(start = CoroutineStart.UNDISPATCHED) {
+            installStateWrites.withLock { dao.updateInstallState(id.value, state.name) }
+        }
     }
 
     override fun recordPlaySession(id: GameId, endedAtMillis: Long, minutesPlayed: Int) {
