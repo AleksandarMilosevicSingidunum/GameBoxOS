@@ -42,9 +42,11 @@ class AuthorizedInstallLifecycleTest {
         val validator = InstalledContentValidator(app.filesDir.resolve(AssetDownloadWorker.INSTALL_ROOT))
 
         suspend fun installAndVerify() {
+            val previousWorkId = container.authorizedDownloadController.observeState().value.workId
             container.authorizedDownloadController.install()
             try { withTimeout(30_000) {
                 while (!content.isFile ||
+                    container.authorizedDownloadController.observeState().value.workId == previousWorkId ||
                     container.authorizedDownloadController.observeState().value.status != AuthorizedDownloadState.Status.SUCCEEDED ||
                     container.gameRepository.game(gameId)?.state != InstallState.INSTALLED
                 ) delay(50)
