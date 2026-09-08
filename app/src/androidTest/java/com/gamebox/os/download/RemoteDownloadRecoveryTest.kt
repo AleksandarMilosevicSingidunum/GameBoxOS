@@ -60,11 +60,24 @@ class RemoteDownloadRecoveryTest {
             assertEquals(1, gameWrites.size)
             assertEquals(1, jobWrites.size)
 
-            work.value = listOf(WorkInfo(UUID.randomUUID(), WorkInfo.State.RUNNING,
-                tags, Data.EMPTY, Data.EMPTY, 0))
-            yield()
-            assertEquals(InstallState.DOWNLOADING, gameWrites.last())
-            assertEquals(2, gameWrites.size)
+            // A new controller has no in-memory replay cache. Persisted uninstall
+            // state must still win over the previous successful download record.
+            scope.coroutineContext[Job]?.cancelAndJoin()
+            val restartedScope = CoroutineScope(SupervisorJob() + Dispatchers.Unconfined)
+            try {
+                WorkManagerRemoteDownloadController(app, gameRepository, downloadRepository, restartedScope, work)
+                yield()
+                assertEquals(1, gameWrites.size)
+                assertEquals(1, jobWrites.size)
+
+                work.value = listOf(WorkInfo(UUID.randomUUID(), WorkInfo.State.RUNNING,
+                    tags, Data.EMPTY, Data.EMPTY, 0))
+                yield()
+                assertEquals(InstallState.DOWNLOADING, gameWrites.last())
+                assertEquals(2, gameWrites.size)
+            } finally {
+                restartedScope.coroutineContext[Job]?.cancelAndJoin()
+            }
         } finally {
             scope.coroutineContext[Job]?.cancelAndJoin()
         }

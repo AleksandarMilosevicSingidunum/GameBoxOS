@@ -42,8 +42,8 @@ class WorkManagerRemoteDownloadController(
                 workInfoFlow,
                 downloadRepository.observeJobs(),
                 gameRepository.observeGames()
-            ) { workInfos, jobs, games -> Triple(workInfos, jobs, games.map { it.id }.toSet()) }
-                .collect { (workInfos, jobs, gameIds) ->
+            ) { workInfos, jobs, games -> Triple(workInfos, jobs, games.associateBy { it.id }) }
+                .collect { (workInfos, jobs, gamesById) ->
                 val jobsByGame = jobs.associateBy { it.gameId }
                 val presentGameIds = workInfos.mapNotNull(::gameIdFrom).toSet()
                 applied.keys.retainAll(presentGameIds)
@@ -55,7 +55,17 @@ class WorkManagerRemoteDownloadController(
                     .forEach { info ->
                         val id = gameIdFrom(info) ?: return@forEach
                         val job = jobsByGame[id] ?: return@forEach
-                        if (id !in gameIds || applied[id] == info) return@forEach
+                        val game = gamesById[id] ?: return@forEach
+                        if (applied[id] == info) return@forEach
+                        // A retained successful WorkManager record is history, not
+                        // permission to undo an uninstall after the app restarts.
+                        if (info.state == WorkInfo.State.SUCCEEDED &&
+                            job.status == DownloadStatus.COMPLETED &&
+                            game.state == InstallState.NOT_INSTALLED
+                        ) {
+                            applied[id] = info
+                            return@forEach
+                        }
                         // Defer early WorkManager snapshots until both Room rows exist.
                         // Cache only applied work snapshots, not UI/database emissions:
                         // otherwise our own writes (or an uninstall) replay old success.
