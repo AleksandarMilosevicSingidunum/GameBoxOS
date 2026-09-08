@@ -299,8 +299,10 @@ class AndroidPackageGateway(
      * Publishes only the built-in MIT fixture. MediaStore needs no broad storage
      * permission on Android 10+, and produces the conventional path RetroArch needs.
      */
-    private fun publishGalaxyPatrolForRetroArch(source: File): String? = runCatching {
-        val relativePath = "Download/GameBox"
+    internal fun publishGalaxyPatrolForRetroArch(
+        source: File,
+        relativePath: String = "Download/GameBox"
+    ): String? = runCatching {
         val values = ContentValues().apply {
             put(MediaStore.Downloads.DISPLAY_NAME, "galaxy-patrol.nes")
             put(MediaStore.Downloads.MIME_TYPE, "application/x-nes-rom")
@@ -312,11 +314,24 @@ class AndroidPackageGateway(
         try {
             context.contentResolver.openOutputStream(published, "w")?.use { output ->
                 source.inputStream().use { input -> input.copyTo(output) }
-            } ?: return@runCatching null
+            } ?: throw java.io.IOException("Cannot write exported game")
             values.clear()
             values.put(MediaStore.Downloads.IS_PENDING, 0)
-            context.contentResolver.update(published, values, null, null)
-            "/storage/emulated/0/$relativePath/galaxy-patrol.nes"
+            check(context.contentResolver.update(published, values, null, null) == 1) {
+                "Cannot publish exported game"
+            }
+            // MediaStore may rename a duplicate display name. RetroArch needs the
+            // actual filesystem path, not a guessed path to a previous export.
+            @Suppress("DEPRECATION")
+            val exportedPath = context.contentResolver.query(
+                published, arrayOf(MediaStore.MediaColumns.DATA), null, null, null
+            )?.use { cursor ->
+                if (cursor.moveToFirst()) cursor.getString(0) else null
+            }
+            check(!exportedPath.isNullOrBlank() && File(exportedPath).isAbsolute) {
+                "Exported game has no filesystem path"
+            }
+            exportedPath
         } catch (error: Exception) {
             context.contentResolver.delete(published, null, null)
             throw error
@@ -434,4 +449,3 @@ class DefaultGameLaunchController(
         state.value = LaunchUiState(status, gameId, message)
     }
 }
-
