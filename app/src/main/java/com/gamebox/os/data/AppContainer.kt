@@ -39,6 +39,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 
 interface AppContainer {
+    val managedSaveDiscovery: com.gamebox.os.storage.ManagedSaveDiscovery
     val gameRepository: GameRepository
     val settingsRepository: SettingsRepository
     val downloadRepository: DownloadRepository
@@ -97,6 +98,12 @@ class DefaultAppContainer(context: Context) : AppContainer {
         scope = applicationScope,
         onCatalogSeeded = settingsRepository::markCatalogSeeded,
         onCatalogRefreshed = settingsRepository::markCatalogRefreshed
+    )
+
+    override val managedSaveDiscovery = com.gamebox.os.storage.ManagedSaveDiscovery(
+        gameRepository,
+        com.gamebox.os.storage.DirectorySaveAdapter(applicationContext.filesDir.resolve("saves")),
+        applicationScope,
     )
 
     override val remoteDownloadController: RemoteDownloadController =

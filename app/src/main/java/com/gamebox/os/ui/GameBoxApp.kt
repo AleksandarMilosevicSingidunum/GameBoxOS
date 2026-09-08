@@ -152,7 +152,8 @@ fun GameBoxApp(
     saveSafetyController: SaveSafetyController,
     settingsRepository: SettingsRepository,
     catalogDiscoveryRepository: CatalogDiscoveryRepository,
-    authorizedRomImporter: AuthorizedRomImporter
+    authorizedRomImporter: AuthorizedRomImporter,
+    managedSaveDiscovery: com.gamebox.os.storage.ManagedSaveDiscovery
 ) {
     val games by repository.observeGames().collectAsState()
     val uiState = rememberGameBoxUiState()
@@ -240,6 +241,7 @@ fun GameBoxApp(
                             remoteDownloadController,
                             gameLaunchController,
                             saveSafetyController,
+                            managedSaveDiscovery,
                             compact = compact,
                             onDownloads = { uiState.openDestination(Destination.DOWNLOADS.name) },
                             onBack = uiState::clearSelection
@@ -1910,11 +1912,21 @@ private fun DetailsScreen(
     remoteDownloadController: RemoteDownloadController,
     gameLaunchController: GameLaunchController,
     saveSafetyController: SaveSafetyController,
+    managedSaveDiscovery: com.gamebox.os.storage.ManagedSaveDiscovery,
     compact: Boolean,
     onDownloads: () -> Unit,
     onBack: () -> Unit
 ) {
     val isAuthorizedFixture = game.id.value == "galaxy-patrol"
+    val discoveredSaves by managedSaveDiscovery.state.collectAsState()
+    val saveSummary = discoveredSaves[game.id.value]
+    val saveDescription = when (saveSummary?.presence) {
+        com.gamebox.os.storage.SavePresence.PRESENT ->
+            "${saveSummary.artifactCount} managed save files · ${formatDownloadBytes(saveSummary.totalBytes)}"
+        com.gamebox.os.storage.SavePresence.NONE -> "No managed save files found"
+        com.gamebox.os.storage.SavePresence.ERROR -> "Managed saves could not be inspected"
+        null -> "Inspecting managed saves…"
+    }
     val authorizedState by authorizedDownloadController.observeState().collectAsState()
     val launchState by gameLaunchController.observeState().collectAsState()
     val saveSafetyState by saveSafetyController.observeState().collectAsState()
@@ -2182,31 +2194,25 @@ private fun DetailsScreen(
                     color = MaterialTheme.colorScheme.surfaceVariant,
                     shape = RoundedCornerShape(12.dp),
                     modifier = Modifier.fillMaxWidth().semantics {
-                        contentDescription = if (game.savePresent) {
-                            "Save data present, " + formatDownloadBytes(game.saveSizeBytes)
-                        } else {
-                            "No save data discovered"
-                        }
+                        contentDescription = saveDescription
                     }
                 ) {
                     Column(Modifier.padding(14.dp)) {
-                        Text("Save data", fontWeight = FontWeight.Bold)
+                        Text("Managed save data", fontWeight = FontWeight.Bold)
                         Text(
-                            if (game.savePresent) {
-                                formatDownloadBytes(game.saveSizeBytes) +
-                                    " retained independently of installed content"
-                            } else {
-                                "No save data discovered for this game"
-                            },
+                            saveDescription,
                             color = if (game.savePresent) MaterialTheme.colorScheme.primary
                             else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.68f)
                         )
+                        Text("Emulator-owned saves require a configured connection; they are not included in this scan.",
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.68f))
+                        OutlinedButton(onClick = managedSaveDiscovery::refresh) { Text("Refresh saves") }
                     }
                 }
                 if (isAuthorizedFixture && saveSafetyState.saveRecordPresent) {
                     Spacer(Modifier.height(12.dp))
                     Text(
-                        "Test save path: " + saveSafetyState.relativePath,
+                        "Managed save path: " + saveSafetyState.relativePath,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.68f)
                     )
                     Spacer(Modifier.height(8.dp))
