@@ -3,9 +3,18 @@ package com.gamebox.os.download
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.gamebox.os.GameBoxApplication
+import com.gamebox.os.data.GameRepository
+import com.gamebox.os.domain.Game
 import com.gamebox.os.domain.GameId
 import com.gamebox.os.domain.InstallState
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
@@ -45,6 +54,35 @@ class AuthorizedInstallLifecycleTest {
                 validator.validate(AuthorizedHomebrewDownload.RELATIVE_PATH, AuthorizedHomebrewDownload.SHA256))
         }
         installAndVerify()
+
+        // Restore real completed WorkManager state while the library is still loading.
+        // Delegate everything except the delayed read and captured installation write.
+        val delayedGames = MutableStateFlow<List<Game>>(emptyList())
+        val restoredWrites = Channel<InstallState>(Channel.UNLIMITED)
+        val delayedRepository = object : GameRepository by container.gameRepository {
+            override fun observeGames() = delayedGames
+            override fun setInstallState(id: GameId, state: InstallState) {
+                assertEquals(gameId, id)
+                restoredWrites.trySend(state)
+            }
+        }
+        val restoreScope = CoroutineScope(SupervisorJob() + Dispatchers.Unconfined)
+        try {
+            val restoredController = WorkManagerAuthorizedDownloadController(
+                app, delayedRepository, restoreScope
+            )
+            withTimeout(10_000) {
+                restoredController.observeState().first {
+                    it.status == AuthorizedDownloadState.Status.SUCCEEDED
+                }
+            }
+            assertTrue("No write before the target row exists", restoredWrites.tryReceive().isFailure)
+            delayedGames.value = container.gameRepository.observeGames().value
+            assertEquals(InstallState.INSTALLED, withTimeout(10_000) { restoredWrites.receive() })
+        } finally {
+            restoreScope.coroutineContext[Job]?.cancelAndJoin()
+            restoredWrites.close()
+        }
 
         container.saveSafetyController.createTestSaveRecord()
         withTimeout(10_000) {

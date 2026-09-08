@@ -10,6 +10,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -50,6 +51,11 @@ class WorkManagerAuthorizedDownloadController(
 
     init {
         scope.launch {
+            // Room seeding and WorkManager restoration race on a cold start.
+            // StateFlow retains the latest work state while we wait for its target row.
+            gameRepository.observeGames().first { games ->
+                games.any { it.id == HOMEBREW_GAME_ID }
+            }
             state.collect { current ->
                 current.status.toInstallState()?.let {
                     gameRepository.setInstallState(HOMEBREW_GAME_ID, it)
