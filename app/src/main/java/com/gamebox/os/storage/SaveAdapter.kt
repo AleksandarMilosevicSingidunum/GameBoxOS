@@ -1,6 +1,7 @@
 package com.gamebox.os.storage
 
 import java.io.File
+import java.nio.file.Files
 
 class SaveDiscoveryLimitExceededException(
     val limit: Int
@@ -29,12 +30,24 @@ class DirectorySaveAdapter(
 
     override fun discover(gameId: String): List<SaveArtifact> {
         require(gameId.matches(Regex("[A-Za-z0-9._-]+"))) { "gameId contains unsupported characters" }
-        val gameRoot = File(root, gameId).canonicalFile
+        val requestedRoot = File(root, gameId)
+        require(!Files.isSymbolicLink(requestedRoot.toPath())) { "Linked game save directories are not supported" }
+        val gameRoot = requestedRoot.canonicalFile
         require(gameRoot.path.startsWith(root.path + File.separator)) { "game save path escapes configured root" }
         if (!gameRoot.isDirectory) return emptyList()
 
         val discovered = gameRoot.walkTopDown()
-            .filter { it.isFile && it.canonicalPath.startsWith(gameRoot.path + File.separator) }
+            .onEnter { directory ->
+                !Files.isSymbolicLink(directory.toPath()) &&
+                    (directory == gameRoot || directory.canonicalPath.startsWith(gameRoot.path + File.separator))
+            }
+            .onFail { _, error -> throw error }
+            .filter {
+                it.isFile && !Files.isSymbolicLink(it.toPath()) &&
+                    it.canonicalPath.startsWith(gameRoot.path + File.separator) &&
+                    !it.name.endsWith(".restore.part") &&
+                    !(it.name.startsWith("save-import-") && it.name.endsWith(".part"))
+            }
             .take(maxArtifacts + 1)
             .toList()
         if (discovered.size > maxArtifacts) throw SaveDiscoveryLimitExceededException(maxArtifacts)
