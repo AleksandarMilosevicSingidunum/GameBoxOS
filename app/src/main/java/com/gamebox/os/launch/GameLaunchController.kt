@@ -24,6 +24,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.runBlocking
 import java.util.concurrent.atomic.AtomicBoolean
 import java.io.File
 
@@ -401,17 +402,19 @@ class DefaultGameLaunchController(
     private val gateway: PackageGateway,
     private val repository: GameRepository,
     private val returnTracker: ReturnTracker = ReturnTracker(),
-    private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+    private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate),
+    private val sessionJournal: LaunchSessionJournal? = null,
 ) : GameLaunchController {
     private val state = MutableStateFlow(LaunchUiState())
     private val preparing = AtomicBoolean(false)
+    private val recovering = AtomicBoolean(false)
     private var waitingForExternalReturn = false
     @Volatile private var activePreparation: LaunchPreparation? = null
 
     override fun observeState(): StateFlow<LaunchUiState> = state.asStateFlow()
 
     override fun launch(game: Game) {
-        if (waitingForExternalReturn || !preparing.compareAndSet(false, true)) return
+        if (waitingForExternalReturn || recovering.get() || !preparing.compareAndSet(false, true)) return
         val preparation = LaunchPreparation()
         activePreparation = preparation
         update(game.id, LaunchUiState.Status.PREPARING, "Preparing game; checking installed content")
@@ -446,7 +449,17 @@ class DefaultGameLaunchController(
             update(game.id, LaunchUiState.Status.UNSUPPORTED, "No approved adapter for this title")
             return
         }
-        when (withContext(Dispatchers.IO) { gateway.launch(capability, preparation) }) {
+        var ticket: String? = null
+        preparation.beforeDispatch {
+            ticket = runBlocking { sessionJournal?.begin(game.id.value) }
+        }
+        val result = withContext(Dispatchers.IO) { gateway.launch(capability, preparation) }
+        if (result == GatewayResult.LAUNCHED) {
+            ticket?.let { sessionJournal?.confirm(it) }
+        } else {
+            ticket?.let { sessionJournal?.abandon(it) }
+        }
+        when (result) {
             GatewayResult.LAUNCHED -> {
                 returnTracker.started(game.id)
                 waitingForExternalReturn = true
@@ -474,6 +487,26 @@ class DefaultGameLaunchController(
     }
 
     override fun onHostResumed() {
+        if (sessionJournal != null) {
+            if (preparing.get() || !recovering.compareAndSet(false, true)) return
+            scope.launch {
+                try {
+                    val session = sessionJournal.finish()
+                    waitingForExternalReturn = false
+                    returnTracker.returned()
+                    session?.let {
+                        update(GameId(it.gameId), LaunchUiState.Status.RETURNED,
+                            if (it.launchConfirmed) "Returned to GameBox; time away recorded"
+                            else "Recovered an interrupted handoff; no playtime was added")
+                    }
+                } catch (_: Exception) {
+                    state.value = state.value.copy(message = "Could not save session history; return to GameBox to retry")
+                } finally {
+                    recovering.set(false)
+                }
+            }
+            return
+        }
         if (!waitingForExternalReturn) return
         waitingForExternalReturn = false
         val session = returnTracker.returned() ?: return
