@@ -115,6 +115,10 @@ class RoomGameRepository(
             dao.recordPlaySession(id.value, lastPlayed, minutesPlayed.coerceAtLeast(0))
         }
     }
+
+    override suspend fun setInstallStateAndAwait(id: GameId, state: InstallState) {
+        installStateWrites.withLock { dao.updateInstallState(id.value, state.name) }
+    }
 }
 
 fun enrichGamesWithSaveRecords(

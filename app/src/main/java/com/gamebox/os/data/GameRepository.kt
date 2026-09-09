@@ -12,6 +12,7 @@ interface GameRepository {
     fun setFavorite(id: GameId, favorite: Boolean)
     fun setEmulatorSettings(id: GameId, packageName: String?, graphicsProfile: String)
     fun setInstallState(id: GameId, state: InstallState)
+    suspend fun setInstallStateAndAwait(id: GameId, state: InstallState) { setInstallState(id, state) }
     fun recordPlaySession(id: GameId, endedAtMillis: Long, minutesPlayed: Int)
     fun observeCatalogRefreshState(): StateFlow<CatalogRefreshState>
     fun refreshCatalog()
