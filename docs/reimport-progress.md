@@ -16,6 +16,11 @@ locking, end-to-end system-picker automation, and real emulator save validation.
 Restore now requires the retained filenames and SHA-256 checksums for the full
 file set. Identity is checked in staging before replacing content; a different
 edition must be imported separately. Three local identity regression tests pass.
-Android build/runtime validation of this follow-up remains pending.
+Revision 583c472 passed all five GitHub checks, including Android instrumentation,
+unit/build checks, Windows build, and phone/DeX screenshots. The added
+ReimportIdentityIntegrationTest exercises the production importer against actual
+temporary files: mismatches leave existing content and synthetic save bytes intact;
+matching content restores a removed file. Its execution remains pending on the
+follow-up revision. This does not validate a real emulator or its save format.
 No game files are supplied or downloaded by this flow.
 
