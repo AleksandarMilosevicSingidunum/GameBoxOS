@@ -19,6 +19,8 @@ validated and merged session-recovery PR #278. Uninstall acceptance remains pend
 Added Android tests exercise the production controller with Room, multi-file removal,
 actual disc-set reimport/registration, save/history preservation and symlink refusal.
 Their content/save bytes are synthetic, not emulator gameplay evidence. CI pending.
+Production-dialog tests additionally cover unsafe preview refusal, cancel without
+deletion, a single confirmation call, and disabled actions until removal completes.
 
 Pending: full Android build and runtime confirmation tests, operation concurrency with
 import/download workers and real emulator save
