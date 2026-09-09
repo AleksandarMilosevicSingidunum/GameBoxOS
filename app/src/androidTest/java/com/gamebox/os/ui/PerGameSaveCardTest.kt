@@ -32,6 +32,7 @@ class PerGameSaveCardTest {
         compose.onNodeWithText("Back up save copy").assertIsNotEnabled()
         compose.onNodeWithText("Restore save copy").assertIsNotEnabled()
         compose.onNodeWithText("Export save backup").assertIsNotEnabled()
+        compose.onNodeWithText("Import save backup").assertIsNotEnabled()
         compose.runOnIdle { busy.value = false }
         compose.onNodeWithText("Back up save copy").assertIsEnabled()
         compose.onNodeWithText("Restore save copy").assertIsEnabled()
@@ -67,8 +68,22 @@ class PerGameSaveCardTest {
         compose.onNodeWithText("Back up save copy").assertIsNotEnabled()
         compose.onNodeWithText("Restore save copy").assertIsNotEnabled()
         compose.onNodeWithText("Export save backup").assertIsNotEnabled()
+        compose.onNodeWithText("Import save backup").assertIsNotEnabled()
         compose.runOnIdle { state.value = SaveSafetyState() }
         compose.onNodeWithText("Import save copy").assertIsNotEnabled()
     }
-}
 
+    @Test fun importingBackupExplainsReplacementAndCanBeCancelled() {
+        val app = ApplicationProvider.getApplicationContext<GameBoxApplication>()
+        val state = MutableStateFlow(SaveSafetyState(saveRecordPresent = true))
+        val controller = object : SaveSafetyController by app.container.saveSafetyController {
+            override fun observeState() = state
+        }
+        compose.setContent { MaterialTheme { PerGameSaveCard(game, controller, enabled = true) } }
+        compose.onNodeWithText("Import save backup").performClick()
+        compose.onNodeWithText("Import a backup for Save UI?").assertIsDisplayed()
+        compose.onNodeWithText("Choose backup file").assertIsEnabled()
+        compose.onNodeWithText("Cancel").performClick()
+        compose.onNodeWithText("Choose backup file").assertDoesNotExist()
+    }
+}

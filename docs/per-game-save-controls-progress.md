@@ -32,6 +32,13 @@ button cannot race a still-held guard. These follow-up Android tests require CI
 execution; no local Android SDK is available. This is not process-kill evidence.
 
 This is managed single-file save handling, not emulator-private save access.
+The panel now also exposes importing a newer backup, with a pre-picker warning
+that the stored backup is replaced and a separate confirmed restore to apply it.
+Picker callbacks retain their original controller identity and reject delivery
+to a different game's controller or while actions are unavailable. Added UI
+warning/cancel coverage and an Android import-then-restore isolation assertion;
+these new tests await execution. File ownership/format cannot be inferred from
+arbitrary save bytes, and the UI explicitly states that limitation.
 Emulator integration, multi-file snapshots, durable recovery and
 provider round-trip validation remain required before
 general save management can be considered complete.

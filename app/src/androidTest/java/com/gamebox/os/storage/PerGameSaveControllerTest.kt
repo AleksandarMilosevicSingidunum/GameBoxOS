@@ -56,6 +56,15 @@ class PerGameSaveControllerTest {
             assertEquals("FIRST synthetic save", firstFile.readText())
             assertEquals("SECOND synthetic save", root.resolve("saves/second-game/save.dat").readText())
             assertFalse(root.resolve("save-backups/second-game/save.dat").exists())
+            source.writeText("NEW imported backup")
+            first.importBackup(Uri.fromFile(source))
+            withTimeout(5_000) { first.observeState().first { it.operationMessage == "Import completed" } }
+            withTimeout(5_000) { first.observeBusy().first { !it } }
+            assertEquals("FIRST synthetic save", firstFile.readText())
+            first.restoreSave()
+            withTimeout(5_000) { first.observeBusy().first { !it } }
+            assertEquals("NEW imported backup", firstFile.readText())
+            assertEquals("SECOND synthetic save", root.resolve("saves/second-game/save.dat").readText())
             database.saveRecordDao().upsert(SaveRecordEntity("first-game", "second-game/save.dat", 1, 1))
             withTimeout(5_000) { first.observeState().first { !it.saveRecordPresent } }
             assertTrue(second.observeState().value.saveRecordPresent)

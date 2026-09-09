@@ -19,11 +19,26 @@ internal fun PerGameSaveCard(game: Game, controller: SaveSafetyController, enabl
     val actionsEnabled = enabled && !busy
     val state by controller.observeState().collectAsState()
     var confirmRestore by remember(game.id) { mutableStateOf(false) }
+    var confirmImport by remember(game.id) { mutableStateOf(false) }
+    // Keep the launch target, rather than routing a delayed picker result to a new game.
+    var pickerTarget by remember { mutableStateOf<SaveSafetyController?>(null) }
     val importSave = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) {
-        uri -> uri?.let(controller::importInitialSave)
+        uri ->
+        val target = pickerTarget
+        pickerTarget = null
+        if (uri != null && target === controller && actionsEnabled) target?.importInitialSave(uri)
+    }
+    val importBackup = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) {
+        uri ->
+        val target = pickerTarget
+        pickerTarget = null
+        if (uri != null && target === controller && actionsEnabled) target?.importBackup(uri)
     }
     val export = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/octet-stream")) {
-        uri -> uri?.let(controller::exportBackup)
+        uri ->
+        val target = pickerTarget
+        pickerTarget = null
+        if (uri != null && target === controller && actionsEnabled) target?.exportBackup(uri)
     }
     Surface(Modifier.fillMaxWidth().padding(vertical = 12.dp), color = MaterialTheme.colorScheme.surfaceVariant) {
         Column(Modifier.padding(16.dp)) {
@@ -33,19 +48,33 @@ internal fun PerGameSaveCard(game: Game, controller: SaveSafetyController, enabl
             if (state.saveRecordPresent) {
                 Text("${state.sizeBytes} bytes • ${state.relativePath}")
                 Button(onClick = controller::backupSave, enabled = actionsEnabled) { Text("Back up save copy") }
+                OutlinedButton(onClick = { confirmImport = true }, enabled = actionsEnabled) {
+                    Text("Import save backup")
+                }
                 OutlinedButton(onClick = { confirmRestore = true }, enabled = actionsEnabled && state.backupPresent) {
                     Text("Restore save copy")
                 }
-                OutlinedButton(onClick = { export.launch("${game.id.value}-save-backup.dat") },
+                OutlinedButton(onClick = { pickerTarget = controller; export.launch("${game.id.value}-save-backup.dat") },
                     enabled = actionsEnabled && state.backupPresent) { Text("Export save backup") }
             } else {
                 Text("No managed save copy. Select a save you exported from this game's emulator.")
-                Button(onClick = { importSave.launch(arrayOf("*/*")) }, enabled = actionsEnabled) { Text("Import save copy") }
+                Button(onClick = { pickerTarget = controller; importSave.launch(arrayOf("*/*")) }, enabled = actionsEnabled) { Text("Import save copy") }
             }
             state.operationMessage?.let { Text(it,
                 color = if (state.operationSuccessful) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.error) }
         }
     }
+    if (confirmImport) AlertDialog(
+        onDismissRequest = { confirmImport = false },
+        title = { Text("Import a backup for ${game.title}?") },
+        text = { Text("Choose a single-file save exported for this game, up to 16 MiB. It will replace the stored backup, not the current save copy or your emulator's live save. Use Restore save copy afterward to apply it. GameBox cannot verify that a selected file belongs to this game.") },
+        confirmButton = { Button(enabled = actionsEnabled, onClick = {
+            confirmImport = false
+            pickerTarget = controller
+            importBackup.launch(arrayOf("*/*"))
+        }) { Text("Choose backup file") } },
+        dismissButton = { TextButton(onClick = { confirmImport = false }) { Text("Cancel") } }
+    )
     if (confirmRestore) AlertDialog(
         onDismissRequest = { confirmRestore = false },
         title = { Text("Replace this save copy?") },
@@ -57,4 +86,3 @@ internal fun PerGameSaveCard(game: Game, controller: SaveSafetyController, enabl
         dismissButton = { TextButton(onClick = { confirmRestore = false }) { Text("Cancel") } }
     )
 }
-
