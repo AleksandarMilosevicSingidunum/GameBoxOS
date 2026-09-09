@@ -149,3 +149,17 @@ val MIGRATION_10_11 = object : Migration(10, 11) {
         database.execSQL("ALTER TABLE games ADD COLUMN localContentFilesJson TEXT")
     }
 }
+
+val MIGRATION_11_12 = object : Migration(11, 12) {
+    override fun migrate(database: SupportSQLiteDatabase) {
+        database.execSQL("""
+            CREATE TABLE IF NOT EXISTS pending_launch_session (
+                slot INTEGER NOT NULL PRIMARY KEY,
+                ticket TEXT NOT NULL,
+                gameId TEXT NOT NULL,
+                startedAt INTEGER NOT NULL,
+                confirmed INTEGER NOT NULL
+            )
+        """.trimIndent())
+    }
+}

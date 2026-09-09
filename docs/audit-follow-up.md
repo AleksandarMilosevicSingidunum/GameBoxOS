@@ -34,6 +34,26 @@ general save management, and does not close the full EXT-14 acceptance gate.
 
 ## Next critical-path work
 
+Durable launch-session work (DATA-07, audit P1 session recovery): database version 12
+adds one pending-session row. The production gateway persists a handoff ticket before
+opening an emulator, confirms successful dispatch, and abandons known failed handoffs.
+On resume (including a fresh process), Room updates game history and removes that row
+in one transaction. Repeated completion therefore cannot add the session twice.
+An interrupted, unconfirmed handoff adds no playtime. A database write failure before
+dispatch prevents opening the emulator. Recorded duration is time away from GameBox,
+not verified active gameplay; emulator progress/input is still unproven.
+
+Added Android tests for database close/reopen recovery, repeated completion,
+unconfirmed handoff, pending-record overwrite protection, and the 11-to-12 migration
+from the preceding table structure. These await CI and do not replace the missing
+full released-schema migration matrix or actual Android process-death/emulator UAT.
+Two duration tests and the pre-dispatch persistence-failure guard are locally testable.
+Recovery failures now have a global retry banner, including cold starts with no
+selected game. New launches are blocked until reconciliation succeeds; a confirmation
+failure after dispatch is reported as uncertain session tracking, not a failed launch.
+Added controller tests for journal ordering, recreation, recovery/retry and persistence
+failures before/after dispatch, plus a production-banner UI callback test. CI pending.
+
 Launch preparation follow-up (audit P1 UI-thread blocker; EMU-02 integration):
 the production controller now publishes PREPARING synchronously, runs gateway file
 verification/export on Dispatchers.IO, and handles storage exceptions as a retryable
@@ -45,7 +65,8 @@ chunks and atomically closes the cancellation window before external dispatch; a
 accepted cancellation cannot subsequently open the emulator. Three local JVM tests
 passed for cancellation before dispatch, cancellation/repeat rejection after commit,
 and stopping hashing without reading the entire game. Full Android/controller tests
-await CI; no local Android SDK is available. This is not yet a complete
+passed in PR #277 along with Android instrumentation, Windows build and phone/DeX
+screenshot jobs, and that PR is merged. No local Android SDK is available. This is not yet a complete
 launch lifecycle: persistent sessions, large-file frame measurements
 and live emulator gameplay remain pending. Intent dispatch is not proof of gameplay.
 

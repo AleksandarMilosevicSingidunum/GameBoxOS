@@ -8,6 +8,14 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class LaunchPreparationTest {
+    @Test fun failedSessionPersistencePreventsExternalHandoff() {
+        val preparation = LaunchPreparation()
+        preparation.beforeDispatch { throw java.io.IOException("database unavailable") }
+        assertThrows(java.io.IOException::class.java) {
+            preparation.dispatch { fail("Do not launch without a durable session") }
+        }
+    }
+
     @Test fun cancelledPreparationCannotDispatch() {
         val preparation = LaunchPreparation()
         assertTrue(preparation.cancel())

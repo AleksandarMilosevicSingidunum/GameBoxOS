@@ -11,8 +11,9 @@ import androidx.room.RoomDatabase
         CatalogPlatformEntity::class,
         CatalogGameEntity::class,
         CatalogExternalIdEntity::class,
+        PendingLaunchSessionEntity::class,
     ],
-    version = 11,
+    version = 12,
     exportSchema = true
 )
 abstract class GameBoxDatabase : RoomDatabase() {
@@ -20,4 +21,5 @@ abstract class GameBoxDatabase : RoomDatabase() {
     abstract fun downloadJobDao(): DownloadJobDao
     abstract fun saveRecordDao(): SaveRecordDao
     abstract fun catalogDiscoveryDao(): CatalogDiscoveryDao
+    abstract fun launchSessionDao(): LaunchSessionDao
 }
