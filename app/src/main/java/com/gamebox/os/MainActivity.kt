@@ -31,7 +31,8 @@ class MainActivity : ComponentActivity() {
                         container.saveSafetyController,
                         container.settingsRepository,
                         container.catalogDiscoveryRepository,
-                        container.authorizedRomImporter
+                        container.authorizedRomImporter,
+                        container.managedSaveDiscovery
                     )
                 }
             }
@@ -41,5 +42,6 @@ class MainActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         container.gameLaunchController.onHostResumed()
+        container.managedSaveDiscovery.refresh()
     }
 }
