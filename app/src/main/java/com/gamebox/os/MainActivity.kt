@@ -19,6 +19,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
+            val saveFactory = androidx.compose.runtime.remember(container) { container::createSaveSafetyController }
             GameBoxTheme {
                 Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).safeDrawingPadding()) {
                     OfflineStatusBanner(this@MainActivity)
@@ -32,7 +33,8 @@ class MainActivity : ComponentActivity() {
                         container.settingsRepository,
                         container.catalogDiscoveryRepository,
                         container.authorizedRomImporter,
-                        container.managedSaveDiscovery
+                        container.managedSaveDiscovery,
+                        saveControllerFactory = saveFactory
                     )
                 }
             }

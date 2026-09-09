@@ -78,9 +78,10 @@ class DefaultSaveSafetyController(
     private val gameRepository: GameRepository,
     private val scope: CoroutineScope,
     private val settingsRepository: SettingsRepository,
+    private val gameId: GameId = GameId("galaxy-patrol"),
 ) : SaveSafetyController {
+    init { requireSaveGameId(gameId.value) }
     private val applicationContext = context.applicationContext
-    private val gameId = GameId("galaxy-patrol")
     private val savesRoot = applicationContext.filesDir.resolve("saves")
     private val initialSaveImporter = InitialSaveImporter(savesRoot)
     private val backupService = SaveBackupService(
@@ -88,7 +89,12 @@ class DefaultSaveSafetyController(
         applicationContext.filesDir.resolve("save-backups")
     )
     private val operation = MutableStateFlow(SaveOperation())
-    private val state = combine(saveRecordDao.observe(gameId.value), operation) { record, current ->
+    private val state = combine(saveRecordDao.observe(gameId.value), operation) { sourceRecord, current ->
+        val record = sourceRecord?.takeIf {
+            it.gameId == gameId.value && runCatching {
+                requireSavePathForGame(gameId.value, it.relativePath)
+            }.isSuccess
+        }
         SaveSafetyState(
             saveRecordPresent = record != null,
             relativePath = record?.relativePath,
@@ -140,7 +146,7 @@ class DefaultSaveSafetyController(
     override fun importInitialSave(uri: Uri) {
         scope.launch {
             runCatching {
-                val relativePath = "galaxy-patrol/save.dat"
+                val relativePath = gameId.value + "/save.dat"
                 val bytes = applicationContext.contentResolver.openInputStream(uri)?.use {
                     initialSaveImporter.importNew(relativePath, it)
                 } ?: error("Selected document could not be opened")
@@ -229,7 +235,7 @@ class DefaultSaveSafetyController(
 
     override fun downloadCloudSave() {
         scope.launch {
-            val relativePath = state.value.relativePath ?: "galaxy-patrol/save.dat"
+            val relativePath = state.value.relativePath ?: (gameId.value + "/save.dat")
             operation.value = SaveOperation("Downloading and verifying cloud save…")
             val result = runCatching {
                 val cloud = cloudAccess()
@@ -278,6 +284,7 @@ class DefaultSaveSafetyController(
     }
 
     override fun uninstallPreview(): UninstallConfirmation {
+        require(gameId.value == "galaxy-patrol") { "Use the general content-removal flow for this game" }
         val contentFile = applicationContext.filesDir
             .resolve(AssetDownloadWorker.INSTALL_ROOT)
             .resolve(AuthorizedHomebrewDownload.RELATIVE_PATH)
@@ -305,6 +312,7 @@ class DefaultSaveSafetyController(
     }
 
     override fun uninstallTestContent() {
+        require(gameId.value == "galaxy-patrol") { "Use the general content-removal flow for this game" }
         scope.launch {
             val result = runCatching {
                 FileContentUninstaller(
@@ -359,6 +367,7 @@ class DefaultSaveSafetyController(
     }
 
     private fun resolveSave(relativePath: String): File {
+        requireSavePathForGame(gameId.value, relativePath)
         val root = savesRoot.canonicalFile
         val file = File(root, relativePath).canonicalFile
         require(file.path.startsWith(root.path + File.separator)) { "Save path escaped app storage" }
@@ -401,10 +410,14 @@ class DefaultSaveSafetyController(
         val client: HttpsCloudSaveTransportClient,
     )
 
-    private fun record(relativePath: String, sizeBytes: Long) = SaveRecordEntity(
+    private fun record(relativePath: String, sizeBytes: Long): SaveRecordEntity {
+        requireSavePathForGame(gameId.value, relativePath)
+        return SaveRecordEntity(
         gameId.value,
         relativePath,
         System.currentTimeMillis(),
         sizeBytes
     )
+    }
 }
+
