@@ -170,14 +170,15 @@ enum class GatewayResult {
 }
 
 interface PackageGateway {
-    fun launch(capability: EmulatorCapability): GatewayResult
+    fun launch(capability: EmulatorCapability, preparation: LaunchPreparation = LaunchPreparation()): GatewayResult
 }
 
 class AndroidPackageGateway(
     private val context: Context,
     private val verifier: Sha256Verifier = Sha256Verifier()
 ) : PackageGateway {
-    override fun launch(capability: EmulatorCapability): GatewayResult {
+    override fun launch(capability: EmulatorCapability, preparation: LaunchPreparation): GatewayResult {
+        preparation.checkActive()
         val resolvedPackage = resolvePackageName(capability.packageName)
             ?: return GatewayResult.EMULATOR_UNAVAILABLE
         val launcherIntent = context.packageManager.getLaunchIntentForPackage(resolvedPackage)
@@ -198,7 +199,7 @@ class AndroidPackageGateway(
                 return GatewayResult.CONTENT_MISSING
             }
             val verified = content.inputStream().use {
-                verifier.verify(it, approved.sha256)
+                verifier.verify(it, approved.sha256, preparation::checkActive)
             }
             if (verified != VerificationResult.Verified) return GatewayResult.VERIFICATION_FAILED
             contentUris += FileProvider.getUriForFile(
@@ -274,7 +275,7 @@ class AndroidPackageGateway(
         if (intent.resolveActivity(context.packageManager) == null) {
             return GatewayResult.HANDOFF_REJECTED
         }
-        return runCatching {
+        return preparation.dispatch { runCatching {
             context.startActivity(intent)
             GatewayResult.LAUNCHED
         }.getOrElse {
@@ -295,6 +296,8 @@ class AndroidPackageGateway(
                 GatewayResult.HANDOFF_REJECTED
             }
         }
+    }
+
     }
 
     private fun contentClipData(primary: android.net.Uri, companions: List<android.net.Uri>): ClipData =
@@ -390,6 +393,7 @@ interface GameLaunchController {
     fun observeState(): StateFlow<LaunchUiState>
     fun launch(game: Game)
     fun onHostResumed()
+    fun cancelPreparation() {}
 }
 
 class DefaultGameLaunchController(
@@ -402,15 +406,18 @@ class DefaultGameLaunchController(
     private val state = MutableStateFlow(LaunchUiState())
     private val preparing = AtomicBoolean(false)
     private var waitingForExternalReturn = false
+    @Volatile private var activePreparation: LaunchPreparation? = null
 
     override fun observeState(): StateFlow<LaunchUiState> = state.asStateFlow()
 
     override fun launch(game: Game) {
         if (waitingForExternalReturn || !preparing.compareAndSet(false, true)) return
+        val preparation = LaunchPreparation()
+        activePreparation = preparation
         update(game.id, LaunchUiState.Status.PREPARING, "Preparing game; checking installed content")
         scope.launch {
             try {
-                launchPrepared(game)
+                launchPrepared(game, preparation)
             } catch (cancelled: CancellationException) {
                 update(game.id, LaunchUiState.Status.IDLE, "Launch cancelled")
                 throw cancelled
@@ -418,12 +425,18 @@ class DefaultGameLaunchController(
                 update(game.id, LaunchUiState.Status.HANDOFF_REJECTED,
                     "Could not prepare or open this game. Check storage access and try again.")
             } finally {
+                activePreparation = null
                 preparing.set(false)
             }
         }
     }
 
-    private suspend fun launchPrepared(game: Game) {
+    override fun cancelPreparation() {
+        activePreparation?.cancel()
+    }
+
+    private suspend fun launchPrepared(game: Game, preparation: LaunchPreparation) {
+        preparation.checkActive()
         if (game.state !in setOf(InstallState.INSTALLED, InstallState.UPDATE_AVAILABLE)) {
             update(game.id, LaunchUiState.Status.NOT_INSTALLED, "Install and verify before launching")
             return
@@ -433,7 +446,7 @@ class DefaultGameLaunchController(
             update(game.id, LaunchUiState.Status.UNSUPPORTED, "No approved adapter for this title")
             return
         }
-        when (withContext(Dispatchers.IO) { gateway.launch(capability) }) {
+        when (withContext(Dispatchers.IO) { gateway.launch(capability, preparation) }) {
             GatewayResult.LAUNCHED -> {
                 returnTracker.started(game.id)
                 waitingForExternalReturn = true

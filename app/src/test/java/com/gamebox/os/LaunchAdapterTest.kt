@@ -31,7 +31,7 @@ class LaunchAdapterTest {
             val installed = requireNotNull(repository.game(original.id))
             val registry = EmulatorCapabilityRegistry(listOf(capability.copy(gameId = installed.id)))
             val gateway = object : com.gamebox.os.launch.PackageGateway {
-                override fun launch(capability: EmulatorCapability) = result
+                override fun launch(capability: EmulatorCapability, preparation: com.gamebox.os.launch.LaunchPreparation) = result
             }
             val controller = com.gamebox.os.launch.DefaultGameLaunchController(registry, gateway, repository, scope = this)
             controller.launch(installed)
@@ -52,7 +52,7 @@ class LaunchAdapterTest {
         val calls = java.util.concurrent.atomic.AtomicInteger()
         val caller = Thread.currentThread()
         val gateway = object : com.gamebox.os.launch.PackageGateway {
-            override fun launch(capability: EmulatorCapability): com.gamebox.os.launch.GatewayResult {
+            override fun launch(capability: EmulatorCapability, preparation: com.gamebox.os.launch.LaunchPreparation): com.gamebox.os.launch.GatewayResult {
                 calls.incrementAndGet()
                 org.junit.Assert.assertNotEquals(caller, Thread.currentThread())
                 entered.countDown()
@@ -85,7 +85,7 @@ class LaunchAdapterTest {
         val game = repository.observeGames().value.first().copy(state = InstallState.INSTALLED)
         var calls = 0
         val gateway = object : com.gamebox.os.launch.PackageGateway {
-            override fun launch(capability: EmulatorCapability): com.gamebox.os.launch.GatewayResult {
+            override fun launch(capability: EmulatorCapability, preparation: com.gamebox.os.launch.LaunchPreparation): com.gamebox.os.launch.GatewayResult {
                 calls++
                 throw java.io.IOException("unreadable content")
             }

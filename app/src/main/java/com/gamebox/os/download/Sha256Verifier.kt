@@ -9,11 +9,12 @@ sealed interface VerificationResult {
 }
 
 class Sha256Verifier {
-    fun verify(input: InputStream, expectedHex: String): VerificationResult {
+    fun verify(input: InputStream, expectedHex: String, checkActive: () -> Unit = {}): VerificationResult {
         require(SHA256_HEX.matches(expectedHex)) { "Expected checksum must be 64 hexadecimal characters" }
         val digest = MessageDigest.getInstance("SHA-256")
         val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
         while (true) {
+            checkActive()
             val count = input.read(buffer)
             if (count < 0) break
             if (count > 0) digest.update(buffer, 0, count)

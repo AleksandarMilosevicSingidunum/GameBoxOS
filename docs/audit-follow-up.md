@@ -40,8 +40,13 @@ verification/export on Dispatchers.IO, and handles storage exceptions as a retry
 UI failure. Duplicate Play requests are ignored during preparation and while waiting
 for an external return. Added tests cover the dispatcher boundary, duplicate requests,
 resume during preparation, exception/retry, and existing broken-content state handling.
-These tests await CI; no local Android SDK is available. This is not yet a complete
-launch lifecycle: user cancellation, persistent sessions, large-file frame measurements
+Details now offers Cancel preparation. The gateway checks cancellation between hash
+chunks and atomically closes the cancellation window before external dispatch; an
+accepted cancellation cannot subsequently open the emulator. Three local JVM tests
+passed for cancellation before dispatch, cancellation/repeat rejection after commit,
+and stopping hashing without reading the entire game. Full Android/controller tests
+await CI; no local Android SDK is available. This is not yet a complete
+launch lifecycle: persistent sessions, large-file frame measurements
 and live emulator gameplay remain pending. Intent dispatch is not proof of gameplay.
 
 1. One real emulator game/save/return/uninstall/reinstall proof, without synthetic-save claims.

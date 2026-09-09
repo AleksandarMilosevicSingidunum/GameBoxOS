@@ -2267,6 +2267,11 @@ private fun DetailsScreen(
                 if (launchState.gameId == game.id &&
                     launchState.status != LaunchUiState.Status.IDLE
                 ) {
+                    if (launchState.status == LaunchUiState.Status.PREPARING) {
+                        OutlinedButton(onClick = gameLaunchController::cancelPreparation) {
+                            Text("Cancel preparation")
+                        }
+                    }
                     Spacer(Modifier.height(12.dp))
                     Text(
                         launchState.message ?: when (launchState.status) {
