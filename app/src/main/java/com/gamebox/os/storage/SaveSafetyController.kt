@@ -58,6 +58,7 @@ fun backupResultMessage(action: String, result: BackupResult): SaveOperation = w
 }
 
 interface SaveSafetyController {
+    fun observeBusy(): StateFlow<Boolean> = MutableStateFlow(false)
     fun observeState(): StateFlow<SaveSafetyState>
     fun importInitialSave(uri: Uri)
     fun uninstallPreview(): UninstallConfirmation
@@ -89,6 +90,31 @@ class DefaultSaveSafetyController(
         applicationContext.filesDir.resolve("save-backups")
     )
     private val operation = MutableStateFlow(SaveOperation())
+    private val busy = MutableStateFlow(false)
+    override fun observeBusy(): StateFlow<Boolean> = busy
+
+    private fun launchSaveOperation(block: suspend () -> Unit) {
+        val key = savesRoot.canonicalPath + ":" + gameId.value
+        if (!SaveOperationGate.acquire(key)) {
+            operation.value = SaveOperation("A save operation is already running for this game", false)
+            return
+        }
+        busy.value = true
+        val job = scope.launch {
+            // Finish file publication and its database record together when the panel closes.
+            withContext(Dispatchers.IO + NonCancellable) {
+                try { block() }
+                catch (error: Exception) {
+                    if (error is kotlinx.coroutines.CancellationException) throw error
+                    operation.value = SaveOperation("Save operation failed; check storage and retry", false)
+                }
+            }
+        }
+        job.invokeOnCompletion {
+            busy.value = false
+            SaveOperationGate.release(key)
+        }
+    }
     private val state = combine(saveRecordDao.observe(gameId.value), operation) { sourceRecord, current ->
         val record = sourceRecord?.takeIf {
             it.gameId == gameId.value && runCatching {
@@ -144,7 +170,7 @@ class DefaultSaveSafetyController(
     }
 
     override fun importInitialSave(uri: Uri) {
-        scope.launch {
+        launchSaveOperation {
             runCatching {
                 val relativePath = gameId.value + "/save.dat"
                 val bytes = applicationContext.contentResolver.openInputStream(uri)?.use {
@@ -168,30 +194,30 @@ class DefaultSaveSafetyController(
     }
 
     override fun exportBackup(uri: Uri) {
-        scope.launch {
-            val relativePath = state.value.relativePath ?: return@launch noSave("Export")
+        launchSaveOperation {
+            val relativePath = state.value.relativePath ?: return@launchSaveOperation noSave("Export")
             val result = runCatching {
                 applicationContext.contentResolver.openOutputStream(uri, "wt")?.use { output ->
                     backupService.exportBackup(relativePath, output)
                 } ?: BackupResult.BACKUP_MISSING
             }.getOrElse {
                 operation.value = SaveOperation("Export failed: document could not be written", false)
-                return@launch
+                return@launchSaveOperation
             }
             operation.value = backupResultMessage("Export", result)
         }
     }
 
     override fun importBackup(uri: Uri) {
-        scope.launch {
-            val relativePath = state.value.relativePath ?: return@launch noSave("Import")
+        launchSaveOperation {
+            val relativePath = state.value.relativePath ?: return@launchSaveOperation noSave("Import")
             val result = runCatching {
                 applicationContext.contentResolver.openInputStream(uri)?.use { input ->
                     backupService.importBackup(relativePath, input)
                 } ?: BackupResult.BACKUP_MISSING
             }.getOrElse {
                 operation.value = SaveOperation("Import failed: document could not be read", false)
-                return@launch
+                return@launchSaveOperation
             }
             if (result == BackupResult.SUCCESS) {
                 saveRecordDao.upsert(record(relativePath, savesRoot.resolve(relativePath).length()))
@@ -201,8 +227,8 @@ class DefaultSaveSafetyController(
     }
 
     override fun uploadCloudSave() {
-        scope.launch {
-            val relativePath = state.value.relativePath ?: return@launch noSave("Cloud upload")
+        launchSaveOperation {
+            val relativePath = state.value.relativePath ?: return@launchSaveOperation noSave("Cloud upload")
             operation.value = SaveOperation("Uploading encrypted-credential cloud save…")
             val result = runCatching {
                 val cloud = cloudAccess()
@@ -234,7 +260,7 @@ class DefaultSaveSafetyController(
     }
 
     override fun downloadCloudSave() {
-        scope.launch {
+        launchSaveOperation {
             val relativePath = state.value.relativePath ?: (gameId.value + "/save.dat")
             operation.value = SaveOperation("Downloading and verifying cloud save…")
             val result = runCatching {
@@ -313,7 +339,7 @@ class DefaultSaveSafetyController(
 
     override fun uninstallTestContent() {
         require(gameId.value == "galaxy-patrol") { "Use the general content-removal flow for this game" }
-        scope.launch {
+        launchSaveOperation {
             val result = runCatching {
                 FileContentUninstaller(
                     applicationContext.filesDir.resolve(AssetDownloadWorker.INSTALL_ROOT)
@@ -321,7 +347,7 @@ class DefaultSaveSafetyController(
             }
             if (result.isFailure) {
                 operation.value = SaveOperation("Uninstall failed safely", false)
-                return@launch
+                return@launchSaveOperation
             }
             gameRepository.setInstallState(gameId, InstallState.NOT_INSTALLED)
             operation.value = SaveOperation(
@@ -335,11 +361,11 @@ class DefaultSaveSafetyController(
         action: String,
         block: (String) -> BackupResult
     ) {
-        scope.launch {
-            val relativePath = state.value.relativePath ?: return@launch noSave(action)
+        launchSaveOperation {
+            val relativePath = state.value.relativePath ?: return@launchSaveOperation noSave(action)
             val result = runCatching { block(relativePath) }.getOrElse {
                 operation.value = SaveOperation("$action failed safely", false)
-                return@launch
+                return@launchSaveOperation
             }
             if (result == BackupResult.SUCCESS) {
                 saveRecordDao.upsert(record(relativePath, savesRoot.resolve(relativePath).length()))

@@ -14,6 +14,14 @@ managed-copy panel with import, backup, export and confirmed restore. Added Comp
 tests cover confirmation, cancellation and disabled controls; execution is pending.
 The integration is being published as a draft for validation, not marked complete.
 
+Follow-up: a process-local game/root guard rejects overlapping save operations,
+including operations from newly created controllers. The panel disables actions
+while its controller is busy. Once started, file work and record updates continue
+on IO despite panel disposal; completion releases the guard even if the parent
+was cancelled before work began. This is not a durable file/database transaction
+and does not survive process death. One gate unit test passes locally; UI busy-state
+and controller lifecycle integration evidence are still pending.
+
 This is managed single-file save handling, not emulator-private save access.
 Emulator integration, multi-file snapshots, operation cancellation/serialization,
 restore confirmation and provider round-trip validation remain required before

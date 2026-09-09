@@ -20,6 +20,23 @@ class PerGameSaveCardTest {
     @get:Rule val compose = createComposeRule()
     private val game = Game(GameId("save-ui"), "Save UI", "PSP", 2000, "Test", 1, InstallState.INSTALLED)
 
+    @Test fun runningSaveOperationDisablesActionsUntilCompletion() {
+        val app = ApplicationProvider.getApplicationContext<GameBoxApplication>()
+        val state = MutableStateFlow(SaveSafetyState(saveRecordPresent = true, backupPresent = true))
+        val busy = MutableStateFlow(true)
+        val controller = object : SaveSafetyController by app.container.saveSafetyController {
+            override fun observeState() = state
+            override fun observeBusy() = busy
+        }
+        compose.setContent { MaterialTheme { PerGameSaveCard(game, controller, enabled = true) } }
+        compose.onNodeWithText("Back up save copy").assertIsNotEnabled()
+        compose.onNodeWithText("Restore save copy").assertIsNotEnabled()
+        compose.onNodeWithText("Export save backup").assertIsNotEnabled()
+        compose.runOnIdle { busy.value = false }
+        compose.onNodeWithText("Back up save copy").assertIsEnabled()
+        compose.onNodeWithText("Restore save copy").assertIsEnabled()
+    }
+
     @Test fun restoreRequiresConfirmationAndCancelDoesNotWrite() {
         val app = ApplicationProvider.getApplicationContext<GameBoxApplication>()
         val state = MutableStateFlow(SaveSafetyState(saveRecordPresent = true,
