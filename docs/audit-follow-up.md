@@ -26,12 +26,28 @@ and checks 401, incomplete-request 408, malformed-request 400, then authenticate
 on the same listening socket. Parser tests cover truncation, line endings, invalid
 and duplicate headers, line/head/header-count limits and unsupported request bodies.
 
-Pending: normal Android build/test CI, real Android service lifecycle/start-stop
-coverage, and the Windows client against the Android device endpoint. This change
+Merged in PR #276 after Android unit/build, instrumentation, phone/DeX screenshots
+and Windows build checks passed. Pending: real Android service lifecycle/start-stop
+coverage and the Windows client against the Android device endpoint. This change
 does not implement file transfer/synchronization, durable pairing discovery, or
 general save management, and does not close the full EXT-14 acceptance gate.
 
 ## Next critical-path work
+
+Launch preparation follow-up (audit P1 UI-thread blocker; EMU-02 integration):
+the production controller now publishes PREPARING synchronously, runs gateway file
+verification/export on Dispatchers.IO, and handles storage exceptions as a retryable
+UI failure. Duplicate Play requests are ignored during preparation and while waiting
+for an external return. Added tests cover the dispatcher boundary, duplicate requests,
+resume during preparation, exception/retry, and existing broken-content state handling.
+Details now offers Cancel preparation. The gateway checks cancellation between hash
+chunks and atomically closes the cancellation window before external dispatch; an
+accepted cancellation cannot subsequently open the emulator. Three local JVM tests
+passed for cancellation before dispatch, cancellation/repeat rejection after commit,
+and stopping hashing without reading the entire game. Full Android/controller tests
+await CI; no local Android SDK is available. This is not yet a complete
+launch lifecycle: persistent sessions, large-file frame measurements
+and live emulator gameplay remain pending. Intent dispatch is not proof of gameplay.
 
 1. One real emulator game/save/return/uninstall/reinstall proof, without synthetic-save claims.
 2. General game-ID-based content-only uninstall and actual emulator-save ownership.
