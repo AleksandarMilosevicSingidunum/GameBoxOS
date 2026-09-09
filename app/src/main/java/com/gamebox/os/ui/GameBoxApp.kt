@@ -78,6 +78,7 @@ import com.gamebox.os.importer.RomImportResult
 import com.gamebox.os.importer.RomImportSetResult
 import com.gamebox.os.importer.RomImportSource
 import com.gamebox.os.domain.Game
+import com.gamebox.os.domain.belongsToLibrary
 import com.gamebox.os.domain.GameId
 import com.gamebox.os.domain.DownloadStatus
 import com.gamebox.os.domain.CatalogRefreshState
@@ -243,6 +244,7 @@ fun GameBoxApp(
                             gameLaunchController,
                             saveSafetyController,
                             managedSaveDiscovery,
+                            importer = authorizedRomImporter,
                             compact = compact,
                             onDownloads = { uiState.openDestination(Destination.DOWNLOADS.name) },
                             onBack = uiState::clearSelection
@@ -254,8 +256,8 @@ fun GameBoxApp(
                             openPc = { uiState.openDestination(Destination.PC.name) }
                         ) { uiState.openGame(it.id.value) }
                         Destination.LIBRARY -> CollectionScreen(
-                            "Your Library", "Installed and ready offline",
-                            games.filter { it.state == InstallState.INSTALLED || it.state == InstallState.UPDATE_AVAILABLE },
+                            "Your Library", "Installed games and retained imports",
+                            games.filter { it.belongsToLibrary() },
                             restorableGameId,
                             rememberGameFocus,
                             compact
@@ -1914,6 +1916,7 @@ private fun DetailsScreen(
     gameLaunchController: GameLaunchController,
     saveSafetyController: SaveSafetyController,
     managedSaveDiscovery: com.gamebox.os.storage.ManagedSaveDiscovery,
+    importer: AuthorizedRomImporter,
     compact: Boolean,
     onDownloads: () -> Unit,
     onBack: () -> Unit
@@ -1948,6 +1951,9 @@ private fun DetailsScreen(
         ContentRemovalDialog(game, saveSafetyController) { showUninstallConfirmation = false }
     }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+        ImportedGameReimportCard(game, importer, repository,
+            enabled = launchState.status !in setOf(LaunchUiState.Status.PREPARING,
+                LaunchUiState.Status.LAUNCHED, LaunchUiState.Status.SESSION_ERROR))
         Surface(
             modifier = Modifier.fillMaxWidth().height(if (compact) 252.dp else 292.dp),
             shape = RoundedCornerShape(9.dp),
