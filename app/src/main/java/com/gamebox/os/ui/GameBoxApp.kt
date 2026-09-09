@@ -227,6 +227,7 @@ fun GameBoxApp(
             )
         ) {
             TopNav(destination, compact) { uiState.openDestination(it.name) }
+            SessionRecoveryBanner(gameLaunchController)
             Spacer(Modifier.height(if (compact) 14.dp else 12.dp))
 
             Box(Modifier.weight(1f).fillMaxWidth()) {

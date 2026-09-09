@@ -365,7 +365,7 @@ data class LaunchUiState(
     val message: String? = null
 ) {
     enum class Status {
-        IDLE, PREPARING, LAUNCHED, RETURNED, EMULATOR_UNAVAILABLE, UNSUPPORTED, NOT_INSTALLED,
+        IDLE, PREPARING, LAUNCHED, RETURNED, SESSION_ERROR, EMULATOR_UNAVAILABLE, UNSUPPORTED, NOT_INSTALLED,
         CONTENT_MISSING, VERIFICATION_FAILED, HANDOFF_REJECTED
     }
 }
@@ -414,7 +414,8 @@ class DefaultGameLaunchController(
     override fun observeState(): StateFlow<LaunchUiState> = state.asStateFlow()
 
     override fun launch(game: Game) {
-        if (waitingForExternalReturn || recovering.get() || !preparing.compareAndSet(false, true)) return
+        if (state.value.status == LaunchUiState.Status.SESSION_ERROR || waitingForExternalReturn ||
+            recovering.get() || !preparing.compareAndSet(false, true)) return
         val preparation = LaunchPreparation()
         activePreparation = preparation
         update(game.id, LaunchUiState.Status.PREPARING, "Preparing game; checking installed content")
@@ -425,8 +426,13 @@ class DefaultGameLaunchController(
                 update(game.id, LaunchUiState.Status.IDLE, "Launch cancelled")
                 throw cancelled
             } catch (_: Exception) {
-                update(game.id, LaunchUiState.Status.HANDOFF_REJECTED,
-                    "Could not prepare or open this game. Check storage access and try again.")
+                if (sessionJournal != null && preparation.isCommitted()) {
+                    update(game.id, LaunchUiState.Status.SESSION_ERROR,
+                        "Session tracking was interrupted. Recover session history before launching another game.")
+                } else {
+                    update(game.id, LaunchUiState.Status.HANDOFF_REJECTED,
+                        "Could not prepare or open this game. Check storage access and try again.")
+                }
             } finally {
                 activePreparation = null
                 preparing.set(false)
@@ -494,13 +500,19 @@ class DefaultGameLaunchController(
                     val session = sessionJournal.finish()
                     waitingForExternalReturn = false
                     returnTracker.returned()
+                    if (session == null && state.value.status == LaunchUiState.Status.SESSION_ERROR) {
+                        state.value = LaunchUiState()
+                    }
                     session?.let {
                         update(GameId(it.gameId), LaunchUiState.Status.RETURNED,
                             if (it.launchConfirmed) "Returned to GameBox; time away recorded"
                             else "Recovered an interrupted handoff; no playtime was added")
                     }
+                } catch (cancelled: CancellationException) {
+                    throw cancelled
                 } catch (_: Exception) {
-                    state.value = state.value.copy(message = "Could not save session history; return to GameBox to retry")
+                    state.value = state.value.copy(status = LaunchUiState.Status.SESSION_ERROR,
+                        message = "Could not recover session history. Your pending session is retained; retry before launching another game.")
                 } finally {
                     recovering.set(false)
                 }

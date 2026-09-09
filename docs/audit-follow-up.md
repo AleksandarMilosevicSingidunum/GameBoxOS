@@ -48,6 +48,11 @@ unconfirmed handoff, pending-record overwrite protection, and the 11-to-12 migra
 from the preceding table structure. These await CI and do not replace the missing
 full released-schema migration matrix or actual Android process-death/emulator UAT.
 Two duration tests and the pre-dispatch persistence-failure guard are locally testable.
+Recovery failures now have a global retry banner, including cold starts with no
+selected game. New launches are blocked until reconciliation succeeds; a confirmation
+failure after dispatch is reported as uncertain session tracking, not a failed launch.
+Added controller tests for journal ordering, recreation, recovery/retry and persistence
+failures before/after dispatch, plus a production-banner UI callback test. CI pending.
 
 Launch preparation follow-up (audit P1 UI-thread blocker; EMU-02 integration):
 the production controller now publishes PREPARING synchronously, runs gateway file

@@ -23,6 +23,8 @@ class LaunchPreparation {
         if (cancelled) throw CancellationException("Launch preparation cancelled")
     }
 
+    @Synchronized fun isCommitted(): Boolean = committed
+
     fun <T> dispatch(block: () -> T): T {
         synchronized(this) {
             checkActive()
