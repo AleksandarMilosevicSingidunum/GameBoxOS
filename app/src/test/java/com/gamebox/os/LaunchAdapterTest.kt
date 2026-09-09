@@ -12,9 +12,12 @@ import com.gamebox.os.launch.retroArchCorePath
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.flow.first
 
 class LaunchAdapterTest {
-    @Test fun launchFailuresInvalidateOnlyBrokenContent() {
+    @Test fun launchFailuresInvalidateOnlyBrokenContent(): Unit = runBlocking {
         val cases = listOf(
             com.gamebox.os.launch.GatewayResult.CONTENT_MISSING to InstallState.MISSING_FILES,
             com.gamebox.os.launch.GatewayResult.VERIFICATION_FAILED to InstallState.FAILED,
@@ -30,14 +33,71 @@ class LaunchAdapterTest {
             val gateway = object : com.gamebox.os.launch.PackageGateway {
                 override fun launch(capability: EmulatorCapability) = result
             }
-            val controller = com.gamebox.os.launch.DefaultGameLaunchController(registry, gateway, repository)
+            val controller = com.gamebox.os.launch.DefaultGameLaunchController(registry, gateway, repository, scope = this)
             controller.launch(installed)
+            withTimeout(5_000) { controller.observeState().first { it.status != com.gamebox.os.launch.LaunchUiState.Status.PREPARING } }
             controller.onHostResumed()
             val after = requireNotNull(repository.game(original.id))
             assertEquals(expected, after.state)
             assertEquals(original.minutesPlayed, after.minutesPlayed)
             assertEquals(original.favorite, after.favorite)
         }
+    }
+
+    @Test fun preparationDoesNotBlockCallerAndDuplicatePlayDoesNotDispatchTwice(): Unit = runBlocking {
+        val repository = com.gamebox.os.data.FakeGameRepository()
+        val game = repository.observeGames().value.first().copy(state = InstallState.INSTALLED)
+        val entered = java.util.concurrent.CountDownLatch(1)
+        val release = java.util.concurrent.CountDownLatch(1)
+        val calls = java.util.concurrent.atomic.AtomicInteger()
+        val caller = Thread.currentThread()
+        val gateway = object : com.gamebox.os.launch.PackageGateway {
+            override fun launch(capability: EmulatorCapability): com.gamebox.os.launch.GatewayResult {
+                calls.incrementAndGet()
+                org.junit.Assert.assertNotEquals(caller, Thread.currentThread())
+                entered.countDown()
+                check(release.await(5, java.util.concurrent.TimeUnit.SECONDS))
+                return com.gamebox.os.launch.GatewayResult.LAUNCHED
+            }
+        }
+        val controller = com.gamebox.os.launch.DefaultGameLaunchController(
+            EmulatorCapabilityRegistry(listOf(capability.copy(gameId = game.id))), gateway, repository, scope = this
+        )
+        try {
+            controller.launch(game)
+            assertEquals(com.gamebox.os.launch.LaunchUiState.Status.PREPARING, controller.observeState().value.status)
+            controller.launch(game)
+            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                check(entered.await(5, java.util.concurrent.TimeUnit.SECONDS))
+            }
+            controller.onHostResumed() // No session exists while file validation is running.
+            assertEquals(com.gamebox.os.launch.LaunchUiState.Status.PREPARING, controller.observeState().value.status)
+        } finally { release.countDown() }
+        withTimeout(5_000) { controller.observeState().first { it.status == com.gamebox.os.launch.LaunchUiState.Status.LAUNCHED } }
+        controller.launch(game)
+        assertEquals(1, calls.get())
+        controller.onHostResumed()
+        assertEquals(com.gamebox.os.launch.LaunchUiState.Status.RETURNED, controller.observeState().value.status)
+    }
+
+    @Test fun storageFailureBecomesActionableStateAndAllowsRetry(): Unit = runBlocking {
+        val repository = com.gamebox.os.data.FakeGameRepository()
+        val game = repository.observeGames().value.first().copy(state = InstallState.INSTALLED)
+        var calls = 0
+        val gateway = object : com.gamebox.os.launch.PackageGateway {
+            override fun launch(capability: EmulatorCapability): com.gamebox.os.launch.GatewayResult {
+                calls++
+                throw java.io.IOException("unreadable content")
+            }
+        }
+        val controller = com.gamebox.os.launch.DefaultGameLaunchController(
+            EmulatorCapabilityRegistry(listOf(capability.copy(gameId = game.id))), gateway, repository, scope = this
+        )
+        repeat(2) {
+            controller.launch(game)
+            withTimeout(5_000) { controller.observeState().first { it.status == com.gamebox.os.launch.LaunchUiState.Status.HANDOFF_REJECTED } }
+        }
+        assertEquals(2, calls)
     }
 
     private val capability = EmulatorCapability(

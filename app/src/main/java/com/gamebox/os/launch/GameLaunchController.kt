@@ -18,6 +18,13 @@ import com.gamebox.os.download.VerificationResult
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.util.concurrent.atomic.AtomicBoolean
 import java.io.File
 
 data class EmulatorCapability(
@@ -354,7 +361,7 @@ data class LaunchUiState(
     val message: String? = null
 ) {
     enum class Status {
-        IDLE, LAUNCHED, RETURNED, EMULATOR_UNAVAILABLE, UNSUPPORTED, NOT_INSTALLED,
+        IDLE, PREPARING, LAUNCHED, RETURNED, EMULATOR_UNAVAILABLE, UNSUPPORTED, NOT_INSTALLED,
         CONTENT_MISSING, VERIFICATION_FAILED, HANDOFF_REJECTED
     }
 }
@@ -389,14 +396,34 @@ class DefaultGameLaunchController(
     private val registry: EmulatorCapabilityRegistry,
     private val gateway: PackageGateway,
     private val repository: GameRepository,
-    private val returnTracker: ReturnTracker = ReturnTracker()
+    private val returnTracker: ReturnTracker = ReturnTracker(),
+    private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 ) : GameLaunchController {
     private val state = MutableStateFlow(LaunchUiState())
+    private val preparing = AtomicBoolean(false)
     private var waitingForExternalReturn = false
 
     override fun observeState(): StateFlow<LaunchUiState> = state.asStateFlow()
 
     override fun launch(game: Game) {
+        if (waitingForExternalReturn || !preparing.compareAndSet(false, true)) return
+        update(game.id, LaunchUiState.Status.PREPARING, "Preparing game; checking installed content")
+        scope.launch {
+            try {
+                launchPrepared(game)
+            } catch (cancelled: CancellationException) {
+                update(game.id, LaunchUiState.Status.IDLE, "Launch cancelled")
+                throw cancelled
+            } catch (_: Exception) {
+                update(game.id, LaunchUiState.Status.HANDOFF_REJECTED,
+                    "Could not prepare or open this game. Check storage access and try again.")
+            } finally {
+                preparing.set(false)
+            }
+        }
+    }
+
+    private suspend fun launchPrepared(game: Game) {
         if (game.state !in setOf(InstallState.INSTALLED, InstallState.UPDATE_AVAILABLE)) {
             update(game.id, LaunchUiState.Status.NOT_INSTALLED, "Install and verify before launching")
             return
@@ -406,7 +433,7 @@ class DefaultGameLaunchController(
             update(game.id, LaunchUiState.Status.UNSUPPORTED, "No approved adapter for this title")
             return
         }
-        when (gateway.launch(capability)) {
+        when (withContext(Dispatchers.IO) { gateway.launch(capability) }) {
             GatewayResult.LAUNCHED -> {
                 returnTracker.started(game.id)
                 waitingForExternalReturn = true
