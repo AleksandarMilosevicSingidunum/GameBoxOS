@@ -393,11 +393,7 @@ class DefaultSaveSafetyController(
     }
 
     private fun resolveSave(relativePath: String): File {
-        requireSavePathForGame(gameId.value, relativePath)
-        val root = savesRoot.canonicalFile
-        val file = File(root, relativePath).canonicalFile
-        require(file.path.startsWith(root.path + File.separator)) { "Save path escaped app storage" }
-        return file
+        return resolveGameSave(savesRoot, gameId.value, relativePath)
     }
 
     private fun preserveConflict(payload: ByteArray) {

@@ -44,6 +44,11 @@ after failed reads or size-limit rejection. Eight local JVM backup/path tests
 pass, including interrupted-provider and empty-document preservation of a
 previously restorable backup. File/checksum publication remains two separate
 writes; this does not establish crash-atomic backup replacement.
+Cloud-save reads now use the game-scoped resolver, rejecting symbolic links in
+both game directories and artifact paths before reading bytes. Three identity/
+resolution JVM tests pass locally. Android linked-file and linked-directory tests
+were added and await execution. This closes a static path-isolation gap, not
+concurrent filesystem-mutation or live cloud-provider validation.
 Emulator integration, multi-file snapshots, durable recovery and
 provider round-trip validation remain required before
 general save management can be considered complete.
