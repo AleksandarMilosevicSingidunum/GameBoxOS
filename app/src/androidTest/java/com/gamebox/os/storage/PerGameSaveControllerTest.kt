@@ -9,6 +9,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.gamebox.os.GameBoxApplication
 import com.gamebox.os.data.local.GameBoxDatabase
 import com.gamebox.os.data.local.SaveRecordEntity
+import com.gamebox.os.data.local.SaveRecordDao
 import com.gamebox.os.domain.GameId
 import com.gamebox.os.settings.SettingsRepository
 import kotlinx.coroutines.*
@@ -38,16 +39,20 @@ class PerGameSaveControllerTest {
             val source = root.resolve("source.sav").apply { writeText("FIRST synthetic save") }
             first.importInitialSave(Uri.fromFile(source))
             withTimeout(5_000) { first.observeState().first { it.saveRecordPresent } }
+            withTimeout(5_000) { first.observeBusy().first { !it } }
             assertFalse(second.observeState().value.saveRecordPresent)
             source.writeText("SECOND synthetic save")
             second.importInitialSave(Uri.fromFile(source))
             withTimeout(5_000) { second.observeState().first { it.saveRecordPresent } }
+            withTimeout(5_000) { second.observeBusy().first { !it } }
             first.backupSave()
             withTimeout(5_000) { first.observeState().first { it.operationMessage == "Backup completed" } }
+            withTimeout(5_000) { first.observeBusy().first { !it } }
             val firstFile = root.resolve("saves/first-game/save.dat")
             firstFile.writeText("CHANGED")
             first.restoreSave()
             withTimeout(5_000) { first.observeState().first { it.operationMessage == "Restore completed" } }
+            withTimeout(5_000) { first.observeBusy().first { !it } }
             assertEquals("FIRST synthetic save", firstFile.readText())
             assertEquals("SECOND synthetic save", root.resolve("saves/second-game/save.dat").readText())
             assertFalse(root.resolve("save-backups/second-game/save.dat").exists())
@@ -61,5 +66,57 @@ class PerGameSaveControllerTest {
             root.deleteRecursively()
         }
     }
-}
 
+    @Test fun leavingPanelFinishesStartedImportAndKeepsSameGameLocked(): Unit = runBlocking {
+        val app = ApplicationProvider.getApplicationContext<GameBoxApplication>()
+        val root = Files.createTempDirectory(app.cacheDir.toPath(), "save-lifecycle-").toFile()
+        val context = object : ContextWrapper(app) {
+            override fun getFilesDir(): File = root
+            override fun getApplicationContext(): Context = this
+        }
+        val database = Room.inMemoryDatabaseBuilder(app, GameBoxDatabase::class.java).build()
+        val oldScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+        val newScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+        val reachedRecordWrite = CompletableDeferred<Unit>()
+        val allowRecordWrite = CompletableDeferred<Unit>()
+        val dao = database.saveRecordDao()
+        val delayedDao = object : SaveRecordDao by dao {
+            override suspend fun upsert(record: SaveRecordEntity) {
+                reachedRecordWrite.complete(Unit)
+                allowRecordWrite.await()
+                dao.upsert(record)
+            }
+        }
+        try {
+            val first = DefaultSaveSafetyController(context, delayedDao, app.container.gameRepository,
+                oldScope, SettingsRepository(app), GameId("lifecycle-game"))
+            val reopened = DefaultSaveSafetyController(context, dao, app.container.gameRepository,
+                newScope, SettingsRepository(app), GameId("lifecycle-game"))
+            val source = root.resolve("source.sav").apply { writeText("Synthetic lifecycle save") }
+            first.importInitialSave(Uri.fromFile(source))
+            withTimeout(5_000) { reachedRecordWrite.await() }
+            oldScope.cancel()
+            assertTrue(first.observeBusy().value)
+            reopened.importInitialSave(Uri.fromFile(source))
+            withTimeout(5_000) {
+                reopened.observeState().first {
+                    it.operationMessage == "A save operation is already running for this game"
+                }
+            }
+            allowRecordWrite.complete(Unit)
+            withTimeout(5_000) { oldScope.coroutineContext[Job]!!.join() }
+            assertFalse(first.observeBusy().value)
+            withTimeout(5_000) { reopened.observeState().first { it.saveRecordPresent } }
+            assertEquals("Synthetic lifecycle save", root.resolve("saves/lifecycle-game/save.dat").readText())
+            reopened.backupSave()
+            withTimeout(5_000) { reopened.observeState().first { it.operationMessage == "Backup completed" } }
+            withTimeout(5_000) { reopened.observeBusy().first { !it } }
+        } finally {
+            allowRecordWrite.complete(Unit)
+            oldScope.coroutineContext[Job]?.cancelAndJoin()
+            newScope.coroutineContext[Job]?.cancelAndJoin()
+            database.close()
+            root.deleteRecursively()
+        }
+    }
+}

@@ -111,8 +111,8 @@ class DefaultSaveSafetyController(
             }
         }
         job.invokeOnCompletion {
-            busy.value = false
             SaveOperationGate.release(key)
+            busy.value = false
         }
     }
     private val state = combine(saveRecordDao.observe(gameId.value), operation) { sourceRecord, current ->
@@ -446,4 +446,3 @@ class DefaultSaveSafetyController(
     )
     }
 }
-

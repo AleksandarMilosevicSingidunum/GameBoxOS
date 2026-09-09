@@ -8,8 +8,9 @@ using the caller's coroutine lifetime rather than retaining every visited game.
 
 Two pure identity tests pass locally. A new Android test exercises two controllers
 with separate imports, backup/restore, corrupt cross-game records and synthetic
-save bytes. It has not run yet. Controller and container edits are not yet compiled
-by Android tooling yet. Game details now receive the per-game factory and show a
+save bytes. The Android unit/build check and Windows build passed at c683dbf;
+Android instrumentation and screenshot checks were still running when checked.
+Game details now receive the per-game factory and show a
 managed-copy panel with import, backup, export and confirmed restore. Added Compose
 tests cover confirmation, cancellation and disabled controls; execution is pending.
 The integration is being published as a draft for validation, not marked complete.
@@ -22,8 +23,15 @@ was cancelled before work began. This is not a durable file/database transaction
 and does not survive process death. One gate unit test passes locally; UI busy-state
 and controller lifecycle integration evidence are still pending.
 
-This is managed single-file save handling, not emulator-private save access.
-Emulator integration, multi-file snapshots, operation cancellation/serialization,
-restore confirmation and provider round-trip validation remain required before
-general save management can be considered complete.
+Added a deterministic lifecycle test that pauses the real Room record write after
+import, cancels the original panel scope, verifies a reopened controller cannot
+overlap it, then releases the write and verifies the record, bytes and subsequent
+backup. Existing tests now await operation completion before starting another
+action. The guard is released before clearing the busy indicator, so an enabled
+button cannot race a still-held guard. These follow-up Android tests require CI
+execution; no local Android SDK is available. This is not process-kill evidence.
 
+This is managed single-file save handling, not emulator-private save access.
+Emulator integration, multi-file snapshots, durable recovery and
+provider round-trip validation remain required before
+general save management can be considered complete.
