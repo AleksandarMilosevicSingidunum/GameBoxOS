@@ -78,6 +78,7 @@ import com.gamebox.os.importer.RomImportResult
 import com.gamebox.os.importer.RomImportSetResult
 import com.gamebox.os.importer.RomImportSource
 import com.gamebox.os.domain.Game
+import com.gamebox.os.domain.belongsToLibrary
 import com.gamebox.os.domain.GameId
 import com.gamebox.os.domain.DownloadStatus
 import com.gamebox.os.domain.CatalogRefreshState
@@ -243,6 +244,7 @@ fun GameBoxApp(
                             gameLaunchController,
                             saveSafetyController,
                             managedSaveDiscovery,
+                            importer = authorizedRomImporter,
                             compact = compact,
                             onDownloads = { uiState.openDestination(Destination.DOWNLOADS.name) },
                             onBack = uiState::clearSelection
@@ -254,8 +256,8 @@ fun GameBoxApp(
                             openPc = { uiState.openDestination(Destination.PC.name) }
                         ) { uiState.openGame(it.id.value) }
                         Destination.LIBRARY -> CollectionScreen(
-                            "Your Library", "Installed and ready offline",
-                            games.filter { it.state == InstallState.INSTALLED || it.state == InstallState.UPDATE_AVAILABLE },
+                            "Your Library", "Installed games and retained imports",
+                            games.filter { it.belongsToLibrary() },
                             restorableGameId,
                             rememberGameFocus,
                             compact
@@ -1914,6 +1916,7 @@ private fun DetailsScreen(
     gameLaunchController: GameLaunchController,
     saveSafetyController: SaveSafetyController,
     managedSaveDiscovery: com.gamebox.os.storage.ManagedSaveDiscovery,
+    importer: AuthorizedRomImporter,
     compact: Boolean,
     onDownloads: () -> Unit,
     onBack: () -> Unit
@@ -1945,47 +1948,12 @@ private fun DetailsScreen(
         ActivityResultContracts.OpenDocument()
     ) { uri -> uri?.let(saveSafetyController::importBackup) }
     if (showUninstallConfirmation) {
-        val preview = saveSafetyController.uninstallPreview()
-        AlertDialog(
-            onDismissRequest = { showUninstallConfirmation = false },
-            title = { Text("Uninstall " + game.title + "?") },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("Content to remove: " + formatDownloadBytes(preview.bytesFreed))
-                    Text(
-                        if (preview.retainsProgress) {
-                            "Save data retained: " + formatDownloadBytes(preview.retainedSaveBytes) +
-                                " across " + preview.retainedSaveArtifacts + " artifact(s)"
-                        } else {
-                            "No save data is currently recorded. Metadata, favorites, and play history are retained."
-                        }
-                    )
-                    Text(
-                        "Only installed game content will be removed.",
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.68f)
-                    )
-                }
-            },
-            confirmButton = {
-                Button(
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error, contentColor = MaterialTheme.colorScheme.onError),
-                    onClick = {
-                        saveSafetyController.uninstallTestContent()
-                        showUninstallConfirmation = false
-                    },
-                    modifier = Modifier.semantics {
-                        contentDescription = "Confirm uninstall and retain save data"
-                    }
-                ) { Text("Uninstall content") }
-            },
-            dismissButton = {
-                OutlinedButton(onClick = { showUninstallConfirmation = false }) {
-                    Text("Cancel")
-                }
-            }
-        )
+        ContentRemovalDialog(game, saveSafetyController) { showUninstallConfirmation = false }
     }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+        ImportedGameReimportCard(game, importer, repository,
+            enabled = launchState.status !in setOf(LaunchUiState.Status.PREPARING,
+                LaunchUiState.Status.LAUNCHED, LaunchUiState.Status.SESSION_ERROR))
         Surface(
             modifier = Modifier.fillMaxWidth().height(if (compact) 252.dp else 292.dp),
             shape = RoundedCornerShape(9.dp),
@@ -2169,13 +2137,23 @@ private fun DetailsScreen(
                         Button(onClick = { gameLaunchController.launch(game) }) {
                             Text("Play")
                         }
-                        OutlinedButton(onClick = { showUninstallConfirmation = true }) {
+                        OutlinedButton(onClick = { showUninstallConfirmation = true },
+                            enabled = launchState.status !in setOf(LaunchUiState.Status.PREPARING,
+                                LaunchUiState.Status.LAUNCHED, LaunchUiState.Status.SESSION_ERROR)) {
                             Text("Uninstall content")
                         }
                     }
                     if (isAuthorizedFixture && !saveSafetyState.saveRecordPresent) {
                         OutlinedButton(onClick = { initialSaveLauncher.launch(arrayOf("*/*")) }) {
                             Text("Import save file")
+                        }
+                    }
+                    if (!isAuthorizedFixture && game.state in setOf(InstallState.INSTALLED,
+                        InstallState.UPDATE_AVAILABLE, InstallState.MISSING_FILES)) {
+                        OutlinedButton(onClick = { showUninstallConfirmation = true },
+                            enabled = launchState.status !in setOf(LaunchUiState.Status.PREPARING,
+                                LaunchUiState.Status.LAUNCHED, LaunchUiState.Status.SESSION_ERROR)) {
+                            Text("Uninstall content")
                         }
                     }
                     if (!isAuthorizedFixture && game.state == InstallState.DOWNLOADING &&

@@ -9,6 +9,11 @@ import com.gamebox.os.data.GameRepository
 import com.gamebox.os.data.local.SaveRecordDao
 import com.gamebox.os.data.local.SaveRecordEntity
 import com.gamebox.os.domain.GameId
+import com.gamebox.os.domain.Game
+import com.gamebox.os.content.GameContentPolicy
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.NonCancellable
 import com.gamebox.os.domain.InstallState
 import com.gamebox.os.download.AssetDownloadWorker
 import com.gamebox.os.download.AuthorizedHomebrewDownload
@@ -57,6 +62,8 @@ interface SaveSafetyController {
     fun importInitialSave(uri: Uri)
     fun uninstallPreview(): UninstallConfirmation
     fun uninstallTestContent()
+    fun contentRemovalPreview(game: Game): ContentRemovalPreview
+    suspend fun uninstallContent(game: Game): String
     fun backupSave()
     fun restoreSave()
     fun exportBackup(uri: Uri)
@@ -96,6 +103,39 @@ class DefaultSaveSafetyController(
     }.stateIn(scope, SharingStarted.Eagerly, SaveSafetyState())
 
     override fun observeState(): StateFlow<SaveSafetyState> = state
+
+    override fun contentRemovalPreview(game: Game): ContentRemovalPreview =
+        GameOwnedContentUninstaller(applicationContext.filesDir).preview(contentManifest(game))
+
+    override suspend fun uninstallContent(game: Game): String = withContext(Dispatchers.IO + NonCancellable) {
+        val current = requireNotNull(gameRepository.game(game.id)) { "Game is no longer in the library" }
+        require(current.state in setOf(InstallState.INSTALLED, InstallState.UPDATE_AVAILABLE, InstallState.MISSING_FILES)) {
+            "Wait for installation or download operations to finish"
+        }
+        val manifest = contentManifest(current)
+        require(manifest == contentManifest(game)) { "Game content changed; reopen the confirmation" }
+        try {
+            val removed = GameOwnedContentUninstaller(applicationContext.filesDir).uninstall(manifest)
+            gameRepository.setInstallStateAndAwait(game.id, InstallState.NOT_INSTALLED)
+            "$removed content file(s) removed. Saves, backups, metadata and history retained."
+        } catch (error: ContentRemovalFailed) {
+            if (error.removedFiles > 0) gameRepository.setInstallStateAndAwait(game.id, InstallState.MISSING_FILES)
+            throw IllegalStateException("Content removal stopped after ${error.removedFiles} file(s). Saves were not touched; retry to remove remaining content.", error)
+        }
+    }
+
+    private fun contentManifest(game: Game): ContentRemovalManifest {
+        val primary = game.localContentRelativePath
+        val paths = if (primary != null) {
+            (listOf(primary) + game.localContentFiles.map { it.relativePath }).distinct().map { "imports/$it" }
+        } else if (game.id.value == "galaxy-patrol") {
+            listOf("installed/" + AuthorizedHomebrewDownload.RELATIVE_PATH)
+        } else {
+            require(game.expectedSha256 != null) { "No managed game content is recorded" }
+            listOf("installed/" + GameContentPolicy.describe(game.id.value, game.platform, game.sourceUrl).relativePath)
+        }
+        return ContentRemovalManifest(game.id.value, paths)
+    }
 
     override fun importInitialSave(uri: Uri) {
         scope.launch {
