@@ -39,6 +39,11 @@ to a different game's controller or while actions are unavailable. Added UI
 warning/cancel coverage and an Android import-then-restore isolation assertion;
 these new tests await execution. File ownership/format cannot be inferred from
 arbitrary save bytes, and the UI explicitly states that limitation.
+Backup import now rejects empty documents before publication and cleans staging
+after failed reads or size-limit rejection. Eight local JVM backup/path tests
+pass, including interrupted-provider and empty-document preservation of a
+previously restorable backup. File/checksum publication remains two separate
+writes; this does not establish crash-atomic backup replacement.
 Emulator integration, multi-file snapshots, durable recovery and
 provider round-trip validation remain required before
 general save management can be considered complete.

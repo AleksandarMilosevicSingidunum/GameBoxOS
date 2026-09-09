@@ -9,6 +9,8 @@ import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
+import java.io.InputStream
+import java.io.IOException
 
 class SaveBackupServiceTest {
     @get:Rule val temporaryFolder = TemporaryFolder()
@@ -115,5 +117,35 @@ class SaveBackupServiceTest {
         assertThrows(IllegalArgumentException::class.java) {
             service.restore("../outside.dat")
         }
+    }
+
+    @Test fun emptyAndInterruptedImportsRetainExistingBackupAndCleanStaging() {
+        val saves = temporaryFolder.newFolder("saves")
+        val backups = temporaryFolder.newFolder("backups")
+        val save = saves.resolve("game/save.dat").apply {
+            parentFile.mkdirs()
+            writeText("ORIGINAL")
+        }
+        val service = SaveBackupService(saves, backups)
+        assertEquals(BackupResult.SUCCESS, service.createBackup("game/save.dat"))
+        assertThrows(IllegalArgumentException::class.java) {
+            service.importBackup("game/save.dat", ByteArrayInputStream(byteArrayOf()))
+        }
+        val interrupted = object : InputStream() {
+            var reads = 0
+            override fun read(): Int = throw IOException("provider disconnected")
+            override fun read(buffer: ByteArray, offset: Int, length: Int): Int {
+                if (reads++ > 0) throw IOException("provider disconnected")
+                buffer[offset] = 42
+                return 1
+            }
+        }
+        assertThrows(IOException::class.java) {
+            service.importBackup("game/save.dat", interrupted)
+        }
+        assertEquals(false, backups.resolve("game/save.dat.import.part").exists())
+        save.writeText("CURRENT")
+        assertEquals(BackupResult.SUCCESS, service.restore("game/save.dat"))
+        assertEquals("ORIGINAL", save.readText())
     }
 }
