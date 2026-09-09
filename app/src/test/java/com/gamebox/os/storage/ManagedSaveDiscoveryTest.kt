@@ -11,7 +11,7 @@ import org.junit.rules.TemporaryFolder
 class ManagedSaveDiscoveryTest {
     @get:Rule val temporary = TemporaryFolder()
 
-    @Test fun discoversChangesAndRefreshesRemovedFilesWithoutWritingThem() = runBlocking {
+    @Test fun discoversChangesAndRefreshesRemovedFilesWithoutWritingThem(): Unit = runBlocking {
         val repository = FakeGameRepository()
         val id = repository.observeGames().value.first().id.value
         val scope = CoroutineScope(SupervisorJob() + Dispatchers.Unconfined)
@@ -32,7 +32,7 @@ class ManagedSaveDiscoveryTest {
         } finally { scope.coroutineContext[Job]?.cancelAndJoin() }
     }
 
-    @Test fun failedInspectionDoesNotClaimNoSaves() = runBlocking {
+    @Test fun failedInspectionDoesNotClaimNoSaves(): Unit = runBlocking {
         val repository = FakeGameRepository()
         val id = repository.observeGames().value.first().id.value
         val scope = CoroutineScope(SupervisorJob() + Dispatchers.Unconfined)
