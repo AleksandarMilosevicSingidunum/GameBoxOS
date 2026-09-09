@@ -13,6 +13,9 @@ its own Android build and regression run. No real-emulator save recovery is clai
 
 Still pending: process-death recovery during import, shared per-game mutation
 locking, end-to-end system-picker automation, and real emulator save validation.
-The picker cannot prove that a selected file is the same title: users must select
-the matching owned copy. No game files are supplied or downloaded by this flow.
+Restore now requires the retained filenames and SHA-256 checksums for the full
+file set. Identity is checked in staging before replacing content; a different
+edition must be imported separately. Three local identity regression tests pass.
+Android build/runtime validation of this follow-up remains pending.
+No game files are supplied or downloaded by this flow.
 

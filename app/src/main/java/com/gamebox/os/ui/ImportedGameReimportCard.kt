@@ -47,7 +47,13 @@ internal fun ImportedGameReimportCard(game: Game, importer: AuthorizedRomImporte
                             } ?: error("Selected file has no display name")
                             RomImportSource(uri, name)
                         }
-                        when (val result = importer.importSet(current.id, sources, current.platform)) {
+                        val original = LocalContentFile(requireNotNull(current.localContentRelativePath),
+                            requireNotNull(current.localContentSha256) { "Original checksum is missing; use a new import" },
+                            current.localContentMimeType ?: "application/octet-stream")
+                        val expected = listOf(original) + current.localContentFiles.filterNot {
+                            it.relativePath == original.relativePath
+                        }
+                        when (val result = importer.importSet(current.id, sources, current.platform, expected)) {
                             is RomImportSetResult.Imported -> {
                                 val primary = result.launchFile
                                 repository.registerImportedGame(ImportedGameRegistration(
@@ -79,7 +85,7 @@ internal fun ImportedGameReimportCard(game: Game, importer: AuthorizedRomImporte
         Surface(Modifier.fillMaxWidth().padding(bottom = 12.dp), color = MaterialTheme.colorScheme.surfaceVariant) {
             Column(Modifier.padding(16.dp)) {
                 Text("Restore imported game", style = MaterialTheme.typography.titleMedium)
-                Text("Select your own game file, or the descriptor and all tracks for a disc set. Saves and history are kept.")
+                Text("Select the original game file, or the descriptor and all tracks with their original filenames. Checksums must match. Saves and history are kept.")
                 if (busy) LinearProgressIndicator(Modifier.fillMaxWidth())
                 Button(enabled = enabled && !busy && game.canReimportContent(),
                     onClick = { picker.launch(arrayOf("*/*")) }) { Text("Select game files to reimport") }

@@ -105,6 +105,7 @@ class AuthorizedRomImporter(
         gameId: GameId,
         sources: List<RomImportSource>,
         platform: String? = null,
+        expectedFiles: List<com.gamebox.os.domain.LocalContentFile>? = null,
     ): RomImportSetResult = withContext(Dispatchers.IO) {
         if (sources.isEmpty()) return@withContext RomImportSetResult.Rejected("Select at least one game file")
         if (sources.size > 64) return@withContext RomImportSetResult.Rejected("A disc set may contain at most 64 files")
@@ -160,6 +161,13 @@ class AuthorizedRomImporter(
             val launchFile = requireNotNull(stagedFiles.firstOrNull {
                 it.relativePath.substringAfterLast('/').equals(launchName, ignoreCase = true)
             })
+            expectedFiles?.let { expected ->
+                verifyReimportIdentity(expected, stagedFiles.map {
+                    com.gamebox.os.domain.LocalContentFile(
+                        RomImportPolicy.importRootRelativePath(gameId, it.relativePath),
+                        it.hashes.sha256, it.mimeType)
+                })
+            }
             replaceDirectoryAtomically(targetDirectory, staging, backup)
             val ordered = listOf(launchFile) + stagedFiles.filterNot { it === launchFile }
             RomImportSetResult.Imported(launchFile, ordered)
@@ -205,3 +213,4 @@ class AuthorizedRomImporter(
     }
 
 }
+
