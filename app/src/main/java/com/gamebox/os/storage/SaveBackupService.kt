@@ -33,7 +33,8 @@ class SaveBackupService(
         val source = resolveContained(savesRoot, relativePath)
         if (!source.isFile) return BackupResult.SOURCE_MISSING
         val backup = resolveContained(backupsRoot, relativePath)
-        val staged = File(requireNotNull(backup.parentFile), backup.name + ".part")
+        val staged = resolveContained(backupsRoot, relativePath + ".part")
+        checksumFile(backup) // Validate sidecar before changing backup bytes.
         check(backup.parentFile?.mkdirs() != false || backup.parentFile?.isDirectory == true)
         val copied = source.inputStream().use { input ->
             staged.outputStream().use { output -> copyBounded(input, output, maxBackupBytes) }
@@ -61,7 +62,7 @@ class SaveBackupService(
         }
 
         val destination = resolveContained(savesRoot, relativePath)
-        val staged = File(requireNotNull(destination.parentFile), destination.name + ".restore.part")
+        val staged = resolveContained(savesRoot, relativePath + ".restore.part")
         check(destination.parentFile?.mkdirs() != false || destination.parentFile?.isDirectory == true)
         backup.inputStream().use { input ->
             staged.outputStream().use { output -> input.copyTo(output) }
@@ -95,7 +96,8 @@ class SaveBackupService(
     ): BackupResult {
         require(maxBytes > 0L) { "Import size limit must be positive" }
         val backup = resolveContained(backupsRoot, relativePath)
-        val staged = File(requireNotNull(backup.parentFile), backup.name + ".import.part")
+        val staged = resolveContained(backupsRoot, relativePath + ".import.part")
+        checksumFile(backup)
         check(backup.parentFile?.mkdirs() != false || backup.parentFile?.isDirectory == true)
         var transferred = 0L
         var exceeded = false
@@ -139,6 +141,15 @@ class SaveBackupService(
     private fun resolveContained(root: File, relativePath: String): File {
         require(relativePath.isNotBlank()) { "Save path cannot be blank" }
         require(!File(relativePath).isAbsolute) { "Save path must be relative" }
+        require(relativePath.none { it == '\\' || it == ':' || it == '\u0000' } &&
+            relativePath.split('/').none { it.isBlank() || it == "." || it == ".." }) {
+            "Save path contains unsafe components"
+        }
+        var component = root
+        relativePath.split('/').forEach {
+            component = File(component, it)
+            require(!Files.isSymbolicLink(component.toPath())) { "Save path cannot follow symbolic links" }
+        }
         val target = File(root, relativePath).canonicalFile
         require(target.path.startsWith(root.path + File.separator)) {
             "Save path escapes managed storage"
@@ -147,7 +158,7 @@ class SaveBackupService(
     }
 
     private fun checksumFile(backup: File) =
-        File(requireNotNull(backup.parentFile), backup.name + ".sha256")
+        resolveContained(backupsRoot, backup.relativeTo(backupsRoot).invariantSeparatorsPath + ".sha256")
 
     private fun File.sha256(): String {
         val digest = MessageDigest.getInstance("SHA-256")
@@ -175,3 +186,4 @@ class SaveBackupService(
         }
     }
 }
+
