@@ -10,6 +10,28 @@ import java.nio.file.Files
 
 @RunWith(AndroidJUnit4::class)
 class SaveBackupSymlinkTest {
+    @Test fun gameResolverRejectsLinkedFilesAndGameDirectories() {
+        val app = ApplicationProvider.getApplicationContext<Context>()
+        val root = Files.createTempDirectory(app.cacheDir.toPath(), "save-identity-links-").toFile()
+        try {
+            val other = root.resolve("other/save.dat").apply { parentFile.mkdirs(); writeText("PRIVATE") }
+            val linkedGame = root.resolve("linked-game")
+            Files.createSymbolicLink(linkedGame.toPath(), other.parentFile.toPath())
+            try {
+                assertThrows(IllegalArgumentException::class.java) {
+                    resolveGameSave(root, "linked-game", "linked-game/save.dat")
+                }
+            } finally { Files.deleteIfExists(linkedGame.toPath()) }
+            val linkedFile = root.resolve("game/save.dat").apply { parentFile.mkdirs() }
+            Files.createSymbolicLink(linkedFile.toPath(), other.toPath())
+            try {
+                assertThrows(IllegalArgumentException::class.java) {
+                    resolveGameSave(root, "game", "game/save.dat")
+                }
+            } finally { Files.deleteIfExists(linkedFile.toPath()) }
+            assertEquals("PRIVATE", other.readText())
+        } finally { root.deleteRecursively() }
+    }
     @Test fun backupAndTemporaryLinksCannotTouchOtherGameFiles() {
         val app = ApplicationProvider.getApplicationContext<Context>()
         val root = Files.createTempDirectory(app.cacheDir.toPath(), "save-link-test-").toFile()
@@ -42,4 +64,3 @@ class SaveBackupSymlinkTest {
         } finally { root.deleteRecursively() }
     }
 }
-

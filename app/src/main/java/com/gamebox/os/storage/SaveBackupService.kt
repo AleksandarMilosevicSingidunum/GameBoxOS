@@ -101,28 +101,31 @@ class SaveBackupService(
         check(backup.parentFile?.mkdirs() != false || backup.parentFile?.isDirectory == true)
         var transferred = 0L
         var exceeded = false
-        staged.outputStream().use { output ->
-            val buffer = ByteArray(64 * 1024)
-            while (!exceeded) {
-                val count = input.read(buffer)
-                if (count < 0) break
-                if (count == 0) continue
-                transferred += count
-                if (transferred > maxBytes) {
-                    exceeded = true
-                } else {
-                    output.write(buffer, 0, count)
+        try {
+            staged.outputStream().use { output ->
+                val buffer = ByteArray(64 * 1024)
+                while (!exceeded) {
+                    val count = input.read(buffer)
+                    if (count < 0) break
+                    if (count == 0) continue
+                    transferred += count
+                    if (transferred > maxBytes) {
+                        exceeded = true
+                    } else {
+                        output.write(buffer, 0, count)
+                    }
                 }
             }
-        }
-        if (exceeded) {
+            if (exceeded) return BackupResult.SIZE_LIMIT_EXCEEDED
+            require(transferred > 0L) { "Selected backup is empty; existing backup retained" }
+            val checksum = staged.sha256()
+            promote(staged, backup)
+            checksumFile(backup).writeText(checksum)
+            return BackupResult.SUCCESS
+        } finally {
+            // Provider failures must not leave a partial document in managed storage.
             staged.delete()
-            return BackupResult.SIZE_LIMIT_EXCEEDED
         }
-        val checksum = staged.sha256()
-        promote(staged, backup)
-        checksumFile(backup).writeText(checksum)
-        return BackupResult.SUCCESS
     }
 
     private fun copyBounded(input: InputStream, output: OutputStream, limit: Long): Boolean {
@@ -186,4 +189,3 @@ class SaveBackupService(
         }
     }
 }
-

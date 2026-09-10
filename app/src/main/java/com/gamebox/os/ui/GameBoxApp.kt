@@ -154,7 +154,8 @@ fun GameBoxApp(
     settingsRepository: SettingsRepository,
     catalogDiscoveryRepository: CatalogDiscoveryRepository,
     authorizedRomImporter: AuthorizedRomImporter,
-    managedSaveDiscovery: com.gamebox.os.storage.ManagedSaveDiscovery
+    managedSaveDiscovery: com.gamebox.os.storage.ManagedSaveDiscovery,
+    saveControllerFactory: ((GameId, kotlinx.coroutines.CoroutineScope) -> SaveSafetyController)? = null
 ) {
     val games by repository.observeGames().collectAsState()
     val uiState = rememberGameBoxUiState()
@@ -245,6 +246,7 @@ fun GameBoxApp(
                             saveSafetyController,
                             managedSaveDiscovery,
                             importer = authorizedRomImporter,
+                            saveControllerFactory = saveControllerFactory,
                             compact = compact,
                             onDownloads = { uiState.openDestination(Destination.DOWNLOADS.name) },
                             onBack = uiState::clearSelection
@@ -1917,11 +1919,23 @@ private fun DetailsScreen(
     saveSafetyController: SaveSafetyController,
     managedSaveDiscovery: com.gamebox.os.storage.ManagedSaveDiscovery,
     importer: AuthorizedRomImporter,
+    saveControllerFactory: ((GameId, kotlinx.coroutines.CoroutineScope) -> SaveSafetyController)?,
     compact: Boolean,
     onDownloads: () -> Unit,
     onBack: () -> Unit
 ) {
     val isAuthorizedFixture = game.id.value == "galaxy-patrol"
+    val parentSaveScope = rememberCoroutineScope()
+    val saveScope = remember(game.id, saveControllerFactory) {
+        kotlinx.coroutines.CoroutineScope(parentSaveScope.coroutineContext +
+            kotlinx.coroutines.SupervisorJob(parentSaveScope.coroutineContext[kotlinx.coroutines.Job]))
+    }
+    DisposableEffect(saveScope) {
+        onDispose { saveScope.coroutineContext[kotlinx.coroutines.Job]?.cancel() }
+    }
+    val gameSaveController = remember(game.id, saveControllerFactory) {
+        if (game.id.value == "galaxy-patrol") null else saveControllerFactory?.invoke(game.id, saveScope)
+    }
     val discoveredSaves by managedSaveDiscovery.state.collectAsState()
     val saveSummary = discoveredSaves[game.id.value]
     val saveDescription = when (saveSummary?.presence) {
@@ -1954,6 +1968,10 @@ private fun DetailsScreen(
         ImportedGameReimportCard(game, importer, repository,
             enabled = launchState.status !in setOf(LaunchUiState.Status.PREPARING,
                 LaunchUiState.Status.LAUNCHED, LaunchUiState.Status.SESSION_ERROR))
+        gameSaveController?.let { controller ->
+            PerGameSaveCard(game, controller, enabled = launchState.status !in setOf(
+                LaunchUiState.Status.PREPARING, LaunchUiState.Status.LAUNCHED, LaunchUiState.Status.SESSION_ERROR))
+        }
         Surface(
             modifier = Modifier.fillMaxWidth().height(if (compact) 252.dp else 292.dp),
             shape = RoundedCornerShape(9.dp),

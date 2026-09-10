@@ -49,6 +49,11 @@ interface AppContainer {
     val remoteDownloadController: RemoteDownloadController
     val gameLaunchController: GameLaunchController
     val saveSafetyController: SaveSafetyController
+    fun createSaveSafetyController(gameId: com.gamebox.os.domain.GameId,
+        scope: CoroutineScope): SaveSafetyController {
+        require(gameId.value == "galaxy-patrol") { "Per-game save controls are not configured" }
+        return saveSafetyController
+    }
     val catalogDiscoverySync: TheGamesDbCatalogSync
     val catalogDiscoveryRepository: CatalogDiscoveryRepository
     val authorizedRomImporter: AuthorizedRomImporter
@@ -122,6 +127,12 @@ class DefaultAppContainer(context: Context) : AppContainer {
     override val saveSafetyController: SaveSafetyController = DefaultSaveSafetyController(
         applicationContext, database.saveRecordDao(), gameRepository, applicationScope, settingsRepository
     )
+
+    override fun createSaveSafetyController(gameId: com.gamebox.os.domain.GameId,
+        scope: CoroutineScope): SaveSafetyController = DefaultSaveSafetyController(
+        applicationContext, database.saveRecordDao(), gameRepository,
+        CoroutineScope(scope.coroutineContext + Dispatchers.IO), settingsRepository, gameId
+    )
 }
 
 internal fun isNetworkAvailable(context: Context): Boolean {
@@ -131,3 +142,4 @@ internal fun isNetworkAvailable(context: Context): Boolean {
     return capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) &&
         capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
 }
+
