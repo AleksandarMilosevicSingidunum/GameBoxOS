@@ -36,23 +36,27 @@ class SaveBackupService(
         val staged = resolveContained(backupsRoot, relativePath + ".part")
         checksumFile(backup) // Validate sidecar before changing backup bytes.
         check(backup.parentFile?.mkdirs() != false || backup.parentFile?.isDirectory == true)
-        val copied = source.inputStream().use { input ->
-            staged.outputStream().use { output -> copyBounded(input, output, maxBackupBytes) }
-        }
-        if (!copied) {
+        try {
+            val copied = source.inputStream().use { input ->
+                staged.outputStream().use { output -> copyBounded(input, output, maxBackupBytes) }
+            }
+            if (!copied) return BackupResult.SIZE_LIMIT_EXCEEDED
+            require(staged.length() > 0L) { "Save is empty; existing backup retained" }
+            val checksum = staged.sha256()
+            promote(staged, backup)
+            checksumFile(backup).writeText(checksum)
+            return BackupResult.SUCCESS
+        } finally {
             staged.delete()
-            return BackupResult.SIZE_LIMIT_EXCEEDED
         }
-        val checksum = staged.sha256()
-        promote(staged, backup)
-        checksumFile(backup).writeText(checksum)
-        return BackupResult.SUCCESS
     }
 
     fun restore(relativePath: String): BackupResult {
         val backup = resolveContained(backupsRoot, relativePath)
         val checksum = checksumFile(backup)
         if (!backup.isFile || !checksum.isFile) return BackupResult.BACKUP_MISSING
+        if (backup.length() == 0L) return BackupResult.CHECKSUM_MISMATCH
+        if (backup.length() > maxBackupBytes) return BackupResult.SIZE_LIMIT_EXCEEDED
         val expected = checksum.readText().trim()
         if (!Regex("[0-9a-fA-F]{64}").matches(expected)) {
             return BackupResult.CHECKSUM_MISMATCH
@@ -64,21 +68,28 @@ class SaveBackupService(
         val destination = resolveContained(savesRoot, relativePath)
         val staged = resolveContained(savesRoot, relativePath + ".restore.part")
         check(destination.parentFile?.mkdirs() != false || destination.parentFile?.isDirectory == true)
-        backup.inputStream().use { input ->
-            staged.outputStream().use { output -> input.copyTo(output) }
-        }
-        if (staged.inputStream().use { verifier.verify(it, expected) } != VerificationResult.Verified) {
+        try {
+            val copied = backup.inputStream().use { input ->
+                staged.outputStream().use { output -> copyBounded(input, output, maxBackupBytes) }
+            }
+            if (!copied) return BackupResult.SIZE_LIMIT_EXCEEDED
+            if (staged.length() == 0L ||
+                staged.inputStream().use { verifier.verify(it, expected) } != VerificationResult.Verified) {
+                return BackupResult.CHECKSUM_MISMATCH
+            }
+            promote(staged, destination)
+            return BackupResult.SUCCESS
+        } finally {
             staged.delete()
-            return BackupResult.CHECKSUM_MISMATCH
         }
-        promote(staged, destination)
-        return BackupResult.SUCCESS
     }
 
     fun exportBackup(relativePath: String, output: OutputStream): BackupResult {
         val backup = resolveContained(backupsRoot, relativePath)
         val checksum = checksumFile(backup)
         if (!backup.isFile || !checksum.isFile) return BackupResult.BACKUP_MISSING
+        if (backup.length() == 0L) return BackupResult.CHECKSUM_MISMATCH
+        if (backup.length() > maxBackupBytes) return BackupResult.SIZE_LIMIT_EXCEEDED
         val expected = checksum.readText().trim()
         if (!Regex("[0-9a-fA-F]{64}").matches(expected)) return BackupResult.CHECKSUM_MISMATCH
         if (backup.inputStream().use { verifier.verify(it, expected) } != VerificationResult.Verified) {
@@ -189,3 +200,4 @@ class SaveBackupService(
         }
     }
 }
+

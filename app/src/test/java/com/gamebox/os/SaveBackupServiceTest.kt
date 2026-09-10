@@ -106,6 +106,43 @@ class SaveBackupServiceTest {
         assertEquals(false, backups.resolve("retro-test/large.dat.sha256").exists())
     }
 
+    @Test fun emptySaveCannotReplaceLastGoodBackup() {
+        val saves = temporaryFolder.newFolder("saves")
+        val backups = temporaryFolder.newFolder("backups")
+        val save = saves.resolve("game/save.dat").apply { parentFile.mkdirs(); writeText("GOOD") }
+        val service = SaveBackupService(saves, backups)
+        assertEquals(BackupResult.SUCCESS, service.createBackup("game/save.dat"))
+        val digest = backups.resolve("game/save.dat.sha256").readText()
+        save.writeText("")
+        assertThrows(IllegalArgumentException::class.java) { service.createBackup("game/save.dat") }
+        assertEquals("GOOD", backups.resolve("game/save.dat").readText())
+        assertEquals(digest, backups.resolve("game/save.dat.sha256").readText())
+        assertEquals(false, backups.resolve("game/save.dat.part").exists())
+        assertEquals(BackupResult.SUCCESS, service.restore("game/save.dat"))
+        assertEquals("GOOD", save.readText())
+    }
+
+    @Test fun checksumValidEmptyOrOversizedBackupCannotReplaceSaveOrExport() {
+        val saves = temporaryFolder.newFolder("saves")
+        val backups = temporaryFolder.newFolder("backups")
+        val save = saves.resolve("game/save.dat").apply { parentFile.mkdirs(); writeText("CURRENT") }
+        val backup = backups.resolve("game/save.dat").apply { parentFile.mkdirs() }
+        val service = SaveBackupService(saves, backups, maxBackupBytes = 3)
+        for (bytes in listOf(byteArrayOf(), ByteArray(4) { 7 })) {
+            backup.writeBytes(bytes)
+            backups.resolve("game/save.dat.sha256").writeText(
+                java.security.MessageDigest.getInstance("SHA-256").digest(bytes)
+                    .joinToString("") { "%02x".format(it) })
+            val expected = if (bytes.isEmpty()) BackupResult.CHECKSUM_MISMATCH else BackupResult.SIZE_LIMIT_EXCEEDED
+            assertEquals(expected, service.restore("game/save.dat"))
+            val output = ByteArrayOutputStream()
+            assertEquals(expected, service.exportBackup("game/save.dat", output))
+            assertEquals(0, output.size())
+            assertEquals("CURRENT", save.readText())
+            assertEquals(false, saves.resolve("game/save.dat.restore.part").exists())
+        }
+    }
+
     @Test fun missingAndTraversalInputsFailClosed() {
         val service = SaveBackupService(
             temporaryFolder.newFolder("saves"),
@@ -149,3 +186,4 @@ class SaveBackupServiceTest {
         assertEquals("ORIGINAL", save.readText())
     }
 }
+
