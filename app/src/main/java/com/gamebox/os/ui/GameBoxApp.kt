@@ -2551,7 +2551,7 @@ private fun DownloadMetricCard(icon: ImageVector, value: String, label: String, 
 }
 
 
-private data class AppShortcut(
+internal data class AppShortcut(
     val title: String,
     val description: String,
     val packageName: String
@@ -2737,7 +2737,7 @@ private fun BlueprintAppHubScreen(
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp), contentPadding = PaddingValues(3.dp)) {
                     items(shortcuts, key = { it.packageName }) { shortcut ->
                         BlueprintShortcutTile(shortcut, shortcut.packageName in installedPackages,
-                            Modifier.width(128.dp).height(178.dp)) { onLaunch(shortcut) }
+                            Modifier.width(128.dp).height(128.dp + 48.dp * (androidx.compose.ui.platform.LocalDensity.current.fontScale - 1f).coerceAtLeast(0f))) { onLaunch(shortcut) }
                     }
                 }
                 Text("Ready on this device", fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
@@ -2797,7 +2797,7 @@ private fun BlueprintAppHubScreen(
 }
 
 @Composable
-private fun BlueprintShortcutTile(
+internal fun BlueprintShortcutTile(
     shortcut: AppShortcut,
     installed: Boolean,
     modifier: Modifier,
