@@ -49,6 +49,14 @@ class PerGameSaveControllerTest {
             withTimeout(5_000) { first.observeState().first { it.operationMessage == "Backup completed" } }
             withTimeout(5_000) { first.observeBusy().first { !it } }
             val firstFile = root.resolve("saves/first-game/save.dat")
+            val recordBeforeEmptyBackup = database.saveRecordDao().observe("first-game").first()
+            firstFile.writeText("")
+            first.backupSave()
+            withTimeout(5_000) { first.observeState().first { it.operationMessage == "Backup failed safely" } }
+            withTimeout(5_000) { first.observeBusy().first { !it } }
+            assertEquals(recordBeforeEmptyBackup, database.saveRecordDao().observe("first-game").first())
+            assertEquals("FIRST synthetic save", root.resolve("save-backups/first-game/save.dat").readText())
+            assertFalse(root.resolve("save-backups/first-game/save.dat.part").exists())
             firstFile.writeText("CHANGED")
             first.restoreSave()
             withTimeout(5_000) { first.observeState().first { it.operationMessage == "Restore completed" } }
@@ -129,3 +137,4 @@ class PerGameSaveControllerTest {
         }
     }
 }
+
