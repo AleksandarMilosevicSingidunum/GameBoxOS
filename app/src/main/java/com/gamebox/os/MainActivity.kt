@@ -41,6 +41,11 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    override fun onPause() {
+        container.gameLaunchController.onHostPaused()
+        super.onPause()
+    }
+
     override fun onResume() {
         super.onResume()
         container.gameLaunchController.onHostResumed()
