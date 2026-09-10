@@ -578,7 +578,7 @@ private fun HomeGameSection(
 }
 
 @Composable
-private fun HomeQuickLaunchRow(openPc: () -> Unit, compact: Boolean = true) {
+internal fun HomeQuickLaunchRow(openPc: () -> Unit, compact: Boolean = true) {
     Text("Quick launch", fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
     Spacer(Modifier.height(11.dp))
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -591,11 +591,11 @@ private fun HomeQuickLaunchRow(openPc: () -> Unit, compact: Boolean = true) {
             Surface(
                 color = accent, shape = RoundedCornerShape(7.dp),
                 border = BorderStroke(1.dp, Color.White.copy(alpha = .12f)),
-                modifier = Modifier.weight(1f).height(if (compact) 140.dp else 100.dp).blueprintClick(openPc)
+                modifier = Modifier.weight(1f).heightIn(min = if (compact) 140.dp else 100.dp).blueprintClick(openPc)
                     .semantics { contentDescription = "Quick launch $label; opens PC Hub" }
             ) {
                 Column(
-                    Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = .40f)))).padding(8.dp),
+                    Modifier.fillMaxWidth().background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = .40f)))).padding(8.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center,
                 ) {
