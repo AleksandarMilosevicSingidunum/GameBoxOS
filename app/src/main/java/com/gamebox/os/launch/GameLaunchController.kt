@@ -394,6 +394,7 @@ interface GameLaunchController {
     fun observeState(): StateFlow<LaunchUiState>
     fun launch(game: Game)
     fun onHostResumed()
+    fun onHostPaused() {}
     fun cancelPreparation() {}
 }
 
@@ -408,6 +409,7 @@ class DefaultGameLaunchController(
     private val state = MutableStateFlow(LaunchUiState())
     private val preparing = AtomicBoolean(false)
     private val recovering = AtomicBoolean(false)
+    private val deferredHostReturn = DeferredHostReturn()
     private var waitingForExternalReturn = false
     @Volatile private var activePreparation: LaunchPreparation? = null
 
@@ -436,6 +438,7 @@ class DefaultGameLaunchController(
             } finally {
                 activePreparation = null
                 preparing.set(false)
+                if (deferredHostReturn.take()) onHostResumed()
             }
         }
     }
@@ -458,6 +461,7 @@ class DefaultGameLaunchController(
         var ticket: String? = null
         preparation.beforeDispatch {
             ticket = runBlocking { sessionJournal?.begin(game.id.value) }
+            deferredHostReturn.arm()
         }
         val result = withContext(Dispatchers.IO) { gateway.launch(capability, preparation) }
         if (result == GatewayResult.LAUNCHED) {
@@ -492,7 +496,15 @@ class DefaultGameLaunchController(
         }
     }
 
+    override fun onHostPaused() {
+        deferredHostReturn.onPaused()
+    }
+
     override fun onHostResumed() {
+        if (preparing.get()) {
+            deferredHostReturn.onResumed()
+            return
+        }
         if (sessionJournal != null) {
             if (preparing.get() || !recovering.compareAndSet(false, true)) return
             scope.launch {
