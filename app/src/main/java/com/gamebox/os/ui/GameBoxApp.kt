@@ -551,7 +551,7 @@ BlueprintPanel(Modifier.fillMaxWidth()) {
                         }
                     }
                 }
-                Column(Modifier.weight(1f)) { HomeQuickLaunchRow(openPc) }
+                Column(Modifier.weight(1f)) { HomeQuickLaunchRow(openPc, compact = false) }
             }
         }
         HomeGameSection(if (history.isEmpty()) "Explore games" else "Recently played",
@@ -578,7 +578,7 @@ private fun HomeGameSection(
 }
 
 @Composable
-private fun HomeQuickLaunchRow(openPc: () -> Unit) {
+private fun HomeQuickLaunchRow(openPc: () -> Unit, compact: Boolean = true) {
     Text("Quick launch", fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
     Spacer(Modifier.height(11.dp))
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -591,7 +591,7 @@ private fun HomeQuickLaunchRow(openPc: () -> Unit) {
             Surface(
                 color = accent, shape = RoundedCornerShape(7.dp),
                 border = BorderStroke(1.dp, Color.White.copy(alpha = .12f)),
-                modifier = Modifier.weight(1f).height(140.dp).blueprintClick(openPc)
+                modifier = Modifier.weight(1f).height(if (compact) 140.dp else 100.dp).blueprintClick(openPc)
                     .semantics { contentDescription = "Quick launch $label; opens PC Hub" }
             ) {
                 Column(
@@ -600,7 +600,7 @@ private fun HomeQuickLaunchRow(openPc: () -> Unit) {
                     verticalArrangement = Arrangement.Center,
                 ) {
                     AppBrandMark(label, Modifier.size(32.dp))
-                    Spacer(Modifier.height(18.dp))
+                    Spacer(Modifier.height(if (compact) 18.dp else 8.dp))
                     Text(label, maxLines = 1, overflow = TextOverflow.Ellipsis, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
                     Text("PC Hub", color = Color.White.copy(alpha = .7f), fontSize = 9.sp)
                 }
@@ -627,8 +627,8 @@ private fun HomeStatusItem(icon: ImageVector, label: String, value: String, prog
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(9.dp)) {
                 Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
                 Column {
-                    Text(label, fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Text(value, fontWeight = FontWeight.SemiBold, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(label, fontSize = 10.sp, lineHeight = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(value, fontWeight = FontWeight.SemiBold, fontSize = 11.sp, lineHeight = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
             }
             if (progress != null) {
