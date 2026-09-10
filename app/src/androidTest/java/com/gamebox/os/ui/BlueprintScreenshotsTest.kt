@@ -7,6 +7,9 @@ import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.gamebox.os.MainActivity
+import com.gamebox.os.GameBoxApplication
+import com.gamebox.os.domain.InstallState
+import kotlinx.coroutines.runBlocking
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -37,6 +40,32 @@ class BlueprintScreenshotsTest {
             rule.waitForIdle()
             tab.assertIsSelected()
             capture("${index + 3}-${title.lowercase()}")
+        }
+        capturePopulatedLayout()
+    }
+
+    /** Test-only installed flags exercise layout, not installation or gameplay. */
+    private fun capturePopulatedLayout() {
+        val app = InstrumentationRegistry.getInstrumentation().targetContext.applicationContext as GameBoxApplication
+        val repository = app.container.gameRepository
+        val originals = repository.observeGames().value.take(6)
+        check(originals.isNotEmpty()) { "Populated capture requires catalog records" }
+        try {
+            runBlocking {
+                originals.forEach { repository.setInstallStateAndAwait(it.id, InstallState.INSTALLED) }
+            }
+            listOf("Home", "Library").forEach { title ->
+                val tab = rule.onNodeWithContentDescription("$title tab")
+                runCatching { tab.performScrollTo() }
+                tab.performClick()
+                rule.waitForIdle()
+                tab.assertIsSelected()
+                capture("populated-layout-${title.lowercase()}")
+            }
+        } finally {
+            runBlocking {
+                originals.forEach { repository.setInstallStateAndAwait(it.id, it.state) }
+            }
         }
     }
 

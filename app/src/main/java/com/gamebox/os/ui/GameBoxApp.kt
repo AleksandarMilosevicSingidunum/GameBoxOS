@@ -116,7 +116,7 @@ import com.gamebox.os.diagnostics.buildDiagnosticsRecoveryBundle
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
-private enum class Destination(val title: String) {
+internal enum class Destination(val title: String) {
     HOME("Home"), LIBRARY("Library"), STORE("Store"), DOWNLOADS("Downloads"),
     MEDIA("Media"), PC("PC"), SETTINGS("Settings")
 }
@@ -401,7 +401,7 @@ private fun GameBoxLogo(selected: Destination) {
 }
 
 @Composable
-private fun NavButton(item: Destination, selected: Destination, onSelect: (Destination) -> Unit) {
+internal fun NavButton(item: Destination, selected: Destination, onSelect: (Destination) -> Unit) {
     val interactionSource = remember { MutableInteractionSource() }
     val hovered by interactionSource.collectIsHoveredAsState()
     val pressed by interactionSource.collectIsPressedAsState()
@@ -415,10 +415,13 @@ private fun NavButton(item: Destination, selected: Destination, onSelect: (Desti
         if (emphasized) MaterialTheme.colorScheme.primary else Color.Transparent,
         label = "nav-border",
     )
+    val fill by animateColorAsState(
+        if (emphasized) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f) else Color.Transparent,
+        label = "nav-fill",
+    )
     Surface(
-        color = if (emphasized) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.50f)
-            else Color.Transparent,
-        shape = RoundedCornerShape(8.dp),
+        color = fill,
+        shape = RoundedCornerShape(50),
         border = BorderStroke(1.dp, if (emphasized) blueprintFocusBrush() else Brush.linearGradient(listOf(border, border))),
         modifier = Modifier
             .graphicsLayer { scaleX = scale; scaleY = scale }
@@ -431,13 +434,17 @@ private fun NavButton(item: Destination, selected: Destination, onSelect: (Desti
                 this.selected = item == selected
             }
     ) {
-        Row(
-            Modifier.padding(horizontal = 10.dp, vertical = 10.dp),
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(item.title, maxLines = 1, fontSize = 12.sp, fontWeight = if (item == selected) FontWeight.Bold else FontWeight.Medium,
-                color = if (emphasized) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant)
+        Box(contentAlignment = Alignment.Center) {
+            Text(
+                item.title, modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                maxLines = 1, fontSize = 12.sp,
+                fontWeight = if (item == selected) FontWeight.Bold else FontWeight.Medium,
+                color = if (emphasized) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            if (item == selected) {
+                Box(Modifier.align(Alignment.BottomCenter).padding(bottom = 1.dp)
+                    .width(26.dp).height(3.dp).clip(RoundedCornerShape(50)).background(blueprintFocusBrush()))
+            }
         }
     }
 }
@@ -551,7 +558,7 @@ BlueprintPanel(Modifier.fillMaxWidth()) {
                         }
                     }
                 }
-                Column(Modifier.weight(1f)) { HomeQuickLaunchRow(openPc) }
+                Column(Modifier.weight(1f)) { HomeQuickLaunchRow(openPc, compact = false) }
             }
         }
         HomeGameSection(if (history.isEmpty()) "Explore games" else "Recently played",
@@ -578,7 +585,7 @@ private fun HomeGameSection(
 }
 
 @Composable
-private fun HomeQuickLaunchRow(openPc: () -> Unit) {
+internal fun HomeQuickLaunchRow(openPc: () -> Unit, compact: Boolean = true) {
     Text("Quick launch", fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
     Spacer(Modifier.height(11.dp))
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -591,16 +598,16 @@ private fun HomeQuickLaunchRow(openPc: () -> Unit) {
             Surface(
                 color = accent, shape = RoundedCornerShape(7.dp),
                 border = BorderStroke(1.dp, Color.White.copy(alpha = .12f)),
-                modifier = Modifier.weight(1f).height(140.dp).blueprintClick(openPc)
+                modifier = Modifier.weight(1f).heightIn(min = if (compact) 140.dp else 100.dp).blueprintClick(openPc)
                     .semantics { contentDescription = "Quick launch $label; opens PC Hub" }
             ) {
                 Column(
-                    Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = .40f)))).padding(8.dp),
+                    Modifier.fillMaxWidth().background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = .40f)))).padding(8.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center,
                 ) {
                     AppBrandMark(label, Modifier.size(32.dp))
-                    Spacer(Modifier.height(18.dp))
+                    Spacer(Modifier.height(if (compact) 18.dp else 8.dp))
                     Text(label, maxLines = 1, overflow = TextOverflow.Ellipsis, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
                     Text("PC Hub", color = Color.White.copy(alpha = .7f), fontSize = 9.sp)
                 }
@@ -627,8 +634,8 @@ private fun HomeStatusItem(icon: ImageVector, label: String, value: String, prog
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(9.dp)) {
                 Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
                 Column {
-                    Text(label, fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Text(value, fontWeight = FontWeight.SemiBold, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(label, fontSize = 10.sp, lineHeight = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(value, fontWeight = FontWeight.SemiBold, fontSize = 11.sp, lineHeight = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
             }
             if (progress != null) {
@@ -2544,7 +2551,7 @@ private fun DownloadMetricCard(icon: ImageVector, value: String, label: String, 
 }
 
 
-private data class AppShortcut(
+internal data class AppShortcut(
     val title: String,
     val description: String,
     val packageName: String
@@ -2730,7 +2737,7 @@ private fun BlueprintAppHubScreen(
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp), contentPadding = PaddingValues(3.dp)) {
                     items(shortcuts, key = { it.packageName }) { shortcut ->
                         BlueprintShortcutTile(shortcut, shortcut.packageName in installedPackages,
-                            Modifier.width(128.dp).height(178.dp)) { onLaunch(shortcut) }
+                            Modifier.width(128.dp).height(128.dp + 48.dp * (androidx.compose.ui.platform.LocalDensity.current.fontScale - 1f).coerceAtLeast(0f))) { onLaunch(shortcut) }
                     }
                 }
                 Text("Ready on this device", fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
@@ -2790,7 +2797,7 @@ private fun BlueprintAppHubScreen(
 }
 
 @Composable
-private fun BlueprintShortcutTile(
+internal fun BlueprintShortcutTile(
     shortcut: AppShortcut,
     installed: Boolean,
     modifier: Modifier,

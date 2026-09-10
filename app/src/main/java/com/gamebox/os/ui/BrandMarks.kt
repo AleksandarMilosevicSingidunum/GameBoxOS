@@ -278,7 +278,7 @@ internal fun AppBrandMark(title: String, modifier: Modifier = Modifier) {
                 drawLine(Color.White, Offset(size.width * 0.50f, size.height), Offset(size.width * 0.50f, size.height * 0.73f), size.minDimension * 0.07f)
                 drawLine(Color.White, Offset(size.width * 0.28f, size.height * 0.96f), Offset(size.width * 0.72f, size.height * 0.96f), size.minDimension * 0.07f)
             }
-            "Steam Library" -> Canvas(Modifier.fillMaxSize()) {
+            "Steam", "Steam Library" -> Canvas(Modifier.fillMaxSize()) {
                 drawCircle(Color.White, size.minDimension * 0.47f, style = Stroke(size.minDimension * 0.07f))
                 drawCircle(Color.White, size.minDimension * 0.13f, Offset(size.width * 0.67f, size.height * 0.33f), style = Stroke(size.minDimension * 0.07f))
                 drawCircle(Color.White, size.minDimension * 0.11f, Offset(size.width * 0.33f, size.height * 0.67f), style = Stroke(size.minDimension * 0.07f))
