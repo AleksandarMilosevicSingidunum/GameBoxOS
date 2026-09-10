@@ -79,6 +79,42 @@ class LaunchSessionControllerTest {
         }
     }
 
+    @Test fun confirmationDoesNotRecoverWithoutACompletedReturn(): Unit = runBlocking {
+        for (leftAgain in listOf(false, true)) {
+            val repository = FakeGameRepository()
+            val game = repository.observeGames().value.first().copy(state = InstallState.INSTALLED)
+            val started = CompletableDeferred<Unit>()
+            val release = CompletableDeferred<Unit>()
+            val journal = Journal().apply {
+                confirmationStarted = started
+                allowConfirmation = release
+            }
+            val gateway = object : PackageGateway {
+                override fun launch(capability: EmulatorCapability, preparation: LaunchPreparation) =
+                    preparation.dispatch { GatewayResult.LAUNCHED }
+            }
+            val controller = DefaultGameLaunchController(
+                EmulatorCapabilityRegistry(listOf(capability.copy(gameId = game.id))), gateway, repository,
+                scope = this, sessionJournal = journal)
+            try {
+                controller.launch(game)
+                withTimeout(5_000) { started.await() }
+                if (leftAgain) controller.onHostPaused()
+                controller.onHostResumed()
+                if (leftAgain) controller.onHostPaused()
+                release.complete(Unit)
+                withTimeout(5_000) { controller.observeState().first { it.status == LaunchUiState.Status.LAUNCHED } }
+                assertEquals(game.id.value, journal.pending)
+                assertEquals(listOf("begin", "confirm"), journal.events)
+                controller.onHostResumed()
+                withTimeout(5_000) { controller.observeState().first { it.status == LaunchUiState.Status.RETURNED } }
+                assertNull(journal.pending)
+            } finally {
+                release.complete(Unit)
+            }
+        }
+    }
+
     @Test fun aNewControllerRecoversPersistedDispatchWithoutLaunchingAgain(): Unit = runBlocking {
         val repository = FakeGameRepository()
         val game = repository.observeGames().value.first().copy(state = InstallState.INSTALLED)
