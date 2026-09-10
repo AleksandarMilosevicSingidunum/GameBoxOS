@@ -116,7 +116,7 @@ import com.gamebox.os.diagnostics.buildDiagnosticsRecoveryBundle
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
-private enum class Destination(val title: String) {
+internal enum class Destination(val title: String) {
     HOME("Home"), LIBRARY("Library"), STORE("Store"), DOWNLOADS("Downloads"),
     MEDIA("Media"), PC("PC"), SETTINGS("Settings")
 }
@@ -401,7 +401,7 @@ private fun GameBoxLogo(selected: Destination) {
 }
 
 @Composable
-private fun NavButton(item: Destination, selected: Destination, onSelect: (Destination) -> Unit) {
+internal fun NavButton(item: Destination, selected: Destination, onSelect: (Destination) -> Unit) {
     val interactionSource = remember { MutableInteractionSource() }
     val hovered by interactionSource.collectIsHoveredAsState()
     val pressed by interactionSource.collectIsPressedAsState()
@@ -415,10 +415,13 @@ private fun NavButton(item: Destination, selected: Destination, onSelect: (Desti
         if (emphasized) MaterialTheme.colorScheme.primary else Color.Transparent,
         label = "nav-border",
     )
+    val fill by animateColorAsState(
+        if (emphasized) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f) else Color.Transparent,
+        label = "nav-fill",
+    )
     Surface(
-        color = if (emphasized) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.50f)
-            else Color.Transparent,
-        shape = RoundedCornerShape(8.dp),
+        color = fill,
+        shape = RoundedCornerShape(50),
         border = BorderStroke(1.dp, if (emphasized) blueprintFocusBrush() else Brush.linearGradient(listOf(border, border))),
         modifier = Modifier
             .graphicsLayer { scaleX = scale; scaleY = scale }
@@ -431,13 +434,17 @@ private fun NavButton(item: Destination, selected: Destination, onSelect: (Desti
                 this.selected = item == selected
             }
     ) {
-        Row(
-            Modifier.padding(horizontal = 10.dp, vertical = 10.dp),
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(item.title, maxLines = 1, fontSize = 12.sp, fontWeight = if (item == selected) FontWeight.Bold else FontWeight.Medium,
-                color = if (emphasized) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant)
+        Box(contentAlignment = Alignment.Center) {
+            Text(
+                item.title, modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                maxLines = 1, fontSize = 12.sp,
+                fontWeight = if (item == selected) FontWeight.Bold else FontWeight.Medium,
+                color = if (emphasized) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            if (item == selected) {
+                Box(Modifier.align(Alignment.BottomCenter).padding(bottom = 1.dp)
+                    .width(26.dp).height(3.dp).clip(RoundedCornerShape(50)).background(blueprintFocusBrush()))
+            }
         }
     }
 }
