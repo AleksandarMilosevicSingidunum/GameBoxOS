@@ -49,6 +49,7 @@ internal class ControllerActionRegistry {
 }
 
 internal val LocalControllerActions = staticCompositionLocalOf<ControllerActionRegistry?> { null }
+internal val LocalGameBoxUiState = staticCompositionLocalOf<GameBoxUiState?> { null }
 internal val LocalReducedMotion = staticCompositionLocalOf { false }
 
 /** Keep the dashboard's proportions on large DeX displays without shrinking phone text. */
@@ -57,6 +58,7 @@ internal fun BlueprintViewport(
     safeAreaPercent: Float = 0f,
     reducedMotion: Boolean = false,
     controllerActions: ControllerActionRegistry? = null,
+    uiState: GameBoxUiState? = null,
     content: @Composable () -> Unit,
 ) {
     val density = LocalDensity.current
@@ -78,6 +80,7 @@ internal fun BlueprintViewport(
                 LocalDensity provides Density(density.density * scale, density.fontScale),
                 LocalReducedMotion provides reducedMotion,
                 LocalControllerActions provides controllerActions,
+                LocalGameBoxUiState provides uiState,
             ) {
                 content()
             }

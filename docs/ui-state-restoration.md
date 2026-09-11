@@ -10,7 +10,9 @@ The restored state currently includes:
 - last focused game per destination;
 - Library query, platform, genre and Favorites mode;
 - Store query, console, platform, genre, region, language and Favorites mode;
-- selected Store discovery result, when that result is still present in the cache.
+- selected Store discovery result, when that result is still present in the cache;
+- primary vertical scroll positions for Home, Library, Store, Downloads, Media,
+  PC Hub, Settings, authorized-game details and discovery details.
 
 Invalid focused IDs are discarded against the current game collection. Empty
 filter values are removed from the saved payload, and the decoder accepts payloads
