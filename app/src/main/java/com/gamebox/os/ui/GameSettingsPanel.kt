@@ -9,6 +9,9 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
@@ -18,18 +21,32 @@ import com.gamebox.os.domain.GraphicsProfiles
 import com.gamebox.os.launch.EmulatorCapabilityRegistry
 import com.gamebox.os.launch.EmulatorReadinessPolicy
 import com.gamebox.os.launch.EmulatorReadinessState
+import com.gamebox.os.settings.GameBoxSettings
+import com.gamebox.os.settings.SettingsRepository
+import kotlinx.coroutines.launch
 
 @Composable
-fun GameSettingsPanel(game: Game, repository: GameRepository, modifier: Modifier = Modifier) {
+fun GameSettingsPanel(
+    game: Game,
+    repository: GameRepository,
+    settingsRepository: SettingsRepository,
+    modifier: Modifier = Modifier,
+) {
     val registry = EmulatorCapabilityRegistry()
     val options = androidx.compose.runtime.remember(game.platform) { registry.optionsFor(game) }
     val packageManager = LocalContext.current.packageManager
+    val settings by settingsRepository.settings.collectAsState(initial = GameBoxSettings())
+    val scope = rememberCoroutineScope()
+    val platformDefault = settings.platformEmulatorDefaults[
+        game.platform.lowercase().filter(Char::isLetterOrDigit)
+    ]?.takeIf { it in options }
+    val effectivePackage = game.emulatorPackage ?: platformDefault
     val installedPackages = options
         .filter { packageManager.getLaunchIntentForPackage(it) != null }
         .toSet()
     val readiness = EmulatorReadinessPolicy.evaluate(
         approvedOptions = options,
-        selectedPackage = game.emulatorPackage,
+        selectedPackage = effectivePackage,
         installedPackages = installedPackages,
         displayName = registry::displayName,
     )
@@ -37,7 +54,30 @@ fun GameSettingsPanel(game: Game, repository: GameRepository, modifier: Modifier
     Column(modifier.fillMaxWidth().padding(16.dp)) {
         Text("Game settings")
         Text("Changes apply the next time this game launches.")
-        Text("Emulator")
+        Text("Platform default · " + game.platform)
+        Text(
+            platformDefault?.let { registry.optionDisplayName(it) } ?: "Automatic recommended option",
+        )
+        Row(Modifier.horizontalScroll(rememberScrollState())) {
+            FilterChip(
+                selected = platformDefault == null,
+                onClick = { scope.launch { settingsRepository.setPlatformEmulatorDefault(game.platform, null) } },
+                label = { Text("Automatic") },
+            )
+            options.forEach { pkg ->
+                val installed = pkg in installedPackages
+                FilterChip(
+                    selected = platformDefault == pkg,
+                    onClick = { scope.launch { settingsRepository.setPlatformEmulatorDefault(game.platform, pkg) } },
+                    enabled = installed,
+                    label = {
+                        Text(registry.optionDisplayName(pkg) + if (installed) " · Installed" else " · Not installed")
+                    },
+                )
+            }
+        }
+        Text("This game")
+        Text(if (game.emulatorPackage == null) "Uses platform default" else "Overrides platform default")
         Row(Modifier.horizontalScroll(rememberScrollState())) {
             FilterChip(
                 selected = game.emulatorPackage == null,
