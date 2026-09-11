@@ -19,6 +19,44 @@ class EmulatorSettingsTest {
     }
 
     @Test
+    fun configuredPlatformDefaultOverridesBuiltInOrder() {
+        val ps1 = Game(
+            GameId("ps1-demo"), "PS1 Demo", "PS1", 2020, "Action", 1,
+            InstallState.INSTALLED, expectedSha256 = "abc"
+        )
+        assertEquals(
+            "com.retroarch.aarch64",
+            registry.forGame(ps1, "com.retroarch.aarch64")?.packageName
+        )
+    }
+
+    @Test
+    fun perGameOverrideWinsOverConfiguredPlatformDefault() {
+        val ps1 = Game(
+            GameId("ps1-override"), "PS1 Override", "PS1", 2020, "Action", 1,
+            InstallState.INSTALLED,
+            emulatorPackage = "com.github.stenzek.duckstation",
+            expectedSha256 = "abc"
+        )
+        assertEquals(
+            "com.github.stenzek.duckstation",
+            registry.forGame(ps1, "com.retroarch.aarch64")?.packageName
+        )
+    }
+
+    @Test
+    fun unsupportedConfiguredDefaultFallsBackToApprovedOption() {
+        val psp = Game(
+            GameId("psp-fallback"), "PSP Fallback", "PSP", 2020, "Action", 1,
+            InstallState.INSTALLED, expectedSha256 = "abc"
+        )
+        assertEquals(
+            "org.ppsspp.ppsspp",
+            registry.forGame(psp, "com.example.untrusted")?.packageName
+        )
+    }
+
+    @Test
     fun unknownOverrideFallsBackToPlatformDefault() {
         val retro = Game(GameId("retro-demo"), "Retro Demo", "Retro", 2020, "Action", 1, InstallState.INSTALLED,
             emulatorPackage = "com.example.untrusted", expectedSha256 = "abc")

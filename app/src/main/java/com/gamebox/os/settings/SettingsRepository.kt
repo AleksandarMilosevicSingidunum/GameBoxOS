@@ -34,6 +34,7 @@ data class GameBoxSettings(
     val cloudSaveRegion: String = "us-east-1",
     val companionEnabled: Boolean = false,
     val companionPort: Int = 49_500,
+    val platformEmulatorDefaults: Map<String, String> = emptyMap(),
 )
 
 class SettingsRepository(private val context: Context) {
@@ -54,6 +55,7 @@ class SettingsRepository(private val context: Context) {
             cloudSaveRegion = preferences[CLOUD_SAVE_REGION] ?: "us-east-1",
             companionEnabled = preferences[COMPANION_ENABLED] ?: false,
             companionPort = (preferences[COMPANION_PORT] ?: 49_500).coerceIn(10_240, 65_535),
+            platformEmulatorDefaults = decodePlatformDefaults(preferences[PLATFORM_EMULATOR_DEFAULTS]),
         )
     }
 
@@ -140,6 +142,21 @@ class SettingsRepository(private val context: Context) {
         }
     }
 
+    suspend fun platformEmulatorDefault(platform: String): String? =
+        settings.first().platformEmulatorDefaults[normalizePlatformKey(platform)]
+
+    suspend fun setPlatformEmulatorDefault(platform: String, packageName: String?) {
+        val key = normalizePlatformKey(platform)
+        require(key.isNotEmpty()) { "Platform is required" }
+        context.gameBoxDataStore.edit { preferences ->
+            val defaults = decodePlatformDefaults(preferences[PLATFORM_EMULATOR_DEFAULTS]).toMutableMap()
+            if (packageName.isNullOrBlank()) defaults.remove(key)
+            else defaults[key] = packageName.trim()
+            if (defaults.isEmpty()) preferences.remove(PLATFORM_EMULATOR_DEFAULTS)
+            else preferences[PLATFORM_EMULATOR_DEFAULTS] = encodePlatformDefaults(defaults)
+        }
+    }
+
     suspend fun setExternalLibraryUri(value: String) {
         context.gameBoxDataStore.edit { preferences ->
             if (value.isBlank()) preferences.remove(EXTERNAL_LIBRARY_URI)
@@ -197,6 +214,7 @@ class SettingsRepository(private val context: Context) {
         val CLOUD_SAVE_REGION = stringPreferencesKey("cloud_save_region")
         val COMPANION_ENABLED = booleanPreferencesKey("companion_enabled")
         val COMPANION_PORT = androidx.datastore.preferences.core.intPreferencesKey("companion_port")
+        val PLATFORM_EMULATOR_DEFAULTS = stringPreferencesKey("platform_emulator_defaults")
         const val THEGAMESDB_API_KEY = "thegamesdb_api_key"
         const val CLOUD_SAVE_USERNAME = "cloud_save_username"
         const val CLOUD_SAVE_PASSWORD = "cloud_save_password"
@@ -205,3 +223,22 @@ class SettingsRepository(private val context: Context) {
         const val COMPANION_PAIRING_SECRET = "companion_pairing_secret"
     }
 }
+
+
+internal fun normalizePlatformKey(platform: String): String =
+    platform.lowercase().filter(Char::isLetterOrDigit)
+
+internal fun encodePlatformDefaults(defaults: Map<String, String>): String =
+    defaults.entries.sortedBy { it.key }.joinToString("\n") { (platform, packageName) ->
+        platform + "\t" + packageName
+    }
+
+internal fun decodePlatformDefaults(value: String?): Map<String, String> =
+    value.orEmpty().lineSequence().mapNotNull { line ->
+        val separator = line.indexOf('\t')
+        if (separator <= 0 || separator == line.lastIndex) null
+        else line.substring(0, separator) to line.substring(separator + 1)
+    }.filter { (platform, packageName) ->
+        platform.all(Char::isLetterOrDigit) &&
+            packageName.all { it.isLetterOrDigit() || it == '.' || it == '_' }
+    }.toMap()
