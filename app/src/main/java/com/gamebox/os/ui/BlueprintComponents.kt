@@ -8,6 +8,7 @@ import androidx.compose.foundation.interaction.collectIsHoveredAsState
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
@@ -17,15 +18,32 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.dp
 
 /** Keep the dashboard's proportions on large DeX displays without shrinking phone text. */
 @Composable
-internal fun BlueprintViewport(content: @Composable () -> Unit) {
+internal fun BlueprintViewport(
+    safeAreaPercent: Float = 0f,
+    content: @Composable () -> Unit,
+) {
     val density = LocalDensity.current
     BoxWithConstraints(Modifier.fillMaxSize()) {
-        val scale = minOf(maxWidth.value / 1280f, maxHeight.value / 720f).coerceIn(1f, 2f)
-        CompositionLocalProvider(LocalDensity provides Density(density.density * scale, density.fontScale)) {
-            content()
+        val useTvSafeArea = maxWidth >= 900.dp && maxWidth / maxHeight >= 1.5f
+        val inset = safeAreaPercent.coerceIn(0f, 0.1f)
+        val horizontalInset = if (useTvSafeArea) maxWidth * inset else 0.dp
+        val verticalInset = if (useTvSafeArea) maxHeight * inset else 0.dp
+        val contentWidth = maxWidth - horizontalInset * 2
+        val contentHeight = maxHeight - verticalInset * 2
+        val scale = minOf(contentWidth.value / 1280f, contentHeight.value / 720f).coerceIn(1f, 2f)
+        Box(
+            Modifier.fillMaxSize().padding(
+                horizontal = horizontalInset,
+                vertical = verticalInset,
+            )
+        ) {
+            CompositionLocalProvider(LocalDensity provides Density(density.density * scale, density.fontScale)) {
+                content()
+            }
         }
     }
 }
