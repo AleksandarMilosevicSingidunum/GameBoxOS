@@ -510,7 +510,11 @@ private fun ControllerFooter(xLabel: String, yLabel: String) {
 
 @Composable
 private fun ControllerHint(letter: String, label: String, color: Color) {
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+    Row(
+        modifier = Modifier.semantics { contentDescription = "$letter button: $label" },
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(5.dp),
+    ) {
         Surface(shape = CircleShape, color = Color.Transparent, border = BorderStroke(1.dp, color), modifier = Modifier.size(17.dp)) {
             Box(contentAlignment = Alignment.Center) {
                 Text(letter, color = color, fontSize = 9.sp, fontWeight = FontWeight.Bold)
