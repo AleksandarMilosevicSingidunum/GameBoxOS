@@ -4,6 +4,6 @@ Managed backup creation and import publish payload and SHA-256 digest in one bou
 
 Legacy payload plus `.sha256` backups remain readable. The next successful backup migrates that path to the atomic format; a leftover legacy sidecar is ignored when the atomic header is present.
 
-Multi-artifact coordination now reports individual failures without throwing out of the operation. A new manifest is published only when every discovered artifact succeeds; otherwise the previous complete manifest is retained.
+Multi-artifact coordination preflights every discovered source. Known missing, empty or oversized artifacts abort the batch before any backup changes. Per-artifact results remain visible and the prior manifest is retained. If writes begin and the process stops between separate artifact publications, the set is not yet transactional; generation-based recovery remains open.
 
-Sixteen combined snapshot, service and manifest-wiring tests pass locally. Full project validation is pending. This does not provide a transaction across all artifact files and their manifest, nor prove real emulator save compatibility.
+Sixteen combined snapshot, service and manifest-wiring tests pass locally. Full project validation is pending. This does not prove real emulator save compatibility.

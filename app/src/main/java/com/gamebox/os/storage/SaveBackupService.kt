@@ -10,7 +10,10 @@ import java.nio.file.Files
 import java.nio.file.StandardCopyOption
 import java.security.MessageDigest
 
-enum class BackupResult { SUCCESS, SOURCE_MISSING, BACKUP_MISSING, CHECKSUM_MISMATCH, SIZE_LIMIT_EXCEEDED, CROSS_GAME_PATH }
+enum class BackupResult {
+    SUCCESS, SOURCE_MISSING, BACKUP_MISSING, CHECKSUM_MISMATCH, SIZE_LIMIT_EXCEEDED,
+    CROSS_GAME_PATH, SNAPSHOT_ABORTED
+}
 
 class SaveBackupService(
     savesDirectory: File,
@@ -34,13 +37,23 @@ class SaveBackupService(
 
     fun createBackup(relativePath: String): BackupResult {
         val source = resolveContained(savesRoot, relativePath)
-        if (!source.isFile) return BackupResult.SOURCE_MISSING
+        when (val inspection = inspectSource(relativePath)) {
+            BackupResult.SUCCESS -> Unit
+            BackupResult.CHECKSUM_MISMATCH -> require(false) { "Save is empty; existing backup retained" }
+            else -> return inspection
+        }
         val backup = resolveContained(backupsRoot, relativePath)
         validateBackupDestination(backup)
         check(backup.parentFile?.mkdirs() != false || backup.parentFile?.isDirectory == true)
-        if (source.length() > maxBackupBytes) return BackupResult.SIZE_LIMIT_EXCEEDED
-        require(source.length() > 0L) { "Save is empty; existing backup retained" }
         source.inputStream().use { AtomicSaveSnapshot.write(backup, it, maxBackupBytes) }
+        return BackupResult.SUCCESS
+    }
+
+    internal fun inspectSource(relativePath: String): BackupResult {
+        val source = resolveContained(savesRoot, relativePath)
+        if (!source.isFile) return BackupResult.SOURCE_MISSING
+        if (source.length() == 0L) return BackupResult.CHECKSUM_MISMATCH
+        if (source.length() > maxBackupBytes) return BackupResult.SIZE_LIMIT_EXCEEDED
         return BackupResult.SUCCESS
     }
 

@@ -62,9 +62,10 @@ class SaveBackupManifestWiringTest {
 
             val result = coordinator.backup("ppsspp", "game-a")
 
-            assertEquals(1, result.successfulCount)
-            assertEquals(1, result.failedCount)
-            assertTrue(result.message!!.contains("previous complete snapshot retained"))
+            assertEquals(0, result.successfulCount)
+            assertEquals(2, result.failedCount)
+            assertTrue(result.message!!.contains("no artifact backups were changed"))
+            assertEquals(false, File(backups, "game-a/slot.sav").exists())
             assertEquals(
                 SaveSnapshotManifest("game-a", 100L, listOf("game-a/previous.sav")),
                 store.load("game-a"),

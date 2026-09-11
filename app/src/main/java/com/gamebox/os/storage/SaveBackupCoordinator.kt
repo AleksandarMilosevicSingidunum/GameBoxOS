@@ -30,6 +30,23 @@ class SaveBackupCoordinator(
 
         return runCatching { adapter.discover(gameId) }.fold(
             onSuccess = { artifacts ->
+                val inspections = artifacts.map { artifact ->
+                    artifact to runCatching {
+                        backupService.inspectSource(artifact.relativePath)
+                    }.getOrDefault(BackupResult.CHECKSUM_MISMATCH)
+                }
+                if (inspections.any { it.second != BackupResult.SUCCESS }) {
+                    return@fold GameSaveBackupResult(
+                        gameId = gameId,
+                        artifacts = inspections.map { (artifact, inspection) ->
+                            SaveArtifactBackupResult(
+                                artifact,
+                                if (inspection == BackupResult.SUCCESS) BackupResult.SNAPSHOT_ABORTED else inspection,
+                            )
+                        },
+                        message = "Save snapshot preflight failed; no artifact backups were changed",
+                    )
+                }
                 val results = artifacts.map { artifact ->
                     SaveArtifactBackupResult(
                         artifact = artifact,
