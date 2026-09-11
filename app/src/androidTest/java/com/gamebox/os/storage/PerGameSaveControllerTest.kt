@@ -55,7 +55,13 @@ class PerGameSaveControllerTest {
             withTimeout(5_000) { first.observeState().first { it.operationMessage == "Backup failed safely" } }
             withTimeout(5_000) { first.observeBusy().first { !it } }
             assertEquals(recordBeforeEmptyBackup, database.saveRecordDao().observe("first-game").first())
-            assertEquals("FIRST synthetic save", root.resolve("save-backups/first-game/save.dat").readText())
+            val retainedPayload = java.io.ByteArrayOutputStream()
+            assertEquals(
+                BackupResult.SUCCESS,
+                SaveBackupService(root.resolve("saves"), root.resolve("save-backups"))
+                    .exportBackup("first-game/save.dat", retainedPayload)
+            )
+            assertEquals("FIRST synthetic save", retainedPayload.toString(Charsets.UTF_8.name()))
             assertFalse(root.resolve("save-backups/first-game/save.dat.part").exists())
             firstFile.writeText("CHANGED")
             first.restoreSave()

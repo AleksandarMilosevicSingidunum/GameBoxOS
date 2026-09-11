@@ -30,16 +30,35 @@ class SaveBackupCoordinator(
 
         return runCatching { adapter.discover(gameId) }.fold(
             onSuccess = { artifacts ->
+                val inspections = artifacts.map { artifact ->
+                    artifact to runCatching {
+                        backupService.inspectSource(artifact.relativePath)
+                    }.getOrDefault(BackupResult.CHECKSUM_MISMATCH)
+                }
+                if (inspections.any { it.second != BackupResult.SUCCESS }) {
+                    return@fold GameSaveBackupResult(
+                        gameId = gameId,
+                        artifacts = inspections.map { (artifact, inspection) ->
+                            SaveArtifactBackupResult(
+                                artifact,
+                                if (inspection == BackupResult.SUCCESS) BackupResult.SNAPSHOT_ABORTED else inspection,
+                            )
+                        },
+                        message = "Save snapshot preflight failed; no artifact backups were changed",
+                    )
+                }
                 val results = artifacts.map { artifact ->
                     SaveArtifactBackupResult(
                         artifact = artifact,
-                        result = backupService.createBackup(artifact.relativePath),
+                        result = runCatching {
+                            backupService.createBackup(artifact.relativePath)
+                        }.getOrDefault(BackupResult.CHECKSUM_MISMATCH),
                     )
                 }
                 val successfulPaths = results
                     .filter { it.result == BackupResult.SUCCESS }
                     .map { it.artifact.relativePath }
-                if (successfulPaths.isNotEmpty()) {
+                if (successfulPaths.isNotEmpty() && successfulPaths.size == results.size) {
                     manifestStore?.save(
                         SaveSnapshotManifest(
                             gameId = gameId,
@@ -48,7 +67,13 @@ class SaveBackupCoordinator(
                         ),
                     )
                 }
-                GameSaveBackupResult(gameId = gameId, artifacts = results)
+                GameSaveBackupResult(
+                    gameId = gameId,
+                    artifacts = results,
+                    message = if (results.any { it.result != BackupResult.SUCCESS }) {
+                        "Save snapshot was incomplete; previous complete snapshot retained"
+                    } else null,
+                )
             },
             onFailure = { error ->
                 GameSaveBackupResult(
