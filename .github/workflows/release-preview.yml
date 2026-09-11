@@ -1,0 +1,126 @@
+name: Publish combined preview release
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: preview-release-${{ github.event.release.tag_name }}
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    if: ${{ github.event.release.prerelease }}
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.release.outputs.tag }}
+    steps:
+      - id: release
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          if [[ ! "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+-(alpha|beta)(\.[0-9]+)?$ ]]; then
+            echo "Preview releases require an alpha or beta semantic version tag." >&2
+            exit 1
+          fi
+          echo "tag=$RELEASE_TAG" >> "$GITHUB_OUTPUT"
+
+  android:
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ needs.validate.outputs.tag }}
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: android-actions/setup-android@v4
+        with:
+          packages: "platform-tools platforms;android-36 build-tools;36.0.0"
+      - uses: gradle/actions/setup-gradle@v6
+        with:
+          gradle-version: "9.5.0"
+          cache-provider: basic
+      - name: Test and build preview APK
+        run: gradle --no-daemon testDebugUnitTest assembleDebug
+      - name: Prepare Android assets
+        env:
+          RELEASE_TAG: ${{ needs.validate.outputs.tag }}
+        run: |
+          asset="GameBoxOS-$RELEASE_TAG-debug.apk"
+          cp app/build/outputs/apk/debug/app-debug.apk "$asset"
+          sha256sum "$asset" > "$asset.sha256"
+          python - "$asset" "$RELEASE_TAG" <<'PY'
+          import hashlib, json, pathlib, subprocess, sys
+          artifact, tag = sys.argv[1:]
+          path = pathlib.Path(artifact)
+          payload = {
+              "schemaVersion": 1,
+              "artifactName": artifact,
+              "releaseTag": tag,
+              "channel": "PREVIEW",
+              "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+              "sizeBytes": path.stat().st_size,
+              "sourceCommit": subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip(),
+              "signing": "Android debug key; not for production distribution",
+          }
+          pathlib.Path(f"GameBoxOS-{tag}-android-manifest.json").write_text(
+              json.dumps(payload, indent=2) + "\n", encoding="utf-8"
+          )
+          PY
+      - name: Attach Android assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ needs.validate.outputs.tag }}
+        run: gh release upload "$RELEASE_TAG" GameBoxOS-* --clobber --repo "${{ github.repository }}"
+
+  windows:
+    needs: validate
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ needs.validate.outputs.tag }}
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 8.0.x
+      - name: Test Windows companion
+        run: dotnet run --project windows/GameBox.Windows.Core.Tests/GameBox.Windows.Core.Tests.csproj --configuration Release
+      - name: Publish self-contained preview companion
+        run: dotnet publish windows/GameBox.Windows/GameBox.Windows.csproj --configuration Release --runtime win-x64 --self-contained true -p:PublishSingleFile=true -p:DebugType=None --output artifacts/GameBoxWindows
+      - name: Package Windows assets
+        shell: pwsh
+        env:
+          RELEASE_TAG: ${{ needs.validate.outputs.tag }}
+        run: |
+          $archive = "GameBoxWindows-$env:RELEASE_TAG-win-x64-unsigned.zip"
+          Compress-Archive -Path artifacts/GameBoxWindows/* -DestinationPath $archive
+          $file = Get-Item $archive
+          $sha = (Get-FileHash $file.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+          "$sha  $archive" | Set-Content "$archive.sha256"
+          [ordered]@{
+            schemaVersion = 1
+            artifactName = $archive
+            releaseTag = $env:RELEASE_TAG
+            channel = 'PREVIEW'
+            sha256 = $sha
+            sizeBytes = $file.Length
+            runtime = 'win-x64'
+            selfContained = $true
+            authenticodeSigned = $false
+            sourceCommit = (git rev-parse HEAD).Trim()
+            warning = 'Unsigned preview build; Windows may display a publisher warning.'
+          } | ConvertTo-Json | Set-Content "GameBoxWindows-$env:RELEASE_TAG-manifest.json"
+      - name: Attach Windows assets
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ needs.validate.outputs.tag }}
+        run: gh release upload $env:RELEASE_TAG GameBoxWindows-* --clobber --repo "${{ github.repository }}"
