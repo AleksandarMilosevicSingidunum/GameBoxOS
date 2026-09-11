@@ -682,8 +682,13 @@ val allDiscoveryGames by discoveryRepository.observeGames(null, "", 250).collect
     var discoverySyncProgress by remember { mutableStateOf(0f) }
     var platform by remember { mutableStateOf<String?>(null) }
     var genre by remember { mutableStateOf<String?>(null) }
+    var region by remember { mutableStateOf<String?>(null) }
+    var language by remember { mutableStateOf<String?>(null) }
     var favoritesOnly by remember { mutableStateOf(false) }
-    val filtered = filterGames(games, query, platform, genre, favoritesOnly)
+    val filtered = filterGames(
+        games, query, platform, genre, favoritesOnly,
+        region = region, language = language,
+    )
     val focusTarget = restoreGameId?.takeIf { id -> filtered.any { it.id == id } }
         ?: filtered.firstOrNull()?.id
     if (selectedDiscovery != null) {
@@ -829,7 +834,12 @@ val allDiscoveryGames by discoveryRepository.observeGames(null, "", 250).collect
         Spacer(Modifier.height(16.dp))
         GameFilterBar(
             games, query, { query = it }, platform, { platform = it },
-            genre, { genre = it }, favoritesOnly, { favoritesOnly = it }
+            genre, { genre = it }, favoritesOnly, { favoritesOnly = it },
+            showMetadataFilters = true,
+            region = region,
+            onRegion = { region = it },
+            language = language,
+            onLanguage = { language = it },
         )
         Spacer(Modifier.height(16.dp))
         if (filtered.isEmpty()) Text("No authorized games match these filters")
@@ -1504,10 +1514,17 @@ private fun GameFilterBar(
     genre: String?,
     onGenre: (String?) -> Unit,
     favoritesOnly: Boolean,
-    onFavoritesOnly: (Boolean) -> Unit
+    onFavoritesOnly: (Boolean) -> Unit,
+    showMetadataFilters: Boolean = false,
+    region: String? = null,
+    onRegion: (String?) -> Unit = {},
+    language: String? = null,
+    onLanguage: (String?) -> Unit = {},
 ) {
     val platforms = games.map { it.platform }.distinct().sorted()
     val genres = games.map { it.genre }.distinct().sorted()
+    val regions = games.mapNotNull { it.region }.filter(String::isNotBlank).distinct().sorted()
+    val languages = games.mapNotNull { it.language }.filter(String::isNotBlank).distinct().sorted()
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         OutlinedTextField(
             value = query,
@@ -1539,6 +1556,25 @@ private fun GameFilterBar(
                 FilterChip(selected = genre == value, onClick = { onGenre(value) }, label = { Text(value) })
             }
         }
+        if (showMetadataFilters && (regions.isNotEmpty() || languages.isNotEmpty())) {
+            Row(
+                Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                if (regions.isNotEmpty()) {
+                    FilterChip(selected = region == null, onClick = { onRegion(null) }, label = { Text("All regions") })
+                    regions.forEach { value ->
+                        FilterChip(selected = region == value, onClick = { onRegion(value) }, label = { Text(value) })
+                    }
+                }
+                if (languages.isNotEmpty()) {
+                    FilterChip(selected = language == null, onClick = { onLanguage(null) }, label = { Text("All languages") })
+                    languages.forEach { value ->
+                        FilterChip(selected = language == value, onClick = { onLanguage(value) }, label = { Text(value) })
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -1559,7 +1595,9 @@ internal fun filterGames(
     query: String,
     platform: String?,
     genre: String?,
-    favoritesOnly: Boolean
+    favoritesOnly: Boolean,
+    region: String? = null,
+    language: String? = null,
 ): List<Game> {
     val normalized = query.trim()
     return games.filter { game ->
@@ -1568,7 +1606,10 @@ internal fun filterGames(
             game.platform.contains(normalized, ignoreCase = true) ||
             game.genre.contains(normalized, ignoreCase = true)) &&
             (platform == null || game.platform == platform) &&
-            (genre == null || game.genre == genre) &&
+            matchesStoreMetadataFilters(
+                game.genre, game.region, game.language,
+                genre, region, language,
+            ) &&
             (!favoritesOnly || game.favorite)
     }
 }
