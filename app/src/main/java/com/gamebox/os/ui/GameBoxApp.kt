@@ -381,7 +381,7 @@ fun GameBoxApp(
 }
 
 @Composable
-private fun restoredScrollState(key: String): androidx.compose.foundation.ScrollState {
+internal fun restoredScrollState(key: String): androidx.compose.foundation.ScrollState {
     val uiState = LocalGameBoxUiState.current
     val initial = uiState?.screenValue("scroll." + key)?.toIntOrNull()?.coerceAtLeast(0) ?: 0
     val scrollState = rememberScrollState(initial = initial)
