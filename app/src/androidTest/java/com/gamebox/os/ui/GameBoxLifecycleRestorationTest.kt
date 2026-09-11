@@ -24,9 +24,13 @@ class GameBoxLifecycleRestorationTest {
                 Text("destination=" + state.destination)
                 Text("selected=" + (state.selectedGameId ?: "none"))
                 Text("focus=" + (state.restoreFocus("STORE", listOf("galaxy-patrol")) ?: "none"))
+                Text("query=" + (state.screenValue("store.query") ?: "none"))
+                Text("console=" + (state.screenValue("store.console") ?: "none"))
                 Button(onClick = {
                     state.openDestination("STORE")
                     state.rememberFocus("STORE", "galaxy-patrol")
+                    state.rememberScreenValue("store.query", "patrol")
+                    state.rememberScreenValue("store.console", "homebrew")
                     state.openGame("galaxy-patrol")
                 }) { Text("Open fixture") }
             }
@@ -38,6 +42,8 @@ class GameBoxLifecycleRestorationTest {
         composeRule.onNodeWithText("destination=STORE").assertExists()
         composeRule.onNodeWithText("selected=galaxy-patrol").assertExists()
         composeRule.onNodeWithText("focus=galaxy-patrol").assertExists()
+        composeRule.onNodeWithText("query=patrol").assertExists()
+        composeRule.onNodeWithText("console=homebrew").assertExists()
     }
 }
 
