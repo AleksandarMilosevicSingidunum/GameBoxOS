@@ -21,6 +21,34 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 
+@Stable
+internal class ControllerActionRegistry {
+    var xLabel by mutableStateOf("Store")
+        private set
+    var yLabel by mutableStateOf("Settings")
+        private set
+    private var xAction: (() -> Unit)? = null
+    private var yAction: (() -> Unit)? = null
+
+    fun configure(xLabel: String, onX: () -> Unit, yLabel: String, onY: () -> Unit) {
+        this.xLabel = xLabel
+        this.yLabel = yLabel
+        xAction = onX
+        yAction = onY
+    }
+
+    fun clear() {
+        xLabel = "Store"
+        yLabel = "Settings"
+        xAction = null
+        yAction = null
+    }
+
+    fun invokeX(): Boolean = xAction?.let { it(); true } ?: false
+    fun invokeY(): Boolean = yAction?.let { it(); true } ?: false
+}
+
+internal val LocalControllerActions = staticCompositionLocalOf<ControllerActionRegistry?> { null }
 internal val LocalReducedMotion = staticCompositionLocalOf { false }
 
 /** Keep the dashboard's proportions on large DeX displays without shrinking phone text. */
@@ -28,6 +56,7 @@ internal val LocalReducedMotion = staticCompositionLocalOf { false }
 internal fun BlueprintViewport(
     safeAreaPercent: Float = 0f,
     reducedMotion: Boolean = false,
+    controllerActions: ControllerActionRegistry? = null,
     content: @Composable () -> Unit,
 ) {
     val density = LocalDensity.current
@@ -48,6 +77,7 @@ internal fun BlueprintViewport(
             CompositionLocalProvider(
                 LocalDensity provides Density(density.density * scale, density.fontScale),
                 LocalReducedMotion provides reducedMotion,
+                LocalControllerActions provides controllerActions,
             ) {
                 content()
             }
