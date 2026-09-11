@@ -5,9 +5,11 @@ import com.gamebox.os.storage.SaveAdapterRegistry
 import com.gamebox.os.storage.SaveBackupCoordinator
 import com.gamebox.os.storage.SaveBackupService
 import com.gamebox.os.storage.SaveSnapshotManifestStore
+import com.gamebox.os.storage.SaveSnapshotManifest
 import java.io.File
 import kotlin.io.path.createTempDirectory
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class SaveBackupManifestWiringTest {
@@ -34,6 +36,39 @@ class SaveBackupManifestWiringTest {
             assertEquals(1, result.successfulCount)
             assertEquals(456L, manifest?.createdAtMillis)
             assertEquals(listOf("game-a/slot.sav"), manifest?.relativePaths)
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun partialBackupRetainsPreviousCompleteManifest() {
+        val root = createTempDirectory("gamebox-save-partial-manifest-").toFile()
+        val saves = File(root, "saves")
+        val backups = File(root, "backups")
+        val manifests = File(root, "manifests")
+        try {
+            File(saves, "game-a").mkdirs()
+            File(saves, "game-a/slot.sav").writeText("progress")
+            File(saves, "game-a/empty.sav").writeBytes(byteArrayOf())
+            val store = SaveSnapshotManifestStore(manifests)
+            store.save(SaveSnapshotManifest("game-a", 100L, listOf("game-a/previous.sav")))
+            val coordinator = SaveBackupCoordinator(
+                registry = SaveAdapterRegistry(mapOf("ppsspp" to DirectorySaveAdapter(saves))),
+                backupService = SaveBackupService(saves, backups),
+                manifestStore = store,
+                nowMillis = { 456L },
+            )
+
+            val result = coordinator.backup("ppsspp", "game-a")
+
+            assertEquals(1, result.successfulCount)
+            assertEquals(1, result.failedCount)
+            assertTrue(result.message!!.contains("previous complete snapshot retained"))
+            assertEquals(
+                SaveSnapshotManifest("game-a", 100L, listOf("game-a/previous.sav")),
+                store.load("game-a"),
+            )
         } finally {
             root.deleteRecursively()
         }

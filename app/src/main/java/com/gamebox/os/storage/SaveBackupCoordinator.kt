@@ -33,13 +33,15 @@ class SaveBackupCoordinator(
                 val results = artifacts.map { artifact ->
                     SaveArtifactBackupResult(
                         artifact = artifact,
-                        result = backupService.createBackup(artifact.relativePath),
+                        result = runCatching {
+                            backupService.createBackup(artifact.relativePath)
+                        }.getOrDefault(BackupResult.CHECKSUM_MISMATCH),
                     )
                 }
                 val successfulPaths = results
                     .filter { it.result == BackupResult.SUCCESS }
                     .map { it.artifact.relativePath }
-                if (successfulPaths.isNotEmpty()) {
+                if (successfulPaths.isNotEmpty() && successfulPaths.size == results.size) {
                     manifestStore?.save(
                         SaveSnapshotManifest(
                             gameId = gameId,
@@ -48,7 +50,13 @@ class SaveBackupCoordinator(
                         ),
                     )
                 }
-                GameSaveBackupResult(gameId = gameId, artifacts = results)
+                GameSaveBackupResult(
+                    gameId = gameId,
+                    artifacts = results,
+                    message = if (results.any { it.result != BackupResult.SUCCESS }) {
+                        "Save snapshot was incomplete; previous complete snapshot retained"
+                    } else null,
+                )
             },
             onFailure = { error ->
                 GameSaveBackupResult(
