@@ -39,6 +39,11 @@ class BlueprintScreenshotsTest {
             tab.performClick()
             rule.waitForIdle()
             tab.assertIsSelected()
+            if (title == "Store") {
+                rule.onNodeWithText("Genre: All").assertIsDisplayed()
+                rule.onNodeWithText("Region: All").assertIsDisplayed()
+                rule.onNodeWithText("Language: All").assertIsDisplayed()
+            }
             capture("${index + 3}-${title.lowercase()}")
         }
         capturePopulatedLayout()
