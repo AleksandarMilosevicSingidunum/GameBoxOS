@@ -1011,26 +1011,26 @@ private fun BlueprintCatalogScreen(
             TextButton(
                 onClick = { genreFilter = cycle(genreFilter, genres) },
                 enabled = genres.isNotEmpty(),
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth().height(30.dp),
             ) { Text("Genre: " + (genreFilter ?: "All"), fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis) }
             TextButton(
                 onClick = { regionFilter = cycle(regionFilter, regions) },
                 enabled = regions.isNotEmpty(),
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth().height(30.dp),
             ) { Text("Region: " + (regionFilter ?: "All"), fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis) }
             TextButton(
                 onClick = { languageFilter = cycle(languageFilter, languages) },
                 enabled = languages.isNotEmpty(),
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth().height(30.dp),
             ) { Text("Language: " + (languageFilter ?: "All"), fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis) }
-            TextButton(onClick = { sortByRating = !sortByRating }, modifier = Modifier.fillMaxWidth()) {
+            TextButton(onClick = { sortByRating = !sortByRating }, modifier = Modifier.fillMaxWidth().height(30.dp)) {
                 Text(if (sortByRating) "Sort: Rating ↓" else "Sort: Title A–Z", fontSize = 10.sp)
             }
             TextButton(onClick = {
                 favoritesOnly = false; installedOnly = false; sortByRating = false
                 genreFilter = null; regionFilter = null; languageFilter = null
                 onQuery(""); onSelectConsole(null)
-            }, modifier = Modifier.fillMaxWidth()) {
+            }, modifier = Modifier.fillMaxWidth().height(30.dp)) {
                 Text("Clear filters", fontSize = 10.sp)
             }
             Spacer(Modifier.weight(1f))

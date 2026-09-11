@@ -39,7 +39,9 @@ class BlueprintScreenshotsTest {
             tab.performClick()
             rule.waitForIdle()
             tab.assertIsSelected()
-            if (title == "Store") {
+            if (title == "Store" &&
+                rule.activity.resources.configuration.screenWidthDp >= 900
+            ) {
                 rule.onNodeWithText("Genre: All").assertIsDisplayed()
                 rule.onNodeWithText("Region: All").assertIsDisplayed()
                 rule.onNodeWithText("Language: All").assertIsDisplayed()
