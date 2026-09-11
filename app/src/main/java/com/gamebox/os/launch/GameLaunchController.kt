@@ -119,13 +119,14 @@ class EmulatorCapabilityRegistry(
 
     fun forGame(gameId: GameId): EmulatorCapability? = capabilities.firstOrNull { it.gameId == gameId }
 
-    fun forGame(game: Game): EmulatorCapability? {
+    fun forGame(game: Game, platformDefaultPackage: String? = null): EmulatorCapability? {
         val explicit = capabilities.firstOrNull { it.gameId == game.id }
         val importedPath = game.localContentRelativePath
         val importedChecksum = game.localContentSha256
         val importedMimeType = game.localContentMimeType
         if (importedPath != null && importedChecksum != null && importedMimeType != null) {
             val packageName = game.emulatorPackage?.takeIf { it in optionsFor(game) }
+                ?: platformDefaultPackage?.takeIf { it in optionsFor(game) }
                 ?: explicit?.packageName
                 ?: optionsFor(game).firstOrNull()
                 ?: return null
@@ -148,6 +149,7 @@ class EmulatorCapabilityRegistry(
         explicit?.let { return it }
         val checksum = game.expectedSha256 ?: return null
         val packageName = game.emulatorPackage?.takeIf { it in optionsFor(game) }
+            ?: platformDefaultPackage?.takeIf { it in optionsFor(game) }
             ?: optionsFor(game).firstOrNull() ?: return null
         val content = GameContentPolicy.describe(
             gameId = game.id.value,
@@ -405,6 +407,7 @@ class DefaultGameLaunchController(
     private val returnTracker: ReturnTracker = ReturnTracker(),
     private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate),
     private val sessionJournal: LaunchSessionJournal? = null,
+    private val platformEmulatorDefault: suspend (String) -> String? = { null },
 ) : GameLaunchController {
     private val state = MutableStateFlow(LaunchUiState())
     private val preparing = AtomicBoolean(false)
@@ -453,7 +456,7 @@ class DefaultGameLaunchController(
             update(game.id, LaunchUiState.Status.NOT_INSTALLED, "Install and verify before launching")
             return
         }
-        val capability = registry.forGame(game)
+        val capability = registry.forGame(game, platformEmulatorDefault(game.platform))
         if (capability == null) {
             update(game.id, LaunchUiState.Status.UNSUPPORTED, "No approved adapter for this title")
             return
