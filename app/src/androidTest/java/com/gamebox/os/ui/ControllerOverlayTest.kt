@@ -1,7 +1,7 @@
 package com.gamebox.os.ui
 
 import android.view.KeyEvent
-import androidx.compose.ui.test.assertDoesNotExist
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -24,12 +24,12 @@ class ControllerOverlayTest {
         sendButton(KeyEvent.KEYCODE_BUTTON_START)
         rule.onNodeWithContentDescription("Controller quick actions").assertIsDisplayed()
         sendButton(KeyEvent.KEYCODE_BUTTON_B)
-        rule.onNodeWithContentDescription("Controller quick actions").assertDoesNotExist()
+        rule.onAllNodesWithContentDescription("Controller quick actions").assertCountEquals(0)
 
         sendButton(KeyEvent.KEYCODE_BUTTON_SELECT)
         rule.onNodeWithContentDescription("System status overlay").assertIsDisplayed()
         sendButton(KeyEvent.KEYCODE_BUTTON_B)
-        rule.onNodeWithContentDescription("System status overlay").assertDoesNotExist()
+        rule.onAllNodesWithContentDescription("System status overlay").assertCountEquals(0)
     }
 
     private fun sendButton(keyCode: Int) {
