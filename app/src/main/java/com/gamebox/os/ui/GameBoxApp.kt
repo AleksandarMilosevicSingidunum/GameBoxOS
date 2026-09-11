@@ -1434,6 +1434,44 @@ private fun BlueprintLibrarySection(
 }
 
 @Composable
+private fun GameAvailabilityBadge(game: Game, modifier: Modifier = Modifier) {
+    val availableFromSource = game.state == InstallState.NOT_INSTALLED && !game.sourceUrl.isNullOrBlank()
+    val (label, icon) = when {
+        availableFromSource -> "Available" to Icons.Rounded.CloudDownload
+        game.state == InstallState.NOT_INSTALLED -> "Import copy" to Icons.Rounded.FolderOpen
+        game.state == InstallState.INSTALLED -> "Installed" to Icons.Rounded.CheckCircle
+        game.state == InstallState.UPDATE_AVAILABLE -> "Update" to Icons.Rounded.SystemUpdate
+        game.state == InstallState.QUEUED -> "Queued" to Icons.Rounded.Schedule
+        game.state == InstallState.DOWNLOADING -> "Downloading" to Icons.Rounded.Downloading
+        game.state == InstallState.PAUSED -> "Paused" to Icons.Rounded.PauseCircle
+        game.state == InstallState.VERIFYING -> "Verifying" to Icons.Rounded.Verified
+        game.state == InstallState.INSTALLING -> "Installing" to Icons.Rounded.InstallMobile
+        game.state == InstallState.MISSING_FILES -> "Missing files" to Icons.Rounded.FolderOff
+        else -> "Retry" to Icons.Rounded.ErrorOutline
+    }
+    val accent = when {
+        game.state == InstallState.INSTALLED -> Color(0xFF58D68D)
+        game.state in setOf(InstallState.FAILED, InstallState.MISSING_FILES) -> MaterialTheme.colorScheme.error
+        else -> MaterialTheme.colorScheme.primary
+    }
+    Surface(
+        modifier = modifier.semantics { contentDescription = "Availability: $label" },
+        shape = RoundedCornerShape(5.dp),
+        color = Color(0xDC07101A),
+        border = BorderStroke(1.dp, accent.copy(alpha = 0.82f)),
+    ) {
+        Row(
+            Modifier.padding(horizontal = 6.dp, vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            Icon(icon, contentDescription = null, tint = accent, modifier = Modifier.size(11.dp))
+            Text(label, color = accent, fontSize = 8.sp, fontWeight = FontWeight.SemiBold)
+        }
+    }
+}
+
+@Composable
 private fun BlueprintGameTile(
     game: Game,
     restoreFocus: Boolean,
@@ -1995,6 +2033,7 @@ internal fun GameCard(
                     }
                 }
             } else {
+                GameAvailabilityBadge(game, Modifier.align(Alignment.TopStart).padding(7.dp))
                 if (game.favorite) Icon(Icons.Rounded.Favorite, null, tint = MaterialTheme.colorScheme.secondary,
                     modifier = Modifier.align(Alignment.TopEnd).padding(8.dp).size(14.dp))
                 Column(Modifier.align(Alignment.BottomStart).fillMaxWidth().padding(if (poster) 9.dp else 11.dp)) {
