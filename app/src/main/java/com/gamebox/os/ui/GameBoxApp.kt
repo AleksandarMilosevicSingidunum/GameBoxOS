@@ -164,6 +164,8 @@ fun GameBoxApp(
     val controllerActions = remember { ControllerActionRegistry() }
     val appScope = rememberCoroutineScope()
     var showProfileSwitcher by remember { mutableStateOf(false) }
+    var showQuickActions by remember { mutableStateOf(false) }
+    var showSystemStatus by remember { mutableStateOf(false) }
     var focusStoreSearchOnEnter by remember { mutableStateOf(false) }
     val uiState = rememberGameBoxUiState()
     val destination = runCatching { Destination.valueOf(uiState.destination) }
@@ -190,6 +192,14 @@ fun GameBoxApp(
                 when (event.nativeKeyEvent.keyCode) {
                     AndroidKeyEvent.KEYCODE_BUTTON_L1 -> { moveTab(-1); true }
                     AndroidKeyEvent.KEYCODE_BUTTON_R1 -> { moveTab(1); true }
+                    AndroidKeyEvent.KEYCODE_BUTTON_START, AndroidKeyEvent.KEYCODE_MENU -> {
+                        showQuickActions = true
+                        true
+                    }
+                    AndroidKeyEvent.KEYCODE_BUTTON_SELECT -> {
+                        showSystemStatus = true
+                        true
+                    }
                     AndroidKeyEvent.KEYCODE_BUTTON_X -> {
                         if (controllerActions.invokeX()) true
                         else { uiState.openDestination(Destination.STORE.name); true }
@@ -198,8 +208,13 @@ fun GameBoxApp(
                         if (controllerActions.invokeY()) true
                         else { uiState.openDestination(Destination.SETTINGS.name); true }
                     }
-                    AndroidKeyEvent.KEYCODE_BACK, AndroidKeyEvent.KEYCODE_BUTTON_B ->
-                        if (selectedGameId != null) { uiState.clearSelection(); true } else false
+                    AndroidKeyEvent.KEYCODE_BACK, AndroidKeyEvent.KEYCODE_BUTTON_B -> when {
+                        showQuickActions -> { showQuickActions = false; true }
+                        showSystemStatus -> { showSystemStatus = false; true }
+                        showProfileSwitcher -> { showProfileSwitcher = false; true }
+                        selectedGameId != null -> { uiState.clearSelection(); true }
+                        else -> false
+                    }
                     else -> false
                 }
             }
@@ -316,6 +331,37 @@ fun GameBoxApp(
                 Spacer(Modifier.height(8.dp))
                 ControllerFooter(controllerActions.xLabel, controllerActions.yLabel, appSettings.activeProfileName)
             }
+        }
+        if (showQuickActions) {
+            QuickActionsDialog(
+                destination = destination,
+                xLabel = controllerActions.xLabel,
+                yLabel = controllerActions.yLabel,
+                onX = {
+                    showQuickActions = false
+                    if (!controllerActions.invokeX()) uiState.openDestination(Destination.STORE.name)
+                },
+                onY = {
+                    showQuickActions = false
+                    if (!controllerActions.invokeY()) uiState.openDestination(Destination.SETTINGS.name)
+                },
+                onHome = {
+                    showQuickActions = false
+                    uiState.openDestination(Destination.HOME.name)
+                },
+                onDownloads = {
+                    showQuickActions = false
+                    uiState.openDestination(Destination.DOWNLOADS.name)
+                },
+                onSettings = {
+                    showQuickActions = false
+                    uiState.openDestination(Destination.SETTINGS.name)
+                },
+                onDismiss = { showQuickActions = false },
+            )
+        }
+        if (showSystemStatus) {
+            SystemStatusDialog(onDismiss = { showSystemStatus = false })
         }
         if (showProfileSwitcher) {
             ProfileSwitcherDialog(
@@ -500,6 +546,68 @@ private fun destinationIcon(item: Destination): ImageVector = when (item) {
 }
 
 @Composable
+private fun QuickActionsDialog(
+    destination: Destination,
+    xLabel: String,
+    yLabel: String,
+    onX: () -> Unit,
+    onY: () -> Unit,
+    onHome: () -> Unit,
+    onDownloads: () -> Unit,
+    onSettings: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        icon = { Icon(Icons.Rounded.Gamepad, contentDescription = null) },
+        title = { Text(destination.title + " quick actions") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                SettingsActionRow("X  " + xLabel, Icons.Rounded.Close, onX)
+                SettingsActionRow("Y  " + yLabel, Icons.Rounded.ChangeCircle, onY)
+                HorizontalDivider()
+                SettingsActionRow("Home", Icons.Rounded.Home, onHome)
+                SettingsActionRow("Downloads", Icons.Rounded.Downloading, onDownloads)
+                SettingsActionRow("Settings", Icons.Rounded.Settings, onSettings)
+            }
+        },
+        confirmButton = {},
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Close") } },
+        modifier = Modifier.semantics { contentDescription = "Controller quick actions" },
+    )
+}
+
+@Composable
+private fun SystemStatusDialog(onDismiss: () -> Unit) {
+    val context = LocalContext.current
+    val networkService = context.getSystemService(ConnectivityManager::class.java)
+    val network = networkService?.getNetworkCapabilities(networkService.activeNetwork)
+    val networkLabel = if (network?.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED) == true) {
+        "Connected"
+    } else {
+        "Offline"
+    }
+    val storage = context.filesDir
+    val available = formatBytes(storage.usableSpace)
+    val total = formatBytes(storage.totalSpace)
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        icon = { Icon(Icons.Rounded.Info, contentDescription = null) },
+        title = { Text("System status") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                SettingsStatusCard(Icons.Rounded.Storage, "Storage", "$available free of $total")
+                SettingsStatusCard(Icons.Rounded.Wifi, "Network", networkLabel)
+                SettingsStatusCard(Icons.Rounded.SportsEsports, "Controller", connectedControllerLabel())
+                SettingsStatusCard(Icons.Rounded.Smartphone, "Device", Build.MODEL)
+            }
+        },
+        confirmButton = { TextButton(onClick = onDismiss) { Text("Done") } },
+        modifier = Modifier.semantics { contentDescription = "System status overlay" },
+    )
+}
+
+@Composable
 private fun ProfileSwitcherDialog(
     activeProfile: String,
     onDismiss: () -> Unit,
@@ -559,6 +667,8 @@ private fun ControllerFooter(xLabel: String, yLabel: String, profileName: String
             ControllerHint("X", xLabel, Color(0xFF3C8DFF))
             ControllerHint("Y", yLabel, Color(0xFFFFC43D))
             Text("LB/RB  Change tab", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp)
+            Text("Menu  Quick actions", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp)
+            Text("View  Status", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp)
         }
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Icon(
