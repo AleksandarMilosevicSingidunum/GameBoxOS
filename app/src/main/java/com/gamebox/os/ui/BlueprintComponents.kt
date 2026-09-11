@@ -21,10 +21,13 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 
+internal val LocalReducedMotion = staticCompositionLocalOf { false }
+
 /** Keep the dashboard's proportions on large DeX displays without shrinking phone text. */
 @Composable
 internal fun BlueprintViewport(
     safeAreaPercent: Float = 0f,
+    reducedMotion: Boolean = false,
     content: @Composable () -> Unit,
 ) {
     val density = LocalDensity.current
@@ -42,7 +45,10 @@ internal fun BlueprintViewport(
                 vertical = verticalInset,
             )
         ) {
-            CompositionLocalProvider(LocalDensity provides Density(density.density * scale, density.fontScale)) {
+            CompositionLocalProvider(
+                LocalDensity provides Density(density.density * scale, density.fontScale),
+                LocalReducedMotion provides reducedMotion,
+            ) {
                 content()
             }
         }
@@ -59,7 +65,11 @@ internal fun Modifier.blueprintClick(onClick: () -> Unit): Modifier = composed {
     val hovered by source.collectIsHoveredAsState()
     val pressed by source.collectIsPressedAsState()
     var focused by remember { mutableStateOf(false) }
-    val scale by animateFloatAsState(if (pressed) .97f else if (hovered || focused) 1.018f else 1f, label = "blueprint-action")
+    val reducedMotion = LocalReducedMotion.current
+    val scale by animateFloatAsState(
+        if (reducedMotion) 1f else if (pressed) .97f else if (hovered || focused) 1.018f else 1f,
+        label = "blueprint-action",
+    )
     this.graphicsLayer { scaleX = scale; scaleY = scale }
         .onFocusChanged { focused = it.isFocused }
         .hoverable(source)
