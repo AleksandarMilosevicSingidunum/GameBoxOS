@@ -2705,7 +2705,8 @@ private val pcShortcuts = listOf(
     AppShortcut("Winlator", "Windows applications", "com.winlator"),
     AppShortcut("Termux", "Linux terminal", "com.termux"),
     AppShortcut("Files", "Android document manager", "com.google.android.documentsui"),
-    AppShortcut("Chrome", "Web browser", "com.android.chrome")
+    AppShortcut("Chrome", "Web browser", "com.android.chrome"),
+    AppShortcut("Android desktop", "Return to the DeX or Android home screen", "__android_home__")
 )
 
 @Composable
@@ -2722,8 +2723,13 @@ private fun AppHubScreen(
     )
     val launchIntents = remember(shortcuts) {
         shortcuts.associate { shortcut ->
-            shortcut.packageName to context.packageManager
-                .getLaunchIntentForPackage(shortcut.packageName)
+            shortcut.packageName to if (shortcut.packageName == "__android_home__") {
+                Intent(Intent.ACTION_MAIN)
+                    .addCategory(Intent.CATEGORY_HOME)
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            } else {
+                context.packageManager.getLaunchIntentForPackage(shortcut.packageName)
+            }
         }
     }
     val visiblePackages = visibleShortcutPackageNames(
