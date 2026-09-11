@@ -34,7 +34,7 @@ class SaveBackupService(
         if (!source.isFile) return BackupResult.SOURCE_MISSING
         val backup = resolveContained(backupsRoot, relativePath)
         val staged = resolveContained(backupsRoot, relativePath + ".part")
-        checksumFile(backup) // Validate sidecar before changing backup bytes.
+        validateBackupDestination(backup)
         check(backup.parentFile?.mkdirs() != false || backup.parentFile?.isDirectory == true)
         try {
             val copied = source.inputStream().use { input ->
@@ -108,7 +108,7 @@ class SaveBackupService(
         require(maxBytes > 0L) { "Import size limit must be positive" }
         val backup = resolveContained(backupsRoot, relativePath)
         val staged = resolveContained(backupsRoot, relativePath + ".import.part")
-        checksumFile(backup)
+        validateBackupDestination(backup)
         check(backup.parentFile?.mkdirs() != false || backup.parentFile?.isDirectory == true)
         var transferred = 0L
         var exceeded = false
@@ -171,6 +171,12 @@ class SaveBackupService(
         return target
     }
 
+    private fun validateBackupDestination(backup: File) {
+        val checksum = checksumFile(backup)
+        require(!backup.exists() || backup.isFile) { "Backup destination is not a file" }
+        require(!checksum.exists() || checksum.isFile) { "Backup checksum destination is not a file" }
+    }
+
     private fun checksumFile(backup: File) =
         resolveContained(backupsRoot, backup.relativeTo(backupsRoot).invariantSeparatorsPath + ".sha256")
 
@@ -200,4 +206,3 @@ class SaveBackupService(
         }
     }
 }
-

@@ -143,6 +143,24 @@ class SaveBackupServiceTest {
         }
     }
 
+    @Test fun invalidChecksumDestinationDoesNotReplaceBackupBytes() {
+        val saves = temporaryFolder.newFolder("saves")
+        val backups = temporaryFolder.newFolder("backups")
+        val path = "game/save.dat"
+        saves.resolve(path).apply { parentFile.mkdirs(); writeText("NEW") }
+        val backup = backups.resolve(path).apply { parentFile.mkdirs(); writeText("LAST GOOD") }
+        backups.resolve(path + ".sha256").mkdir()
+        val service = SaveBackupService(saves, backups)
+        assertThrows(IllegalArgumentException::class.java) { service.createBackup(path) }
+        assertEquals("LAST GOOD", backup.readText())
+        assertThrows(IllegalArgumentException::class.java) {
+            service.importBackup(path, ByteArrayInputStream("IMPORTED".toByteArray()))
+        }
+        assertEquals("LAST GOOD", backup.readText())
+        assertEquals(false, backups.resolve(path + ".part").exists())
+        assertEquals(false, backups.resolve(path + ".import.part").exists())
+    }
+
     @Test fun missingAndTraversalInputsFailClosed() {
         val service = SaveBackupService(
             temporaryFolder.newFolder("saves"),
@@ -186,4 +204,3 @@ class SaveBackupServiceTest {
         assertEquals("ORIGINAL", save.readText())
     }
 }
-
