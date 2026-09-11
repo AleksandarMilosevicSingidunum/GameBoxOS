@@ -21,6 +21,7 @@ private val Context.gameBoxDataStore: DataStore<Preferences> by preferencesDataS
 
 data class GameBoxSettings(
     val safeAreaPercent: Float = 0.04f,
+    val reducedMotion: Boolean = false,
     val showUnavailableGames: Boolean = true,
     val showUnavailableShortcuts: Boolean = true,
     val catalogSeededAtEpochMs: Long? = null,
@@ -39,6 +40,7 @@ class SettingsRepository(private val context: Context) {
     val settings: Flow<GameBoxSettings> = context.gameBoxDataStore.data.map { preferences ->
         GameBoxSettings(
             safeAreaPercent = preferences[SAFE_AREA] ?: 0.04f,
+            reducedMotion = preferences[REDUCED_MOTION] ?: false,
             showUnavailableGames = preferences[SHOW_UNAVAILABLE] ?: true,
             showUnavailableShortcuts = preferences[SHOW_UNAVAILABLE_SHORTCUTS] ?: true,
             catalogSeededAtEpochMs = preferences[CATALOG_SEEDED_AT],
@@ -153,6 +155,10 @@ class SettingsRepository(private val context: Context) {
         context.gameBoxDataStore.edit { it[SAFE_AREA] = value.coerceIn(0f, 0.1f) }
     }
 
+    suspend fun setReducedMotion(value: Boolean) {
+        context.gameBoxDataStore.edit { it[REDUCED_MOTION] = value }
+    }
+
     suspend fun setShowUnavailableGames(value: Boolean) {
         context.gameBoxDataStore.edit { it[SHOW_UNAVAILABLE] = value }
     }
@@ -171,6 +177,7 @@ class SettingsRepository(private val context: Context) {
 
     private companion object {
         val SAFE_AREA = floatPreferencesKey("safe_area_percent")
+        val REDUCED_MOTION = booleanPreferencesKey("reduced_motion")
         val SHOW_UNAVAILABLE = booleanPreferencesKey("show_unavailable_games")
         val SHOW_UNAVAILABLE_SHORTCUTS = booleanPreferencesKey("show_unavailable_shortcuts")
         val CATALOG_SEEDED_AT = longPreferencesKey("catalog_seeded_at_epoch_ms")
