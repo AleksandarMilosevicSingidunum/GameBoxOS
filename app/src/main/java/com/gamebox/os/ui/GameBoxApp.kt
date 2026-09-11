@@ -707,13 +707,17 @@ val allDiscoveryGames by discoveryRepository.observeGames(null, "", 250).collect
     var region by remember { mutableStateOf<String?>(null) }
     var language by remember { mutableStateOf<String?>(null) }
     var favoritesOnly by remember { mutableStateOf(false) }
-    DisposableEffect(controllerActions) {
-        controllerActions?.configure(
-            xLabel = "Search",
-            onX = { searchFocusRequester.requestFocus() },
-            yLabel = "Filters",
-            onY = { favoritesOnly = !favoritesOnly },
-        )
+    DisposableEffect(controllerActions, selectedDiscovery) {
+        if (selectedDiscovery == null) {
+            controllerActions?.configure(
+                xLabel = "Search",
+                onX = { runCatching { searchFocusRequester.requestFocus() } },
+                yLabel = "Filters",
+                onY = { favoritesOnly = !favoritesOnly },
+            )
+        } else {
+            controllerActions?.clear()
+        }
         onDispose { controllerActions?.clear() }
     }
     val filtered = filterGames(
