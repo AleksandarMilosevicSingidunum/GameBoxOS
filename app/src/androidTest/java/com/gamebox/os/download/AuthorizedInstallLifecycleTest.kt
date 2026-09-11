@@ -84,14 +84,16 @@ class AuthorizedInstallLifecycleTest {
             val restoredController = WorkManagerAuthorizedDownloadController(
                 app, delayedRepository, restoreScope
             )
-            withTimeout(10_000) {
+            // Shared CI emulators can pause Room/WorkManager dispatch while the other
+            // instrumentation classes finish; this is an eventual-state assertion.
+            withTimeout(30_000) {
                 restoredController.observeState().first {
                     it.status == AuthorizedDownloadState.Status.SUCCEEDED
                 }
             }
             assertTrue("No write before the target row exists", restoredWrites.tryReceive().isFailure)
             delayedGames.value = container.gameRepository.observeGames().value
-            assertEquals(InstallState.INSTALLED, withTimeout(10_000) { restoredWrites.receive() })
+            assertEquals(InstallState.INSTALLED, withTimeout(30_000) { restoredWrites.receive() })
         } finally {
             restoreScope.coroutineContext[Job]?.cancelAndJoin()
             restoredWrites.close()
@@ -100,14 +102,14 @@ class AuthorizedInstallLifecycleTest {
         val selectedSave = java.io.File.createTempFile("selected-save-", ".dat", app.cacheDir)
         selectedSave.writeText("SAVE")
         container.saveSafetyController.importInitialSave(android.net.Uri.fromFile(selectedSave))
-        withTimeout(10_000) {
+        withTimeout(30_000) {
             container.saveSafetyController.observeState().first { it.saveRecordPresent }
         }
         val originalSave = save.readBytes()
         selectedSave.delete()
         assertTrue(originalSave.isNotEmpty())
         container.saveSafetyController.backupSave()
-        withTimeout(10_000) {
+        withTimeout(30_000) {
             container.saveSafetyController.observeState().first { it.backupPresent && it.operationSuccessful }
         }
         val preview = container.saveSafetyController.uninstallPreview()
@@ -116,7 +118,7 @@ class AuthorizedInstallLifecycleTest {
         assertEquals(originalSave.size.toLong(), preview.retainedSaveBytes)
 
         container.saveSafetyController.uninstallTestContent()
-        withTimeout(10_000) {
+        withTimeout(30_000) {
             container.gameRepository.observeGames().first { games ->
                 games.any { it.id == gameId && it.state == InstallState.NOT_INSTALLED }
             }
@@ -132,7 +134,7 @@ class AuthorizedInstallLifecycleTest {
         // Exercise the actual restore service after changing this test-owned save.
         save.writeText("CHANGED BY LIFECYCLE TEST")
         container.saveSafetyController.restoreSave()
-        withTimeout(10_000) {
+        withTimeout(30_000) {
             container.saveSafetyController.observeState().first {
                 it.operationSuccessful && it.operationMessage == "Restore completed"
             }
@@ -140,3 +142,4 @@ class AuthorizedInstallLifecycleTest {
         assertArrayEquals(originalSave, save.readBytes())
     }
 }
+
