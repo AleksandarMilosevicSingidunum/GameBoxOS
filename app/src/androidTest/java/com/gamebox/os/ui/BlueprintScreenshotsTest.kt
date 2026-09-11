@@ -39,6 +39,18 @@ class BlueprintScreenshotsTest {
             tab.performClick()
             rule.waitForIdle()
             tab.assertIsSelected()
+            if (rule.activity.resources.configuration.screenWidthDp >= 900) {
+                when (title) {
+                    "Library" -> {
+                        rule.onNodeWithContentDescription("X button: Search").assertIsDisplayed()
+                        rule.onNodeWithContentDescription("Y button: Favorites").assertIsDisplayed()
+                    }
+                    "Store" -> {
+                        rule.onNodeWithContentDescription("X button: Search").assertIsDisplayed()
+                        rule.onNodeWithContentDescription("Y button: Filters").assertIsDisplayed()
+                    }
+                }
+            }
             if (title == "Store" &&
                 rule.activity.resources.configuration.screenWidthDp >= 900
             ) {

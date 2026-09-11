@@ -188,11 +188,11 @@ fun GameBoxApp(
                     AndroidKeyEvent.KEYCODE_BUTTON_L1 -> { moveTab(-1); true }
                     AndroidKeyEvent.KEYCODE_BUTTON_R1 -> { moveTab(1); true }
                     AndroidKeyEvent.KEYCODE_BUTTON_X -> {
-                        if (destination == Destination.STORE && controllerActions.invokeX()) true
+                        if (destination in setOf(Destination.STORE, Destination.LIBRARY) && controllerActions.invokeX()) true
                         else { uiState.openDestination(Destination.STORE.name); true }
                     }
                     AndroidKeyEvent.KEYCODE_BUTTON_Y -> {
-                        if (destination == Destination.STORE && controllerActions.invokeY()) true
+                        if (destination in setOf(Destination.STORE, Destination.LIBRARY) && controllerActions.invokeY()) true
                         else { uiState.openDestination(Destination.SETTINGS.name); true }
                     }
                     AndroidKeyEvent.KEYCODE_BACK, AndroidKeyEvent.KEYCODE_BUTTON_B ->
@@ -510,7 +510,11 @@ private fun ControllerFooter(xLabel: String, yLabel: String) {
 
 @Composable
 private fun ControllerHint(letter: String, label: String, color: Color) {
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+    Row(
+        modifier = Modifier.semantics { contentDescription = "$letter button: $label" },
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(5.dp),
+    ) {
         Surface(shape = CircleShape, color = Color.Transparent, border = BorderStroke(1.dp, color), modifier = Modifier.size(17.dp)) {
             Box(contentAlignment = Alignment.Center) {
                 Text(letter, color = color, fontSize = 9.sp, fontWeight = FontWeight.Bold)
@@ -1206,10 +1210,21 @@ private fun CollectionScreen(
     compact: Boolean,
     open: (Game) -> Unit
 ) {
+    val controllerActions = LocalControllerActions.current
+    val searchFocusRequester = remember { FocusRequester() }
     var query by remember { mutableStateOf("") }
     var platform by remember { mutableStateOf<String?>(null) }
     var genre by remember { mutableStateOf<String?>(null) }
     var favoritesOnly by remember { mutableStateOf(false) }
+    DisposableEffect(controllerActions) {
+        controllerActions?.configure(
+            xLabel = "Search",
+            onX = { runCatching { searchFocusRequester.requestFocus() } },
+            yLabel = "Favorites",
+            onY = { favoritesOnly = !favoritesOnly },
+        )
+        onDispose { controllerActions?.clear() }
+    }
     val filtered = filterGames(games, query, platform, genre, favoritesOnly)
     val focusTarget = restoreGameId?.takeIf { id -> filtered.any { it.id == id } }
         ?: filtered.firstOrNull()?.id
@@ -1227,6 +1242,7 @@ private fun CollectionScreen(
             focusTarget = focusTarget,
             onFocused = onFocused,
             open = open,
+            searchFocusRequester = searchFocusRequester,
         )
         return
     }
@@ -1271,7 +1287,8 @@ private fun CollectionScreen(
         Spacer(Modifier.height(14.dp))
         GameFilterBar(
             games, query, { query = it }, platform, { platform = it },
-            genre, { genre = it }, favoritesOnly, { favoritesOnly = it }
+            genre, { genre = it }, favoritesOnly, { favoritesOnly = it },
+            searchFocusRequester = searchFocusRequester,
         )
         Spacer(Modifier.height(14.dp))
         if (filtered.isEmpty()) {
@@ -1315,6 +1332,7 @@ private fun BlueprintLibraryScreen(
     focusTarget: GameId?,
     onFocused: (GameId) -> Unit,
     open: (Game) -> Unit,
+    searchFocusRequester: FocusRequester? = null,
 ) {
     val summary = summarizeLibrary(games)
     val platforms = games.groupingBy { it.platform }.eachCount().toList().sortedBy { it.first }
@@ -1373,7 +1391,9 @@ private fun BlueprintLibraryScreen(
                 leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null, modifier = Modifier.size(17.dp)) },
                 placeholder = { Text("Search games", fontSize = 11.sp) },
                 singleLine = true,
-                modifier = Modifier.widthIn(max = 230.dp).weight(1f),
+                modifier = Modifier.widthIn(max = 230.dp).weight(1f).then(
+                    searchFocusRequester?.let { Modifier.focusRequester(it) } ?: Modifier
+                ),
                 shape = RoundedCornerShape(8.dp),
             )
             }
