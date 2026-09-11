@@ -184,6 +184,7 @@ fun GameBoxApp(
         safeAreaPercent = appSettings.safeAreaPercent,
         reducedMotion = appSettings.reducedMotion,
         controllerActions = controllerActions,
+        uiState = uiState,
     ) {
     BoxWithConstraints(
         Modifier.fillMaxSize()
@@ -377,6 +378,19 @@ fun GameBoxApp(
         }
     }
 }
+}
+
+@Composable
+private fun restoredScrollState(key: String): androidx.compose.foundation.ScrollState {
+    val uiState = LocalGameBoxUiState.current
+    val initial = uiState?.screenValue("scroll." + key)?.toIntOrNull()?.coerceAtLeast(0) ?: 0
+    val scrollState = rememberScrollState(initial = initial)
+    LaunchedEffect(uiState, key, scrollState) {
+        snapshotFlow { scrollState.value }.collect { value ->
+            uiState?.rememberScreenValue("scroll." + key, value.toString())
+        }
+    }
+    return scrollState
 }
 
 @Composable
@@ -743,7 +757,7 @@ BlueprintPanel(Modifier.fillMaxWidth()) {
     val storage = context.filesDir
     val usedPercent = if (storage.totalSpace > 0L) ((storage.totalSpace - storage.usableSpace) * 100L / storage.totalSpace).toInt() else 0
 
-    Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+    Column(Modifier.fillMaxWidth().verticalScroll(restoredScrollState("home")), verticalArrangement = Arrangement.spacedBy(14.dp)) {
         Text(if (history.isEmpty()) "Ready to play" else "Continue Playing",
             fontSize = if (compact) 22.sp else 16.sp, fontWeight = FontWeight.SemiBold)
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
@@ -1016,7 +1030,7 @@ val allDiscoveryGames by discoveryRepository.observeGames(null, "", 250).collect
         )
         return
     }
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+    Column(Modifier.fillMaxSize().verticalScroll(restoredScrollState("store"))) {
         if (compact) {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Column {
@@ -1471,7 +1485,7 @@ private fun CollectionScreen(
         )
         return
     }
-    Column(Modifier.verticalScroll(rememberScrollState())) {
+    Column(Modifier.verticalScroll(restoredScrollState("library"))) {
         Text(title, fontSize = if (compact) 28.sp else 38.sp, fontWeight = FontWeight.Bold)
         Text(subtitle, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.68f))
         Surface(
@@ -2092,7 +2106,7 @@ private fun DiscoveryDetailsScreen(
     }
     BoxWithConstraints(Modifier.fillMaxSize()) {
         val narrow = maxWidth < 700.dp
-        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        Column(Modifier.fillMaxSize().verticalScroll(restoredScrollState("discovery." + game.id.value)), verticalArrangement = Arrangement.spacedBy(14.dp)) {
             Surface(Modifier.fillMaxWidth().height(if (narrow) 320.dp else 300.dp),
                 shape = RoundedCornerShape(9.dp), color = MaterialTheme.colorScheme.surface,
                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)) {
@@ -2400,7 +2414,7 @@ private fun DetailsScreen(
     if (showUninstallConfirmation) {
         ContentRemovalDialog(game, saveSafetyController) { showUninstallConfirmation = false }
     }
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+    Column(Modifier.fillMaxSize().verticalScroll(restoredScrollState("details." + game.id.value))) {
         ImportedGameReimportCard(game, importer, repository,
             enabled = launchState.status !in setOf(LaunchUiState.Status.PREPARING,
                 LaunchUiState.Status.LAUNCHED, LaunchUiState.Status.SESSION_ERROR))
@@ -2783,7 +2797,7 @@ private fun DownloadsScreen(repository: GameRepository, downloadRepository: Down
     val jobs by downloadRepository.observeJobs().collectAsState()
     val context = LocalContext.current
     val telemetryTracker = remember { DownloadTelemetryTracker() }
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+    Column(Modifier.fillMaxSize().verticalScroll(restoredScrollState("downloads"))) {
         Text(if (compact) "Downloads" else "Download Manager", fontSize = if (compact) 28.sp else 17.sp, fontWeight = FontWeight.Bold)
         Text("Manage active transfers, completed games, and verified installation",
             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.68f))
@@ -3086,7 +3100,7 @@ private fun AppHubScreen(
         )
         return
     }
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+    Column(Modifier.fillMaxSize().verticalScroll(restoredScrollState("hub." + title.lowercase()))) {
         Text(title, fontSize = if (compact) 28.sp else 38.sp, fontWeight = FontWeight.Bold)
         Text(subtitle, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.68f))
         if (title == "PC Hub") {
@@ -3451,7 +3465,7 @@ private fun SettingsScreen(
     val diagnosticGames by gameRepository.observeGames().collectAsState()
     val diagnosticDownloads by downloadRepository.observeJobs().collectAsState()
     val scope = rememberCoroutineScope()
-    val scrollState = rememberScrollState()
+    val scrollState = restoredScrollState("settings")
     val sectionOffsets = remember { mutableStateMapOf<SettingsSection, Int>() }
     var selectedSection by remember { mutableStateOf(SettingsSection.STORAGE) }
     val diagnosticEvents = remember { DiagnosticEventCollector() }
