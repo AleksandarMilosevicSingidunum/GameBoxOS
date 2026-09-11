@@ -272,6 +272,7 @@ fun GameBoxApp(
                         DetailsScreen(
                             selected,
                             repository,
+                            settingsRepository,
                             downloadRepository,
                             authorizedDownloadController,
                             remoteDownloadController,
@@ -2362,6 +2363,7 @@ internal fun GameCard(
 private fun DetailsScreen(
     game: Game,
     repository: GameRepository,
+    settingsRepository: SettingsRepository,
     downloadRepository: DownloadRepository,
     authorizedDownloadController: AuthorizedDownloadController,
     remoteDownloadController: RemoteDownloadController,
@@ -2512,11 +2514,11 @@ private fun DetailsScreen(
         }
         if (LocalReducedMotion.current) {
             if (showGameSettings) {
-                Column { GameSettingsPanel(game = game, repository = repository) }
+                Column { GameSettingsPanel(game = game, repository = repository, settingsRepository = settingsRepository) }
             }
         } else {
             AnimatedVisibility(visible = showGameSettings) {
-                Column { GameSettingsPanel(game = game, repository = repository) }
+                Column { GameSettingsPanel(game = game, repository = repository, settingsRepository = settingsRepository) }
             }
         }
         Spacer(Modifier.height(10.dp))
