@@ -161,6 +161,7 @@ fun GameBoxApp(
     val appSettings by settingsRepository.settings.collectAsState(
         initial = com.gamebox.os.settings.GameBoxSettings()
     )
+    val controllerActions = remember { ControllerActionRegistry() }
     val uiState = rememberGameBoxUiState()
     val destination = runCatching { Destination.valueOf(uiState.destination) }
         .getOrDefault(Destination.HOME)
@@ -177,6 +178,7 @@ fun GameBoxApp(
     BlueprintViewport(
         safeAreaPercent = appSettings.safeAreaPercent,
         reducedMotion = appSettings.reducedMotion,
+        controllerActions = controllerActions,
     ) {
     BoxWithConstraints(
         Modifier.fillMaxSize()
@@ -185,8 +187,14 @@ fun GameBoxApp(
                 when (event.nativeKeyEvent.keyCode) {
                     AndroidKeyEvent.KEYCODE_BUTTON_L1 -> { moveTab(-1); true }
                     AndroidKeyEvent.KEYCODE_BUTTON_R1 -> { moveTab(1); true }
-                    AndroidKeyEvent.KEYCODE_BUTTON_X -> { uiState.openDestination(Destination.STORE.name); true }
-                    AndroidKeyEvent.KEYCODE_BUTTON_Y -> { uiState.openDestination(Destination.SETTINGS.name); true }
+                    AndroidKeyEvent.KEYCODE_BUTTON_X -> {
+                        if (destination == Destination.STORE && controllerActions.invokeX()) true
+                        else { uiState.openDestination(Destination.STORE.name); true }
+                    }
+                    AndroidKeyEvent.KEYCODE_BUTTON_Y -> {
+                        if (destination == Destination.STORE && controllerActions.invokeY()) true
+                        else { uiState.openDestination(Destination.SETTINGS.name); true }
+                    }
                     AndroidKeyEvent.KEYCODE_BACK, AndroidKeyEvent.KEYCODE_BUTTON_B ->
                         if (selectedGameId != null) { uiState.clearSelection(); true } else false
                     else -> false
@@ -296,7 +304,7 @@ fun GameBoxApp(
 
             if (!compact) {
                 Spacer(Modifier.height(8.dp))
-                ControllerFooter()
+                ControllerFooter(controllerActions.xLabel, controllerActions.yLabel)
             }
         }
     }
@@ -472,7 +480,7 @@ private fun destinationIcon(item: Destination): ImageVector = when (item) {
 }
 
 @Composable
-private fun ControllerFooter() {
+private fun ControllerFooter(xLabel: String, yLabel: String) {
     Row(
         Modifier.fillMaxWidth().height(30.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -481,8 +489,8 @@ private fun ControllerFooter() {
         Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
             ControllerHint("A", "Select", Color(0xFF78D64B))
             ControllerHint("B", "Back", Color(0xFFFF4D5E))
-            ControllerHint("X", "Store", Color(0xFF3C8DFF))
-            ControllerHint("Y", "Settings", Color(0xFFFFC43D))
+            ControllerHint("X", xLabel, Color(0xFF3C8DFF))
+            ControllerHint("Y", yLabel, Color(0xFFFFC43D))
             Text("LB/RB  Change tab", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp)
         }
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -671,6 +679,8 @@ private fun CatalogScreen(
 ) {
     val refreshState by repository.observeCatalogRefreshState().collectAsState()
     val scope = rememberCoroutineScope()
+    val controllerActions = LocalControllerActions.current
+    val searchFocusRequester = remember { FocusRequester() }
     var query by remember { mutableStateOf("") }
     val discoveryPlatforms by discoveryRepository.observePlatforms().collectAsState(initial = emptyList())
     var selectedConsoleKey by remember { mutableStateOf<String?>(null) }
@@ -697,6 +707,15 @@ val allDiscoveryGames by discoveryRepository.observeGames(null, "", 250).collect
     var region by remember { mutableStateOf<String?>(null) }
     var language by remember { mutableStateOf<String?>(null) }
     var favoritesOnly by remember { mutableStateOf(false) }
+    DisposableEffect(controllerActions) {
+        controllerActions?.configure(
+            xLabel = "Search",
+            onX = { searchFocusRequester.requestFocus() },
+            yLabel = "Filters",
+            onY = { favoritesOnly = !favoritesOnly },
+        )
+        onDispose { controllerActions?.clear() }
+    }
     val filtered = filterGames(
         games, query, platform, genre, favoritesOnly,
         region = region, language = language,
@@ -767,6 +786,7 @@ val allDiscoveryGames by discoveryRepository.observeGames(null, "", 250).collect
             onSync = ::syncDiscovery,
             openAuthorized = open,
             openDiscovery = { selectedDiscoveryId = it.id },
+            searchFocusRequester = searchFocusRequester,
         )
         return
     }
@@ -852,6 +872,7 @@ val allDiscoveryGames by discoveryRepository.observeGames(null, "", 250).collect
             onRegion = { region = it },
             language = language,
             onLanguage = { language = it },
+            searchFocusRequester = searchFocusRequester,
         )
         Spacer(Modifier.height(16.dp))
         if (filtered.isEmpty()) Text("No authorized games match these filters")
@@ -961,6 +982,7 @@ private fun BlueprintCatalogScreen(
     openDiscovery: (DiscoveryGame) -> Unit,
     allDiscoveryGames: List<DiscoveryGame> = discoveryGames,
     discoveryPlatformNames: Map<String, String> = emptyMap(),
+    searchFocusRequester: FocusRequester? = null,
 ) {
     var favoritesOnly by remember { mutableStateOf(false) }
     var installedOnly by remember { mutableStateOf(false) }
@@ -1107,7 +1129,10 @@ private fun BlueprintCatalogScreen(
                     value = query, onValueChange = onQuery,
                     leadingIcon = { Icon(Icons.Rounded.Search, null, Modifier.size(16.dp)) },
                     placeholder = { Text("Search games", fontSize = 11.sp) },
-                    singleLine = true, modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth().then(
+                        searchFocusRequester?.let { Modifier.focusRequester(it) } ?: Modifier
+                    ),
                     shape = RoundedCornerShape(8.dp),
                 )
                 Text("Metadata includes artwork and details. Open a title to import a copy or view its sources.", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 10.sp, lineHeight = 14.sp)
@@ -1570,6 +1595,7 @@ private fun GameFilterBar(
     onRegion: (String?) -> Unit = {},
     language: String? = null,
     onLanguage: (String?) -> Unit = {},
+    searchFocusRequester: FocusRequester? = null,
 ) {
     val platforms = games.map { it.platform }.distinct().sorted()
     val genres = games.map { it.genre }.distinct().sorted()
@@ -1581,7 +1607,9 @@ private fun GameFilterBar(
             onValueChange = onQuery,
             label = { Text("Search games") },
             singleLine = true,
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth().then(
+                searchFocusRequester?.let { Modifier.focusRequester(it) } ?: Modifier
+            )
         )
         Row(
             Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
