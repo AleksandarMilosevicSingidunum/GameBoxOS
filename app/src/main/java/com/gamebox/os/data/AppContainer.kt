@@ -121,7 +121,8 @@ class DefaultAppContainer(context: Context) : AppContainer {
 
     override val gameLaunchController: GameLaunchController = DefaultGameLaunchController(
         EmulatorCapabilityRegistry(), AndroidPackageGateway(applicationContext), gameRepository,
-        sessionJournal = RoomLaunchSessionJournal(database.launchSessionDao())
+        sessionJournal = RoomLaunchSessionJournal(database.launchSessionDao()),
+        platformEmulatorDefault = settingsRepository::platformEmulatorDefault,
     )
 
     override val saveSafetyController: SaveSafetyController = DefaultSaveSafetyController(
