@@ -41,7 +41,10 @@ class SaveBackupSymlinkTest {
             val save = saves.resolve("game/save.dat").apply { parentFile.mkdirs(); writeText("SAVE") }
             val other = root.resolve("other.dat").apply { writeText("KEEP") }
             val service = SaveBackupService(saves, backups)
-            for (suffix in listOf("", ".part", ".sha256", ".import.part")) {
+            // The current atomic format uses the destination itself and a provider staging file.
+            // A legacy checksum link is still inspected for safe migration. The old fixed `.part`
+            // name is no longer used: AtomicSaveSnapshot creates an unpredictable private temp file.
+            for (suffix in listOf("", ".sha256", ".import.part")) {
                 val link = backups.resolve("game/save.dat$suffix")
                 link.parentFile.mkdirs()
                 Files.createSymbolicLink(link.toPath(), other.toPath())
@@ -64,3 +67,4 @@ class SaveBackupSymlinkTest {
         } finally { root.deleteRecursively() }
     }
 }
+
