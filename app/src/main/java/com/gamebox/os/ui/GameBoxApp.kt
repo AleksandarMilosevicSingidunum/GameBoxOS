@@ -158,6 +158,9 @@ fun GameBoxApp(
     saveControllerFactory: ((GameId, kotlinx.coroutines.CoroutineScope) -> SaveSafetyController)? = null
 ) {
     val games by repository.observeGames().collectAsState()
+    val appSettings by settingsRepository.settings.collectAsState(
+        initial = com.gamebox.os.settings.GameBoxSettings()
+    )
     val uiState = rememberGameBoxUiState()
     val destination = runCatching { Destination.valueOf(uiState.destination) }
         .getOrDefault(Destination.HOME)
@@ -171,7 +174,7 @@ fun GameBoxApp(
         uiState.openDestination(target.name)
     }
 
-    BlueprintViewport {
+    BlueprintViewport(safeAreaPercent = appSettings.safeAreaPercent) {
     BoxWithConstraints(
         Modifier.fillMaxSize()
             .onPreviewKeyEvent { event ->
