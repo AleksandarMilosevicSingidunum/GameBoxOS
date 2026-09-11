@@ -162,6 +162,9 @@ fun GameBoxApp(
         initial = com.gamebox.os.settings.GameBoxSettings()
     )
     val controllerActions = remember { ControllerActionRegistry() }
+    val appScope = rememberCoroutineScope()
+    var showProfileSwitcher by remember { mutableStateOf(false) }
+    var focusStoreSearchOnEnter by remember { mutableStateOf(false) }
     val uiState = rememberGameBoxUiState()
     val destination = runCatching { Destination.valueOf(uiState.destination) }
         .getOrDefault(Destination.HOME)
@@ -188,11 +191,11 @@ fun GameBoxApp(
                     AndroidKeyEvent.KEYCODE_BUTTON_L1 -> { moveTab(-1); true }
                     AndroidKeyEvent.KEYCODE_BUTTON_R1 -> { moveTab(1); true }
                     AndroidKeyEvent.KEYCODE_BUTTON_X -> {
-                        if (destination in setOf(Destination.STORE, Destination.LIBRARY) && controllerActions.invokeX()) true
+                        if (controllerActions.invokeX()) true
                         else { uiState.openDestination(Destination.STORE.name); true }
                     }
                     AndroidKeyEvent.KEYCODE_BUTTON_Y -> {
-                        if (destination in setOf(Destination.STORE, Destination.LIBRARY) && controllerActions.invokeY()) true
+                        if (controllerActions.invokeY()) true
                         else { uiState.openDestination(Destination.SETTINGS.name); true }
                     }
                     AndroidKeyEvent.KEYCODE_BACK, AndroidKeyEvent.KEYCODE_BUTTON_B ->
@@ -269,7 +272,12 @@ fun GameBoxApp(
                         when (destination) {
                         Destination.HOME -> HomeScreen(
                             games, restorableGameId, rememberGameFocus, compact,
-                            openPc = { uiState.openDestination(Destination.PC.name) }
+                            openPc = { uiState.openDestination(Destination.PC.name) },
+                            openSearch = {
+                                focusStoreSearchOnEnter = true
+                                uiState.openDestination(Destination.STORE.name)
+                            },
+                            openProfileSwitcher = { showProfileSwitcher = true },
                         ) { uiState.openGame(it.id.value) }
                         Destination.LIBRARY -> CollectionScreen(
                             "Your Library", "Installed games and retained imports",
@@ -279,7 +287,9 @@ fun GameBoxApp(
                             compact
                         ) { uiState.openGame(it.id.value) }
                         Destination.STORE -> CatalogScreen(
-                            repository, catalogDiscoveryRepository, authorizedRomImporter, games, restorableGameId, rememberGameFocus, compact
+                            repository, catalogDiscoveryRepository, authorizedRomImporter, games, restorableGameId, rememberGameFocus, compact,
+                            focusSearchOnEnter = focusStoreSearchOnEnter,
+                            onSearchFocusHandled = { focusStoreSearchOnEnter = false },
                         ) { uiState.openGame(it.id.value) }
                         Destination.DOWNLOADS -> DownloadsScreen(repository, downloadRepository, remoteDownloadController, compact)
                         Destination.MEDIA -> AppHubScreen(
@@ -304,8 +314,18 @@ fun GameBoxApp(
 
             if (!compact) {
                 Spacer(Modifier.height(8.dp))
-                ControllerFooter(controllerActions.xLabel, controllerActions.yLabel)
+                ControllerFooter(controllerActions.xLabel, controllerActions.yLabel, appSettings.activeProfileName)
             }
+        }
+        if (showProfileSwitcher) {
+            ProfileSwitcherDialog(
+                activeProfile = appSettings.activeProfileName,
+                onDismiss = { showProfileSwitcher = false },
+                onSelect = { profile ->
+                    appScope.launch { settingsRepository.setActiveProfileName(profile) }
+                    showProfileSwitcher = false
+                },
+            )
         }
     }
 }
@@ -480,7 +500,54 @@ private fun destinationIcon(item: Destination): ImageVector = when (item) {
 }
 
 @Composable
-private fun ControllerFooter(xLabel: String, yLabel: String) {
+private fun ProfileSwitcherDialog(
+    activeProfile: String,
+    onDismiss: () -> Unit,
+    onSelect: (String) -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        icon = { Icon(Icons.Rounded.SwitchAccount, contentDescription = null) },
+        title = { Text("Switch profile") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                listOf("Local player", "Guest").forEach { profile ->
+                    val selected = profile == activeProfile
+                    Surface(
+                        modifier = Modifier.fillMaxWidth().blueprintClick { onSelect(profile) }
+                            .semantics {
+                                contentDescription = "$profile profile"
+                                this.selected = selected
+                            },
+                        color = if (selected) MaterialTheme.colorScheme.primaryContainer
+                            else MaterialTheme.colorScheme.surfaceVariant,
+                        shape = RoundedCornerShape(8.dp),
+                        border = if (selected) BorderStroke(1.dp, MaterialTheme.colorScheme.primary) else null,
+                    ) {
+                        Row(
+                            Modifier.padding(14.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        ) {
+                            Icon(
+                                if (profile == "Guest") Icons.Rounded.PersonOutline else Icons.Rounded.AccountCircle,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                            )
+                            Text(profile, modifier = Modifier.weight(1f), fontWeight = FontWeight.SemiBold)
+                            if (selected) Icon(Icons.Rounded.Check, contentDescription = "Active profile")
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {},
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+    )
+}
+
+@Composable
+private fun ControllerFooter(xLabel: String, yLabel: String, profileName: String) {
     Row(
         Modifier.fillMaxWidth().height(30.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -501,7 +568,7 @@ private fun ControllerFooter(xLabel: String, yLabel: String) {
                 modifier = Modifier.size(25.dp),
             )
             Column {
-                Text("Local player", fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                Text(profileName, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
                 Text(connectedControllerLabel(), fontSize = 9.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
@@ -531,8 +598,20 @@ private fun HomeScreen(
     onFocused: (GameId) -> Unit,
     compact: Boolean,
     openPc: () -> Unit,
+    openSearch: () -> Unit,
+    openProfileSwitcher: () -> Unit,
     open: (Game) -> Unit
 ) {
+    val controllerActions = LocalControllerActions.current
+    DisposableEffect(controllerActions) {
+        controllerActions?.configure(
+            xLabel = "Search",
+            onX = openSearch,
+            yLabel = "Switch Profile",
+            onY = openProfileSwitcher,
+        )
+        onDispose { controllerActions?.clear() }
+    }
     if (games.isEmpty()) {
 BlueprintPanel(Modifier.fillMaxWidth()) {
             Text("Welcome to GameBox", fontWeight = FontWeight.Bold)
@@ -679,12 +758,20 @@ private fun CatalogScreen(
     restoreGameId: GameId?,
     onFocused: (GameId) -> Unit,
     compact: Boolean,
+    focusSearchOnEnter: Boolean = false,
+    onSearchFocusHandled: () -> Unit = {},
     open: (Game) -> Unit
 ) {
     val refreshState by repository.observeCatalogRefreshState().collectAsState()
     val scope = rememberCoroutineScope()
     val controllerActions = LocalControllerActions.current
     val searchFocusRequester = remember { FocusRequester() }
+    LaunchedEffect(focusSearchOnEnter) {
+        if (focusSearchOnEnter) {
+            runCatching { searchFocusRequester.requestFocus() }
+            onSearchFocusHandled()
+        }
+    }
     var query by remember { mutableStateOf("") }
     val discoveryPlatforms by discoveryRepository.observePlatforms().collectAsState(initial = emptyList())
     var selectedConsoleKey by remember { mutableStateOf<String?>(null) }

@@ -29,6 +29,10 @@ class BlueprintScreenshotsTest {
         rule.waitUntil(15_000) {
             hero.fetchSemanticsNodes().isNotEmpty()
         }
+        if (rule.activity.resources.configuration.screenWidthDp >= 900) {
+            rule.onNodeWithContentDescription("X button: Search").assertIsDisplayed()
+            rule.onNodeWithContentDescription("Y button: Switch Profile").assertIsDisplayed()
+        }
         capture("01-home")
         hero.onFirst().performClick()
         capture("02-game-details")

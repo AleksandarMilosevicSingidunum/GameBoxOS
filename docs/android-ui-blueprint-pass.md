@@ -22,6 +22,10 @@ aspect ratios necessarily change the rendered result.
   player levels and points have been removed.
 - Phone safe-area padding, large-display scaling and scrollable console/settings rails.
 - Unified mouse hover, touch press and keyboard/controller click sources.
+- Contextual controller footer actions now match the Blueprint on Home
+  (`X Search`, `Y Switch Profile`), Store and Library. Home search opens and
+  focuses the Store query field; the profile chooser persists Local player or
+  Guest and updates the footer identity.
 
 ## Verification
 
