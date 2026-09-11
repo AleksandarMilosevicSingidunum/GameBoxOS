@@ -299,10 +299,12 @@ fun GameBoxApp(
                             games.filter { it.belongsToLibrary() },
                             restorableGameId,
                             rememberGameFocus,
-                            compact
+                            compact,
+                            uiState,
                         ) { uiState.openGame(it.id.value) }
                         Destination.STORE -> CatalogScreen(
                             repository, catalogDiscoveryRepository, authorizedRomImporter, games, restorableGameId, rememberGameFocus, compact,
+                            uiState = uiState,
                             focusSearchOnEnter = focusStoreSearchOnEnter,
                             onSearchFocusHandled = { focusStoreSearchOnEnter = false },
                         ) { uiState.openGame(it.id.value) }
@@ -868,6 +870,7 @@ private fun CatalogScreen(
     restoreGameId: GameId?,
     onFocused: (GameId) -> Unit,
     compact: Boolean,
+    uiState: GameBoxUiState,
     focusSearchOnEnter: Boolean = false,
     onSearchFocusHandled: () -> Unit = {},
     open: (Game) -> Unit
@@ -882,9 +885,9 @@ private fun CatalogScreen(
             onSearchFocusHandled()
         }
     }
-    var query by remember { mutableStateOf("") }
+    var query by remember(uiState) { mutableStateOf(uiState.screenValue("store.query").orEmpty()) }
     val discoveryPlatforms by discoveryRepository.observePlatforms().collectAsState(initial = emptyList())
-    var selectedConsoleKey by remember { mutableStateOf<String?>(null) }
+    var selectedConsoleKey by remember(uiState) { mutableStateOf(uiState.screenValue("store.console")) }
     val selectedConsole = storeConsoles.firstOrNull { it.key == selectedConsoleKey }
     val discoveryPlatformId = when {
         selectedConsole == null -> null
@@ -896,18 +899,30 @@ private fun CatalogScreen(
 val allDiscoveryGames by discoveryRepository.observeGames(null, "", 250).collectAsState(initial = emptyList())
     val discoveryGames by discoveryRepository.observeGames(discoveryPlatformId, query, 250)
         .collectAsState(initial = emptyList())
-    var selectedDiscoveryId by remember { mutableStateOf<GameId?>(null) }
+    var selectedDiscoveryId by remember(uiState) {
+        mutableStateOf(uiState.screenValue("store.discovery")?.let(::GameId))
+    }
     val selectedDiscovery = selectedDiscoveryId?.let { id ->
         discoveryGames.firstOrNull { it.id == id }
     }
     var discoverySyncMessage by remember { mutableStateOf<String?>(null) }
     var discoverySyncing by remember { mutableStateOf(false) }
     var discoverySyncProgress by remember { mutableStateOf(0f) }
-    var platform by remember { mutableStateOf<String?>(null) }
-    var genre by remember { mutableStateOf<String?>(null) }
-    var region by remember { mutableStateOf<String?>(null) }
-    var language by remember { mutableStateOf<String?>(null) }
-    var favoritesOnly by remember { mutableStateOf(false) }
+    var platform by remember(uiState) { mutableStateOf(uiState.screenValue("store.platform")) }
+    var genre by remember(uiState) { mutableStateOf(uiState.screenValue("store.genre")) }
+    var region by remember(uiState) { mutableStateOf(uiState.screenValue("store.region")) }
+    var language by remember(uiState) { mutableStateOf(uiState.screenValue("store.language")) }
+    var favoritesOnly by remember(uiState) { mutableStateOf(uiState.screenValue("store.favorites") == "true") }
+    LaunchedEffect(query, selectedConsoleKey, selectedDiscoveryId, platform, genre, region, language, favoritesOnly) {
+        uiState.rememberScreenValue("store.query", query)
+        uiState.rememberScreenValue("store.console", selectedConsoleKey)
+        uiState.rememberScreenValue("store.discovery", selectedDiscoveryId?.value)
+        uiState.rememberScreenValue("store.platform", platform)
+        uiState.rememberScreenValue("store.genre", genre)
+        uiState.rememberScreenValue("store.region", region)
+        uiState.rememberScreenValue("store.language", language)
+        uiState.rememberScreenValue("store.favorites", favoritesOnly.toString())
+    }
     DisposableEffect(controllerActions, selectedDiscovery) {
         if (selectedDiscovery == null) {
             controllerActions?.configure(
@@ -933,7 +948,10 @@ val allDiscoveryGames by discoveryRepository.observeGames(null, "", 250).collect
             platformName = selectedConsole?.label
                 ?: discoveryPlatforms.firstOrNull { it.id == selectedDiscovery.platformId }?.name
                 ?: selectedDiscovery.platformId,
-            onBack = { selectedDiscoveryId = null },
+            onBack = {
+                selectedDiscoveryId = null
+                uiState.rememberScreenValue("store.discovery", null)
+            },
             onFavorite = {
                 scope.launch {
                     discoveryRepository.setFavorite(
@@ -990,7 +1008,10 @@ val allDiscoveryGames by discoveryRepository.observeGames(null, "", 250).collect
             onRefresh = repository::refreshCatalog,
             onSync = ::syncDiscovery,
             openAuthorized = open,
-            openDiscovery = { selectedDiscoveryId = it.id },
+            openDiscovery = {
+                selectedDiscoveryId = it.id
+                uiState.rememberScreenValue("store.discovery", it.id.value)
+            },
             searchFocusRequester = searchFocusRequester,
         )
         return
@@ -1405,14 +1426,21 @@ private fun CollectionScreen(
     restoreGameId: GameId?,
     onFocused: (GameId) -> Unit,
     compact: Boolean,
+    uiState: GameBoxUiState,
     open: (Game) -> Unit
 ) {
     val controllerActions = LocalControllerActions.current
     val searchFocusRequester = remember { FocusRequester() }
-    var query by remember { mutableStateOf("") }
-    var platform by remember { mutableStateOf<String?>(null) }
-    var genre by remember { mutableStateOf<String?>(null) }
-    var favoritesOnly by remember { mutableStateOf(false) }
+    var query by remember(uiState) { mutableStateOf(uiState.screenValue("library.query").orEmpty()) }
+    var platform by remember(uiState) { mutableStateOf(uiState.screenValue("library.platform")) }
+    var genre by remember(uiState) { mutableStateOf(uiState.screenValue("library.genre")) }
+    var favoritesOnly by remember(uiState) { mutableStateOf(uiState.screenValue("library.favorites") == "true") }
+    LaunchedEffect(query, platform, genre, favoritesOnly) {
+        uiState.rememberScreenValue("library.query", query)
+        uiState.rememberScreenValue("library.platform", platform)
+        uiState.rememberScreenValue("library.genre", genre)
+        uiState.rememberScreenValue("library.favorites", favoritesOnly.toString())
+    }
     DisposableEffect(controllerActions) {
         controllerActions?.configure(
             xLabel = "Search",
