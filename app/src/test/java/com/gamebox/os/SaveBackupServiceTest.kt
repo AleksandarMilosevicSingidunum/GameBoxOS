@@ -1,8 +1,10 @@
 package com.gamebox.os
 
 import com.gamebox.os.storage.BackupResult
+import com.gamebox.os.storage.AtomicSaveSnapshot
 import com.gamebox.os.storage.SaveBackupService
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertThrows
 import org.junit.Rule
 import org.junit.Test
@@ -112,11 +114,15 @@ class SaveBackupServiceTest {
         val save = saves.resolve("game/save.dat").apply { parentFile.mkdirs(); writeText("GOOD") }
         val service = SaveBackupService(saves, backups)
         assertEquals(BackupResult.SUCCESS, service.createBackup("game/save.dat"))
-        val digest = backups.resolve("game/save.dat.sha256").readText()
+        val retained = ByteArrayOutputStream().also {
+            assertEquals(BackupResult.SUCCESS, service.exportBackup("game/save.dat", it))
+        }.toByteArray()
         save.writeText("")
         assertThrows(IllegalArgumentException::class.java) { service.createBackup("game/save.dat") }
-        assertEquals("GOOD", backups.resolve("game/save.dat").readText())
-        assertEquals(digest, backups.resolve("game/save.dat.sha256").readText())
+        val after = ByteArrayOutputStream().also {
+            assertEquals(BackupResult.SUCCESS, service.exportBackup("game/save.dat", it))
+        }.toByteArray()
+        assertArrayEquals(retained, after)
         assertEquals(false, backups.resolve("game/save.dat.part").exists())
         assertEquals(BackupResult.SUCCESS, service.restore("game/save.dat"))
         assertEquals("GOOD", save.readText())
@@ -159,6 +165,30 @@ class SaveBackupServiceTest {
         assertEquals("LAST GOOD", backup.readText())
         assertEquals(false, backups.resolve(path + ".part").exists())
         assertEquals(false, backups.resolve(path + ".import.part").exists())
+    }
+
+    @Test fun legacyBackupRestoresAndNextBackupMigratesAtomically() {
+        val saves = temporaryFolder.newFolder("saves")
+        val backups = temporaryFolder.newFolder("backups")
+        val path = "game/save.dat"
+        val save = saves.resolve(path).apply { parentFile.mkdirs(); writeText("CURRENT") }
+        val legacy = backups.resolve(path).apply { parentFile.mkdirs(); writeText("LEGACY") }
+        backups.resolve(path + ".sha256").writeText(
+            java.security.MessageDigest.getInstance("SHA-256").digest(legacy.readBytes())
+                .joinToString("") { "%02x".format(it) })
+        val service = SaveBackupService(saves, backups)
+        assertEquals(true, service.hasBackup(path))
+        assertEquals(BackupResult.SUCCESS, service.restore(path))
+        assertEquals("LEGACY", save.readText())
+
+        save.writeText("MIGRATED")
+        assertEquals(BackupResult.SUCCESS, service.createBackup(path))
+        assertEquals(true, AtomicSaveSnapshot.hasHeader(legacy))
+        // A stale legacy sidecar is ignored once the atomic header is present.
+        backups.resolve(path + ".sha256").writeText("0".repeat(64))
+        val exported = ByteArrayOutputStream()
+        assertEquals(BackupResult.SUCCESS, service.exportBackup(path, exported))
+        assertEquals("MIGRATED", exported.toString())
     }
 
     @Test fun missingAndTraversalInputsFailClosed() {
