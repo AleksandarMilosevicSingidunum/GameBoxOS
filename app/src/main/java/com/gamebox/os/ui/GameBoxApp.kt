@@ -174,7 +174,10 @@ fun GameBoxApp(
         uiState.openDestination(target.name)
     }
 
-    BlueprintViewport(safeAreaPercent = appSettings.safeAreaPercent) {
+    BlueprintViewport(
+        safeAreaPercent = appSettings.safeAreaPercent,
+        reducedMotion = appSettings.reducedMotion,
+    ) {
     BoxWithConstraints(
         Modifier.fillMaxSize()
             .onPreviewKeyEvent { event ->
@@ -302,14 +305,19 @@ fun GameBoxApp(
 
 @Composable
 private fun BlueprintScreenTransition(screenKey: String, content: @Composable () -> Unit) {
+    val reducedMotion = LocalReducedMotion.current
     key(screenKey) {
-        var visible by remember { mutableStateOf(false) }
-        LaunchedEffect(Unit) { visible = true }
-        AnimatedVisibility(
-            visible = visible,
-            enter = fadeIn(tween(220)) + slideInVertically(tween(260)) { it / 20 },
-        ) {
+        if (reducedMotion) {
             Box(Modifier.fillMaxSize()) { content() }
+        } else {
+            var visible by remember { mutableStateOf(false) }
+            LaunchedEffect(Unit) { visible = true }
+            AnimatedVisibility(
+                visible = visible,
+                enter = fadeIn(tween(220)) + slideInVertically(tween(260)) { it / 20 },
+            ) {
+                Box(Modifier.fillMaxSize()) { content() }
+            }
         }
     }
 }
@@ -410,8 +418,9 @@ internal fun NavButton(item: Destination, selected: Destination, onSelect: (Dest
     val pressed by interactionSource.collectIsPressedAsState()
     var focused by remember { mutableStateOf(false) }
     val emphasized = item == selected || hovered || focused
+    val reducedMotion = LocalReducedMotion.current
     val scale by animateFloatAsState(
-        targetValue = if (pressed) 0.96f else if (hovered || focused) 1.025f else 1f,
+        targetValue = if (reducedMotion) 1f else if (pressed) 0.96f else if (hovered || focused) 1.025f else 1f,
         label = "nav-scale"
     )
     val border by animateColorAsState(
@@ -1921,7 +1930,11 @@ private fun DiscoveryGameCard(game: DiscoveryGame, modifier: Modifier, onClick: 
     val source = remember { MutableInteractionSource() }
     val hovered by source.collectIsHoveredAsState()
     val pressed by source.collectIsPressedAsState()
-    val scale by animateFloatAsState(if (pressed) .97f else if (focused || hovered) 1.018f else 1f, label = "discovery-scale")
+    val reducedMotion = LocalReducedMotion.current
+    val scale by animateFloatAsState(
+        if (reducedMotion) 1f else if (pressed) .97f else if (focused || hovered) 1.018f else 1f,
+        label = "discovery-scale",
+    )
     Surface(
         modifier.graphicsLayer { scaleX = scale; scaleY = scale }
             .onFocusChanged { focused = it.isFocused }.hoverable(source)
@@ -1991,7 +2004,11 @@ internal fun GameCard(
     val hovered by source.collectIsHoveredAsState()
     val pressed by source.collectIsPressedAsState()
     val emphasized = focused || hovered
-    val scale by animateFloatAsState(if (pressed) .975f else if (emphasized) 1.018f else 1f, label = "game-scale")
+    val reducedMotion = LocalReducedMotion.current
+    val scale by animateFloatAsState(
+        if (reducedMotion) 1f else if (pressed) .975f else if (emphasized) 1.018f else 1f,
+        label = "game-scale",
+    )
     LaunchedEffect(restoreFocus) { if (restoreFocus) focusRequester.requestFocus() }
     Surface(
         modifier.focusRequester(focusRequester)
@@ -2202,9 +2219,13 @@ private fun DetailsScreen(
             Icon(Icons.Rounded.Tune, null, Modifier.size(16.dp))
             Text(if (showGameSettings) "Hide game settings" else "Game settings & emulator", Modifier.padding(start = 7.dp), fontSize = 12.sp)
         }
-        AnimatedVisibility(visible = showGameSettings) {
-            Column {
-                GameSettingsPanel(game = game, repository = repository)
+        if (LocalReducedMotion.current) {
+            if (showGameSettings) {
+                Column { GameSettingsPanel(game = game, repository = repository) }
+            }
+        } else {
+            AnimatedVisibility(visible = showGameSettings) {
+                Column { GameSettingsPanel(game = game, repository = repository) }
             }
         }
         Spacer(Modifier.height(10.dp))
@@ -2949,7 +2970,11 @@ internal fun BlueprintShortcutTile(
     val pressed by interactionSource.collectIsPressedAsState()
     var focused by remember { mutableStateOf(false) }
     val emphasized = focused || hovered
-    val scale by animateFloatAsState(if (pressed) 0.95f else if (emphasized) 1.04f else 1f, label = "hub-tile-scale")
+    val reducedMotion = LocalReducedMotion.current
+    val scale by animateFloatAsState(
+        if (reducedMotion) 1f else if (pressed) 0.95f else if (emphasized) 1.04f else 1f,
+        label = "hub-tile-scale",
+    )
     val accent = shortcutAccent(shortcut.title)
     Surface(
         modifier = modifier.graphicsLayer { scaleX = scale; scaleY = scale }
@@ -3053,12 +3078,13 @@ private fun ShortcutCard(
     val hovered by interactionSource.collectIsHoveredAsState()
     val pressed by interactionSource.collectIsPressedAsState()
     val emphasized = focused || hovered
+    val reducedMotion = LocalReducedMotion.current
     val border by animateColorAsState(
         if (emphasized) MaterialTheme.colorScheme.primary else Color.Transparent,
         label = "shortcut-focus"
     )
     val scale by animateFloatAsState(
-        targetValue = if (pressed) 0.97f else if (emphasized) 1.02f else 1f,
+        targetValue = if (reducedMotion) 1f else if (pressed) 0.97f else if (emphasized) 1.02f else 1f,
         label = "shortcut-scale"
     )
     Surface(
@@ -3346,6 +3372,27 @@ private fun SettingsScreen(
                 modifier = Modifier.semantics {
                     contentDescription = "Show unavailable app shortcuts"
                 }
+            )
+        }
+        Row(
+            Modifier.fillMaxWidth().padding(vertical = 6.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(Modifier.weight(1f)) {
+                Text("Reduce motion")
+                Text(
+                    "Disables screen-entry and focus scaling animations while keeping focus borders and state colors.",
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.62f),
+                    fontSize = 12.sp,
+                )
+            }
+            Switch(
+                checked = currentSettings.reducedMotion,
+                onCheckedChange = { reduce ->
+                    scope.launch { settingsRepository.setReducedMotion(reduce) }
+                },
+                modifier = Modifier.semantics { contentDescription = "Reduce motion" },
             )
         }
         Spacer(Modifier.height(18.dp))
