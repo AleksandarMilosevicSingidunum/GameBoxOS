@@ -25,6 +25,7 @@ data class GameBoxSettings(
     val activeProfileName: String = "Local player",
     val showUnavailableGames: Boolean = true,
     val showUnavailableShortcuts: Boolean = true,
+    val downloadsUnmeteredOnly: Boolean = true,
     val catalogSeededAtEpochMs: Long? = null,
     val catalogRefreshedAtEpochMs: Long? = null,
     val catalogUrl: String = "",
@@ -46,6 +47,7 @@ class SettingsRepository(private val context: Context) {
             activeProfileName = preferences[ACTIVE_PROFILE] ?: "Local player",
             showUnavailableGames = preferences[SHOW_UNAVAILABLE] ?: true,
             showUnavailableShortcuts = preferences[SHOW_UNAVAILABLE_SHORTCUTS] ?: true,
+            downloadsUnmeteredOnly = preferences[DOWNLOADS_UNMETERED_ONLY] ?: true,
             catalogSeededAtEpochMs = preferences[CATALOG_SEEDED_AT],
             catalogRefreshedAtEpochMs = preferences[CATALOG_REFRESHED_AT],
             catalogUrl = preferences[CATALOG_URL] ?: "",
@@ -191,6 +193,10 @@ class SettingsRepository(private val context: Context) {
         context.gameBoxDataStore.edit { it[SHOW_UNAVAILABLE_SHORTCUTS] = value }
     }
 
+    suspend fun setDownloadsUnmeteredOnly(value: Boolean) {
+        context.gameBoxDataStore.edit { it[DOWNLOADS_UNMETERED_ONLY] = value }
+    }
+
     suspend fun markCatalogRefreshed(epochMs: Long) {
         context.gameBoxDataStore.edit { it[CATALOG_REFRESHED_AT] = epochMs }
     }
@@ -205,6 +211,7 @@ class SettingsRepository(private val context: Context) {
         val ACTIVE_PROFILE = stringPreferencesKey("active_profile")
         val SHOW_UNAVAILABLE = booleanPreferencesKey("show_unavailable_games")
         val SHOW_UNAVAILABLE_SHORTCUTS = booleanPreferencesKey("show_unavailable_shortcuts")
+        val DOWNLOADS_UNMETERED_ONLY = booleanPreferencesKey("downloads_unmetered_only")
         val CATALOG_SEEDED_AT = longPreferencesKey("catalog_seeded_at_epoch_ms")
         val CATALOG_REFRESHED_AT = longPreferencesKey("catalog_refreshed_at_epoch_ms")
         val CATALOG_URL = stringPreferencesKey("catalog_url")

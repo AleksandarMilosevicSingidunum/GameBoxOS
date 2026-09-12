@@ -44,6 +44,8 @@ import com.gamebox.os.importer.AuthorizedRomImporter
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.stateIn
 
 interface AppContainer {
     val managedSaveDiscovery: com.gamebox.os.storage.ManagedSaveDiscovery
@@ -77,6 +79,11 @@ class DefaultAppContainer(context: Context) : AppContainer {
         MIGRATION_10_11, MIGRATION_11_12,
     ).build()
     override val settingsRepository = SettingsRepository(applicationContext)
+    private val settingsState = settingsRepository.settings.stateIn(
+        applicationScope,
+        SharingStarted.Eagerly,
+        com.gamebox.os.settings.GameBoxSettings(),
+    )
     override val authorizedRomImporter = AuthorizedRomImporter(applicationContext)
     private val assetCatalogProvider = AssetCatalogProvider(applicationContext)
     private val configuredCatalogProvider = ConfiguredCatalogProvider(
@@ -119,7 +126,13 @@ class DefaultAppContainer(context: Context) : AppContainer {
     )
 
     override val remoteDownloadController: RemoteDownloadController =
-        WorkManagerRemoteDownloadController(applicationContext, gameRepository, downloadRepository, applicationScope)
+        WorkManagerRemoteDownloadController(
+            applicationContext,
+            gameRepository,
+            downloadRepository,
+            applicationScope,
+            downloadsUnmeteredOnly = { settingsState.value.downloadsUnmeteredOnly },
+        )
 
     override val authorizedDownloadController: AuthorizedDownloadController =
         WorkManagerAuthorizedDownloadController(applicationContext, gameRepository, applicationScope)

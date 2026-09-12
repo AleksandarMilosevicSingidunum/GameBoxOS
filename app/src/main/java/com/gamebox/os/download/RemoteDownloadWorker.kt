@@ -162,7 +162,7 @@ class RemoteDownloadScheduler(context: Context) {
     private val applicationContext = context.applicationContext
     private val workManager = WorkManager.getInstance(applicationContext)
 
-    fun enqueue(game: Game, replace: Boolean = false) {
+    fun enqueue(game: Game, replace: Boolean = false, unmeteredOnly: Boolean = true) {
         val source = requireNotNull(game.sourceUrl) { "Game has no authorized source" }
         val checksum = requireNotNull(game.expectedSha256) { "Game has no checksum" }
         val content = GameContentPolicy.describe(game.id.value, game.platform, source)
@@ -170,7 +170,11 @@ class RemoteDownloadScheduler(context: Context) {
         val maxBytes = expectedBytes + 16L * 1024L * 1024L
         val relativePath = content.relativePath
         val request = OneTimeWorkRequestBuilder<RemoteDownloadWorker>()
-            .setConstraints(Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build())
+            .setConstraints(
+                Constraints.Builder()
+                    .setRequiredNetworkType(requiredDownloadNetworkType(unmeteredOnly))
+                    .build()
+            )
             .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 15, TimeUnit.SECONDS)
             .setInputData(
                 workDataOf(
@@ -217,3 +221,7 @@ internal fun formatTransferProgress(transferred: Long, total: Long): String {
     return if (total > 0L) readable(transferred) + " of " + readable(total)
     else readable(transferred)
 }
+
+
+internal fun requiredDownloadNetworkType(unmeteredOnly: Boolean): NetworkType =
+    if (unmeteredOnly) NetworkType.UNMETERED else NetworkType.CONNECTED

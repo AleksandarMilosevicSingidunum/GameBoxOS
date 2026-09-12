@@ -51,7 +51,7 @@ class RemoteDownloadRecoveryTest {
         val work = MutableStateFlow(listOf(info(WorkInfo.State.SUCCEEDED)))
         val scope = CoroutineScope(SupervisorJob() + Dispatchers.Unconfined)
         try {
-            WorkManagerRemoteDownloadController(app, gameRepository, downloadRepository, scope, work)
+            WorkManagerRemoteDownloadController(app, gameRepository, downloadRepository, scope, workInfoFlow = work)
             yield()
             assertTrue(gameWrites.isEmpty())
             jobs.value = listOf(job)
@@ -73,7 +73,7 @@ class RemoteDownloadRecoveryTest {
             scope.coroutineContext[Job]?.cancelAndJoin()
             val restartedScope = CoroutineScope(SupervisorJob() + Dispatchers.Unconfined)
             try {
-                WorkManagerRemoteDownloadController(app, gameRepository, downloadRepository, restartedScope, work)
+                WorkManagerRemoteDownloadController(app, gameRepository, downloadRepository, restartedScope, workInfoFlow = work)
                 yield()
                 assertEquals(1, gameWrites.size)
                 assertEquals(1, jobWrites.size)
