@@ -2390,6 +2390,7 @@ private fun DetailsScreen(
     val gameSaveController = remember(game.id, saveControllerFactory) {
         if (game.id.value == "galaxy-patrol") null else saveControllerFactory?.invoke(game.id, saveScope)
     }
+    val contentSafetyController = gameSaveController ?: saveSafetyController
     val discoveredSaves by managedSaveDiscovery.state.collectAsState()
     val saveSummary = discoveredSaves[game.id.value]
     val saveDescription = when (saveSummary?.presence) {
@@ -2416,7 +2417,7 @@ private fun DetailsScreen(
         ActivityResultContracts.OpenDocument()
     ) { uri -> uri?.let(saveSafetyController::importBackup) }
     if (showUninstallConfirmation) {
-        ContentRemovalDialog(game, saveSafetyController) { showUninstallConfirmation = false }
+        ContentRemovalDialog(game, contentSafetyController) { showUninstallConfirmation = false }
     }
     Column(Modifier.fillMaxSize().verticalScroll(restoredScrollState("details." + game.id.value))) {
         ImportedGameReimportCard(game, importer, repository,

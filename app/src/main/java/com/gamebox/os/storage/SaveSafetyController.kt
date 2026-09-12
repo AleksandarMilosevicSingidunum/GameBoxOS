@@ -137,20 +137,37 @@ class DefaultSaveSafetyController(
 
     override fun observeState(): StateFlow<SaveSafetyState> = state
 
-    override fun contentRemovalPreview(game: Game): ContentRemovalPreview =
-        GameOwnedContentUninstaller(applicationContext.filesDir).preview(contentManifest(game))
+    override fun contentRemovalPreview(game: Game): ContentRemovalPreview {
+        require(game.id == gameId) { "Content controller does not belong to this game" }
+        return GameOwnedContentUninstaller(applicationContext.filesDir).preview(contentManifest(game))
+    }
 
     override suspend fun uninstallContent(game: Game): String = withContext(Dispatchers.IO + NonCancellable) {
+        require(game.id == gameId) { "Content controller does not belong to this game" }
         val current = requireNotNull(gameRepository.game(game.id)) { "Game is no longer in the library" }
         require(current.state in setOf(InstallState.INSTALLED, InstallState.UPDATE_AVAILABLE, InstallState.MISSING_FILES)) {
             "Wait for installation or download operations to finish"
         }
         val manifest = contentManifest(current)
         require(manifest == contentManifest(game)) { "Game content changed; reopen the confirmation" }
+        val saveRecord = saveRecordDao.getByGameId(game.id.value)
+        val backupCreated = saveRecord?.let { record ->
+            requireSavePathForGame(game.id.value, record.relativePath)
+            val backupResult = backupService.createBackup(record.relativePath)
+            require(backupResult == BackupResult.SUCCESS) {
+                backupResultMessage("Pre-uninstall backup", backupResult).message
+                    ?: "Pre-uninstall backup failed; content was not removed"
+            }
+            true
+        } ?: false
         try {
             val removed = GameOwnedContentUninstaller(applicationContext.filesDir).uninstall(manifest)
             gameRepository.setInstallStateAndAwait(game.id, InstallState.NOT_INSTALLED)
-            "$removed content file(s) removed. Saves, backups, metadata and history retained."
+            buildString {
+                append("$removed content file(s) removed. ")
+                if (backupCreated) append("Verified save backup created. ")
+                append("Saves, backups, metadata and history retained.")
+            }
         } catch (error: ContentRemovalFailed) {
             if (error.removedFiles > 0) gameRepository.setInstallStateAndAwait(game.id, InstallState.MISSING_FILES)
             throw IllegalStateException("Content removal stopped after ${error.removedFiles} file(s). Saves were not touched; retry to remove remaining content.", error)
