@@ -7,9 +7,11 @@ validated and merged session-recovery PR #278. Uninstall acceptance remains pend
   one game-owned exact-file remover. It rejects cross-game paths, traversal,
   symbolic links and directory deletion; validates the entire set before deletion.
 - SaveSafetyController resolves the current game's manifest, rechecks its state
-  and manifest before removal, and retains saves, backups, metadata and history.
-  Partial filesystem failure marks content missing and offers retry. The production
-  Room state write is awaited before reporting successful removal.
+  and manifest before removal. When a managed save is recorded, it creates and
+  verifies a fresh atomic backup before deleting any game content; backup failure
+  aborts removal. Saves, backups, metadata and history remain retained. Partial
+  filesystem failure marks content missing and offers retry. The production Room
+  state write is awaited before reporting successful removal.
 - Game details exposes a confirmation for other installed/imported games too.
   Preview runs off the UI thread and reports actual recorded-file count and bytes.
   Launch preparation/active handoff/recovery errors disable the removal buttons.
@@ -17,7 +19,8 @@ validated and merged session-recovery PR #278. Uninstall acceptance remains pend
   entry preventing earlier deletion, downloaded and bundled ownership paths.
 
 Added Android tests exercise the production controller with Room, multi-file removal,
-actual disc-set reimport/registration, save/history preservation and symlink refusal.
+actual disc-set reimport/registration, save/history preservation, verified pre-removal
+backup, fail-closed backup errors and symlink refusal.
 Their content/save bytes are synthetic, not emulator gameplay evidence. CI pending.
 Production-dialog tests additionally cover unsafe preview refusal, cancel without
 deletion, a single confirmation call, and disabled actions until removal completes.
