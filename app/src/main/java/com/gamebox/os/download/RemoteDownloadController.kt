@@ -30,6 +30,7 @@ class WorkManagerRemoteDownloadController(
     private val gameRepository: GameRepository,
     private val downloadRepository: DownloadRepository,
     scope: CoroutineScope,
+    private val downloadsUnmeteredOnly: () -> Boolean = { true },
     workInfoFlow: Flow<List<WorkInfo>> = WorkManager.getInstance(context.applicationContext)
         .getWorkInfosByTagFlow(RemoteDownloadWorker.TAG)
 ) : RemoteDownloadController {
@@ -87,7 +88,7 @@ class WorkManagerRemoteDownloadController(
         pausedGameIds.remove(game.id.value)
         downloadRepository.enqueue(game)
         gameRepository.setInstallState(game.id, InstallState.QUEUED)
-        scheduler.enqueue(game)
+        scheduler.enqueue(game, unmeteredOnly = downloadsUnmeteredOnly())
     }
 
     override fun pause(game: Game) {
@@ -108,7 +109,7 @@ class WorkManagerRemoteDownloadController(
             null
         )
         gameRepository.setInstallState(game.id, InstallState.QUEUED)
-        scheduler.enqueue(game, replace = true)
+        scheduler.enqueue(game, replace = true, unmeteredOnly = downloadsUnmeteredOnly())
     }
 
     override fun cancel(game: Game) {
