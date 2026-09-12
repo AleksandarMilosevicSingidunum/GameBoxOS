@@ -8,7 +8,8 @@ class SaveAdapterRegistry(adapters: Map<String, SaveAdapter>) {
         require(adaptersByPlatform.size == adapters.size) { "Duplicate normalized save adapter platform" }
     }
 
-    fun adapterFor(platform: String): SaveAdapter? = adaptersByPlatform[normalize(platform)]
+    fun adapterFor(platform: String): SaveAdapter? =
+        adaptersByPlatform[normalize(platform)] ?: adaptersByPlatform[WILDCARD_PLATFORM]
 
     fun inspect(platform: String, gameId: String): SaveSummary {
         val adapter = adapterFor(platform)
@@ -21,6 +22,7 @@ class SaveAdapterRegistry(adapters: Map<String, SaveAdapter>) {
     }
 
     private companion object {
+        const val WILDCARD_PLATFORM = "*"
         fun normalize(platform: String): String = platform.trim().lowercase()
     }
 }
