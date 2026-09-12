@@ -153,5 +153,16 @@ fun mergeCatalogPreservingLocalState(existing: List<Game>, incoming: List<Game>)
             localContentFiles = local.localContentFiles,
         )
     }
-    return mergedIncoming + existing.filter { it.id !in incomingIds }
+    val retainedLocal = existing
+        .filter { it.id !in incomingIds }
+        .map { local ->
+            // The provider no longer advertises this title. Keep user-owned state,
+            // metadata and verified local files, but never retain a vanished remote
+            // acquisition endpoint or its authorization checksum.
+            local.copy(
+                sourceUrl = null,
+                expectedSha256 = null,
+            )
+        }
+    return mergedIncoming + retainedLocal
 }
