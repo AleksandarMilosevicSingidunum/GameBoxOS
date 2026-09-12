@@ -121,4 +121,79 @@ class GeneralContentRemovalTest {
             root.deleteRecursively()
         }
     }
+
+    @Test fun failedSaveBackupAbortsContentRemoval(): Unit = runBlocking {
+        val app = ApplicationProvider.getApplicationContext<Context>()
+        val root = Files.createTempDirectory(app.cacheDir.toPath(), "content-backup-failure-").toFile()
+        val context = object : ContextWrapper(app) {
+            override fun getFilesDir(): File = root
+            override fun getApplicationContext(): Context = this
+        }
+        val database = Room.inMemoryDatabaseBuilder(app, GameBoxDatabase::class.java).build()
+        val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+        try {
+            val game = Game(
+                id = GameId("backup-failure"),
+                title = "Backup Failure",
+                platform = "NES",
+                year = 1985,
+                genre = "Test",
+                sizeMb = 1,
+                state = InstallState.INSTALLED,
+                localContentRelativePath = "backup-failure/game.nes",
+                localContentSha256 = "c".repeat(64),
+                localContentMimeType = "application/octet-stream",
+            )
+            database.gameDao().upsert(game.toEntity())
+            val repository = RoomGameRepository(
+                database.gameDao(),
+                database.saveRecordDao(),
+                object : CatalogProvider {
+                    override suspend fun load(): CatalogSnapshot =
+                        error("Seeded database must not load a catalog")
+                },
+                scope,
+                {},
+                {},
+            )
+            withTimeout(5_000) {
+                repository.observeGames().first { rows -> rows.any { it.id == game.id } }
+            }
+            val content = root.resolve("imports/backup-failure/game.nes").apply {
+                parentFile.mkdirs()
+                writeText("owned game content")
+            }
+            val emptySave = root.resolve("saves/backup-failure/progress.sav").apply {
+                parentFile.mkdirs()
+                createNewFile()
+            }
+            database.saveRecordDao().upsert(
+                SaveRecordEntity(game.id.value, "backup-failure/progress.sav", 1_000L, emptySave.length())
+            )
+            val controller = DefaultSaveSafetyController(
+                context,
+                database.saveRecordDao(),
+                repository,
+                scope,
+                SettingsRepository(app),
+                game.id,
+            )
+
+            val failure = runCatching { controller.uninstallContent(game) }.exceptionOrNull()
+
+            assertNotNull("An invalid save backup must fail closed", failure)
+            assertEquals("owned game content", content.readText())
+            assertTrue(emptySave.exists())
+            assertEquals(InstallState.INSTALLED, repository.game(game.id)?.state)
+            assertFalse(
+                SaveBackupService(root.resolve("saves"), root.resolve("save-backups"))
+                    .hasBackup("backup-failure/progress.sav")
+            )
+        } finally {
+            scope.coroutineContext[Job]?.cancelAndJoin()
+            database.close()
+            root.deleteRecursively()
+        }
+    }
+
 }
