@@ -60,6 +60,14 @@ jobs:
           git ls-remote --exit-code --tags origin "refs/tags/$RELEASE_TAG" >/dev/null
           git ls-remote --exit-code --tags origin "refs/tags/$ROLLBACK_TAG" >/dev/null
 
+      - name: Calculate and test Android version code
+        shell: bash
+        run: |
+          python -m unittest scripts/test_android_version_code.py
+          version_code="$(python scripts/android-version-code.py "$RELEASE_TAG")"
+          echo "GAMEBOX_VERSION_CODE=$version_code" >> "$GITHUB_ENV"
+          echo "Android versionCode: $version_code"
+
       - uses: actions/setup-java@v5
         with:
           distribution: temurin
