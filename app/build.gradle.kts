@@ -4,6 +4,11 @@ plugins {
     id("org.jetbrains.kotlin.plugin.serialization")
     id("com.google.devtools.ksp")
 }
+val configuredVersionCode = (System.getenv("GAMEBOX_VERSION_CODE") ?: "1").let { raw ->
+    raw.toIntOrNull()?.takeIf { it in 1..2_100_000_000 }
+        ?: error("GAMEBOX_VERSION_CODE must be an integer from 1 to 2100000000")
+}
+
 android {
     namespace = "com.gamebox.os"
     compileSdk = 36
@@ -11,7 +16,7 @@ android {
         applicationId = "com.gamebox.os"
         minSdk = 26
         targetSdk = 36
-        versionCode = 1
+        versionCode = configuredVersionCode
         versionName = (System.getenv("GAMEBOX_VERSION_NAME") ?: "0.1.0").removePrefix("v")
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
