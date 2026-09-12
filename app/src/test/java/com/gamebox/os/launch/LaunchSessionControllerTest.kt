@@ -3,6 +3,10 @@ package com.gamebox.os.launch
 import com.gamebox.os.data.FakeGameRepository
 import com.gamebox.os.domain.GameId
 import com.gamebox.os.domain.InstallState
+import com.gamebox.os.storage.BackupResult
+import com.gamebox.os.storage.GameSaveBackupResult
+import com.gamebox.os.storage.SaveArtifact
+import com.gamebox.os.storage.SaveArtifactBackupResult
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.runBlocking
@@ -186,5 +190,82 @@ class LaunchSessionControllerTest {
             if (!failureBeforeDispatch) assertTrue(controller.observeState().value.message!!.contains("no playtime"))
         }
     }
+
+    @Test fun automaticBackupRunsOnlyAfterConfirmedPlayReturn(): Unit = runBlocking {
+        val repository = FakeGameRepository()
+        val game = repository.observeGames().value.first().copy(state = InstallState.INSTALLED)
+        val journal = Journal()
+        val backedUp = mutableListOf<GameId>()
+        val gateway = object : PackageGateway {
+            override fun launch(capability: EmulatorCapability, preparation: LaunchPreparation) =
+                preparation.dispatch { GatewayResult.LAUNCHED }
+        }
+        val controller = DefaultGameLaunchController(
+            EmulatorCapabilityRegistry(listOf(capability.copy(gameId = game.id))),
+            gateway,
+            repository,
+            scope = this,
+            sessionJournal = journal,
+            backupAfterSession = { gameId ->
+                backedUp += gameId
+                GameSaveBackupResult(
+                    gameId = gameId.value,
+                    artifacts = listOf(
+                        SaveArtifactBackupResult(
+                            SaveArtifact(gameId.value, gameId.value + "/progress.sav", 4, 1),
+                            BackupResult.SUCCESS,
+                        )
+                    ),
+                )
+            },
+        )
+
+        controller.launch(game)
+        withTimeout(5_000) {
+            controller.observeState().first { it.status == LaunchUiState.Status.LAUNCHED }
+        }
+        controller.onHostResumed()
+        val returned = withTimeout(5_000) {
+            controller.observeState().first { it.status == LaunchUiState.Status.RETURNED }
+        }
+
+        assertEquals(listOf(game.id), backedUp)
+        assertTrue(returned.message!!.contains("Backed up 1 save artifact"))
+    }
+
+    @Test fun interruptedUnconfirmedHandoffDoesNotBackUpSaves(): Unit = runBlocking {
+        val repository = FakeGameRepository()
+        val game = repository.observeGames().value.first().copy(state = InstallState.INSTALLED)
+        val journal = Journal().apply {
+            pending = game.id.value
+            confirmed = false
+        }
+        var backupCalls = 0
+        val controller = DefaultGameLaunchController(
+            EmulatorCapabilityRegistry(),
+            object : PackageGateway {
+                override fun launch(
+                    capability: EmulatorCapability,
+                    preparation: LaunchPreparation,
+                ): GatewayResult = error("Recovery must not dispatch")
+            },
+            repository,
+            scope = this,
+            sessionJournal = journal,
+            backupAfterSession = {
+                backupCalls++
+                null
+            },
+        )
+
+        controller.onHostResumed()
+        val returned = withTimeout(5_000) {
+            controller.observeState().first { it.status == LaunchUiState.Status.RETURNED }
+        }
+
+        assertEquals(0, backupCalls)
+        assertTrue(returned.message!!.contains("no playtime"))
+    }
+
 }
 
