@@ -2,8 +2,14 @@ import pathlib
 import sys
 import unittest
 
-sys.path.insert(0, str(pathlib.Path(__file__).parent))
-from android_version_code import android_version_code
+import importlib.util
+
+module_path = pathlib.Path(__file__).with_name("android-version-code.py")
+spec = importlib.util.spec_from_file_location("android_version_code", module_path)
+module = importlib.util.module_from_spec(spec)
+assert spec.loader is not None
+spec.loader.exec_module(module)
+android_version_code = module.android_version_code
 
 
 class AndroidVersionCodeTest(unittest.TestCase):
