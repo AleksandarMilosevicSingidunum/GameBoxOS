@@ -53,7 +53,7 @@ class CatalogMergePolicyTest {
         assertEquals("local/game.zip", retained.localContentRelativePath)
         assertEquals("c".repeat(64), retained.localContentSha256)
         assertEquals(null, retained.sourceUrl)
-        assertEquals(null, retained.expectedSha256)
+        assertEquals("b".repeat(64), retained.expectedSha256)
         assertTrue(merged.any { it.id == GameId("remote") })
     }
 
