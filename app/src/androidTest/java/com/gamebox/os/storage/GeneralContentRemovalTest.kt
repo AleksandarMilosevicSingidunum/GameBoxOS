@@ -12,6 +12,7 @@ import com.gamebox.os.data.RoomGameRepository
 import com.gamebox.os.data.ImportedGameRegistration
 import com.gamebox.os.importer.*
 import com.gamebox.os.data.local.GameBoxDatabase
+import com.gamebox.os.data.local.SaveRecordEntity
 import com.gamebox.os.data.local.toEntity
 import com.gamebox.os.domain.*
 import com.gamebox.os.settings.SettingsRepository
@@ -69,16 +70,22 @@ class GeneralContentRemovalTest {
             val cue = fixture("imports/disc-test/game.cue")
             val track = fixture("imports/disc-test/track.bin")
             val save = fixture("saves/disc-test/progress.sav")
-            val backup = fixture("save-backups/disc-test/progress.sav")
+            database.saveRecordDao().upsert(
+                SaveRecordEntity(game.id.value, "disc-test/progress.sav", 1_000L, save.length())
+            )
             val other = fixture("imports/other/content.chd")
             val controller = DefaultSaveSafetyController(context, database.saveRecordDao(), repository,
-                scope, SettingsRepository(app))
+                scope, SettingsRepository(app), game.id)
             assertEquals(ContentRemovalPreview(14, 2), controller.contentRemovalPreview(game))
             controller.uninstallContent(game)
             withTimeout(5_000) { repository.observeGames().first { rows -> rows.any { it.id == game.id && it.state == InstallState.NOT_INSTALLED } } }
             assertFalse(cue.exists())
             assertFalse(track.exists())
-            listOf(save, backup, other).forEach { assertEquals("content", it.readText()) }
+            listOf(save, other).forEach { assertEquals("content", it.readText()) }
+            assertTrue(
+                SaveBackupService(root.resolve("saves"), root.resolve("save-backups"))
+                    .hasBackup("disc-test/progress.sav")
+            )
             val removed = requireNotNull(repository.game(game.id))
             assertEquals(42, removed.minutesPlayed)
             assertEquals(game.lastPlayed, removed.lastPlayed)
