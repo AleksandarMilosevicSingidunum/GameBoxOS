@@ -12,7 +12,12 @@ at atomic file replacement; an unchanged rerun passed. The cause is not establis
 An Android regression test covers linked backup, checksum, import-staging and
 restore-staging paths; its CI execution is pending.
 
-Still required: general per-game UI/controller wiring, emulator-owned save access,
-snapshot transaction recovery, shared mutation coordination and real emulator
-save round-trip validation. Hardware acceptance remains separately deferred.
+Completed-session recovery now automatically discovers managed save artifacts,
+creates checksum-verified atomic backups, and publishes a per-game snapshot manifest.
+A failed or incomplete automatic snapshot retains the prior complete snapshot and
+surfaces a retry message; interrupted/unconfirmed handoffs do not trigger backup.
+This advances SAVE-04/SAVE-09 for GameBox-managed saves.
+
+Still required: emulator-owned save access outside GameBox private storage and real
+emulator save round-trip validation. Hardware acceptance remains separately deferred.
 
