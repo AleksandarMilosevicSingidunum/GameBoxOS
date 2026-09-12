@@ -31,14 +31,29 @@ class CatalogMergePolicyTest {
         assertEquals(1, merged.localContentFiles.size)
     }
 
-    @Test fun refreshKeepsMissingLocalGamesAndAddsNewRemoteGames() {
-        val localOnly = game("local", "Local", InstallState.INSTALLED)
+    @Test fun refreshKeepsMissingLocalGamesButInvalidatesRemovedRemoteSource() {
+        val localOnly = game("local", "Local", InstallState.INSTALLED).copy(
+            favorite = true,
+            minutesPlayed = 27,
+            sourceUrl = "https://catalog.example/games/local.zip",
+            expectedSha256 = "b".repeat(64),
+            localContentRelativePath = "local/game.zip",
+            localContentSha256 = "c".repeat(64),
+            localContentMimeType = "application/zip",
+        )
         val remoteOnly = game("remote", "Remote", InstallState.NOT_INSTALLED)
 
         val merged = mergeCatalogPreservingLocalState(listOf(localOnly), listOf(remoteOnly))
+        val retained = merged.single { it.id == GameId("local") }
 
         assertEquals(2, merged.size)
-        assertTrue(merged.any { it.id == GameId("local") && it.state == InstallState.INSTALLED })
+        assertEquals(InstallState.INSTALLED, retained.state)
+        assertTrue(retained.favorite)
+        assertEquals(27, retained.minutesPlayed)
+        assertEquals("local/game.zip", retained.localContentRelativePath)
+        assertEquals("c".repeat(64), retained.localContentSha256)
+        assertEquals(null, retained.sourceUrl)
+        assertEquals(null, retained.expectedSha256)
         assertTrue(merged.any { it.id == GameId("remote") })
     }
 
