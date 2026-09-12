@@ -6,7 +6,7 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFailsWith
+import org.junit.Assert.assertThrows
 import org.junit.Test
 
 class DownloadConcurrencyGateTest {
@@ -39,7 +39,7 @@ class DownloadConcurrencyGateTest {
 
     @Test
     fun gateRejectsNonPositiveLimit() {
-        assertFailsWith<IllegalArgumentException> {
+        assertThrows(IllegalArgumentException::class.java) {
             DownloadConcurrencyGate(0)
         }
     }
