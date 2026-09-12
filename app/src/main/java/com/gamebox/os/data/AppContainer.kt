@@ -12,6 +12,8 @@ import com.gamebox.os.catalog.TheGamesDbMetadataClient
 import com.gamebox.os.catalog.TheGamesDbCatalogSync
 import com.gamebox.os.catalog.HttpsTheGamesDbCatalogTransport
 import com.gamebox.os.data.local.GameBoxDatabase
+import com.gamebox.os.data.local.DatabaseMigrationBackupManager
+import com.gamebox.os.data.local.GAMEBOX_DATABASE_VERSION
 import com.gamebox.os.data.local.MIGRATION_1_2
 import com.gamebox.os.data.local.MIGRATION_2_3
 import com.gamebox.os.data.local.MIGRATION_3_4
@@ -69,10 +71,17 @@ interface AppContainer {
 class DefaultAppContainer(context: Context) : AppContainer {
     private val applicationContext = context.applicationContext
     private val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val databaseName = "gamebox.db"
+    private val preMigrationBackup = DatabaseMigrationBackupManager(
+        applicationContext.filesDir.resolve("database-backups")
+    ).createIfNeeded(
+        applicationContext.getDatabasePath(databaseName),
+        GAMEBOX_DATABASE_VERSION,
+    )
     private val database = Room.databaseBuilder(
         applicationContext,
         GameBoxDatabase::class.java,
-        "gamebox.db"
+        databaseName
     ).addMigrations(
         MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5,
         MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10,
