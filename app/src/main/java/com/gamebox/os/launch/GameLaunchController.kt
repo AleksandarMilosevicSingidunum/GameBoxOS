@@ -408,6 +408,7 @@ class DefaultGameLaunchController(
     private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate),
     private val sessionJournal: LaunchSessionJournal? = null,
     private val platformEmulatorDefault: suspend (String) -> String? = { null },
+    private val backupAfterSession: suspend (GameId) -> com.gamebox.os.storage.GameSaveBackupResult? = { null },
 ) : GameLaunchController {
     private val state = MutableStateFlow(LaunchUiState())
     private val preparing = AtomicBoolean(false)
@@ -519,9 +520,29 @@ class DefaultGameLaunchController(
                         state.value = LaunchUiState()
                     }
                     session?.let {
-                        update(GameId(it.gameId), LaunchUiState.Status.RETURNED,
-                            if (it.launchConfirmed) "Returned to GameBox; time away recorded"
-                            else "Recovered an interrupted handoff; no playtime was added")
+                        val returnedGameId = GameId(it.gameId)
+                        val backupAttempt = if (it.launchConfirmed) {
+                            runCatching { backupAfterSession(returnedGameId) }
+                        } else {
+                            Result.success(null)
+                        }
+                        val backup = backupAttempt.getOrNull()
+                        val message = when {
+                            !it.launchConfirmed ->
+                                "Recovered an interrupted handoff; no playtime was added"
+                            backupAttempt.isFailure ->
+                                "Returned to GameBox; time away recorded. Automatic save backup failed safely; use Save controls to retry."
+                            backup == null ->
+                                "Returned to GameBox; time away recorded"
+                            backup.failedCount > 0 || backup.message != null ->
+                                "Returned to GameBox; time away recorded. " +
+                                    (backup.message ?: "Automatic save backup was incomplete; the previous complete snapshot was retained.")
+                            backup.artifacts.isEmpty() ->
+                                "Returned to GameBox; time away recorded. No managed save was found to back up."
+                            else ->
+                                "Returned to GameBox; time away recorded. Backed up ${backup.successfulCount} save artifact(s)."
+                        }
+                        update(returnedGameId, LaunchUiState.Status.RETURNED, message)
                     }
                 } catch (cancelled: CancellationException) {
                     throw cancelled
