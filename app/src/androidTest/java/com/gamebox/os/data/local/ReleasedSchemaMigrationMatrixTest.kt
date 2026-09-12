@@ -98,7 +98,7 @@ class ReleasedSchemaMigrationMatrixTest {
                     installState, lastPlayed, minutesPlayed
                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """.trimIndent(),
-                arrayOf(
+                arrayOf<Any?>(
                     "sentinel-${version}",
                     "Migration sentinel",
                     "Retro",
