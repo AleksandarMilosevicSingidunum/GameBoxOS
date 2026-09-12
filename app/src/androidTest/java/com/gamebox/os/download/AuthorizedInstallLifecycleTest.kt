@@ -79,7 +79,9 @@ class AuthorizedInstallLifecycleTest {
                 restoredWrites.trySend(state)
             }
         }
-        val restoreScope = CoroutineScope(SupervisorJob() + Dispatchers.Unconfined)
+        // WorkManager's Flow is asynchronous; an unconfined collector can starve
+        // callbacks on slower API 35 CI emulators. Use a real dispatcher like production.
+        val restoreScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
         try {
             val restoredController = WorkManagerAuthorizedDownloadController(
                 app, delayedRepository, restoreScope
