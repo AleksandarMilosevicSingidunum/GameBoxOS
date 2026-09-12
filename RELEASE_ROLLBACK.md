@@ -17,3 +17,17 @@ The workflow refuses prerelease tags, missing signing inputs, missing tags, or a
 4. Record the incident and affected versions in the release notes.
 
 The workflow never overwrites source tags and does not silently fall back to an unsigned build.
+
+## Android version ordering
+
+Release workflows derive `versionCode` from the tag and pass it to Gradle through
+`GAMEBOX_VERSION_CODE`. The ordering reserves values 1–499 for alpha builds,
+500–998 for beta builds, and 999 for the stable build of each semantic version.
+Each patch receives a block of 1,000 codes, each minor a block of 1,000,000, and
+each major a block of 100,000,000. Supported ranges are major 0–20, minor 0–99,
+patch 0–999, and prerelease ordinal 1–499.
+
+This makes every accepted alpha → beta → stable → next-patch transition strictly
+increasing and prevents accidental reuse of the hard-coded development code.
+Run `python -m unittest scripts/test_android_version_code.py` before changing
+the mapping.
