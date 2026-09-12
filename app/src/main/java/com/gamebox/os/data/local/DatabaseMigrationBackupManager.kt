@@ -33,8 +33,9 @@ internal class DatabaseMigrationBackupManager(
         check(backupRoot.exists() || backupRoot.mkdirs()) {
             "Unable to create database backup directory"
         }
+        val createdAtMillis = nowMillis()
         val finalDirectory = backupRoot.resolve(
-            "pre-migration-v${sourceVersion}-to-v${targetVersion}-${nowMillis()}"
+            "pre-migration-v${sourceVersion}-to-v${targetVersion}-${createdAtMillis}"
         )
         val stagingDirectory = backupRoot.resolve(".staging-${UUID.randomUUID()}")
         check(stagingDirectory.mkdir()) { "Unable to stage database backup" }
@@ -50,6 +51,7 @@ internal class DatabaseMigrationBackupManager(
             check(stagingDirectory.renameTo(finalDirectory)) {
                 "Unable to commit database backup"
             }
+            finalDirectory.setLastModified(createdAtMillis)
         } catch (failure: Throwable) {
             stagingDirectory.deleteRecursively()
             throw failure
