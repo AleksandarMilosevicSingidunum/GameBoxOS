@@ -158,11 +158,9 @@ fun mergeCatalogPreservingLocalState(existing: List<Game>, incoming: List<Game>)
         .map { local ->
             // The provider no longer advertises this title. Keep user-owned state,
             // metadata and verified local files, but never retain a vanished remote
-            // acquisition endpoint or its authorization checksum.
-            local.copy(
-                sourceUrl = null,
-                expectedSha256 = null,
-            )
+            // acquisition endpoint. Retain the checksum because installed content
+            // still needs it for offline integrity verification and launch.
+            local.copy(sourceUrl = null)
         }
     return mergedIncoming + retainedLocal
 }
