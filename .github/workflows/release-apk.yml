@@ -47,6 +47,15 @@ jobs:
         with:
           ref: ${{ inputs.tag }}
 
+      - name: Calculate and test Android version code
+        shell: bash
+        run: |
+          python -m unittest scripts/test_android_version_code.py
+          version_code="$(python scripts/android-version-code.py "$RELEASE_TAG")"
+          echo "GAMEBOX_VERSION_CODE=$version_code" >> "$GITHUB_ENV"
+          echo "GAMEBOX_VERSION_NAME=${RELEASE_TAG#v}" >> "$GITHUB_ENV"
+          echo "Android versionCode: $version_code"
+
       - name: Set up JDK 17
         uses: actions/setup-java@v5
         with:

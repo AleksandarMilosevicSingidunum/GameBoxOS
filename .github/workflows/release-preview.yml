@@ -36,6 +36,17 @@ jobs:
       - uses: actions/checkout@v6
         with:
           ref: ${{ needs.validate.outputs.tag }}
+      - name: Calculate and test Android version code
+        shell: bash
+        env:
+          RELEASE_TAG: ${{ needs.validate.outputs.tag }}
+        run: |
+          python -m unittest scripts/test_android_version_code.py
+          version_code="$(python scripts/android-version-code.py "$RELEASE_TAG")"
+          echo "GAMEBOX_VERSION_CODE=$version_code" >> "$GITHUB_ENV"
+          echo "GAMEBOX_VERSION_NAME=${RELEASE_TAG#v}" >> "$GITHUB_ENV"
+          echo "Android versionCode: $version_code"
+
       - uses: actions/setup-java@v5
         with:
           distribution: temurin
