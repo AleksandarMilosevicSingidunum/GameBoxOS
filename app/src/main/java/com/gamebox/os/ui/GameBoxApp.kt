@@ -3757,6 +3757,32 @@ private fun SettingsScreen(
             if (activeDownloads == 1) "1 active download" else "$activeDownloads active downloads",
             "Queued transfers are durable and resume through WorkManager after an app or device restart.",
         )
+        Row(
+            Modifier.fillMaxWidth().padding(top = 10.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(Modifier.weight(1f)) {
+                Text("Unmetered downloads only", fontWeight = FontWeight.SemiBold)
+                Text(
+                    if (currentSettings.downloadsUnmeteredOnly)
+                        "Remote game transfers wait for Wi-Fi, Ethernet, or another unmetered connection."
+                    else
+                        "Remote game transfers may use metered or mobile data.",
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.62f),
+                    fontSize = 12.sp,
+                )
+            }
+            Switch(
+                checked = currentSettings.downloadsUnmeteredOnly,
+                onCheckedChange = { enabled ->
+                    scope.launch { settingsRepository.setDownloadsUnmeteredOnly(enabled) }
+                },
+                modifier = Modifier.semantics {
+                    contentDescription = "Unmetered downloads only"
+                },
+            )
+        }
         Spacer(Modifier.height(12.dp))
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             OutlinedButton(
