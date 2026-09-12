@@ -1,6 +1,7 @@
 package com.gamebox.os
 
 import android.os.Bundle
+import android.content.Intent
 import android.view.InputDevice
 import android.view.KeyEvent
 import android.view.MotionEvent
@@ -12,7 +13,10 @@ import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.background
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.Modifier
+import androidx.compose.runtime.mutableStateOf
 import com.gamebox.os.input.AnalogNavigationDebouncer
+import com.gamebox.os.navigation.GameBoxDeepLink
+import com.gamebox.os.navigation.GameBoxNavigationRequest
 import com.gamebox.os.ui.GameBoxApp
 import com.gamebox.os.ui.OfflineStatusBanner
 import com.gamebox.os.ui.theme.GameBoxTheme
@@ -20,9 +24,12 @@ import com.gamebox.os.ui.theme.GameBoxTheme
 class MainActivity : ComponentActivity() {
     private val container by lazy { (application as GameBoxApplication).container }
     private val analogNavigation = AnalogNavigationDebouncer()
+    private val navigationRequest = mutableStateOf<GameBoxNavigationRequest?>(null)
+    private var navigationSequence = 0L
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        acceptNavigation(intent)
         setContent {
             val saveFactory = androidx.compose.runtime.remember(container) { container::createSaveSafetyController }
             GameBoxTheme {
@@ -39,10 +46,24 @@ class MainActivity : ComponentActivity() {
                         container.catalogDiscoveryRepository,
                         container.authorizedRomImporter,
                         container.managedSaveDiscovery,
-                        saveControllerFactory = saveFactory
+                        saveControllerFactory = saveFactory,
+                        navigationRequest = navigationRequest.value,
                     )
                 }
             }
+        }
+    }
+
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        acceptNavigation(intent)
+    }
+
+    private fun acceptNavigation(intent: Intent?) {
+        GameBoxDeepLink.parse(intent)?.let { parsed ->
+            navigationRequest.value = parsed.copy(requestId = ++navigationSequence)
         }
     }
 

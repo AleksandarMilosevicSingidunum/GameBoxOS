@@ -113,6 +113,7 @@ import com.gamebox.os.diagnostics.DiagnosticsDevice
 import com.gamebox.os.diagnostics.DiagnosticEventCollector
 import com.gamebox.os.diagnostics.buildDiagnosticsReport
 import com.gamebox.os.diagnostics.buildDiagnosticsRecoveryBundle
+import com.gamebox.os.navigation.GameBoxNavigationRequest
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
@@ -155,7 +156,8 @@ fun GameBoxApp(
     catalogDiscoveryRepository: CatalogDiscoveryRepository,
     authorizedRomImporter: AuthorizedRomImporter,
     managedSaveDiscovery: com.gamebox.os.storage.ManagedSaveDiscovery,
-    saveControllerFactory: ((GameId, kotlinx.coroutines.CoroutineScope) -> SaveSafetyController)? = null
+    saveControllerFactory: ((GameId, kotlinx.coroutines.CoroutineScope) -> SaveSafetyController)? = null,
+    navigationRequest: GameBoxNavigationRequest? = null,
 ) {
     val games by repository.observeGames().collectAsState()
     val appSettings by settingsRepository.settings.collectAsState(
@@ -173,6 +175,15 @@ fun GameBoxApp(
     val selectedGameId = uiState.selectedGameId?.let(::GameId)
     val restorableGameId = uiState.restoreFocus(destination.name, games.map { it.id.value })?.let(::GameId)
     val rememberGameFocus: (GameId) -> Unit = { uiState.rememberFocus(destination.name, it.value) }
+
+    LaunchedEffect(navigationRequest?.requestId) {
+        navigationRequest?.let { request ->
+            val target = runCatching { Destination.valueOf(request.destination) }
+                .getOrDefault(Destination.HOME)
+            uiState.openDestination(target.name)
+            request.gameId?.let(uiState::openGame)
+        }
+    }
 
     fun moveTab(offset: Int) {
         val tabs = Destination.entries
