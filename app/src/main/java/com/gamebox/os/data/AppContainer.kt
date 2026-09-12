@@ -35,6 +35,11 @@ import com.gamebox.os.launch.EmulatorCapabilityRegistry
 import com.gamebox.os.launch.GameLaunchController
 import com.gamebox.os.storage.DefaultSaveSafetyController
 import com.gamebox.os.storage.SaveSafetyController
+import com.gamebox.os.storage.DirectorySaveAdapter
+import com.gamebox.os.storage.SaveAdapterRegistry
+import com.gamebox.os.storage.SaveBackupCoordinator
+import com.gamebox.os.storage.SaveBackupService
+import com.gamebox.os.storage.SaveSnapshotManifestStore
 import com.gamebox.os.importer.AuthorizedRomImporter
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -119,10 +124,30 @@ class DefaultAppContainer(context: Context) : AppContainer {
     override val authorizedDownloadController: AuthorizedDownloadController =
         WorkManagerAuthorizedDownloadController(applicationContext, gameRepository, applicationScope)
 
+    private val automaticSaveBackup = SaveBackupCoordinator(
+        registry = SaveAdapterRegistry(
+            mapOf("*" to DirectorySaveAdapter(applicationContext.filesDir.resolve("saves")))
+        ),
+        backupService = SaveBackupService(
+            applicationContext.filesDir.resolve("saves"),
+            applicationContext.filesDir.resolve("save-backups"),
+        ),
+        manifestStore = SaveSnapshotManifestStore(
+            applicationContext.filesDir.resolve("save-backup-manifests")
+        ),
+    )
+
     override val gameLaunchController: GameLaunchController = DefaultGameLaunchController(
         EmulatorCapabilityRegistry(), AndroidPackageGateway(applicationContext), gameRepository,
         sessionJournal = RoomLaunchSessionJournal(database.launchSessionDao()),
         platformEmulatorDefault = settingsRepository::platformEmulatorDefault,
+        backupAfterSession = { gameId ->
+            gameRepository.game(gameId)?.let { game ->
+                kotlinx.coroutines.withContext(Dispatchers.IO) {
+                    automaticSaveBackup.backup(game.platform, game.id.value)
+                }
+            }
+        },
     )
 
     override val saveSafetyController: SaveSafetyController = DefaultSaveSafetyController(
