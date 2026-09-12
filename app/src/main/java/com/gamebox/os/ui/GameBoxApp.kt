@@ -1965,6 +1965,7 @@ private fun DiscoveryDetailsScreen(
     importer: AuthorizedRomImporter,
     repository: GameRepository,
 ) {
+    val detail = remember(game, platformName) { GameDetailPresentation.from(game, platformName) }
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val legalSources = remember(game.title, game.platformId) {
@@ -2100,7 +2101,7 @@ private fun DiscoveryDetailsScreen(
     selectedScreenshot?.let { screenshot ->
         AlertDialog(
             onDismissRequest = { selectedScreenshot = null },
-            title = { Text(game.title, maxLines = 2) },
+            title = { Text(detail.title, maxLines = 2) },
             text = { RemoteArtwork(screenshot, Modifier.fillMaxWidth().height(300.dp), contentScale = androidx.compose.ui.layout.ContentScale.Fit) },
             confirmButton = { TextButton(onClick = { selectedScreenshot = null }) { Text("Close") } },
         )
@@ -2112,22 +2113,22 @@ private fun DiscoveryDetailsScreen(
                 shape = RoundedCornerShape(9.dp), color = MaterialTheme.colorScheme.surface,
                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)) {
                 Box(Modifier.fillMaxSize()) {
-                    RemoteArtwork(game.backgroundUrl ?: game.screenshots.firstOrNull() ?: game.coverUrl, Modifier.fillMaxSize(), fallbackKey = game.title)
+                    RemoteArtwork(detail.heroUrl, Modifier.fillMaxSize(), fallbackKey = detail.title)
                     Box(Modifier.fillMaxSize().background(Brush.horizontalGradient(listOf(Color(0xF5030810), Color(0xA5030810), Color(0x30030810)))))
                     Column(Modifier.fillMaxSize().padding(if (narrow) 18.dp else 24.dp), verticalArrangement = Arrangement.Bottom) {
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            ConsoleBrandMark(platformName, true, Modifier.size(23.dp))
-                            Text(platformName.uppercase(), color = MaterialTheme.colorScheme.primary, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                            ConsoleBrandMark(detail.platform, true, Modifier.size(23.dp))
+                            Text(detail.platform.uppercase(), color = MaterialTheme.colorScheme.primary, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                         }
                         Spacer(Modifier.height(10.dp))
-                        Text(game.title, fontSize = if (narrow) 28.sp else 38.sp, fontWeight = FontWeight.Bold,
+                        Text(detail.title, fontSize = if (narrow) 28.sp else 38.sp, fontWeight = FontWeight.Bold,
                             maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.fillMaxWidth(if (narrow) 1f else .75f))
                         FlowRow(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                            game.releaseDate?.let { DetailMetric(Icons.Rounded.CalendarMonth, it.take(4)) }
-                            game.players?.let { DetailMetric(Icons.Rounded.Groups, "$it players") }
-                            game.rating?.let { DetailMetric(Icons.Rounded.Star, it.toString()) }
+                            detail.releaseLabel?.let { DetailMetric(Icons.Rounded.CalendarMonth, it) }
+                            detail.playersLabel?.let { DetailMetric(Icons.Rounded.Groups, it) }
+                            detail.ratingLabel?.let { DetailMetric(Icons.Rounded.Star, it) }
                         }
-                        Text(game.description ?: "Discover this title and import your own copy to play.",
+                        Text(detail.description,
                             color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp, maxLines = 2, overflow = TextOverflow.Ellipsis,
                             modifier = Modifier.widthIn(max = 540.dp).padding(top = 9.dp))
                         Spacer(Modifier.height(12.dp))
@@ -2137,8 +2138,8 @@ private fun DiscoveryDetailsScreen(
                                 Text(if (importing) "Importing…" else "Import your copy", Modifier.padding(start = 6.dp), fontSize = 12.sp)
                             }
                             OutlinedButton(onClick = onFavorite) {
-                                Icon(if (game.favorite) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder, null, Modifier.size(16.dp))
-                                Text(if (game.favorite) "Favorited" else "Favorite", Modifier.padding(start = 6.dp), fontSize = 12.sp)
+                                Icon(if (detail.favorite) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder, null, Modifier.size(16.dp))
+                                Text(if (detail.favorite) "Favorited" else "Favorite", Modifier.padding(start = 6.dp), fontSize = 12.sp)
                             }
                             TextButton(onClick = onBack) { Text("Back", fontSize = 12.sp) }
                         }
@@ -2376,6 +2377,7 @@ private fun DetailsScreen(
     onDownloads: () -> Unit,
     onBack: () -> Unit
 ) {
+    val detail = remember(game) { GameDetailPresentation.from(game) }
     val isAuthorizedFixture = game.id.value == "galaxy-patrol"
     val parentSaveScope = rememberCoroutineScope()
     val saveScope = remember(game.id, saveControllerFactory) {
@@ -2432,7 +2434,7 @@ private fun DetailsScreen(
             tonalElevation = 8.dp,
         ) {
             Box(Modifier.fillMaxSize()) {
-                RemoteArtwork(game.artworkUrl, Modifier.fillMaxSize(), fallbackKey = game.title)
+                RemoteArtwork(detail.heroUrl, Modifier.fillMaxSize(), fallbackKey = detail.title)
                 Box(
                     Modifier.fillMaxSize().background(
                         Brush.horizontalGradient(
@@ -2456,21 +2458,21 @@ private fun DetailsScreen(
                             horizontalArrangement = Arrangement.spacedBy(6.dp),
                         ) {
                             Icon(Icons.Rounded.SportsEsports, contentDescription = null, modifier = Modifier.size(14.dp))
-                            Text(game.platform.uppercase(), color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold, fontSize = 10.sp)
+                            Text(detail.platform.uppercase(), color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold, fontSize = 10.sp)
                         }
                     }
                     Spacer(Modifier.height(10.dp))
                     Text(
-                        game.title,
+                        detail.title,
                         fontSize = if (compact) 29.sp else 39.sp,
                         fontWeight = FontWeight.Black,
                         maxLines = 2,
                     )
-                    Text(game.genre, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp)
+                    Text(detail.genre ?: "Imported", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp)
                     Spacer(Modifier.height(12.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                        DetailMetric(Icons.Rounded.CalendarMonth, game.year.toString())
-                        DetailMetric(Icons.Rounded.Groups, game.players ?: "1 player")
+                        DetailMetric(Icons.Rounded.CalendarMonth, detail.releaseLabel ?: "Unknown")
+                        DetailMetric(Icons.Rounded.Groups, detail.playersLabel ?: "1 player")
                         DetailMetric(Icons.Rounded.Storage, game.sizeMb.toString() + " MB")
                     }
                 }
