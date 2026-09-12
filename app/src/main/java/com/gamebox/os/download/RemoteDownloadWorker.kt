@@ -2,6 +2,7 @@ package com.gamebox.os.download
 
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.app.PendingIntent
 import android.content.Context
 import androidx.core.app.NotificationCompat
 import androidx.work.ForegroundInfo
@@ -16,6 +17,7 @@ import androidx.work.WorkerParameters
 import androidx.work.workDataOf
 import com.gamebox.os.content.GameContentPolicy
 import com.gamebox.os.domain.Game
+import com.gamebox.os.navigation.GameBoxDeepLink
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.util.concurrent.TimeUnit
@@ -87,6 +89,7 @@ class RemoteDownloadWorker(
             .setContentText(formatTransferProgress(transferred, total))
             .setOngoing(true)
             .setOnlyAlertOnce(true)
+            .setContentIntent(navigationIntent(gameId, completed = false))
             .setProgress(100, progress, !determinate)
             .build()
         return ForegroundInfo(notificationId(gameId), notification)
@@ -98,10 +101,25 @@ class RemoteDownloadWorker(
             .setSmallIcon(android.R.drawable.stat_sys_download_done)
             .setContentTitle(gameId + " installed")
             .setContentText(formatTransferProgress(transferred, transferred))
+            .setContentIntent(navigationIntent(gameId, completed = true))
             .setAutoCancel(true)
             .build()
         applicationContext.getSystemService(NotificationManager::class.java)
             .notify(notificationId(gameId), notification)
+    }
+
+    private fun navigationIntent(gameId: String, completed: Boolean): PendingIntent {
+        val intent = GameBoxDeepLink.intent(
+            applicationContext,
+            destination = if (completed) "LIBRARY" else "DOWNLOADS",
+            gameId = gameId.takeIf { completed },
+        )
+        return PendingIntent.getActivity(
+            applicationContext,
+            notificationId(gameId) xor if (completed) COMPLETION_REQUEST_MASK else 0,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
     }
 
     private fun ensureNotificationChannel() {
@@ -136,6 +154,7 @@ class RemoteDownloadWorker(
         private const val MAX_RETRIES = 3
         private const val CHANNEL_ID = "gamebox_downloads"
         private const val NOTIFICATION_ID_BASE = 10_000
+        private const val COMPLETION_REQUEST_MASK = 0x20000000
     }
 }
 
