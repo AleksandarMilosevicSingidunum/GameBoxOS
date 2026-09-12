@@ -42,6 +42,9 @@ jobs:
           gradle-version: "9.5.0"
           cache-provider: basic
 
+      - name: Test Android release version ordering
+        run: python -m unittest scripts/test_android_version_code.py
+
       - name: Validate authorized homebrew fixture
         run: |
           python -m json.tool app/src/main/assets/catalog/authorized-fixture.json > /dev/null
