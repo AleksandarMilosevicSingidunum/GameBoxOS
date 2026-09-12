@@ -20,13 +20,27 @@ import com.gamebox.os.domain.Game
 import com.gamebox.os.navigation.GameBoxDeepLink
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import java.util.concurrent.TimeUnit
+
+internal const val DEFAULT_MAX_CONCURRENT_DOWNLOADS = 2
+
+internal class DownloadConcurrencyGate(maxParallel: Int = DEFAULT_MAX_CONCURRENT_DOWNLOADS) {
+    init { require(maxParallel > 0) { "maxParallel must be positive" } }
+    private val permits = Semaphore(maxParallel)
+
+    suspend fun <T> run(block: suspend () -> T): T = permits.withPermit { block() }
+}
+
+private val remoteDownloadGate = DownloadConcurrencyGate()
 
 class RemoteDownloadWorker(
     appContext: Context,
     parameters: WorkerParameters
 ) : CoroutineWorker(appContext, parameters) {
-    override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
+    override suspend fun doWork(): Result = remoteDownloadGate.run {
+        withContext(Dispatchers.IO) {
         val gameId = inputData.getString(KEY_GAME_ID) ?: return@withContext failure("missing game")
         setForeground(createForegroundInfo(gameId, 0L, -1L))
         val sourceUrl = inputData.getString(KEY_SOURCE_URL) ?: return@withContext failure("missing source")
@@ -76,6 +90,7 @@ class RemoteDownloadWorker(
             is ResumableTransferResult.SizeLimitExceeded -> failure("size limit exceeded")
             is ResumableTransferResult.Failed ->
                 if (runAttemptCount < MAX_RETRIES) Result.retry() else failure(result.reason)
+        }
         }
     }
 
