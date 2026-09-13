@@ -155,7 +155,31 @@ class DefaultSaveSafetyController(
         return GameOwnedContentUninstaller(applicationContext.filesDir).preview(contentManifest(game))
     }
 
-    override suspend fun uninstallContent(game: Game): String = withContext(Dispatchers.IO + NonCancellable) {
+    override suspend fun cloudBackupPreflight(game: Game): CloudBackupPreflight = withContext(Dispatchers.IO) {
+        require(game.id == gameId) { "Content controller does not belong to this game" }
+        val record = saveRecordDao.getByGameId(game.id.value)
+            ?: return@withContext CloudBackupPreflight(
+                CloudBackupPreflightStatus.NOT_REQUIRED,
+                "No managed save copy requires cloud protection.",
+            )
+        requireSavePathForGame(game.id.value, record.relativePath)
+        runCatching { cloudAccess() }.fold(
+            onSuccess = {
+                CloudBackupPreflight(
+                    CloudBackupPreflightStatus.READY,
+                    "Cloud backup is configured and will be verified before content removal.",
+                )
+            },
+            onFailure = {
+                CloudBackupPreflight(
+                    CloudBackupPreflightStatus.ACKNOWLEDGEMENT_REQUIRED,
+                    "Cloud backup is unavailable: \${safeCloudError(it)}. A verified local backup is still required.",
+                )
+            },
+        )
+    }
+
+    override suspend fun uninstallContent(game: Game, allowWithoutCloudBackup: Boolean): String = withContext(Dispatchers.IO + NonCancellable) {
         require(game.id == gameId) { "Content controller does not belong to this game" }
         val current = requireNotNull(gameRepository.game(game.id)) { "Game is no longer in the library" }
         require(current.state in setOf(InstallState.INSTALLED, InstallState.UPDATE_AVAILABLE, InstallState.MISSING_FILES)) {
