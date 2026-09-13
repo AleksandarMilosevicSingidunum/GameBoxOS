@@ -59,10 +59,12 @@
                         <TextBox x:Name="DevicePortBox" Grid.Column="1" Text="49500" Margin="8,0,0,0" AutomationProperties.Name="GameBox device port"/>
                     </Grid>
                     <Grid Margin="0,8,0,0">
-                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
                         <Button Content="Check and remember device" Click="CheckDevice_Click" AutomationProperties.Name="Authenticate, check, and securely remember GameBox device"/>
-                        <Button x:Name="ForgetDeviceButton" Grid.Column="1" Content="Forget" Click="ForgetDevice_Click" IsEnabled="False" Margin="8,0,0,0" AutomationProperties.Name="Forget protected GameBox pairing"/>
+                        <Button Grid.Column="1" Content="Discover" Click="DiscoverDevice_Click" Margin="8,0,0,0" AutomationProperties.Name="Discover enabled GameBox devices on the local network"/>
+                        <Button x:Name="ForgetDeviceButton" Grid.Column="2" Content="Forget" Click="ForgetDevice_Click" IsEnabled="False" Margin="8,0,0,0" AutomationProperties.Name="Forget protected GameBox pairing"/>
                     </Grid>
+                    <ComboBox x:Name="DiscoveredDevicesBox" DisplayMemberPath="DeviceName" SelectionChanged="DiscoveredDevice_SelectionChanged" Margin="0,8,0,0" Visibility="Collapsed" AutomationProperties.Name="Discovered GameBox devices"/>
                     <TextBlock x:Name="DeviceStatusText" Foreground="#9EADC0" TextWrapping="Wrap" Margin="0,6,0,0" AutomationProperties.LiveSetting="Polite" Text="Enter the pairing secret shown in GameBox Settings. After a successful check it is encrypted for this Windows user with DPAPI."/>
                     <Button Content="Refresh GameBox library" Click="RefreshDeviceLibrary_Click" Margin="0,8,0,0" AutomationProperties.Name="Refresh paired GameBox library"/>
                     <TextBlock x:Name="DeviceLibrarySummaryText" Foreground="#9EADC0" TextWrapping="Wrap" Margin="0,6,0,0" AutomationProperties.LiveSetting="Polite" Text="No paired library loaded."/>
