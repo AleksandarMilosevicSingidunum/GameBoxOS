@@ -15,6 +15,7 @@ public partial class MainWindow : Window
     private readonly ObservableCollection<GameEntry> _allGames = new();
     private readonly ObservableCollection<GameEntry> _visibleGames = new();
     private readonly LibraryStore _store;
+    private CancellationTokenSource? _deviceTransferCancellation;
 
     public MainWindow()
     {
@@ -173,6 +174,129 @@ public partial class MainWindow : Window
             DeviceLibrarySummaryText.Text = "Unable to refresh GameBox library: " + ex.Message;
         }
     }
+
+    private CompanionLibraryGame? SelectedDeviceGame =>
+        DeviceLibraryList.SelectedItem as CompanionLibraryGame;
+
+    private void DeviceLibraryList_SelectionChanged(object sender, SelectionChangedEventArgs e) =>
+        UpdateDeviceTransferButtons();
+
+    private void UpdateDeviceTransferButtons()
+    {
+        var selected = SelectedDeviceGame is not null;
+        var busy = _deviceTransferCancellation is not null;
+        DownloadDeviceSaveButton.IsEnabled = selected && !busy;
+        UploadDeviceSaveButton.IsEnabled = selected && !busy;
+        CancelDeviceTransferButton.IsEnabled = busy;
+    }
+
+    private bool TryGetDeviceConnection(out int port)
+    {
+        if (int.TryParse(DevicePortBox.Text.Trim(), out port) && port is >= 10240 and <= 65535)
+            return true;
+        DeviceLibrarySummaryText.Text = "Enter a valid GameBox companion port.";
+        return false;
+    }
+
+    private async void DownloadDeviceSave_Click(object sender, RoutedEventArgs e)
+    {
+        var game = SelectedDeviceGame;
+        if (game is null || !TryGetDeviceConnection(out var port)) return;
+        var dialog = new SaveFileDialog {
+            Title = "Save " + game.Title + " progress to this PC",
+            Filter = "Game save (*.save)|*.save|All files (*.*)|*.*",
+            FileName = game.Id + ".save",
+            AddExtension = true,
+        };
+        if (dialog.ShowDialog(this) != true) return;
+        _deviceTransferCancellation = new CancellationTokenSource();
+        UpdateDeviceTransferButtons();
+        try
+        {
+            DeviceLibrarySummaryText.Text = "Downloading and verifying " + game.Title + " save…";
+            var transfer = await new CompanionSaveClient(new HttpClient()).DownloadAsync(
+                DeviceHostBox.Text,
+                port,
+                DeviceSecretBox.Password,
+                game.Id,
+                _deviceTransferCancellation.Token);
+            var destination = Path.GetFullPath(dialog.FileName);
+            var partial = destination + ".gamebox-partial";
+            try
+            {
+                await File.WriteAllBytesAsync(partial, transfer.Bytes, _deviceTransferCancellation.Token);
+                File.Move(partial, destination, true);
+            }
+            finally { if (File.Exists(partial)) File.Delete(partial); }
+            DeviceLibrarySummaryText.Text = "Verified save downloaded for " + game.Title + ".";
+        }
+        catch (OperationCanceledException)
+        {
+            DeviceLibrarySummaryText.Text = "Save download cancelled; no partial file retained.";
+        }
+        catch (Exception ex)
+        {
+            DeviceLibrarySummaryText.Text = "Save download failed safely: " + ex.Message;
+        }
+        finally
+        {
+            _deviceTransferCancellation.Dispose();
+            _deviceTransferCancellation = null;
+            UpdateDeviceTransferButtons();
+        }
+    }
+
+    private async void UploadDeviceSave_Click(object sender, RoutedEventArgs e)
+    {
+        var game = SelectedDeviceGame;
+        if (game is null || !TryGetDeviceConnection(out var port)) return;
+        var dialog = new OpenFileDialog {
+            Title = "Choose a managed save for " + game.Title,
+            Filter = "Game saves (*.save;*.sav;*.srm)|*.save;*.sav;*.srm|All files (*.*)|*.*",
+            CheckFileExists = true,
+        };
+        if (dialog.ShowDialog(this) != true) return;
+        var info = new FileInfo(dialog.FileName);
+        if (info.Length is <= 0 or > CompanionSaveClient.MaxSaveBytes)
+        {
+            DeviceLibrarySummaryText.Text = "Save must contain 1 byte to 16 MiB.";
+            return;
+        }
+        _deviceTransferCancellation = new CancellationTokenSource();
+        UpdateDeviceTransferButtons();
+        try
+        {
+            DeviceLibrarySummaryText.Text = "Sending and verifying " + game.Title + " save…";
+            var bytes = await File.ReadAllBytesAsync(info.FullName, _deviceTransferCancellation.Token);
+            var result = await new CompanionSaveClient(new HttpClient()).UploadAsync(
+                DeviceHostBox.Text,
+                port,
+                DeviceSecretBox.Password,
+                game.Id,
+                bytes,
+                _deviceTransferCancellation.Token);
+            DeviceLibrarySummaryText.Text = result.ConflictPreserved
+                ? "Save uploaded and verified; the different Android save was preserved."
+                : "Save uploaded and verified for " + game.Title + ".";
+        }
+        catch (OperationCanceledException)
+        {
+            DeviceLibrarySummaryText.Text = "Save upload cancelled; Android content was not partially replaced.";
+        }
+        catch (Exception ex)
+        {
+            DeviceLibrarySummaryText.Text = "Save upload failed safely: " + ex.Message;
+        }
+        finally
+        {
+            _deviceTransferCancellation.Dispose();
+            _deviceTransferCancellation = null;
+            UpdateDeviceTransferButtons();
+        }
+    }
+
+    private void CancelDeviceTransfer_Click(object sender, RoutedEventArgs e) =>
+        _deviceTransferCancellation?.Cancel();
 
     private async void CheckDevice_Click(object sender, RoutedEventArgs e)
     {
