@@ -1,6 +1,6 @@
 package com.gamebox.os.companion
 
-import android.util.Base64
+import java.util.Base64
 
 object CompanionSaveRoute {
     const val PREFIX = "/v1/saves/"
@@ -37,7 +37,7 @@ object CompanionSaveRoute {
                             """","updatedAtMillis":""" + payload.updatedAtMillis +
                             ""","sha256":"""" + payload.sha256 +
                             """","payloadBase64":"""" +
-                            Base64.encodeToString(payload.bytes, Base64.NO_WRAP) + """"}""",
+                            Base64.getEncoder().encodeToString(payload.bytes) + """"}""",
                     )
                 },
                 onFailure = { CompanionHttpResponse(400, """{"error":"save_unavailable"}""") },
