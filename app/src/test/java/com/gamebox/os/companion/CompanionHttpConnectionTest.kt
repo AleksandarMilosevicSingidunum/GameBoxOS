@@ -53,6 +53,8 @@ class CompanionHttpConnectionTest {
         val request = (
             "PUT /v1/saves/game-one HTTP/1.1\r\n" +
                 "Content-Type: application/octet-stream\r\n" +
+                CompanionHttpRequestReader.BODY_SHA256_HEADER + ": " +
+                    CompanionSaveTransferStore.sha256(body) + "\r\n" +
                 "Content-Length: " + body.size + "\r\n\r\n"
             ).toByteArray() + body
         val parsed = CompanionHttpRequestReader.read(request.inputStream())
@@ -61,7 +63,9 @@ class CompanionHttpConnectionTest {
         assertTrue(
             runCatching {
                 CompanionHttpRequestReader.read(
-                    "PUT /v1/saves/game-one HTTP/1.1\r\nContent-Type: application/octet-stream\r\nContent-Length: 4\r\n\r\nX"
+                    "PUT /v1/saves/game-one HTTP/1.1\r\nContent-Type: application/octet-stream\r\n" +
+                        CompanionHttpRequestReader.BODY_SHA256_HEADER + ": " + "0".repeat(64) +
+                        "\r\nContent-Length: 4\r\n\r\nX"
                         .byteInputStream()
                 )
             }.isFailure
