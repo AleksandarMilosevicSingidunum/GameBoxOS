@@ -45,8 +45,9 @@ public partial class MainWindow : Window
                     DeviceHostBox.Text = pairing.Host;
                     DevicePortBox.Text = pairing.Port.ToString();
                     DeviceSecretBox.Password = pairing.Secret;
-                    DeviceStatusText.Text = "Saved pairing restored for " + pairing.Host + ". Check the device to reconnect.";
+                    DeviceStatusText.Text = "Saved pairing restored for " + pairing.Host + ". Reconnecting…";
                     ForgetDeviceButton.IsEnabled = true;
+                    await ReconnectSavedDeviceAsync(pairing);
                 }
             }
             catch (Exception ex)
@@ -177,7 +178,7 @@ public partial class MainWindow : Window
         try
         {
             DeviceLibrarySummaryText.Text = "Refreshing paired GameBox library…";
-            var games = await new CompanionStatusClient(new HttpClient()).GetLibraryAsync(
+            var games = await new CompanionStatusClient(new HttpClient()).GetLibraryWithRetryAsync(
                 DeviceHostBox.Text, port, DeviceSecretBox.Password);
             DeviceLibraryList.ItemsSource = games;
             DeviceLibrarySummaryText.Text = games.Count == 0
@@ -191,6 +192,33 @@ public partial class MainWindow : Window
         catch (Exception ex)
         {
             DeviceLibrarySummaryText.Text = "Unable to refresh GameBox library: " + ex.Message;
+        }
+    }
+
+    private async Task ReconnectSavedDeviceAsync(PairingProfile pairing)
+    {
+        try
+        {
+            var client = new CompanionStatusClient(new HttpClient());
+            var status = await client.ReconnectAsync(pairing.Host, pairing.Port, pairing.Secret);
+            var games = await client.GetLibraryWithRetryAsync(pairing.Host, pairing.Port, pairing.Secret);
+            DeviceLibraryList.ItemsSource = games;
+            DeviceStatusText.Text = status.DeviceName + " reconnected automatically (protocol v" +
+                status.ProtocolVersion + ").";
+            DeviceLibrarySummaryText.Text = games.Count == 0
+                ? "The paired GameBox library is empty."
+                : games.Count + " game(s) available on the paired GameBox.";
+            StatusText.Text = "Reconnected to " + status.DeviceName;
+        }
+        catch (UnauthorizedAccessException)
+        {
+            DeviceStatusText.Text =
+                "Saved pairing was rejected. Copy the current secret from GameBox Settings or forget this pairing.";
+        }
+        catch (Exception ex)
+        {
+            DeviceStatusText.Text =
+                "Saved GameBox is temporarily unavailable after 3 attempts: " + ex.Message;
         }
     }
 
@@ -428,7 +456,7 @@ public partial class MainWindow : Window
         try
         {
             DeviceStatusText.Text = "Checking GameBox device…";
-            var status = await new CompanionStatusClient(new HttpClient()).GetStatusAsync(
+            var status = await new CompanionStatusClient(new HttpClient()).ReconnectAsync(
                 DeviceHostBox.Text, port, DeviceSecretBox.Password);
             DeviceStatusText.Text = $"{status.DeviceName} is {status.Status} (protocol v{status.ProtocolVersion}).";
             StatusText.Text = "Connected to " + status.DeviceName;

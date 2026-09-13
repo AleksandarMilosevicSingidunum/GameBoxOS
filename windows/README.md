@@ -11,6 +11,7 @@ This optional native .NET 8/WPF companion complements the Android/DeX GameBox OS
 - Search and filter by favorites, availability, and platform.
 - Connect to a paired GameBox device, browse its library, update a title's favorite state, upload/download a selected managed save, and send a user-selected legally owned game copy to an existing catalog title.
 - Remember a successfully authenticated device across restarts. Host and port are stored in the bounded local profile; the 256-bit pairing secret is encrypted with Windows DPAPI for the current user and can be explicitly forgotten without changing Android.
+- Automatically reconnect and refresh the paired library after startup with three bounded exponential-backoff attempts for transient LAN failures. Authentication rejection and invalid protocol/data fail immediately; caller cancellation stops before another request.
 - Verify save SHA-256 on both platforms, limit saves to 16 MiB, support cancellation, and preserve a different Android save before replacement.
 - Stream owned game copies up to 64 GiB without buffering them in memory. Android authenticates the declared checksum before reading the body, stages with an inactivity timeout, verifies SHA-256 again, enforces the selected console's format allowlist, and atomically registers the installed content. A failed or cancelled transfer retains no partial content; a failed replacement restores the previous copy.
 

@@ -23,6 +23,24 @@ public sealed class CompanionStatusClient
         if (this.timeout <= TimeSpan.Zero) throw new ArgumentOutOfRangeException(nameof(timeout));
     }
 
+    public Task<CompanionDeviceStatus> ReconnectAsync(
+        string host,
+        int port,
+        string pairingSecret,
+        CancellationToken cancellationToken = default) =>
+        CompanionRetryPolicy.ExecuteAsync(
+            token => GetStatusAsync(host, port, pairingSecret, token),
+            cancellationToken);
+
+    public Task<IReadOnlyList<CompanionLibraryGame>> GetLibraryWithRetryAsync(
+        string host,
+        int port,
+        string pairingSecret,
+        CancellationToken cancellationToken = default) =>
+        CompanionRetryPolicy.ExecuteAsync(
+            token => GetLibraryAsync(host, port, pairingSecret, token),
+            cancellationToken);
+
     public async Task<CompanionDeviceStatus> GetStatusAsync(
         string host,
         int port,

@@ -468,6 +468,56 @@ try
     Require(invalidPairingRejected, "Malformed pairing profiles must fail closed.");
     pairingStore.Delete();
 
+    var reconnectAttempts = 0;
+    using var reconnectHttp = new HttpClient(new StubHttpMessageHandler(_ =>
+    {
+        reconnectAttempts++;
+        if (reconnectAttempts < 3) throw new HttpRequestException("transient LAN outage");
+        return new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent(
+                "{\"protocolVersion\":1,\"deviceName\":\"Recovered GameBox\",\"status\":\"ready\"}")
+        };
+    }));
+    var reconnectDelays = 0;
+    var recoveredStatus = await CompanionRetryPolicy.ExecuteAsync(
+        token => new CompanionStatusClient(reconnectHttp).GetStatusAsync(
+            "192.168.1.22", 49_500, companionSecret, token),
+        maxAttempts: 3,
+        initialDelay: TimeSpan.Zero,
+        delay: (_, _) => { reconnectDelays++; return Task.CompletedTask; });
+    Require(recoveredStatus.DeviceName == "Recovered GameBox" &&
+        reconnectAttempts == 3 && reconnectDelays == 2,
+        "Reconnect policy must recover after bounded transient failures.");
+
+    var authenticationAttempts = 0;
+    var authenticationFailure = false;
+    try
+    {
+        await CompanionRetryPolicy.ExecuteAsync<int>(
+            _ => { authenticationAttempts++; throw new UnauthorizedAccessException("rejected"); },
+            maxAttempts: 3,
+            initialDelay: TimeSpan.Zero,
+            delay: (_, _) => Task.CompletedTask);
+    }
+    catch (UnauthorizedAccessException) { authenticationFailure = true; }
+    Require(authenticationFailure && authenticationAttempts == 1,
+        "Reconnect policy must never retry rejected authentication.");
+
+    using var cancelledReconnect = new CancellationTokenSource();
+    cancelledReconnect.Cancel();
+    var cancelledAttempts = 0;
+    var callerCancellationObserved = false;
+    try
+    {
+        await CompanionRetryPolicy.ExecuteAsync(
+            _ => { cancelledAttempts++; return Task.FromResult(1); },
+            cancelledReconnect.Token);
+    }
+    catch (OperationCanceledException) { callerCancellationObserved = true; }
+    Require(callerCancellationObserved && cancelledAttempts == 0,
+        "Reconnect policy must honor caller cancellation before network access.");
+
     Console.WriteLine("GameBox Windows core tests passed.");
 }
 finally
