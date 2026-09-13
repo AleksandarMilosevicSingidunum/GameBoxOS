@@ -4,10 +4,10 @@ using System.Text.Json;
 
 namespace GameBox.Windows;
 
-internal sealed record PairingProfile(string Host, int Port, string Secret);
+public sealed record PairingProfile(string Host, int Port, string Secret);
 
 /// <summary>Persists the LAN endpoint while protecting pairing material with Windows DPAPI for the current user.</summary>
-internal sealed class PairingProfileStore
+public sealed class PairingProfileStore
 {
     private const uint CryptProtectUiForbidden = 0x1;
     private readonly string path;
