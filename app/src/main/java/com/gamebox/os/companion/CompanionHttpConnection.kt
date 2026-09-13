@@ -18,6 +18,7 @@ internal data class CompanionHttpRequestHead(
     val contentType: String?,
     val declaredBodySha256: String?,
     val fileName: String?,
+    val configurationFlags: String?,
 )
 
 internal data class CompanionHttpRequest(
@@ -29,6 +30,7 @@ internal data class CompanionHttpRequest(
     val bodyLength: Long = body.size.toLong(),
     val bodySha256: String? = null,
     val fileName: String? = null,
+    val configurationFlags: String? = null,
 )
 
 private class CompanionUnauthorizedRequest : IllegalArgumentException()
@@ -38,6 +40,7 @@ private class CompanionPayloadTooLarge : IllegalArgumentException()
 internal object CompanionHttpRequestReader {
     const val BODY_SHA256_HEADER = "X-GameBox-Content-SHA256"
     const val FILE_NAME_HEADER = "X-GameBox-File-Name"
+    const val CONFIGURATION_HEADER = "X-GameBox-Configuration"
     private const val MAX_HEAD_BYTES = 16 * 1024
     private const val MAX_LINE_BYTES = 4096
     private const val MAX_HEADERS = 32
@@ -111,11 +114,16 @@ internal object CompanionHttpRequestReader {
             contentType = contentType,
             declaredBodySha256 = declaredHash?.lowercase(Locale.ROOT),
             fileName = headers[FILE_NAME_HEADER.lowercase(Locale.ROOT)],
+            configurationFlags = headers[CONFIGURATION_HEADER.lowercase(Locale.ROOT)],
         )
         if (!authorizeHead(head)) throw CompanionUnauthorizedRequest()
 
         if (contentLength == 0L) {
-            return CompanionHttpRequest(head.method, head.path, head.authorization, fileName = head.fileName)
+            return CompanionHttpRequest(
+                head.method, head.path, head.authorization,
+                bodySha256 = head.declaredBodySha256,
+                fileName = head.fileName, configurationFlags = head.configurationFlags,
+            )
         }
         val digest = MessageDigest.getInstance("SHA-256")
         var remaining = contentLength
@@ -141,6 +149,7 @@ internal object CompanionHttpRequestReader {
                 return CompanionHttpRequest(
                     head.method, head.path, head.authorization,
                     bodyFile = staged, bodyLength = contentLength, bodySha256 = actual, fileName = head.fileName,
+                    configurationFlags = head.configurationFlags,
                 )
             } catch (failure: Throwable) {
                 staged.delete()
@@ -163,6 +172,7 @@ internal object CompanionHttpRequestReader {
         return CompanionHttpRequest(
             head.method, head.path, head.authorization,
             body = output.toByteArray(), bodyLength = contentLength, bodySha256 = actual, fileName = head.fileName,
+            configurationFlags = head.configurationFlags,
         )
     }
 

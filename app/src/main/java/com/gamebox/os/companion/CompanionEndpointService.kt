@@ -116,6 +116,14 @@ class CompanionEndpointService : Service() {
     private fun route(request: CompanionHttpRequest, secret: String): CompanionHttpResponse {
         val now = System.currentTimeMillis() / 1_000L
         return when {
+            request.path == CompanionConfigurationRoute.PATH -> runBlocking {
+                CompanionConfigurationRoute.handle(
+                    request = request,
+                    pairingSecret = secret,
+                    store = SettingsCompanionConfigurationStore(SettingsRepository(applicationContext)),
+                    nowUnixTimeSeconds = now,
+                )
+            }
             request.path == CompanionStatusRoute.PATH -> CompanionStatusRoute.handle(
                 method = request.method, path = request.path, authorization = request.authorization, pairingSecret = secret,
                 deviceName = applicationInfo.loadLabel(packageManager).toString(), nowUnixTimeSeconds = now,

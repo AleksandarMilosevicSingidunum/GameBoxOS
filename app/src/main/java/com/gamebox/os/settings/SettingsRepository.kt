@@ -176,6 +176,20 @@ class SettingsRepository(private val context: Context) {
         context.gameBoxDataStore.edit { it[SAFE_AREA] = value.coerceIn(0f, 0.1f) }
     }
 
+    suspend fun setCompanionManagedPreferences(
+        reducedMotion: Boolean,
+        showUnavailableGames: Boolean,
+        showUnavailableShortcuts: Boolean,
+        downloadsUnmeteredOnly: Boolean,
+    ) {
+        context.gameBoxDataStore.edit { preferences ->
+            preferences[REDUCED_MOTION] = reducedMotion
+            preferences[SHOW_UNAVAILABLE] = showUnavailableGames
+            preferences[SHOW_UNAVAILABLE_SHORTCUTS] = showUnavailableShortcuts
+            preferences[DOWNLOADS_UNMETERED_ONLY] = downloadsUnmeteredOnly
+        }
+    }
+
     suspend fun setReducedMotion(value: Boolean) {
         context.gameBoxDataStore.edit { it[REDUCED_MOTION] = value }
     }

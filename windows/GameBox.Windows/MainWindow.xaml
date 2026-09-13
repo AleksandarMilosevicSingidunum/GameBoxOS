@@ -38,6 +38,7 @@
                 </ListBox>
             </Border>
             <Border Grid.Column="1" Background="#111824" CornerRadius="16" Margin="18,0,0,0" Padding="24">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                 <StackPanel>
                     <TextBlock Text="SELECTED GAME" Foreground="{StaticResource AccentBrush}" FontWeight="Bold"/>
                     <TextBlock x:Name="SelectedTitle" Text="Choose a game" FontSize="28" FontWeight="Bold" Margin="0,8,0,4" TextWrapping="Wrap"/>
@@ -66,7 +67,18 @@
                     </Grid>
                     <ComboBox x:Name="DiscoveredDevicesBox" DisplayMemberPath="DeviceName" SelectionChanged="DiscoveredDevice_SelectionChanged" Margin="0,8,0,0" Visibility="Collapsed" AutomationProperties.Name="Discovered GameBox devices"/>
                     <TextBlock x:Name="DeviceStatusText" Foreground="#9EADC0" TextWrapping="Wrap" Margin="0,6,0,0" AutomationProperties.LiveSetting="Polite" Text="Enter the pairing secret shown in GameBox Settings. After a successful check it is encrypted for this Windows user with DPAPI."/>
-                    <Button Content="Refresh GameBox library" Click="RefreshDeviceLibrary_Click" Margin="0,8,0,0" AutomationProperties.Name="Refresh paired GameBox library"/>
+                    <TextBlock Text="DEVICE PREFERENCES" Foreground="{StaticResource AccentBrush}" FontWeight="Bold" Margin="0,14,0,4"/>
+                    <CheckBox x:Name="ReducedMotionDeviceCheck" Content="Reduce interface motion" IsEnabled="False" Margin="0,3"/>
+                    <CheckBox x:Name="ShowUnavailableGamesDeviceCheck" Content="Show unavailable games" IsEnabled="False" Margin="0,3"/>
+                    <CheckBox x:Name="ShowUnavailableShortcutsDeviceCheck" Content="Show unavailable Media and PC apps" IsEnabled="False" Margin="0,3"/>
+                    <CheckBox x:Name="UnmeteredDownloadsDeviceCheck" Content="Download only on unmetered networks" IsEnabled="False" Margin="0,3"/>
+                    <Grid Margin="0,6,0,0">
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                        <Button Content="Refresh device settings" Click="RefreshDeviceSettings_Click" AutomationProperties.Name="Refresh paired GameBox preferences"/>
+                        <Button Grid.Column="1" Content="Apply device settings" Click="ApplyDeviceSettings_Click" Margin="8,0,0,0" AutomationProperties.Name="Apply paired GameBox preferences"/>
+                    </Grid>
+                    <TextBlock x:Name="DeviceConfigurationSummaryText" Foreground="#9EADC0" TextWrapping="Wrap" Margin="0,6,0,0" AutomationProperties.LiveSetting="Polite" Text="Connect to load device preferences."/>
+                    <Button Content="Refresh GameBox library" Click="RefreshDeviceLibrary_Click" Margin="0,12,0,0" AutomationProperties.Name="Refresh paired GameBox library"/>
                     <TextBlock x:Name="DeviceLibrarySummaryText" Foreground="#9EADC0" TextWrapping="Wrap" Margin="0,6,0,0" AutomationProperties.LiveSetting="Polite" Text="No paired library loaded."/>
                     <ListBox x:Name="DeviceLibraryList" SelectionChanged="DeviceLibraryList_SelectionChanged" Background="Transparent" BorderThickness="0" Foreground="{StaticResource TextBrush}" MaxHeight="128" Margin="0,4,0,0" AutomationProperties.Name="Paired GameBox library">
                         <ListBox.ItemTemplate><DataTemplate><StackPanel Margin="2"><TextBlock Text="{Binding Title}" FontWeight="SemiBold"/><TextBlock Foreground="#9EADC0" Text="{Binding Platform}"/></StackPanel></DataTemplate></ListBox.ItemTemplate>
@@ -82,6 +94,7 @@
                     <Separator Margin="0,22"/>
                     <TextBlock Text="Transfers are paired and checksum-verified. Saves are limited to 16 MiB and preserve conflicts. Send game copy accepts only a file you select and own; Android validates its console format before atomically installing it." Foreground="#9EADC0" TextWrapping="Wrap"/>
                 </StackPanel>
+                </ScrollViewer>
             </Border>
         </Grid>
         <DockPanel Grid.Row="3" Margin="0,16,0,0">
