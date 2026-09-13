@@ -10,6 +10,8 @@ import com.gamebox.os.domain.Game
 import com.gamebox.os.domain.GameId
 import com.gamebox.os.domain.InstallState
 import com.gamebox.os.storage.ContentRemovalPreview
+import com.gamebox.os.storage.CloudBackupPreflight
+import com.gamebox.os.storage.CloudBackupPreflightStatus
 import com.gamebox.os.storage.SaveSafetyController
 import kotlinx.coroutines.CompletableDeferred
 import org.junit.Assert.*
@@ -27,11 +29,15 @@ class ContentRemovalDialogTest {
         var closed = 0
         val controller = object : SaveSafetyController by app.container.saveSafetyController {
             override fun contentRemovalPreview(game: Game): ContentRemovalPreview = throw IllegalArgumentException("unsafe manifest")
+            override suspend fun cloudBackupPreflight(game: Game) = CloudBackupPreflight(
+                CloudBackupPreflightStatus.NOT_REQUIRED,
+                "No managed save copy requires cloud protection.",
+            )
             override suspend fun uninstallContent(game: Game): String = error("Must not remove unverified content")
         }
         compose.setContent { MaterialTheme { ContentRemovalDialog(game, controller) { closed++ } } }
         compose.waitUntil(5_000) {
-            compose.onAllNodesWithText("Cannot verify this game's owned content. No files were removed.").fetchSemanticsNodes().isNotEmpty()
+            compose.onAllNodesWithText("Cannot verify this game's owned content and backup readiness. No files were removed.").fetchSemanticsNodes().isNotEmpty()
         }
         compose.onNodeWithText("Uninstall content").assertIsNotEnabled()
         compose.onNodeWithText("Cancel").performClick()
@@ -45,7 +51,17 @@ class ContentRemovalDialogTest {
         var closed = 0
         val controller = object : SaveSafetyController by app.container.saveSafetyController {
             override fun contentRemovalPreview(game: Game) = ContentRemovalPreview(7, 1)
-            override suspend fun uninstallContent(game: Game): String { removals++; return result.await() }
+            override suspend fun cloudBackupPreflight(game: Game) = CloudBackupPreflight(
+                CloudBackupPreflightStatus.NOT_REQUIRED,
+                "No managed save copy requires cloud protection.",
+            )
+            override suspend fun uninstallContent(game: Game): String =
+                uninstallContent(game, allowWithoutCloudBackup = false)
+            override suspend fun uninstallContent(game: Game, allowWithoutCloudBackup: Boolean): String {
+                assertFalse("Cloud acknowledgement must not be supplied when preflight is ready", allowWithoutCloudBackup)
+                removals++
+                return result.await()
+            }
         }
         compose.setContent { MaterialTheme { ContentRemovalDialog(game, controller) { closed++ } } }
         compose.waitUntil(5_000) {
@@ -61,4 +77,35 @@ class ContentRemovalDialogTest {
         compose.onNodeWithText("Close").performClick()
         compose.runOnIdle { assertEquals(1, closed); assertEquals(1, removals) }
     }
+    @Test fun cloudFailureRequiresExplicitAcknowledgement() {
+        val app = ApplicationProvider.getApplicationContext<GameBoxApplication>()
+        var allowedWithoutCloud = false
+        val controller = object : SaveSafetyController by app.container.saveSafetyController {
+            override fun contentRemovalPreview(game: Game) = ContentRemovalPreview(7, 1)
+            override suspend fun cloudBackupPreflight(game: Game) = CloudBackupPreflight(
+                CloudBackupPreflightStatus.ACKNOWLEDGEMENT_REQUIRED,
+                "Cloud backup is unavailable: network is offline. A verified local backup is still required.",
+            )
+            override suspend fun uninstallContent(game: Game): String =
+                error("Two-argument removal contract required")
+            override suspend fun uninstallContent(game: Game, allowWithoutCloudBackup: Boolean): String {
+                allowedWithoutCloud = allowWithoutCloudBackup
+                return "Content removed using verified local backup"
+            }
+        }
+
+        compose.setContent { MaterialTheme { ContentRemovalDialog(game, controller) {} } }
+        compose.waitUntil(5_000) {
+            compose.onAllNodesWithText("Cloud backup is unavailable", substring = true)
+                .fetchSemanticsNodes().isNotEmpty()
+        }
+        compose.onNodeWithText("Uninstall content").assertIsNotEnabled()
+        compose.onNode(isToggleable()).performClick()
+        compose.onNodeWithText("Uninstall content").assertIsEnabled().performClick()
+        compose.waitUntil(5_000) {
+            compose.onAllNodesWithText("Close").fetchSemanticsNodes().isNotEmpty()
+        }
+        compose.runOnIdle { assertTrue(allowedWithoutCloud) }
+    }
+
 }

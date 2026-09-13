@@ -77,7 +77,9 @@ class GeneralContentRemovalTest {
             val controller = DefaultSaveSafetyController(context, database.saveRecordDao(), repository,
                 scope, SettingsRepository(app), game.id)
             assertEquals(ContentRemovalPreview(14, 2), controller.contentRemovalPreview(game))
-            controller.uninstallContent(game)
+            // This isolated instrumentation environment intentionally has no configured
+            // cloud provider. Exercise the explicit, user-acknowledged local-backup path.
+            controller.uninstallContent(game, allowWithoutCloudBackup = true)
             withTimeout(5_000) { repository.observeGames().first { rows -> rows.any { it.id == game.id && it.state == InstallState.NOT_INSTALLED } } }
             assertFalse(cue.exists())
             assertFalse(track.exists())
