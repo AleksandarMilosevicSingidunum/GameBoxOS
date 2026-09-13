@@ -211,7 +211,7 @@ class AndroidPackageGateway(
                 local.isFile -> local.inputStream().use {
                     verifier.verify(it, approved.sha256, preparation::checkActive)
                 }
-                external != null -> externalContent.open(external).use {
+                external != null -> requireNotNull(externalContent).open(external).use {
                     verifier.verify(it, approved.sha256, preparation::checkActive)
                 }
                 else -> return GatewayResult.CONTENT_MISSING
