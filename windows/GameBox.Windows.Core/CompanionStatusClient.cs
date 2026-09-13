@@ -123,6 +123,56 @@ public sealed class CompanionStatusClient
         }
     }
 
+    public async Task<CompanionLibraryGame> SetFavoriteAsync(
+        string host,
+        int port,
+        string pairingSecret,
+        CompanionLibraryGame game,
+        bool favorite,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(game);
+        if (string.IsNullOrWhiteSpace(host)) throw new ArgumentException("Host is required.", nameof(host));
+        if (port is < 10240 or > 65535) throw new ArgumentOutOfRangeException(nameof(port));
+        if (string.IsNullOrWhiteSpace(game.Id) || game.Id.Length > 96 ||
+            !char.IsLetterOrDigit(game.Id[0]) ||
+            game.Id.Any(static c => !(char.IsLetterOrDigit(c) || c is '.' or '_' or '-')))
+            throw new ArgumentException("Game ID is invalid.", nameof(game));
+
+        var requestPath = "/v1/library/" + game.Id + "/favorite/" + (favorite ? "on" : "off");
+        using var request = new HttpRequestMessage(HttpMethod.Put, CreateEndpointUri(host, port, requestPath));
+        request.Headers.TryAddWithoutValidation(
+            CompanionProtocol.AuthorizationHeader,
+            CompanionProtocol.CreateAuthorization(
+                pairingSecret, "PUT", requestPath, DateTimeOffset.UtcNow.ToUnixTimeSeconds()));
+        using var timeoutSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        timeoutSource.CancelAfter(timeout);
+        using var response = await client.SendAsync(
+            request, HttpCompletionOption.ResponseHeadersRead, timeoutSource.Token).ConfigureAwait(false);
+        if (response.StatusCode == HttpStatusCode.Unauthorized)
+            throw new UnauthorizedAccessException("GameBox rejected the pairing secret.");
+        if (response.StatusCode == HttpStatusCode.NotFound)
+            throw new InvalidDataException("The selected GameBox title is no longer available.");
+        if (!response.IsSuccessStatusCode)
+            throw new InvalidDataException("GameBox rejected the library update (" + (int)response.StatusCode + ").");
+        await using var stream = await response.Content.ReadAsStreamAsync(timeoutSource.Token).ConfigureAwait(false);
+        var bytes = await ReadBoundedAsync(stream, timeoutSource.Token).ConfigureAwait(false);
+        try
+        {
+            using var document = JsonDocument.Parse(bytes);
+            var root = document.RootElement;
+            if (root.GetProperty("protocolVersion").GetInt32() != CompanionProtocol.Version ||
+                root.GetProperty("gameId").GetString() != game.Id ||
+                root.GetProperty("favorite").GetBoolean() != favorite)
+                throw new InvalidDataException("GameBox returned an invalid library update confirmation.");
+        }
+        catch (JsonException exception)
+        {
+            throw new InvalidDataException("GameBox returned invalid library update JSON.", exception);
+        }
+        return game with { Favorite = favorite };
+    }
+
     private static Uri CreateEndpointUri(string host, int port, string path)
     {
         var normalized = host.Trim().Trim('[', ']');
