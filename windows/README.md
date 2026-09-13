@@ -9,7 +9,7 @@ This optional native .NET 8/WPF companion complements the Android/DeX GameBox OS
 - Discover installed Epic Games from bounded launcher manifests while rejecting traversal, missing executables, malformed JSON, and oversized metadata.
 - Create persistent Moonlight streaming sessions with validated host/application arguments while leaving pairing and credentials in Moonlight.
 - Search and filter by favorites, availability, and platform.
-- Connect to a paired GameBox device, browse its library, upload/download a selected managed save, and send a user-selected legally owned game copy to an existing catalog title.
+- Connect to a paired GameBox device, browse its library, update a title's favorite state, upload/download a selected managed save, and send a user-selected legally owned game copy to an existing catalog title.
 - Verify save SHA-256 on both platforms, limit saves to 16 MiB, support cancellation, and preserve a different Android save before replacement.
 - Stream owned game copies up to 64 GiB without buffering them in memory. Android authenticates the declared checksum before reading the body, stages with an inactivity timeout, verifies SHA-256 again, enforces the selected console's format allowlist, and atomically registers the installed content. A failed or cancelled transfer retains no partial content; a failed replacement restores the previous copy.
 
