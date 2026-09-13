@@ -188,6 +188,10 @@ public partial class MainWindow : Window
         DownloadDeviceSaveButton.IsEnabled = selected && !busy;
         UploadDeviceSaveButton.IsEnabled = selected && !busy;
         UploadDeviceContentButton.IsEnabled = selected && !busy;
+        FavoriteDeviceGameButton.IsEnabled = selected && !busy;
+        FavoriteDeviceGameButton.Content = SelectedDeviceGame?.Favorite == true
+            ? "Remove device favorite"
+            : "Add device favorite";
         CancelDeviceTransferButton.IsEnabled = busy;
     }
 
@@ -287,6 +291,42 @@ public partial class MainWindow : Window
         catch (Exception ex)
         {
             DeviceLibrarySummaryText.Text = "Save upload failed safely: " + ex.Message;
+        }
+        finally
+        {
+            _deviceTransferCancellation.Dispose();
+            _deviceTransferCancellation = null;
+            UpdateDeviceTransferButtons();
+        }
+    }
+
+    private async void FavoriteDeviceGame_Click(object sender, RoutedEventArgs e)
+    {
+        var game = SelectedDeviceGame;
+        if (game is null || !TryGetDeviceConnection(out var port)) return;
+        _deviceTransferCancellation = new CancellationTokenSource();
+        UpdateDeviceTransferButtons();
+        try
+        {
+            var favorite = !game.Favorite;
+            DeviceLibrarySummaryText.Text = favorite
+                ? "Adding " + game.Title + " to device favorites…"
+                : "Removing " + game.Title + " from device favorites…";
+            await new CompanionStatusClient(new HttpClient()).SetFavoriteAsync(
+                DeviceHostBox.Text, port, DeviceSecretBox.Password, game, favorite,
+                _deviceTransferCancellation.Token);
+            await RefreshDeviceLibraryCoreAsync(port);
+            DeviceLibrarySummaryText.Text = favorite
+                ? game.Title + " added to device favorites."
+                : game.Title + " removed from device favorites.";
+        }
+        catch (OperationCanceledException)
+        {
+            DeviceLibrarySummaryText.Text = "Device library update cancelled.";
+        }
+        catch (Exception ex)
+        {
+            DeviceLibrarySummaryText.Text = "Device library update failed safely: " + ex.Message;
         }
         finally
         {
