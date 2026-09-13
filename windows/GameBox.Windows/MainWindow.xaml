@@ -65,6 +65,7 @@
                     <ListBox x:Name="DeviceLibraryList" SelectionChanged="DeviceLibraryList_SelectionChanged" Background="Transparent" BorderThickness="0" Foreground="{StaticResource TextBrush}" MaxHeight="128" Margin="0,4,0,0" AutomationProperties.Name="Paired GameBox library">
                         <ListBox.ItemTemplate><DataTemplate><StackPanel Margin="2"><TextBlock Text="{Binding Title}" FontWeight="SemiBold"/><TextBlock Foreground="#9EADC0" Text="{Binding Platform}"/></StackPanel></DataTemplate></ListBox.ItemTemplate>
                     </ListBox>
+                    <Button x:Name="FavoriteDeviceGameButton" Content="Add device favorite" Click="FavoriteDeviceGame_Click" IsEnabled="False" Margin="0,8,0,0" AutomationProperties.Name="Set favorite state for selected GameBox game"/>
                     <Grid Margin="0,8,0,0">
                         <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
                         <Button x:Name="DownloadDeviceSaveButton" Content="Save to PC" Click="DownloadDeviceSave_Click" IsEnabled="False" AutomationProperties.Name="Download selected GameBox managed save"/>
