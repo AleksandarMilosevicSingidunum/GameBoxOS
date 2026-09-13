@@ -24,5 +24,25 @@ class CompanionProtocolTest {
     @Test(expected = IllegalArgumentException::class) fun rejectsTraversalWhenSigning() {
         CompanionProtocol.createAuthorization(secret, "GET", "/v1/../status", 1_700_000_000)
     }
+    @Test fun uploadAuthorizationBindsExactBodyChecksum() {
+        val first = "a".repeat(64)
+        val second = "b".repeat(64)
+        val authorization = CompanionProtocol.createAuthorization(
+            secret, "PUT", "/v1/saves/game-one", 1_700_000_000, first
+        )
+        assertTrue(
+            CompanionProtocol.verifyAuthorization(
+                secret, "PUT", "/v1/saves/game-one", authorization, 1_700_000_030,
+                bodySha256 = first,
+            )
+        )
+        assertFalse(
+            CompanionProtocol.verifyAuthorization(
+                secret, "PUT", "/v1/saves/game-one", authorization, 1_700_000_030,
+                bodySha256 = second,
+            )
+        )
+    }
+
 }
 
