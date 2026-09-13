@@ -55,12 +55,12 @@ class CompanionEndpointService : Service() {
 
     private fun route(request: CompanionHttpRequest, secret: String): CompanionHttpResponse {
         val now = System.currentTimeMillis() / 1_000L
-        return when (request.path) {
-            CompanionStatusRoute.PATH -> CompanionStatusRoute.handle(
+        return when {
+            request.path == CompanionStatusRoute.PATH -> CompanionStatusRoute.handle(
                 method = request.method, path = request.path, authorization = request.authorization, pairingSecret = secret,
                 deviceName = applicationInfo.loadLabel(packageManager).toString(), nowUnixTimeSeconds = now,
             )
-            CompanionLibraryRoute.PATH -> CompanionLibraryRoute.handle(
+            request.path == CompanionLibraryRoute.PATH -> CompanionLibraryRoute.handle(
                 method = request.method, path = request.path, authorization = request.authorization, pairingSecret = secret,
                 library = (application as GameBoxApplication).container.gameRepository.observeGames().value.map { game ->
                     CompanionLibraryItem(
@@ -71,6 +71,17 @@ class CompanionEndpointService : Service() {
                 },
                 nowUnixTimeSeconds = now,
             )
+            request.path.startsWith(CompanionSaveRoute.PREFIX) -> runBlocking {
+                CompanionSaveRoute.handle(
+                    request = request,
+                    pairingSecret = secret,
+                    store = CompanionSaveTransferStore(
+                        applicationContext.filesDir,
+                        (application as GameBoxApplication).container.gameRepository,
+                    ),
+                    nowUnixTimeSeconds = now,
+                )
+            }
             else -> CompanionHttpResponse(404, """{"error":"not_found"}""")
         }
     }

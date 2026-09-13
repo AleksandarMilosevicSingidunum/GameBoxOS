@@ -11,6 +11,7 @@ internal data class CompanionHttpRequest(
     val method: String,
     val path: String,
     val authorization: String?,
+    val body: ByteArray = byteArrayOf(),
 )
 
 /** One bounded, body-free HTTP request. Never reads past the terminating CRLF. */
@@ -18,6 +19,7 @@ internal object CompanionHttpRequestReader {
     private const val MAX_HEAD_BYTES = 16 * 1024
     private const val MAX_LINE_BYTES = 4096
     private const val MAX_HEADERS = 32
+    private const val MAX_BODY_BYTES = 16 * 1024 * 1024
     private val headerName = Regex("[!#$%&'*+.^_`|~0-9A-Za-z-]+")
 
     fun read(input: InputStream, beforeRead: () -> Unit = {}): CompanionHttpRequest {
@@ -54,9 +56,30 @@ internal object CompanionHttpRequestReader {
             require(name !in headers) { "Duplicate header" }
             headers[name] = line.substring(colon + 1).trim()
         }
-        require("transfer-encoding" !in headers &&
-            (headers["content-length"] == null || headers["content-length"] == "0")) { "Bodies are not supported" }
-        return CompanionHttpRequest(parts[0], parts[1], headers[CompanionProtocol.AUTHORIZATION_HEADER.lowercase(Locale.ROOT)])
+        require("transfer-encoding" !in headers) { "Transfer encoding is not supported" }
+        val contentLength = headers["content-length"]?.toLongOrNull() ?: 0L
+        require(contentLength in 0..MAX_BODY_BYTES.toLong()) { "Request body is invalid or too large" }
+        if (contentLength > 0L) {
+            require(parts[0] == "PUT" &&
+                headers["content-type"]?.substringBefore(';')?.trim()?.lowercase(Locale.ROOT) ==
+                    "application/octet-stream") {
+                "Only bounded binary PUT bodies are supported"
+            }
+        }
+        val body = ByteArray(contentLength.toInt())
+        var offset = 0
+        while (offset < body.size) {
+            beforeRead()
+            val count = input.read(body, offset, body.size - offset)
+            if (count < 0) throw EOFException("Incomplete request body")
+            if (count > 0) offset += count
+        }
+        return CompanionHttpRequest(
+            parts[0],
+            parts[1],
+            headers[CompanionProtocol.AUTHORIZATION_HEADER.lowercase(Locale.ROOT)],
+            body,
+        )
     }
 }
 

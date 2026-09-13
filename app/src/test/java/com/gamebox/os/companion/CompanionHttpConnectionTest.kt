@@ -48,6 +48,26 @@ class CompanionHttpConnectionTest {
         }
     }
 
+    @Test fun readsOnlyDeclaredBoundedBinaryPutBody() {
+        val body = "SAVE".toByteArray()
+        val request = (
+            "PUT /v1/saves/game-one HTTP/1.1\r\n" +
+                "Content-Type: application/octet-stream\r\n" +
+                "Content-Length: " + body.size + "\r\n\r\n"
+            ).toByteArray() + body
+        val parsed = CompanionHttpRequestReader.read(request.inputStream())
+        assertEquals("PUT", parsed.method)
+        assertArrayEquals(body, parsed.body)
+        assertTrue(
+            runCatching {
+                CompanionHttpRequestReader.read(
+                    "PUT /v1/saves/game-one HTTP/1.1\r\nContent-Type: application/octet-stream\r\nContent-Length: 4\r\n\r\nX"
+                        .byteInputStream()
+                )
+            }.isFailure
+        )
+    }
+
     @Test fun actualSocketRespondsBeforeClientClosesAndSurvivesBadClients() {
         val executor = Executors.newSingleThreadExecutor()
         ServerSocket(0, 4, InetAddress.getLoopbackAddress()).use { listener ->

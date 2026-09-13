@@ -310,6 +310,70 @@ try
     Require(pairedLibrary.Count == 1 && pairedLibrary[0].Title == "Galaxy Patrol" && pairedLibrary[0].SavePresent, "Companion library must parse paired GameBox metadata.");
     RequireThrows<ArgumentException>(() => new CompanionStatusClient(new HttpClient()).GetStatusAsync("http://host", 49_500, companionSecret).GetAwaiter().GetResult(), "Companion status must reject host URLs.");
 
+    var saveBytes = System.Text.Encoding.UTF8.GetBytes("SAVE-DATA");
+    var saveHash = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(saveBytes)).ToLowerInvariant();
+    HttpRequestMessage? saveDownloadRequest = null;
+    using var saveDownloadHttp = new HttpClient(new StubHttpMessageHandler(request =>
+    {
+        saveDownloadRequest = request;
+        return new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent(JsonSerializer.Serialize(new
+            {
+                protocolVersion = 1,
+                gameId = "nes-1",
+                updatedAtMillis = 1234,
+                sha256 = saveHash,
+                payloadBase64 = Convert.ToBase64String(saveBytes)
+            }))
+        };
+    }));
+    var saveDownload = await new CompanionSaveClient(saveDownloadHttp).DownloadAsync(
+        "192.168.1.22", 49_500, companionSecret, "nes-1");
+    Require(saveDownload.Bytes.SequenceEqual(saveBytes), "Companion save download must verify and return exact bytes.");
+    Require(saveDownloadRequest?.RequestUri?.AbsolutePath == "/v1/saves/nes-1", "Save download must bind the selected game ID.");
+    Require(saveDownloadRequest?.Headers.Contains(CompanionProtocol.AuthorizationHeader) == true, "Save download must authenticate.");
+
+    HttpRequestMessage? saveUploadRequest = null;
+    using var saveUploadHttp = new HttpClient(new StubHttpMessageHandler(request =>
+    {
+        saveUploadRequest = request;
+        return new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent(JsonSerializer.Serialize(new
+            {
+                protocolVersion = 1,
+                gameId = "nes-1",
+                updatedAtMillis = 2345,
+                sha256 = saveHash,
+                conflictPreserved = true
+            }))
+        };
+    }));
+    var saveUpload = await new CompanionSaveClient(saveUploadHttp).UploadAsync(
+        "192.168.1.22", 49_500, companionSecret, "nes-1", saveBytes);
+    Require(saveUpload.ConflictPreserved, "Save upload must surface Android conflict preservation.");
+    Require(saveUploadRequest?.Method == HttpMethod.Put &&
+        saveUploadRequest.Content?.Headers.ContentType?.MediaType == "application/octet-stream",
+        "Save upload must use a bounded binary PUT.");
+    var saveUploadAuthorization = saveUploadRequest!.Headers
+        .GetValues(CompanionProtocol.AuthorizationHeader).Single();
+    var authorizationNow = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+    Require(
+        CompanionProtocol.VerifyAuthorization(
+            companionSecret, "PUT", "/v1/saves/nes-1", saveUploadAuthorization,
+            authorizationNow, bodySha256: saveHash),
+        "Save upload authorization must bind the exact payload checksum.");
+    Require(
+        !CompanionProtocol.VerifyAuthorization(
+            companionSecret, "PUT", "/v1/saves/nes-1", saveUploadAuthorization,
+            authorizationNow, bodySha256: new string('0', 64)),
+        "Save upload authorization must reject altered payload bytes.");
+    RequireThrows<ArgumentException>(() =>
+        new CompanionSaveClient(new HttpClient()).DownloadAsync(
+            "192.168.1.22", 49_500, companionSecret, "../escape").GetAwaiter().GetResult(),
+        "Companion save transfer must reject traversal IDs.");
+
     Console.WriteLine("GameBox Windows core tests passed.");
 }
 finally
