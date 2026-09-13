@@ -55,7 +55,13 @@ class ContentRemovalDialogTest {
                 CloudBackupPreflightStatus.NOT_REQUIRED,
                 "No managed save copy requires cloud protection.",
             )
-            override suspend fun uninstallContent(game: Game): String { removals++; return result.await() }
+            override suspend fun uninstallContent(game: Game): String =
+                uninstallContent(game, allowWithoutCloudBackup = false)
+            override suspend fun uninstallContent(game: Game, allowWithoutCloudBackup: Boolean): String {
+                assertFalse("Cloud acknowledgement must not be supplied when preflight is ready", allowWithoutCloudBackup)
+                removals++
+                return result.await()
+            }
         }
         compose.setContent { MaterialTheme { ContentRemovalDialog(game, controller) { closed++ } } }
         compose.waitUntil(5_000) {
