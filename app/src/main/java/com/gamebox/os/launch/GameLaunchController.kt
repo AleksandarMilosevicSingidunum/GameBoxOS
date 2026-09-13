@@ -15,6 +15,8 @@ import com.gamebox.os.domain.InstallState
 import com.gamebox.os.domain.LocalContentFile
 import com.gamebox.os.download.Sha256Verifier
 import com.gamebox.os.download.VerificationResult
+import com.gamebox.os.storage.ExternalGameContent
+import com.gamebox.os.storage.ExternalLibraryContentStore
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -178,7 +180,8 @@ interface PackageGateway {
 
 class AndroidPackageGateway(
     private val context: Context,
-    private val verifier: Sha256Verifier = Sha256Verifier()
+    private val verifier: Sha256Verifier = Sha256Verifier(),
+    private val externalContent: ExternalLibraryContentStore? = null,
 ) : PackageGateway {
     override fun launch(capability: EmulatorCapability, preparation: LaunchPreparation): GatewayResult {
         preparation.checkActive()
@@ -196,20 +199,34 @@ class AndroidPackageGateway(
             )
         ) + capability.companionFiles
         val contentUris = mutableListOf<android.net.Uri>()
-        approvedFiles.forEach { approved ->
-            val content = File(installRoot, approved.relativePath).canonicalFile
-            if (!content.path.startsWith(rootPrefix) || !content.isFile) {
-                return GatewayResult.CONTENT_MISSING
-            }
-            val verified = content.inputStream().use {
-                verifier.verify(it, approved.sha256, preparation::checkActive)
+        var primaryLocalFile: File? = null
+        var primaryExternalContent: ExternalGameContent? = null
+        approvedFiles.forEachIndexed { index, approved ->
+            val local = File(installRoot, approved.relativePath).canonicalFile
+            if (!local.path.startsWith(rootPrefix)) return GatewayResult.CONTENT_MISSING
+            val external = if (!local.isFile && capability.contentRoot == EmulatorContentRoot.INSTALLED) {
+                externalContent?.content(capability.gameId.value, approved.relativePath)
+            } else null
+            val verified = when {
+                local.isFile -> local.inputStream().use {
+                    verifier.verify(it, approved.sha256, preparation::checkActive)
+                }
+                external != null -> requireNotNull(externalContent).open(external).use {
+                    verifier.verify(it, approved.sha256, preparation::checkActive)
+                }
+                else -> return GatewayResult.CONTENT_MISSING
             }
             if (verified != VerificationResult.Verified) return GatewayResult.VERIFICATION_FAILED
-            contentUris += FileProvider.getUriForFile(
-                context,
-                context.packageName + ".files",
-                content,
-            )
+            val contentUri = if (local.isFile) {
+                FileProvider.getUriForFile(context, context.packageName + ".files", local)
+            } else {
+                requireNotNull(external).uri
+            }
+            contentUris += contentUri
+            if (index == 0) {
+                primaryLocalFile = local.takeIf(File::isFile)
+                primaryExternalContent = external
+            }
         }
         val uri = contentUris.first()
         val plan = EmulatorIntentPolicy.plan(
@@ -234,7 +251,11 @@ class AndroidPackageGateway(
             resolvedPackage.startsWith("com.retroarch") &&
             capability.gameId == GameId("galaxy-patrol")
         ) {
-            publishGalaxyPatrolForRetroArch(File(installRoot, capability.contentRelativePath).canonicalFile) ?: return GatewayResult.HANDOFF_REJECTED
+            primaryLocalFile?.let(::publishGalaxyPatrolForRetroArch)
+                ?: primaryExternalContent?.let { external ->
+                    publishGalaxyPatrolForRetroArch { externalContent!!.open(external) }
+                }
+                ?: return GatewayResult.HANDOFF_REJECTED
         } else {
             uri.toString()
         }
@@ -315,6 +336,11 @@ class AndroidPackageGateway(
     internal fun publishGalaxyPatrolForRetroArch(
         source: File,
         relativePath: String = "Download/GameBox"
+    ): String? = publishGalaxyPatrolForRetroArch(relativePath) { source.inputStream() }
+
+    private fun publishGalaxyPatrolForRetroArch(
+        relativePath: String = "Download/GameBox",
+        openSource: () -> java.io.InputStream,
     ): String? = runCatching {
         val values = ContentValues().apply {
             put(MediaStore.Downloads.DISPLAY_NAME, "galaxy-patrol.nes")
@@ -326,7 +352,7 @@ class AndroidPackageGateway(
         val published = context.contentResolver.insert(collection, values) ?: return@runCatching null
         try {
             context.contentResolver.openOutputStream(published, "w")?.use { output ->
-                source.inputStream().use { input -> input.copyTo(output) }
+                openSource().use { input -> input.copyTo(output) }
             } ?: throw java.io.IOException("Cannot write exported game")
             values.clear()
             values.put(MediaStore.Downloads.IS_PENDING, 0)

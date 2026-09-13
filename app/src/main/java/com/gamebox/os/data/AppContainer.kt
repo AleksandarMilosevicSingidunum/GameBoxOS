@@ -42,6 +42,7 @@ import com.gamebox.os.storage.SaveAdapterRegistry
 import com.gamebox.os.storage.SaveBackupCoordinator
 import com.gamebox.os.storage.SaveBackupService
 import com.gamebox.os.storage.SaveSnapshotManifestStore
+import com.gamebox.os.storage.ExternalLibraryContentStore
 import com.gamebox.os.importer.AuthorizedRomImporter
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -93,6 +94,9 @@ class DefaultAppContainer(context: Context) : AppContainer {
         SharingStarted.Eagerly,
         com.gamebox.os.settings.GameBoxSettings(),
     )
+    private val externalLibraryContent = ExternalLibraryContentStore(applicationContext) {
+        settingsState.value.externalLibraryUri
+    }
     override val authorizedRomImporter = AuthorizedRomImporter(applicationContext)
     private val assetCatalogProvider = AssetCatalogProvider(applicationContext)
     private val configuredCatalogProvider = ConfiguredCatalogProvider(
@@ -160,7 +164,9 @@ class DefaultAppContainer(context: Context) : AppContainer {
     )
 
     override val gameLaunchController: GameLaunchController = DefaultGameLaunchController(
-        EmulatorCapabilityRegistry(), AndroidPackageGateway(applicationContext), gameRepository,
+        EmulatorCapabilityRegistry(),
+        AndroidPackageGateway(applicationContext, externalContent = externalLibraryContent),
+        gameRepository,
         sessionJournal = RoomLaunchSessionJournal(database.launchSessionDao()),
         platformEmulatorDefault = settingsRepository::platformEmulatorDefault,
         backupAfterSession = { gameId ->
@@ -173,13 +179,15 @@ class DefaultAppContainer(context: Context) : AppContainer {
     )
 
     override val saveSafetyController: SaveSafetyController = DefaultSaveSafetyController(
-        applicationContext, database.saveRecordDao(), gameRepository, applicationScope, settingsRepository
+        applicationContext, database.saveRecordDao(), gameRepository, applicationScope, settingsRepository,
+        externalContent = externalLibraryContent,
     )
 
     override fun createSaveSafetyController(gameId: com.gamebox.os.domain.GameId,
         scope: CoroutineScope): SaveSafetyController = DefaultSaveSafetyController(
         applicationContext, database.saveRecordDao(), gameRepository,
-        CoroutineScope(scope.coroutineContext + Dispatchers.IO), settingsRepository, gameId
+        CoroutineScope(scope.coroutineContext + Dispatchers.IO), settingsRepository, gameId,
+        externalContent = externalLibraryContent,
     )
 }
 

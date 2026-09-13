@@ -3736,7 +3736,7 @@ private fun SettingsScreen(
             Text(if (migrationPlan.isEmpty) "No installed content to migrate" else "Migrate " + formatBytes(migrationPlan.totalBytes))
         }
         Text(
-            "Migration copies verified installed content to the selected library. Phone files are retained.",
+            "Migration verifies each installed file in the selected library, switches playback to it, then removes the matching phone copy.",
             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.62f),
             fontSize = 12.sp
         )

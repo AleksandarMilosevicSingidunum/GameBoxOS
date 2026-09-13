@@ -112,6 +112,7 @@ class DefaultSaveSafetyController(
     private val scope: CoroutineScope,
     private val settingsRepository: SettingsRepository,
     private val gameId: GameId = GameId("galaxy-patrol"),
+    private val externalContent: ExternalLibraryContentStore? = null,
 ) : SaveSafetyController {
     init { requireSaveGameId(gameId.value) }
     private val applicationContext = context.applicationContext
@@ -170,7 +171,15 @@ class DefaultSaveSafetyController(
 
     override fun contentRemovalPreview(game: Game): ContentRemovalPreview {
         require(game.id == gameId) { "Content controller does not belong to this game" }
-        return GameOwnedContentUninstaller(applicationContext.filesDir).preview(contentManifest(game))
+        val manifest = contentManifest(game)
+        val internal = GameOwnedContentUninstaller(applicationContext.filesDir).preview(manifest)
+        val externalPaths = externalOnlyPaths(manifest)
+        val external = if (externalPaths.isEmpty()) ContentRemovalPreview(0, 0) else {
+            requireNotNull(externalContent) {
+                "External game content is recorded but no external library is configured"
+            }.preview(game.id.value, externalPaths)
+        }
+        return ContentRemovalPreview(internal.bytes + external.bytes, internal.files + external.files)
     }
 
     override suspend fun cloudBackupPreflight(game: Game): CloudBackupPreflight = withContext(Dispatchers.IO) {
@@ -225,8 +234,19 @@ class DefaultSaveSafetyController(
                 failureReason = upload.exceptionOrNull()?.let(::safeCloudError) ?: "operation failed safely",
             )
         } ?: false
+        val externalPaths = externalOnlyPaths(manifest)
+        // Resolve every required external file before deleting any internal content.
+        if (externalPaths.isNotEmpty()) {
+            requireNotNull(externalContent) {
+                "External game content is unavailable; reconnect the selected library and retry"
+            }.preview(game.id.value, externalPaths)
+        }
         try {
-            val removed = GameOwnedContentUninstaller(applicationContext.filesDir).uninstall(manifest)
+            val internalRemoved = GameOwnedContentUninstaller(applicationContext.filesDir).uninstall(manifest)
+            val externalRemoved = if (externalPaths.isEmpty()) 0 else {
+                requireNotNull(externalContent).uninstall(game.id.value, externalPaths)
+            }
+            val removed = internalRemoved + externalRemoved
             gameRepository.setInstallStateAndAwait(game.id, InstallState.NOT_INSTALLED)
             buildString {
                 append("$removed content file(s) removed. ")
@@ -240,6 +260,11 @@ class DefaultSaveSafetyController(
             throw IllegalStateException("Content removal stopped after ${error.removedFiles} file(s). Saves were not touched; retry to remove remaining content.", error)
         }
     }
+
+    private fun externalOnlyPaths(manifest: ContentRemovalManifest): List<String> =
+        manifest.relativePaths.filter { path ->
+            path.startsWith("installed/") && !applicationContext.filesDir.resolve(path).isFile
+        }.map { it.removePrefix("installed/") }
 
     private fun contentManifest(game: Game): ContentRemovalManifest {
         val primary = game.localContentRelativePath
