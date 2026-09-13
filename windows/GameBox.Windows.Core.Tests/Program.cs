@@ -1,6 +1,7 @@
 using System.Net;
 using System.Text.Json;
 using GameBox.Windows.Core;
+using GameBox.Windows;
 
 var root = Path.Combine(Path.GetTempPath(), "gamebox-windows-tests-" + Guid.NewGuid().ToString("N"));
 Directory.CreateDirectory(root);
@@ -445,6 +446,27 @@ try
             companionSecret, "PUT", "/v1/library/nes-1/favorite/off",
             favoriteAuthorization, DateTimeOffset.UtcNow.ToUnixTimeSeconds()),
         "Paired favorite management authorization must bind the desired state.");
+
+    var pairingPath = Path.Combine(root, "pairing", "paired-device.json");
+    var pairingStore = new PairingProfileStore(pairingPath);
+    var pairingProfile = new PairingProfile("192.168.1.22", 49_500, companionSecret);
+    await pairingStore.SaveAsync(pairingProfile);
+    var protectedProfileBytes = await File.ReadAllTextAsync(pairingPath);
+    Require(!protectedProfileBytes.Contains(companionSecret, StringComparison.Ordinal),
+        "Persisted pairing profile must never contain the plaintext secret.");
+    var restoredPairing = await pairingStore.LoadAsync();
+    Require(restoredPairing == pairingProfile,
+        "DPAPI pairing profile must round-trip for the current Windows user.");
+    pairingStore.Delete();
+    Require(await pairingStore.LoadAsync() is null && !File.Exists(pairingPath),
+        "Forgetting a pairing must remove the durable profile.");
+    Directory.CreateDirectory(Path.GetDirectoryName(pairingPath)!);
+    await File.WriteAllTextAsync(pairingPath, "{invalid");
+    var invalidPairingRejected = false;
+    try { await pairingStore.LoadAsync(); }
+    catch (InvalidDataException) { invalidPairingRejected = true; }
+    Require(invalidPairingRejected, "Malformed pairing profiles must fail closed.");
+    pairingStore.Delete();
 
     Console.WriteLine("GameBox Windows core tests passed.");
 }
