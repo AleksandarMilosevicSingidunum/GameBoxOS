@@ -60,6 +60,20 @@ data class CloudBackupPreflight(
 
 class CloudBackupAcknowledgementRequired(message: String) : IllegalStateException(message)
 
+internal fun requireCloudBackupOrAcknowledgement(
+    uploadSucceeded: Boolean,
+    allowWithoutCloudBackup: Boolean,
+    failureReason: String,
+): Boolean {
+    if (!uploadSucceeded && !allowWithoutCloudBackup) {
+        throw CloudBackupAcknowledgementRequired(
+            "Cloud backup failed: $failureReason. Content was not removed. " +
+                "Review the warning and explicitly continue with the verified local backup."
+        )
+    }
+    return uploadSucceeded
+}
+
 fun backupResultMessage(action: String, result: BackupResult): SaveOperation = when (result) {
     BackupResult.SUCCESS -> SaveOperation("$action completed")
     BackupResult.SOURCE_MISSING -> SaveOperation("$action failed: save file is missing", false)
@@ -205,13 +219,11 @@ class DefaultSaveSafetyController(
         } ?: false
         val cloudBackupCreated = saveRecord?.let { record ->
             val upload = runCatching { uploadCloudSaveNow(record.relativePath, record.updatedAtMillis) }
-            if (upload.isFailure && !allowWithoutCloudBackup) {
-                throw CloudBackupAcknowledgementRequired(
-                    "Cloud backup failed: \${safeCloudError(upload.exceptionOrNull()!!)}. " +
-                        "Content was not removed. Review the warning and explicitly continue with the verified local backup."
-                )
-            }
-            upload.isSuccess
+            requireCloudBackupOrAcknowledgement(
+                uploadSucceeded = upload.isSuccess,
+                allowWithoutCloudBackup = allowWithoutCloudBackup,
+                failureReason = upload.exceptionOrNull()?.let(::safeCloudError) ?: "operation failed safely",
+            )
         } ?: false
         try {
             val removed = GameOwnedContentUninstaller(applicationContext.filesDir).uninstall(manifest)
