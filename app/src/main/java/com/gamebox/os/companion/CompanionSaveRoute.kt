@@ -22,6 +22,8 @@ internal object CompanionSaveRoute {
                 request.path,
                 request.authorization,
                 nowUnixTimeSeconds,
+                bodySha256 = request.body.takeIf { it.isNotEmpty() }
+                    ?.let(CompanionSaveTransferStore::sha256),
             )
         ) {
             return CompanionHttpResponse(401, """{"error":"unauthorized"}""")
