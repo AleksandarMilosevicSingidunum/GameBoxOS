@@ -9,14 +9,22 @@ object CompanionProtocol {
     const val VERSION = 1
     const val AUTHORIZATION_HEADER = "X-GameBox-Authorization"
 
-    fun createAuthorization(secret: String, method: String, requestPath: String, unixTimeSeconds: Long): String {
+    fun createAuthorization(
+        secret: String,
+        method: String,
+        requestPath: String,
+        unixTimeSeconds: Long,
+        bodySha256: String? = null,
+    ): String {
         require(validSecret(secret)) { "Pairing secret is invalid" }
         require(method.isNotBlank()) { "Method is required" }
         require(requestPath.startsWith('/') && !requestPath.contains("..")) {
             "Request path must be absolute and traversal-free"
         }
         require(unixTimeSeconds > 0) { "Timestamp is required" }
-        val payload = "v$VERSION\n${method.trim().uppercase()}\n$requestPath\n$unixTimeSeconds"
+        require(bodySha256 == null || validSha256(bodySha256)) { "Body checksum is invalid" }
+        val payload = "v$VERSION\n${method.trim().uppercase()}\n$requestPath\n$unixTimeSeconds\n" +
+            bodySha256.orEmpty().lowercase()
         val mac = Mac.getInstance("HmacSHA256")
         mac.init(SecretKeySpec(hexToBytes(secret), "HmacSHA256"))
         return "v$VERSION:$unixTimeSeconds:${mac.doFinal(payload.toByteArray(StandardCharsets.UTF_8)).toHex()}"
@@ -29,6 +37,7 @@ object CompanionProtocol {
         authorization: String?,
         nowUnixTimeSeconds: Long,
         allowedSkewSeconds: Long = 120,
+        bodySha256: String? = null,
     ): Boolean {
         if (!validSecret(secret) || authorization == null || allowedSkewSeconds < 0) return false
         val parts = authorization.split(':')
@@ -36,12 +45,14 @@ object CompanionProtocol {
         val timestamp = parts[1].toLongOrNull() ?: return false
         if (kotlin.math.abs(nowUnixTimeSeconds - timestamp) > allowedSkewSeconds) return false
         return runCatching {
-            val expected = createAuthorization(secret, method, requestPath, timestamp)
+            val expected = createAuthorization(secret, method, requestPath, timestamp, bodySha256)
             constantTimeEquals(expected, authorization)
         }.getOrDefault(false)
     }
 
     private fun validSecret(value: String): Boolean = value.length == 64 && value.all { it.isDigit() || it.lowercaseChar() in 'a'..'f' }
+    private fun validSha256(value: String): Boolean =
+        value.length == 64 && value.all { it.isDigit() || it.lowercaseChar() in 'a'..'f' }
 
     private fun hexToBytes(value: String): ByteArray = ByteArray(value.length / 2) { index ->
         value.substring(index * 2, index * 2 + 2).toInt(16).toByte()
