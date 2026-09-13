@@ -40,11 +40,16 @@ public sealed class CompanionSaveClient
     {
         var path = SavePath(gameId);
         using var request = CreateRequest(HttpMethod.Get, host, port, pairingSecret, path);
-        using var response = await SendAsync(request, cancellationToken).ConfigureAwait(false);
+        using var timeoutSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        timeoutSource.CancelAfter(timeout);
+        using var response = await client.SendAsync(
+            request,
+            HttpCompletionOption.ResponseHeadersRead,
+            timeoutSource.Token).ConfigureAwait(false);
         if (response.StatusCode == HttpStatusCode.NotFound)
             throw new FileNotFoundException("GameBox has no managed save for this game.");
         await EnsureSuccessAsync(response).ConfigureAwait(false);
-        var envelope = await ReadBoundedAsync(response, cancellationToken).ConfigureAwait(false);
+        var envelope = await ReadBoundedAsync(response, timeoutSource.Token).ConfigureAwait(false);
         using var document = ParseEnvelope(envelope);
         var root = document.RootElement;
         RequireProtocol(root);
@@ -80,7 +85,12 @@ public sealed class CompanionSaveClient
         using var request = CreateRequest(HttpMethod.Put, host, port, pairingSecret, path);
         request.Content = new ByteArrayContent(bytes);
         request.Content.Headers.ContentType = new MediaTypeHeaderValue("application/octet-stream");
-        using var response = await SendAsync(request, cancellationToken).ConfigureAwait(false);
+        using var timeoutSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        timeoutSource.CancelAfter(timeout);
+        using var response = await client.SendAsync(
+            request,
+            HttpCompletionOption.ResponseHeadersRead,
+            timeoutSource.Token).ConfigureAwait(false);
         await EnsureSuccessAsync(response).ConfigureAwait(false);
         var envelope = await ReadBoundedAsync(response, cancellationToken).ConfigureAwait(false);
         using var document = ParseEnvelope(envelope);
@@ -118,24 +128,6 @@ public sealed class CompanionSaveClient
                 path,
                 DateTimeOffset.UtcNow.ToUnixTimeSeconds()));
         return request;
-    }
-
-    private async Task<HttpResponseMessage> SendAsync(
-        HttpRequestMessage request,
-        CancellationToken cancellationToken)
-    {
-        var timeoutSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        timeoutSource.CancelAfter(timeout);
-        try
-        {
-            return await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, timeoutSource.Token)
-                .ConfigureAwait(false);
-        }
-        catch
-        {
-            timeoutSource.Dispose();
-            throw;
-        }
     }
 
     private static async Task EnsureSuccessAsync(HttpResponseMessage response)
