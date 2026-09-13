@@ -356,6 +356,19 @@ try
     Require(saveUploadRequest?.Method == HttpMethod.Put &&
         saveUploadRequest.Content?.Headers.ContentType?.MediaType == "application/octet-stream",
         "Save upload must use a bounded binary PUT.");
+    var saveUploadAuthorization = saveUploadRequest!.Headers
+        .GetValues(CompanionProtocol.AuthorizationHeader).Single();
+    var authorizationNow = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+    Require(
+        CompanionProtocol.VerifyAuthorization(
+            companionSecret, "PUT", "/v1/saves/nes-1", saveUploadAuthorization,
+            authorizationNow, bodySha256: saveHash),
+        "Save upload authorization must bind the exact payload checksum.");
+    Require(
+        !CompanionProtocol.VerifyAuthorization(
+            companionSecret, "PUT", "/v1/saves/nes-1", saveUploadAuthorization,
+            authorizationNow, bodySha256: new string('0', 64)),
+        "Save upload authorization must reject altered payload bytes.");
     RequireThrows<ArgumentException>(() =>
         new CompanionSaveClient(new HttpClient()).DownloadAsync(
             "192.168.1.22", 49_500, companionSecret, "../escape").GetAwaiter().GetResult(),
