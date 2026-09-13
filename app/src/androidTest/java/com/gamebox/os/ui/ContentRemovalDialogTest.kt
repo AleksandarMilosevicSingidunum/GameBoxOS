@@ -10,6 +10,8 @@ import com.gamebox.os.domain.Game
 import com.gamebox.os.domain.GameId
 import com.gamebox.os.domain.InstallState
 import com.gamebox.os.storage.ContentRemovalPreview
+import com.gamebox.os.storage.CloudBackupPreflight
+import com.gamebox.os.storage.CloudBackupPreflightStatus
 import com.gamebox.os.storage.SaveSafetyController
 import kotlinx.coroutines.CompletableDeferred
 import org.junit.Assert.*
@@ -27,11 +29,15 @@ class ContentRemovalDialogTest {
         var closed = 0
         val controller = object : SaveSafetyController by app.container.saveSafetyController {
             override fun contentRemovalPreview(game: Game): ContentRemovalPreview = throw IllegalArgumentException("unsafe manifest")
+            override suspend fun cloudBackupPreflight(game: Game) = CloudBackupPreflight(
+                CloudBackupPreflightStatus.NOT_REQUIRED,
+                "No managed save copy requires cloud protection.",
+            )
             override suspend fun uninstallContent(game: Game): String = error("Must not remove unverified content")
         }
         compose.setContent { MaterialTheme { ContentRemovalDialog(game, controller) { closed++ } } }
         compose.waitUntil(5_000) {
-            compose.onAllNodesWithText("Cannot verify this game's owned content. No files were removed.").fetchSemanticsNodes().isNotEmpty()
+            compose.onAllNodesWithText("Cannot verify this game's owned content and backup readiness. No files were removed.").fetchSemanticsNodes().isNotEmpty()
         }
         compose.onNodeWithText("Uninstall content").assertIsNotEnabled()
         compose.onNodeWithText("Cancel").performClick()
@@ -45,6 +51,10 @@ class ContentRemovalDialogTest {
         var closed = 0
         val controller = object : SaveSafetyController by app.container.saveSafetyController {
             override fun contentRemovalPreview(game: Game) = ContentRemovalPreview(7, 1)
+            override suspend fun cloudBackupPreflight(game: Game) = CloudBackupPreflight(
+                CloudBackupPreflightStatus.NOT_REQUIRED,
+                "No managed save copy requires cloud protection.",
+            )
             override suspend fun uninstallContent(game: Game): String { removals++; return result.await() }
         }
         compose.setContent { MaterialTheme { ContentRemovalDialog(game, controller) { closed++ } } }
