@@ -121,6 +121,7 @@ internal object CompanionHttpRequestReader {
         if (contentLength == 0L) {
             return CompanionHttpRequest(
                 head.method, head.path, head.authorization,
+                bodySha256 = head.declaredBodySha256,
                 fileName = head.fileName, configurationFlags = head.configurationFlags,
             )
         }
