@@ -14,6 +14,7 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class CompanionSaveTransferStoreTest {
+    private val secret = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
     private class FakeGames : GameRepository {
         private val game = Game(GameId("test-game"), "Test", "NES", 2000, "Test", 1, InstallState.INSTALLED)
         private val games = MutableStateFlow(listOf(game))
@@ -76,4 +77,48 @@ class CompanionSaveTransferStoreTest {
             root.deleteRecursively()
         }
     }
+    @Test fun authenticatedRouteTransfersExactGameScopedBytes(): Unit = runBlocking {
+        val root = Files.createTempDirectory("companion-save-route-").toFile()
+        try {
+            val store = CompanionSaveTransferStore(root, FakeGames()) { 1234L }
+            val uploaded = "ROUTE-SAVE".toByteArray()
+            val path = "/v1/saves/test-game"
+            val uploadHash = CompanionSaveTransferStore.sha256(uploaded)
+            val uploadAuthorization = CompanionProtocol.createAuthorization(
+                secret, "PUT", path, 1_700_000_000, uploadHash
+            )
+            val upload = CompanionSaveRoute.handle(
+                CompanionHttpRequest("PUT", path, uploadAuthorization, uploaded),
+                secret,
+                store,
+                1_700_000_030,
+            )
+            assertEquals(200, upload.status)
+            assertTrue(upload.body.contains(uploadHash))
+
+            val downloadAuthorization = CompanionProtocol.createAuthorization(
+                secret, "GET", path, 1_700_000_000
+            )
+            val download = CompanionSaveRoute.handle(
+                CompanionHttpRequest("GET", path, downloadAuthorization),
+                secret,
+                store,
+                1_700_000_030,
+            )
+            assertEquals(200, download.status)
+            assertTrue(download.body.contains(java.util.Base64.getEncoder().encodeToString(uploaded)))
+
+            val tampered = CompanionSaveRoute.handle(
+                CompanionHttpRequest("PUT", path, uploadAuthorization, "ALTERED".toByteArray()),
+                secret,
+                store,
+                1_700_000_030,
+            )
+            assertEquals(401, tampered.status)
+            assertEquals("ROUTE-SAVE", root.resolve("saves/test-game/save.dat").readText())
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
 }
