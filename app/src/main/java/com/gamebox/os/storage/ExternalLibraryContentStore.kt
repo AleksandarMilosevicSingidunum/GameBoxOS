@@ -5,6 +5,18 @@ import android.net.Uri
 import androidx.documentfile.provider.DocumentFile
 import java.io.InputStream
 
+internal fun externalLibrarySegments(gameId: String, relativePath: String): List<String> {
+    require(gameId.matches(Regex("[A-Za-z0-9][A-Za-z0-9._-]{0,95}"))) {
+        "Invalid game ID"
+    }
+    require(
+        relativePath.isNotBlank() &&
+            relativePath.none { it == '\\' || it == ':' || it == '\u0000' } &&
+            relativePath.split('/').none { it.isBlank() || it == "." || it == ".." }
+    ) { "Unsafe external content path" }
+    return listOf(gameId) + relativePath.split('/')
+}
+
 data class ExternalGameContent(
     val uri: Uri,
     val sizeBytes: Long,
@@ -62,21 +74,14 @@ class ExternalLibraryContentStore(
     }
 
     private fun resolve(gameId: String, relativePath: String): DocumentFile? {
-        require(gameId.matches(Regex("[A-Za-z0-9][A-Za-z0-9._-]{0,95}"))) {
-            "Invalid game ID"
-        }
-        require(
-            relativePath.isNotBlank() &&
-                relativePath.none { it == '\\' || it == ':' || it == '\u0000' } &&
-                relativePath.split('/').none { it.isBlank() || it == "." || it == ".." }
-        ) { "Unsafe external content path" }
+        val segments = externalLibrarySegments(gameId, relativePath)
         val configured = treeUri().takeIf(String::isNotBlank) ?: return null
         val uri = runCatching { Uri.parse(configured) }.getOrNull() ?: return null
         val root = DocumentFile.fromTreeUri(applicationContext, uri)
             ?.takeIf { it.exists() && it.isDirectory && it.canRead() }
             ?: return null
-        var current = root.findFile(gameId)?.takeIf { it.isDirectory } ?: return null
-        relativePath.split('/').forEach { segment ->
+        var current = root.findFile(segments.first())?.takeIf { it.isDirectory } ?: return null
+        segments.drop(1).forEach { segment ->
             current = current.findFile(segment) ?: return null
         }
         return current.takeIf { it.exists() && it.isFile && it.canRead() }
