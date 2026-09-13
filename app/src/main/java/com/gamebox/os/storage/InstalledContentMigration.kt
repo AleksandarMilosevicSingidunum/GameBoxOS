@@ -19,5 +19,12 @@ class InstalledContentMigration(private val installedRoot: File) {
         return ContentMigrationPlanner.plan(items)
     }
     fun execute(context: Context, treeUri: Uri, plan: ContentMigrationPlan): ContentMigrationResult =
-        ContentMigrationExecutor(SafDocumentTreeCopyOperation(context, treeUri, installedRoot)).execute(plan)
+        ContentMigrationExecutor(
+            SafDocumentTreeCopyOperation(
+                context,
+                treeUri,
+                installedRoot,
+                deleteSourceAfterVerification = true,
+            )
+        ).execute(plan)
 }
