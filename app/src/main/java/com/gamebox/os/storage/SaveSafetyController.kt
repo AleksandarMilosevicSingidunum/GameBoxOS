@@ -197,12 +197,24 @@ class DefaultSaveSafetyController(
             }
             true
         } ?: false
+        val cloudBackupCreated = saveRecord?.let { record ->
+            val upload = runCatching { uploadCloudSaveNow(record.relativePath, record.updatedAtMillis) }
+            if (upload.isFailure && !allowWithoutCloudBackup) {
+                throw CloudBackupAcknowledgementRequired(
+                    "Cloud backup failed: \${safeCloudError(upload.exceptionOrNull()!!)}. " +
+                        "Content was not removed. Review the warning and explicitly continue with the verified local backup."
+                )
+            }
+            upload.isSuccess
+        } ?: false
         try {
             val removed = GameOwnedContentUninstaller(applicationContext.filesDir).uninstall(manifest)
             gameRepository.setInstallStateAndAwait(game.id, InstallState.NOT_INSTALLED)
             buildString {
                 append("$removed content file(s) removed. ")
                 if (backupCreated) append("Verified save backup created. ")
+                if (cloudBackupCreated) append("Cloud save uploaded and verified. ")
+                else if (saveRecord != null) append("Cloud backup unavailable; explicitly continued with verified local backup. ")
                 append("Saves, backups, metadata and history retained.")
             }
         } catch (error: ContentRemovalFailed) {
