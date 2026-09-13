@@ -48,6 +48,18 @@ data class SaveSafetyState(
 
 data class SaveOperation(val message: String? = null, val successful: Boolean = true)
 
+enum class CloudBackupPreflightStatus { NOT_REQUIRED, READY, ACKNOWLEDGEMENT_REQUIRED }
+
+data class CloudBackupPreflight(
+    val status: CloudBackupPreflightStatus,
+    val message: String,
+) {
+    val requiresAcknowledgement: Boolean
+        get() = status == CloudBackupPreflightStatus.ACKNOWLEDGEMENT_REQUIRED
+}
+
+class CloudBackupAcknowledgementRequired(message: String) : IllegalStateException(message)
+
 fun backupResultMessage(action: String, result: BackupResult): SaveOperation = when (result) {
     BackupResult.SUCCESS -> SaveOperation("$action completed")
     BackupResult.SOURCE_MISSING -> SaveOperation("$action failed: save file is missing", false)
@@ -65,7 +77,8 @@ interface SaveSafetyController {
     fun uninstallPreview(): UninstallConfirmation
     fun uninstallTestContent()
     fun contentRemovalPreview(game: Game): ContentRemovalPreview
-    suspend fun uninstallContent(game: Game): String
+    suspend fun cloudBackupPreflight(game: Game): CloudBackupPreflight
+    suspend fun uninstallContent(game: Game, allowWithoutCloudBackup: Boolean = false): String
     fun backupSave()
     fun restoreSave()
     fun exportBackup(uri: Uri)
