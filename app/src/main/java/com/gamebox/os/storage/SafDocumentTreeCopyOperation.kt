@@ -6,6 +6,13 @@ import androidx.documentfile.provider.DocumentFile
 import java.io.File
 import java.security.MessageDigest
 
+internal fun migrationDestinationVerified(
+    sourceBytes: Long,
+    destinationBytes: Long,
+    sourceSha256: ByteArray,
+    destinationSha256: ByteArray,
+): Boolean = sourceBytes == destinationBytes && sourceSha256.contentEquals(destinationSha256)
+
 /** Copies app-private content into a user-authorized SAF tree and optionally cuts over after verification. */
 class SafDocumentTreeCopyOperation(
     context: Context,
@@ -37,9 +44,14 @@ class SafDocumentTreeCopyOperation(
             val sourceDigest = source.inputStream().use(::sha256)
             val destinationDigest = resolver.openInputStream(finalFile.uri)?.use(::sha256)
                 ?: throw ExternalStorageUnavailableException("unable to verify destination")
-            check(finalFile.length() == source.length() && destinationDigest.contentEquals(sourceDigest)) {
-                "destination verification failed"
-            }
+            check(
+                migrationDestinationVerified(
+                    source.length(),
+                    finalFile.length(),
+                    sourceDigest,
+                    destinationDigest,
+                )
+            ) { "destination verification failed" }
             partial.delete()
             if (deleteSourceAfterVerification) {
                 check(source.delete()) { "destination verified but internal source could not be removed" }
