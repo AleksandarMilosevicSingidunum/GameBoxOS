@@ -30,7 +30,8 @@ public static class CompanionProtocol
         if (bodySha256 is not null && !IsSha256(bodySha256))
             throw new ArgumentException("Body checksum is invalid.", nameof(bodySha256));
 
-        var payload = $"v{Version}\n{method.Trim().ToUpperInvariant()}\n{requestPath}\n{unixTimeSeconds}\n{bodySha256?.ToLowerInvariant() ?? string.Empty}";
+        var payload = $"v{Version}\n{method.Trim().ToUpperInvariant()}\n{requestPath}\n{unixTimeSeconds}";
+        if (bodySha256 is not null) payload += "\n" + bodySha256.ToLowerInvariant();
         var key = Convert.FromHexString(pairingSecret);
         var hash = HMACSHA256.HashData(key, Encoding.UTF8.GetBytes(payload));
         return $"v{Version}:{unixTimeSeconds}:{Convert.ToHexString(hash).ToLowerInvariant()}";
