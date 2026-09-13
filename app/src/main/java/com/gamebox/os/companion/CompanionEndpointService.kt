@@ -73,6 +73,13 @@ class CompanionEndpointService : Service() {
                 method = request.method, path = request.path, authorization = request.authorization, pairingSecret = secret,
                 deviceName = applicationInfo.loadLabel(packageManager).toString(), nowUnixTimeSeconds = now,
             )
+            request.path.startsWith(CompanionLibraryManagementRoute.PREFIX) &&
+                request.path != CompanionLibraryRoute.PATH -> CompanionLibraryManagementRoute.handle(
+                request = request,
+                pairingSecret = secret,
+                games = (application as GameBoxApplication).container.gameRepository,
+                nowUnixTimeSeconds = now,
+            )
             request.path == CompanionLibraryRoute.PATH -> CompanionLibraryRoute.handle(
                 method = request.method, path = request.path, authorization = request.authorization, pairingSecret = secret,
                 library = (application as GameBoxApplication).container.gameRepository.observeGames().value.map { game ->
