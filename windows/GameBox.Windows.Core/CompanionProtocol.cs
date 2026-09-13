@@ -15,15 +15,22 @@ public static class CompanionProtocol
     public static string CreatePairingSecret()
         => Convert.ToHexString(RandomNumberGenerator.GetBytes(32)).ToLowerInvariant();
 
-    public static string CreateAuthorization(string pairingSecret, string method, string requestPath, long unixTimeSeconds)
+    public static string CreateAuthorization(
+        string pairingSecret,
+        string method,
+        string requestPath,
+        long unixTimeSeconds,
+        string? bodySha256 = null)
     {
         if (!IsValidSecret(pairingSecret)) throw new ArgumentException("Pairing secret is invalid.", nameof(pairingSecret));
         if (string.IsNullOrWhiteSpace(method)) throw new ArgumentException("Method is required.", nameof(method));
         if (!requestPath.StartsWith("/", StringComparison.Ordinal) || requestPath.Contains("..", StringComparison.Ordinal))
             throw new ArgumentException("Request path must be absolute and traversal-free.", nameof(requestPath));
         if (unixTimeSeconds <= 0) throw new ArgumentOutOfRangeException(nameof(unixTimeSeconds));
+        if (bodySha256 is not null && !IsSha256(bodySha256))
+            throw new ArgumentException("Body checksum is invalid.", nameof(bodySha256));
 
-        var payload = $"v{Version}\n{method.Trim().ToUpperInvariant()}\n{requestPath}\n{unixTimeSeconds}";
+        var payload = $"v{Version}\n{method.Trim().ToUpperInvariant()}\n{requestPath}\n{unixTimeSeconds}\n{bodySha256?.ToLowerInvariant() ?? string.Empty}";
         var key = Convert.FromHexString(pairingSecret);
         var hash = HMACSHA256.HashData(key, Encoding.UTF8.GetBytes(payload));
         return $"v{Version}:{unixTimeSeconds}:{Convert.ToHexString(hash).ToLowerInvariant()}";
@@ -35,7 +42,8 @@ public static class CompanionProtocol
         string requestPath,
         string? authorization,
         long nowUnixTimeSeconds,
-        long allowedSkewSeconds = 120)
+        long allowedSkewSeconds = 120,
+        string? bodySha256 = null)
     {
         if (!IsValidSecret(pairingSecret) || string.IsNullOrWhiteSpace(authorization) || allowedSkewSeconds < 0) return false;
         var parts = authorization.Split(':');
@@ -43,7 +51,7 @@ public static class CompanionProtocol
         if (Math.Abs(nowUnixTimeSeconds - timestamp) > allowedSkewSeconds) return false;
         try
         {
-            var expected = CreateAuthorization(pairingSecret, method, requestPath, timestamp);
+            var expected = CreateAuthorization(pairingSecret, method, requestPath, timestamp, bodySha256);
             var expectedBytes = Encoding.UTF8.GetBytes(expected);
             var actualBytes = Encoding.UTF8.GetBytes(authorization);
             return expectedBytes.Length == actualBytes.Length && CryptographicOperations.FixedTimeEquals(expectedBytes, actualBytes);
@@ -52,6 +60,9 @@ public static class CompanionProtocol
     }
 
     private static bool IsValidSecret(string value) =>
+        value.Length == 64 && value.All(static c => char.IsAsciiHexDigit(c));
+
+    private static bool IsSha256(string value) =>
         value.Length == 64 && value.All(static c => char.IsAsciiHexDigit(c));
 }
 
