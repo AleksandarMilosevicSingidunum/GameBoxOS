@@ -71,4 +71,35 @@ class ContentRemovalDialogTest {
         compose.onNodeWithText("Close").performClick()
         compose.runOnIdle { assertEquals(1, closed); assertEquals(1, removals) }
     }
+    @Test fun cloudFailureRequiresExplicitAcknowledgement() {
+        val app = ApplicationProvider.getApplicationContext<GameBoxApplication>()
+        var allowedWithoutCloud = false
+        val controller = object : SaveSafetyController by app.container.saveSafetyController {
+            override fun contentRemovalPreview(game: Game) = ContentRemovalPreview(7, 1)
+            override suspend fun cloudBackupPreflight(game: Game) = CloudBackupPreflight(
+                CloudBackupPreflightStatus.ACKNOWLEDGEMENT_REQUIRED,
+                "Cloud backup is unavailable: network is offline. A verified local backup is still required.",
+            )
+            override suspend fun uninstallContent(game: Game): String =
+                error("Two-argument removal contract required")
+            override suspend fun uninstallContent(game: Game, allowWithoutCloudBackup: Boolean): String {
+                allowedWithoutCloud = allowWithoutCloudBackup
+                return "Content removed using verified local backup"
+            }
+        }
+
+        compose.setContent { MaterialTheme { ContentRemovalDialog(game, controller) {} } }
+        compose.waitUntil(5_000) {
+            compose.onAllNodesWithText("Cloud backup is unavailable", substring = true)
+                .fetchSemanticsNodes().isNotEmpty()
+        }
+        compose.onNodeWithText("Uninstall content").assertIsNotEnabled()
+        compose.onNode(isToggleable()).performClick()
+        compose.onNodeWithText("Uninstall content").assertIsEnabled().performClick()
+        compose.waitUntil(5_000) {
+            compose.onAllNodesWithText("Close").fetchSemanticsNodes().isNotEmpty()
+        }
+        compose.runOnIdle { assertTrue(allowedWithoutCloud) }
+    }
+
 }
