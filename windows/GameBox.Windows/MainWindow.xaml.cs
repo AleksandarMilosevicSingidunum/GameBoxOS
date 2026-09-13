@@ -528,6 +528,10 @@ public partial class MainWindow : Window
             await _pairingStore.SaveAsync(new PairingProfile(
                 DeviceHostBox.Text.Trim(), port, DeviceSecretBox.Password));
             ForgetDeviceButton.IsEnabled = true;
+            using var configurationHttp = new HttpClient();
+            var configuration = await new CompanionConfigurationClient(configurationHttp).GetWithRetryAsync(
+                DeviceHostBox.Text, port, DeviceSecretBox.Password);
+            ShowDeviceConfiguration(configuration);
         }
         catch (UnauthorizedAccessException)
         {
@@ -589,6 +593,15 @@ public partial class MainWindow : Window
         DiscoveredDevicesBox.Visibility = Visibility.Collapsed;
         DeviceLibrarySummaryText.Text = "No paired library loaded.";
         DeviceStatusText.Text = "Pairing removed from this Windows user.";
+        DeviceConfigurationSummaryText.Text = "Connect to load device preferences.";
+        ReducedMotionDeviceCheck.IsChecked = false;
+        ShowUnavailableGamesDeviceCheck.IsChecked = false;
+        ShowUnavailableShortcutsDeviceCheck.IsChecked = false;
+        UnmeteredDownloadsDeviceCheck.IsChecked = false;
+        ReducedMotionDeviceCheck.IsEnabled = false;
+        ShowUnavailableGamesDeviceCheck.IsEnabled = false;
+        ShowUnavailableShortcutsDeviceCheck.IsEnabled = false;
+        UnmeteredDownloadsDeviceCheck.IsEnabled = false;
         ForgetDeviceButton.IsEnabled = false;
         UpdateDeviceTransferButtons();
     }
