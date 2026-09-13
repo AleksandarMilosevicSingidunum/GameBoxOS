@@ -184,12 +184,10 @@ internal class CompanionHttpConnection(
         var stagedBody: File? = null
         try {
             val response = try {
-                val deadline = System.nanoTime() + requestTimeoutMillis * 1_000_000L
                 val input = socket.getInputStream().buffered()
                 val request = CompanionHttpRequestReader.read(input, {
-                    val remaining = deadline - System.nanoTime()
-                    if (remaining <= 0L) throw SocketTimeoutException()
-                    socket.soTimeout = ((remaining + 999_999L) / 1_000_000L).toInt().coerceAtLeast(1)
+                    // Bound inactivity, not total duration: large owned-copy transfers may take hours.
+                    socket.soTimeout = requestTimeoutMillis
                 }, bodyDirectory, authorizeHead)
                 stagedBody = request.bodyFile
                 route(request)
