@@ -195,6 +195,67 @@ public partial class MainWindow : Window
         }
     }
 
+    private void ShowDeviceConfiguration(CompanionDeviceConfiguration configuration)
+    {
+        ReducedMotionDeviceCheck.IsChecked = configuration.ReducedMotion;
+        ShowUnavailableGamesDeviceCheck.IsChecked = configuration.ShowUnavailableGames;
+        ShowUnavailableShortcutsDeviceCheck.IsChecked = configuration.ShowUnavailableShortcuts;
+        UnmeteredDownloadsDeviceCheck.IsChecked = configuration.DownloadsUnmeteredOnly;
+        ReducedMotionDeviceCheck.IsEnabled = true;
+        ShowUnavailableGamesDeviceCheck.IsEnabled = true;
+        ShowUnavailableShortcutsDeviceCheck.IsEnabled = true;
+        UnmeteredDownloadsDeviceCheck.IsEnabled = true;
+        DeviceConfigurationSummaryText.Text = "Device preferences are synchronized.";
+    }
+
+    private async void RefreshDeviceSettings_Click(object sender, RoutedEventArgs e)
+    {
+        if (!TryGetDeviceConnection(out var port)) return;
+        try
+        {
+            DeviceConfigurationSummaryText.Text = "Refreshing device preferences…";
+            using var http = new HttpClient();
+            var configuration = await new CompanionConfigurationClient(http).GetWithRetryAsync(
+                DeviceHostBox.Text, port, DeviceSecretBox.Password);
+            ShowDeviceConfiguration(configuration);
+        }
+        catch (UnauthorizedAccessException)
+        {
+            DeviceConfigurationSummaryText.Text = "Pairing was rejected. Copy the current secret from GameBox Settings.";
+        }
+        catch (Exception ex)
+        {
+            DeviceConfigurationSummaryText.Text = "Unable to refresh device preferences: " + ex.Message;
+        }
+    }
+
+    private async void ApplyDeviceSettings_Click(object sender, RoutedEventArgs e)
+    {
+        if (!TryGetDeviceConnection(out var port)) return;
+        var configuration = new CompanionDeviceConfiguration(
+            ReducedMotionDeviceCheck.IsChecked == true,
+            ShowUnavailableGamesDeviceCheck.IsChecked == true,
+            ShowUnavailableShortcutsDeviceCheck.IsChecked == true,
+            UnmeteredDownloadsDeviceCheck.IsChecked == true);
+        try
+        {
+            DeviceConfigurationSummaryText.Text = "Applying device preferences…";
+            using var http = new HttpClient();
+            var confirmed = await new CompanionConfigurationClient(http).PutAsync(
+                DeviceHostBox.Text, port, DeviceSecretBox.Password, configuration);
+            ShowDeviceConfiguration(confirmed);
+            DeviceConfigurationSummaryText.Text = "Device preferences applied and verified.";
+        }
+        catch (UnauthorizedAccessException)
+        {
+            DeviceConfigurationSummaryText.Text = "Pairing was rejected. No preferences were changed.";
+        }
+        catch (Exception ex)
+        {
+            DeviceConfigurationSummaryText.Text = "Device preferences were not applied: " + ex.Message;
+        }
+    }
+
     private async Task ReconnectSavedDeviceAsync(PairingProfile pairing)
     {
         try
@@ -202,7 +263,11 @@ public partial class MainWindow : Window
             var client = new CompanionStatusClient(new HttpClient());
             var status = await client.ReconnectAsync(pairing.Host, pairing.Port, pairing.Secret);
             var games = await client.GetLibraryWithRetryAsync(pairing.Host, pairing.Port, pairing.Secret);
+            using var configurationHttp = new HttpClient();
+            var configuration = await new CompanionConfigurationClient(configurationHttp).GetWithRetryAsync(
+                pairing.Host, pairing.Port, pairing.Secret);
             DeviceLibraryList.ItemsSource = games;
+            ShowDeviceConfiguration(configuration);
             DeviceStatusText.Text = status.DeviceName + " reconnected automatically (protocol v" +
                 status.ProtocolVersion + ").";
             DeviceLibrarySummaryText.Text = games.Count == 0
