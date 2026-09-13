@@ -89,6 +89,24 @@ class RoomGameRepository(
         dao.upsert(mergeImportedGame(existing, imported).toEntity())
     }
 
+    override suspend fun registerManagedSave(
+        id: GameId,
+        relativePath: String,
+        updatedAtMillis: Long,
+        sizeBytes: Long,
+    ) {
+        require(dao.getById(id.value) != null) { "Save does not belong to a library game" }
+        require(relativePath.startsWith(id.value + "/") && !relativePath.contains("..")) {
+            "Save path must remain inside its game"
+        }
+        require(updatedAtMillis >= 0L && sizeBytes in 1..(16L * 1024L * 1024L)) {
+            "Save metadata is invalid"
+        }
+        saveRecordDao.upsert(
+            SaveRecordEntity(id.value, relativePath, updatedAtMillis, sizeBytes)
+        )
+    }
+
     private fun consumeFallbackReason(): CatalogFallbackReason =
         (catalogProvider as? CatalogFallbackStatus)?.consumeFallbackReason()
             ?: CatalogFallbackReason.NONE
