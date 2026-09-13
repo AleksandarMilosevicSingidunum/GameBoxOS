@@ -49,7 +49,7 @@ class CompanionLibraryManagementRouteTest {
         val path = "/v1/library/game-1/favorite/off"
         val authorization = CompanionProtocol.createAuthorization(secret, "PUT", path, 1_700_000_000)
         assertEquals(401, CompanionLibraryManagementRoute.handle(
-            CompanionHttpRequest("PUT", path + "x", authorization),
+            CompanionHttpRequest("PUT", "/v1/library/game-1/favorite/on", authorization),
             secret, games, 1_700_000_030,
         ).status)
         val missing = "/v1/library/missing/favorite/off"
