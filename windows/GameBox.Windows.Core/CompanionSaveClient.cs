@@ -127,6 +127,8 @@ public sealed class CompanionSaveClient
         if (normalized.Contains('/') || normalized.Contains('\\') || normalized.Contains('?') || normalized.Contains('#'))
             throw new ArgumentException("Host must not include a scheme, path, or query.", nameof(host));
         var request = new HttpRequestMessage(method, new UriBuilder(Uri.UriSchemeHttp, normalized, port, path).Uri);
+        if (bodySha256 is not null)
+            request.Headers.TryAddWithoutValidation("X-GameBox-Content-SHA256", bodySha256);
         request.Headers.TryAddWithoutValidation(
             CompanionProtocol.AuthorizationHeader,
             CompanionProtocol.CreateAuthorization(

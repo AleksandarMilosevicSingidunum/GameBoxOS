@@ -374,6 +374,53 @@ try
             "192.168.1.22", 49_500, companionSecret, "../escape").GetAwaiter().GetResult(),
         "Companion save transfer must reject traversal IDs.");
 
+    var contentPath = Path.Combine(root, "Galaxy Patrol.nes");
+    var contentBytes = System.Text.Encoding.UTF8.GetBytes("OWNED-NES-CONTENT");
+    await File.WriteAllBytesAsync(contentPath, contentBytes);
+    var contentHash = Convert.ToHexString(
+        System.Security.Cryptography.SHA256.HashData(contentBytes)).ToLowerInvariant();
+    HttpRequestMessage? contentUploadRequest = null;
+    using var contentUploadHttp = new HttpClient(new StubHttpMessageHandler(request =>
+    {
+        contentUploadRequest = request;
+        return new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent(JsonSerializer.Serialize(new
+            {
+                protocolVersion = 1,
+                gameId = "galaxy-patrol",
+                fileName = "Galaxy Patrol.nes",
+                sizeBytes = contentBytes.LongLength,
+                sha256 = contentHash
+            }))
+        };
+    }));
+    var contentUpload = await new CompanionContentClient(contentUploadHttp).UploadAsync(
+        "192.168.1.22", 49_500, companionSecret, "galaxy-patrol", contentPath);
+    Require(contentUpload.Sha256 == contentHash && contentUpload.SizeBytes == contentBytes.LongLength,
+        "Content upload must verify Android confirmation.");
+    Require(contentUploadRequest?.Method == HttpMethod.Put &&
+        contentUploadRequest.RequestUri?.AbsolutePath == "/v1/content/galaxy-patrol" &&
+        contentUploadRequest.Content?.Headers.ContentLength == contentBytes.LongLength,
+        "Content upload must stream a length-delimited binary PUT.");
+    Require(contentUploadRequest!.Headers.GetValues("X-GameBox-Content-SHA256").Single() == contentHash,
+        "Content upload must declare its signed SHA-256 before streaming.");
+    Require(
+        System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(
+            contentUploadRequest.Headers.GetValues("X-GameBox-File-Name").Single())) == "Galaxy Patrol.nes",
+        "Content upload must carry the selected filename without path data.");
+    var contentAuthorization = contentUploadRequest.Headers
+        .GetValues(CompanionProtocol.AuthorizationHeader).Single();
+    Require(CompanionProtocol.VerifyAuthorization(
+            companionSecret, "PUT", "/v1/content/galaxy-patrol", contentAuthorization,
+            DateTimeOffset.UtcNow.ToUnixTimeSeconds(), bodySha256: contentHash),
+        "Content upload authorization must bind the exact file checksum.");
+    RequireThrows<ArgumentException>(() =>
+        new CompanionContentClient(new HttpClient()).UploadAsync(
+            "192.168.1.22", 49_500, companionSecret, "../escape", contentPath)
+            .GetAwaiter().GetResult(),
+        "Content upload must reject traversal IDs.");
+
     Console.WriteLine("GameBox Windows core tests passed.");
 }
 finally

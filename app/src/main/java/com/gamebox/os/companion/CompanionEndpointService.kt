@@ -43,9 +43,22 @@ class CompanionEndpointService : Service() {
                 server = listener
                 listener.reuseAddress = true
                 listener.bind(InetSocketAddress(port))
-                val connection = CompanionHttpConnection()
+                val staging = applicationContext.cacheDir.resolve("companion-requests")
+                val connection = CompanionHttpConnection(bodyDirectory = staging)
                 while (!Thread.currentThread().isInterrupted) listener.accept().use { socket ->
-                    connection.handle(socket) { request -> route(request, secret) }
+                    connection.handle(
+                        socket = socket,
+                        authorizeHead = { head ->
+                            CompanionProtocol.verifyAuthorization(
+                                secret = secret,
+                                method = head.method,
+                                requestPath = head.path,
+                                authorization = head.authorization,
+                                nowUnixTimeSeconds = System.currentTimeMillis() / 1_000L,
+                                bodySha256 = head.declaredBodySha256,
+                            )
+                        },
+                    ) { request -> route(request, secret) }
                 }
             }
         }
@@ -71,6 +84,17 @@ class CompanionEndpointService : Service() {
                 },
                 nowUnixTimeSeconds = now,
             )
+            request.path.startsWith(CompanionContentRoute.PREFIX) -> runBlocking {
+                CompanionContentRoute.handle(
+                    request = request,
+                    pairingSecret = secret,
+                    store = CompanionContentTransferStore(
+                        applicationContext.filesDir,
+                        (application as GameBoxApplication).container.gameRepository,
+                    ),
+                    nowUnixTimeSeconds = now,
+                )
+            }
             request.path.startsWith(CompanionSaveRoute.PREFIX) -> runBlocking {
                 CompanionSaveRoute.handle(
                     request = request,

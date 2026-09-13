@@ -187,6 +187,7 @@ public partial class MainWindow : Window
         var busy = _deviceTransferCancellation is not null;
         DownloadDeviceSaveButton.IsEnabled = selected && !busy;
         UploadDeviceSaveButton.IsEnabled = selected && !busy;
+        UploadDeviceContentButton.IsEnabled = selected && !busy;
         CancelDeviceTransferButton.IsEnabled = busy;
     }
 
@@ -293,6 +294,65 @@ public partial class MainWindow : Window
             _deviceTransferCancellation = null;
             UpdateDeviceTransferButtons();
         }
+    }
+
+    private async void UploadDeviceContent_Click(object sender, RoutedEventArgs e)
+    {
+        var game = SelectedDeviceGame;
+        if (game is null || !TryGetDeviceConnection(out var port)) return;
+        var dialog = new OpenFileDialog {
+            Title = "Choose your legally owned copy for " + game.Title,
+            Filter = "Console and homebrew images|*.nes;*.unf;*.sfc;*.smc;*.z64;*.n64;*.v64;*.gb;*.gbc;*.gba;*.nds;*.3ds;*.cia;*.iso;*.chd;*.cso;*.pbp;*.rvz;*.wbfs;*.gdi;*.cdi;*.xci;*.nsp;*.nro;*.zip;*.7z;*.rom|All files (*.*)|*.*",
+            CheckFileExists = true,
+        };
+        if (dialog.ShowDialog(this) != true) return;
+        var info = new FileInfo(dialog.FileName);
+        if (info.Length is <= 0 or > CompanionContentClient.MaxContentBytes)
+        {
+            DeviceLibrarySummaryText.Text = "Game content must contain 1 byte to 64 GiB.";
+            return;
+        }
+        if (MessageBox.Show(
+                "Send the selected file to " + game.Title + "? Continue only if this is your legally owned copy. GameBox will verify its checksum and console format before replacing content.",
+                "Send owned game copy", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
+
+        _deviceTransferCancellation = new CancellationTokenSource();
+        UpdateDeviceTransferButtons();
+        try
+        {
+            DeviceLibrarySummaryText.Text = "Hashing, sending, and verifying " + info.Name + "…";
+            var result = await new CompanionContentClient(new HttpClient()).UploadAsync(
+                DeviceHostBox.Text,
+                port,
+                DeviceSecretBox.Password,
+                game.Id,
+                info.FullName,
+                _deviceTransferCancellation.Token);
+            DeviceLibrarySummaryText.Text = "Verified " + result.FileName + " on GameBox (" +
+                result.SizeBytes.ToString("N0") + " bytes).";
+            await RefreshDeviceLibraryCoreAsync(port);
+        }
+        catch (OperationCanceledException)
+        {
+            DeviceLibrarySummaryText.Text = "Game transfer cancelled; Android retained no partial content.";
+        }
+        catch (Exception ex)
+        {
+            DeviceLibrarySummaryText.Text = "Game transfer failed safely: " + ex.Message;
+        }
+        finally
+        {
+            _deviceTransferCancellation.Dispose();
+            _deviceTransferCancellation = null;
+            UpdateDeviceTransferButtons();
+        }
+    }
+
+    private async Task RefreshDeviceLibraryCoreAsync(int port)
+    {
+        var games = await new CompanionStatusClient(new HttpClient()).GetLibraryAsync(
+            DeviceHostBox.Text, port, DeviceSecretBox.Password);
+        DeviceLibraryList.ItemsSource = games;
     }
 
     private void CancelDeviceTransfer_Click(object sender, RoutedEventArgs e) =>
