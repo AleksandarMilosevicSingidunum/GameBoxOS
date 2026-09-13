@@ -15,14 +15,17 @@ public partial class MainWindow : Window
     private readonly ObservableCollection<GameEntry> _allGames = new();
     private readonly ObservableCollection<GameEntry> _visibleGames = new();
     private readonly LibraryStore _store;
+    private readonly PairingProfileStore _pairingStore;
     private CancellationTokenSource? _deviceTransferCancellation;
 
     public MainWindow()
     {
         InitializeComponent();
         GamesList.ItemsSource = _visibleGames;
-        var dataPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "GameBoxOS", "windows-library.json");
-        _store = new LibraryStore(dataPath);
+        var appData = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "GameBoxOS");
+        _store = new LibraryStore(Path.Combine(appData, "windows-library.json"));
+        _pairingStore = new PairingProfileStore(Path.Combine(appData, "paired-device.json"));
         Loaded += async (_, _) => await LoadLibraryAsync();
         PreviewKeyDown += MainWindow_PreviewKeyDown;
     }
@@ -34,6 +37,22 @@ public partial class MainWindow : Window
         try
         {
             foreach (var game in await _store.LoadAsync()) _allGames.Add(game);
+            try
+            {
+                var pairing = await _pairingStore.LoadAsync();
+                if (pairing is not null)
+                {
+                    DeviceHostBox.Text = pairing.Host;
+                    DevicePortBox.Text = pairing.Port.ToString();
+                    DeviceSecretBox.Password = pairing.Secret;
+                    DeviceStatusText.Text = "Saved pairing restored for " + pairing.Host + ". Check the device to reconnect.";
+                    ForgetDeviceButton.IsEnabled = true;
+                }
+            }
+            catch (Exception ex)
+            {
+                DeviceStatusText.Text = "Saved pairing could not be restored: " + ex.Message;
+            }
             RefreshPlatformOptions();
             RefreshVisibleGames();
             StatusText.Text = _allGames.Count + " local game(s)";
@@ -413,6 +432,9 @@ public partial class MainWindow : Window
                 DeviceHostBox.Text, port, DeviceSecretBox.Password);
             DeviceStatusText.Text = $"{status.DeviceName} is {status.Status} (protocol v{status.ProtocolVersion}).";
             StatusText.Text = "Connected to " + status.DeviceName;
+            await _pairingStore.SaveAsync(new PairingProfile(
+                DeviceHostBox.Text.Trim(), port, DeviceSecretBox.Password));
+            ForgetDeviceButton.IsEnabled = true;
         }
         catch (UnauthorizedAccessException)
         {
@@ -422,6 +444,22 @@ public partial class MainWindow : Window
         {
             DeviceStatusText.Text = "Unable to reach GameBox: " + ex.Message;
         }
+    }
+
+    private void ForgetDevice_Click(object sender, RoutedEventArgs e)
+    {
+        if (MessageBox.Show(
+                "Forget this paired GameBox device on this PC? This removes the DPAPI-protected secret but does not change the Android device.",
+                "Forget paired device", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
+        _pairingStore.Delete();
+        DeviceHostBox.Clear();
+        DeviceSecretBox.Clear();
+        DevicePortBox.Text = "49500";
+        DeviceLibraryList.ItemsSource = null;
+        DeviceLibrarySummaryText.Text = "No paired library loaded.";
+        DeviceStatusText.Text = "Pairing removed from this Windows user.";
+        ForgetDeviceButton.IsEnabled = false;
+        UpdateDeviceTransferButtons();
     }
 
     private async void CleanupMissing_Click(object sender, RoutedEventArgs e)
