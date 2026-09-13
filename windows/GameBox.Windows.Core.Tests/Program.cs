@@ -518,6 +518,35 @@ try
     Require(callerCancellationObserved && cancelledAttempts == 0,
         "Reconnect policy must honor caller cancellation before network access.");
 
+    var discoveryNonce = "0123456789abcdef0123456789abcdef";
+    var discoveryRequest = CompanionDiscoveryProtocol.CreateRequest(discoveryNonce);
+    Require(System.Text.Encoding.ASCII.GetString(discoveryRequest) ==
+        "GAMEBOX_DISCOVER_V1:" + discoveryNonce,
+        "Discovery request must carry the bounded random nonce.");
+    var discoveredDevice = CompanionDiscoveryProtocol.ParseResponse(
+        System.Text.Encoding.ASCII.GetBytes(
+            "GAMEBOX_HERE_V1:" + discoveryNonce + ":49500:" +
+            Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes("Living Room GameBox"))),
+        discoveryNonce,
+        IPAddress.Parse("192.168.1.22"));
+    Require(discoveredDevice is not null &&
+        discoveredDevice.Host == "192.168.1.22" &&
+        discoveredDevice.Port == 49_500 &&
+        discoveredDevice.DeviceName == "Living Room GameBox",
+        "Discovery response must bind nonce, sender address, port, and device name.");
+    Require(CompanionDiscoveryProtocol.ParseResponse(
+        System.Text.Encoding.ASCII.GetBytes(
+            "GAMEBOX_HERE_V1:" + new string('0', 32) + ":49500:VGVzdA=="),
+        discoveryNonce,
+        IPAddress.Loopback) is null,
+        "Discovery must ignore replayed or unrelated nonces.");
+    RequireThrows<ArgumentException>(
+        () => CompanionDiscoveryProtocol.CreateRequest("../escape"),
+        "Discovery must reject malformed nonces.");
+    RequireThrows<ArgumentOutOfRangeException>(
+        () => _ = new CompanionDiscoveryClient(TimeSpan.FromSeconds(11)),
+        "Discovery must enforce a bounded response window.");
+
     Console.WriteLine("GameBox Windows core tests passed.");
 }
 finally

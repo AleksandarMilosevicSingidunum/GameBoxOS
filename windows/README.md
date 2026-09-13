@@ -9,6 +9,7 @@ This optional native .NET 8/WPF companion complements the Android/DeX GameBox OS
 - Discover installed Epic Games from bounded launcher manifests while rejecting traversal, missing executables, malformed JSON, and oversized metadata.
 - Create persistent Moonlight streaming sessions with validated host/application arguments while leaving pairing and credentials in Moonlight.
 - Search and filter by favorites, availability, and platform.
+- Discover enabled GameBox devices over bounded nonce-correlated UDP broadcast across active IPv4 LAN interfaces, choose a returned device, then authenticate with its pairing secret. Discovery exposes only device name, address, companion port, and protocol identity.
 - Connect to a paired GameBox device, browse its library, update a title's favorite state, upload/download a selected managed save, and send a user-selected legally owned game copy to an existing catalog title.
 - Remember a successfully authenticated device across restarts. Host and port are stored in the bounded local profile; the 256-bit pairing secret is encrypted with Windows DPAPI for the current user and can be explicitly forgotten without changing Android.
 - Automatically reconnect and refresh the paired library after startup with three bounded exponential-backoff attempts for transient LAN failures. Authentication rejection and invalid protocol/data fail immediately; caller cancellation stops before another request.
@@ -30,7 +31,7 @@ The companion never searches for or downloads game content from third-party sour
 
 ## Remaining Windows work
 
-Live Windows↔Android large-file, cancellation, DPAPI reconnect, disk-full, and replacement acceptance testing remains pending, along with additional PC-runtime integrations, installer packaging, and physical Windows acceptance testing. Authenticode signing and signed release upload are prepared through the protected `release-windows-production.yml` workflow.
+Live Windows↔Android discovery across real routed/VLAN/firewall environments, large-file transfer, cancellation, DPAPI reconnect, disk-full, and replacement acceptance testing remains pending, along with additional PC-runtime integrations, installer packaging, and physical Windows acceptance testing. Authenticode signing and signed release upload are prepared through the protected `release-windows-production.yml` workflow.
 
 CI publishes the self-contained ZIP with a SHA-256 file and a validated JSON provenance manifest containing the exact artifact name, hash, byte size, runtime, self-contained flag, and source commit. Validation also requires exactly one non-empty `GameBox.Windows.exe` in the archive and verifies the published executable before upload.
 

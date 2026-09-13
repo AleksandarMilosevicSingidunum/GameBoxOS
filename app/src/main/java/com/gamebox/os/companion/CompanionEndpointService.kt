@@ -11,24 +11,38 @@ import com.gamebox.os.GameBoxApplication
 import com.gamebox.os.settings.SettingsRepository
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
+import java.net.DatagramPacket
+import java.net.DatagramSocket
 import java.net.InetSocketAddress
 import java.net.ServerSocket
+import java.net.SocketTimeoutException
 import java.util.concurrent.Executors
 
 /** Opt-in LAN listener for a paired Windows companion. */
 class CompanionEndpointService : Service() {
     private val executor = Executors.newSingleThreadExecutor()
+    private val discoveryExecutor = Executors.newSingleThreadExecutor()
     @Volatile private var server: ServerSocket? = null
+    @Volatile private var discoverySocket: DatagramSocket? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
             ACTION_STOP -> { stopListener(); stopSelf() }
-            ACTION_START -> { startForeground(NOTIFICATION_ID, notification()); executor.execute(::serve) }
+            ACTION_START -> {
+                startForeground(NOTIFICATION_ID, notification())
+                executor.execute(::serve)
+                discoveryExecutor.execute(::advertise)
+            }
         }
         return START_NOT_STICKY
     }
 
-    override fun onDestroy() { stopListener(); executor.shutdownNow(); super.onDestroy() }
+    override fun onDestroy() {
+        stopListener()
+        executor.shutdownNow()
+        discoveryExecutor.shutdownNow()
+        super.onDestroy()
+    }
     override fun onBind(intent: Intent?): IBinder? = null
 
     private fun serve() {
@@ -64,6 +78,39 @@ class CompanionEndpointService : Service() {
         }
         server = null
         stopSelf()
+    }
+
+    private fun advertise() {
+        val repository = SettingsRepository(applicationContext)
+        val settings = runBlocking { repository.settings.first() }
+        val secret = runBlocking { repository.companionPairingSecret() }
+        if (!settings.companionEnabled || secret.isNullOrBlank()) return
+        runCatching {
+            DatagramSocket(null).use { socket ->
+                discoverySocket = socket
+                socket.reuseAddress = true
+                socket.broadcast = true
+                socket.soTimeout = 1_000
+                socket.bind(InetSocketAddress(CompanionDiscoveryProtocol.PORT))
+                val buffer = ByteArray(512)
+                while (!Thread.currentThread().isInterrupted) {
+                    val request = DatagramPacket(buffer, buffer.size)
+                    try {
+                        socket.receive(request)
+                    } catch (_: SocketTimeoutException) {
+                        continue
+                    }
+                    val nonce = CompanionDiscoveryProtocol.parseRequest(request.data, request.length) ?: continue
+                    val response = CompanionDiscoveryProtocol.response(
+                        nonce,
+                        settings.companionPort,
+                        applicationInfo.loadLabel(packageManager).toString(),
+                    )
+                    socket.send(DatagramPacket(response, response.size, request.address, request.port))
+                }
+            }
+        }
+        discoverySocket = null
     }
 
     private fun route(request: CompanionHttpRequest, secret: String): CompanionHttpResponse {
@@ -117,7 +164,12 @@ class CompanionEndpointService : Service() {
         }
     }
 
-    private fun stopListener() { runCatching { server?.close() }; server = null }
+    private fun stopListener() {
+        runCatching { server?.close() }
+        runCatching { discoverySocket?.close() }
+        server = null
+        discoverySocket = null
+    }
 
     override fun onCreate() {
         super.onCreate()
