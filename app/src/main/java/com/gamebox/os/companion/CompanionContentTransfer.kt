@@ -44,7 +44,10 @@ internal class CompanionContentTransferStore(
         require(destination.canonicalPath.startsWith(filesDir.resolve("imports").canonicalPath + File.separator)) {
             "Content destination is unsafe"
         }
-        require(destination.parentFile?.mkdirs() != false) { "Content destination is unavailable" }
+        val destinationDirectory = requireNotNull(destination.parentFile)
+        require(destinationDirectory.isDirectory || destinationDirectory.mkdirs()) {
+            "Content destination is unavailable"
+        }
         val partial = File(destination.parentFile, destination.name + ".companion-partial")
         val backup = File(destination.parentFile, destination.name + ".companion-backup")
         partial.delete()
