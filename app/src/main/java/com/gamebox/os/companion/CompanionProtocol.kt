@@ -23,8 +23,8 @@ object CompanionProtocol {
         }
         require(unixTimeSeconds > 0) { "Timestamp is required" }
         require(bodySha256 == null || validSha256(bodySha256)) { "Body checksum is invalid" }
-        val payload = "v$VERSION\n${method.trim().uppercase()}\n$requestPath\n$unixTimeSeconds\n" +
-            bodySha256.orEmpty().lowercase()
+        val basePayload = "v$VERSION\n${method.trim().uppercase()}\n$requestPath\n$unixTimeSeconds"
+        val payload = bodySha256?.let { "$basePayload\n${it.lowercase()}" } ?: basePayload
         val mac = Mac.getInstance("HmacSHA256")
         mac.init(SecretKeySpec(hexToBytes(secret), "HmacSHA256"))
         return "v$VERSION:$unixTimeSeconds:${mac.doFinal(payload.toByteArray(StandardCharsets.UTF_8)).toHex()}"
