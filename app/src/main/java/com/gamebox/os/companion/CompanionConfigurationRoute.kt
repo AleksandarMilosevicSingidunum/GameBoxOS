@@ -2,6 +2,7 @@ package com.gamebox.os.companion
 
 import com.gamebox.os.settings.SettingsRepository
 import kotlinx.coroutines.flow.first
+import java.security.MessageDigest
 
 internal data class CompanionConfiguration(
     val reducedMotion: Boolean,
@@ -53,7 +54,7 @@ internal object CompanionConfigurationRoute {
         }
         if (pairingSecret.isNullOrBlank() || !CompanionProtocol.verifyAuthorization(
                 pairingSecret, request.method, request.path, request.authorization,
-                nowUnixTimeSeconds,
+                nowUnixTimeSeconds, bodySha256 = request.bodySha256,
             )) {
             return CompanionHttpResponse(401, """{"error":"unauthorized"}""")
         }
@@ -63,7 +64,10 @@ internal object CompanionConfigurationRoute {
                 onFailure = { CompanionHttpResponse(400, """{"error":"config_unavailable"}""") },
             )
             "PUT" -> {
-                val encoded = request.fileName
+                val encoded = request.configurationFlags
+                if (encoded == null || request.bodySha256 != encoded.sha256()) {
+                    return CompanionHttpResponse(400, """{"error":"config_invalid"}""")
+                }
                 val configuration = runCatching { parseConfiguration(encoded) }.getOrNull()
                     ?: return CompanionHttpResponse(400, """{"error":"config_invalid"}""")
                 runCatching { store.write(configuration) }.fold(
@@ -86,6 +90,10 @@ internal object CompanionConfigurationRoute {
      * A body-free PUT carries exactly four bits as an ASCII header value, in JSON field order.
      * This keeps configuration requests authenticated before any body is read.
      */
+    private fun String.sha256(): String = MessageDigest.getInstance("SHA-256")
+        .digest(toByteArray(Charsets.US_ASCII))
+        .joinToString("") { "%02x".format(it.toInt() and 0xff) }
+
     private fun parseConfiguration(value: String?): CompanionConfiguration {
         require(value != null && value.matches(Regex("^[01]{4}$"))) {
             "Configuration flags are invalid"
