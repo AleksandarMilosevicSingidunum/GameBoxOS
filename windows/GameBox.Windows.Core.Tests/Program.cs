@@ -421,6 +421,31 @@ try
             .GetAwaiter().GetResult(),
         "Content upload must reject traversal IDs.");
 
+    HttpRequestMessage? favoriteRequest = null;
+    using var favoriteHttp = new HttpClient(new StubHttpMessageHandler(request =>
+    {
+        favoriteRequest = request;
+        return new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent(
+                "{\"protocolVersion\":1,\"gameId\":\"nes-1\",\"favorite\":false}")
+        };
+    }));
+    var unfavorited = await new CompanionStatusClient(favoriteHttp).SetFavoriteAsync(
+        "192.168.1.22", 49_500, companionSecret, pairedLibrary[0], false);
+    Require(!unfavorited.Favorite && unfavorited.Id == pairedLibrary[0].Id,
+        "Paired favorite management must preserve game identity and update local state.");
+    Require(favoriteRequest?.Method == HttpMethod.Put &&
+        favoriteRequest.RequestUri?.AbsolutePath == "/v1/library/nes-1/favorite/off" &&
+        favoriteRequest.Content is null,
+        "Paired favorite management must use a body-free idempotent PUT.");
+    var favoriteAuthorization = favoriteRequest!.Headers
+        .GetValues(CompanionProtocol.AuthorizationHeader).Single();
+    Require(CompanionProtocol.VerifyAuthorization(
+            companionSecret, "PUT", "/v1/library/nes-1/favorite/off",
+            favoriteAuthorization, DateTimeOffset.UtcNow.ToUnixTimeSeconds()),
+        "Paired favorite management authorization must bind the desired state.");
+
     Console.WriteLine("GameBox Windows core tests passed.");
 }
 finally
