@@ -17,4 +17,7 @@ interface GameRepository {
     fun observeCatalogRefreshState(): StateFlow<CatalogRefreshState>
     fun refreshCatalog()
     suspend fun registerImportedGame(imported: ImportedGameRegistration)
+    suspend fun registerManagedSave(id: GameId, relativePath: String, updatedAtMillis: Long, sizeBytes: Long) {
+        error("Managed save registration is unavailable")
+    }
 }
