@@ -63,10 +63,11 @@ class CompanionHttpConnectionTest {
         assertTrue(
             runCatching {
                 CompanionHttpRequestReader.read(
-                    "PUT /v1/saves/game-one HTTP/1.1\r\nContent-Type: application/octet-stream\r\n" +
-                        CompanionHttpRequestReader.BODY_SHA256_HEADER + ": " + "0".repeat(64) +
-                        "\r\nContent-Length: 4\r\n\r\nX"
-                        .byteInputStream()
+                    (
+                        "PUT /v1/saves/game-one HTTP/1.1\r\nContent-Type: application/octet-stream\r\n" +
+                            CompanionHttpRequestReader.BODY_SHA256_HEADER + ": " + "0".repeat(64) +
+                            "\r\nContent-Length: 4\r\n\r\nX"
+                    ).byteInputStream()
                 )
             }.isFailure
         )
