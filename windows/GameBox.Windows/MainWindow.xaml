@@ -38,6 +38,7 @@
                 </ListBox>
             </Border>
             <Border Grid.Column="1" Background="#111824" CornerRadius="16" Margin="18,0,0,0" Padding="24">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                 <StackPanel>
                     <TextBlock Text="SELECTED GAME" Foreground="{StaticResource AccentBrush}" FontWeight="Bold"/>
                     <TextBlock x:Name="SelectedTitle" Text="Choose a game" FontSize="28" FontWeight="Bold" Margin="0,8,0,4" TextWrapping="Wrap"/>
@@ -93,6 +94,7 @@
                     <Separator Margin="0,22"/>
                     <TextBlock Text="Transfers are paired and checksum-verified. Saves are limited to 16 MiB and preserve conflicts. Send game copy accepts only a file you select and own; Android validates its console format before atomically installing it." Foreground="#9EADC0" TextWrapping="Wrap"/>
                 </StackPanel>
+                </ScrollViewer>
             </Border>
         </Grid>
         <DockPanel Grid.Row="3" Margin="0,16,0,0">
