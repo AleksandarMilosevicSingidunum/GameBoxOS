@@ -10,6 +10,7 @@ This optional native .NET 8/WPF companion complements the Android/DeX GameBox OS
 - Create persistent Moonlight streaming sessions with validated host/application arguments while leaving pairing and credentials in Moonlight.
 - Search and filter by favorites, availability, and platform.
 - Connect to a paired GameBox device, browse its library, update a title's favorite state, upload/download a selected managed save, and send a user-selected legally owned game copy to an existing catalog title.
+- Remember a successfully authenticated device across restarts. Host and port are stored in the bounded local profile; the 256-bit pairing secret is encrypted with Windows DPAPI for the current user and can be explicitly forgotten without changing Android.
 - Verify save SHA-256 on both platforms, limit saves to 16 MiB, support cancellation, and preserve a different Android save before replacement.
 - Stream owned game copies up to 64 GiB without buffering them in memory. Android authenticates the declared checksum before reading the body, stages with an inactivity timeout, verifies SHA-256 again, enforces the selected console's format allowlist, and atomically registers the installed content. A failed or cancelled transfer retains no partial content; a failed replacement restores the previous copy.
 
@@ -28,7 +29,7 @@ The companion never searches for or downloads game content from third-party sour
 
 ## Remaining Windows work
 
-Live Windows↔Android large-file, cancellation, reconnect, disk-full, and replacement acceptance testing remains pending, along with additional PC-runtime integrations, installer packaging, and physical Windows acceptance testing. Authenticode signing and signed release upload are prepared through the protected `release-windows-production.yml` workflow.
+Live Windows↔Android large-file, cancellation, DPAPI reconnect, disk-full, and replacement acceptance testing remains pending, along with additional PC-runtime integrations, installer packaging, and physical Windows acceptance testing. Authenticode signing and signed release upload are prepared through the protected `release-windows-production.yml` workflow.
 
 CI publishes the self-contained ZIP with a SHA-256 file and a validated JSON provenance manifest containing the exact artifact name, hash, byte size, runtime, self-contained flag, and source commit. Validation also requires exactly one non-empty `GameBox.Windows.exe` in the archive and verifies the published executable before upload.
 
