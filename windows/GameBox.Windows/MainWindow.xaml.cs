@@ -474,6 +474,42 @@ public partial class MainWindow : Window
         }
     }
 
+    private async void DiscoverDevice_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            DeviceStatusText.Text = "Searching local network for GameBox devices…";
+            var devices = await new CompanionDiscoveryClient().DiscoverAsync();
+            DiscoveredDevicesBox.ItemsSource = devices;
+            DiscoveredDevicesBox.Visibility = devices.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+            if (devices.Count == 0)
+            {
+                DeviceStatusText.Text =
+                    "No enabled GameBox device responded. Confirm Companion is enabled and both devices are on the same LAN.";
+                return;
+            }
+            DiscoveredDevicesBox.SelectedIndex = 0;
+            DeviceStatusText.Text = devices.Count == 1
+                ? "Found " + devices[0].DeviceName + " at " + devices[0].Host + ". Enter its pairing secret, then check and remember."
+                : "Found " + devices.Count + " GameBox devices. Choose one, enter its pairing secret, then check and remember.";
+        }
+        catch (OperationCanceledException)
+        {
+            DeviceStatusText.Text = "GameBox discovery was cancelled.";
+        }
+        catch (Exception ex)
+        {
+            DeviceStatusText.Text = "GameBox discovery failed safely: " + ex.Message;
+        }
+    }
+
+    private void DiscoveredDevice_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (DiscoveredDevicesBox.SelectedItem is not DiscoveredGameBox device) return;
+        DeviceHostBox.Text = device.Host;
+        DevicePortBox.Text = device.Port.ToString();
+    }
+
     private void ForgetDevice_Click(object sender, RoutedEventArgs e)
     {
         if (MessageBox.Show(
@@ -484,6 +520,8 @@ public partial class MainWindow : Window
         DeviceSecretBox.Clear();
         DevicePortBox.Text = "49500";
         DeviceLibraryList.ItemsSource = null;
+        DiscoveredDevicesBox.ItemsSource = null;
+        DiscoveredDevicesBox.Visibility = Visibility.Collapsed;
         DeviceLibrarySummaryText.Text = "No paired library loaded.";
         DeviceStatusText.Text = "Pairing removed from this Windows user.";
         ForgetDeviceButton.IsEnabled = false;
