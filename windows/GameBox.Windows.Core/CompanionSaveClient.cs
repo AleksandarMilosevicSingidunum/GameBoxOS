@@ -92,7 +92,7 @@ public sealed class CompanionSaveClient
             HttpCompletionOption.ResponseHeadersRead,
             timeoutSource.Token).ConfigureAwait(false);
         await EnsureSuccessAsync(response).ConfigureAwait(false);
-        var envelope = await ReadBoundedAsync(response, cancellationToken).ConfigureAwait(false);
+        var envelope = await ReadBoundedAsync(response, timeoutSource.Token).ConfigureAwait(false);
         using var document = ParseEnvelope(envelope);
         var root = document.RootElement;
         RequireProtocol(root);
