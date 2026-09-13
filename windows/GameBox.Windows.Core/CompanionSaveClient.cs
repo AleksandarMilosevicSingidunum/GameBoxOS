@@ -82,7 +82,13 @@ public sealed class CompanionSaveClient
         if (bytes.Length is <= 0 or > MaxSaveBytes)
             throw new InvalidDataException("Save must contain 1 byte to 16 MiB.");
         var path = SavePath(gameId);
-        using var request = CreateRequest(HttpMethod.Put, host, port, pairingSecret, path);
+        using var request = CreateRequest(
+            HttpMethod.Put,
+            host,
+            port,
+            pairingSecret,
+            path,
+            Sha256(bytes));
         request.Content = new ByteArrayContent(bytes);
         request.Content.Headers.ContentType = new MediaTypeHeaderValue("application/octet-stream");
         using var timeoutSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
@@ -112,7 +118,8 @@ public sealed class CompanionSaveClient
         string host,
         int port,
         string pairingSecret,
-        string path)
+        string path,
+        string? bodySha256 = null)
     {
         if (string.IsNullOrWhiteSpace(host)) throw new ArgumentException("Host is required.", nameof(host));
         if (port is < 10240 or > 65535) throw new ArgumentOutOfRangeException(nameof(port));
@@ -126,7 +133,8 @@ public sealed class CompanionSaveClient
                 pairingSecret,
                 method.Method,
                 path,
-                DateTimeOffset.UtcNow.ToUnixTimeSeconds()));
+                DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
+                bodySha256));
         return request;
     }
 
