@@ -84,6 +84,17 @@ class CompanionEndpointService : Service() {
                 },
                 nowUnixTimeSeconds = now,
             )
+            request.path.startsWith(CompanionContentRoute.PREFIX) -> runBlocking {
+                CompanionContentRoute.handle(
+                    request = request,
+                    pairingSecret = secret,
+                    store = CompanionContentTransferStore(
+                        applicationContext.filesDir,
+                        (application as GameBoxApplication).container.gameRepository,
+                    ),
+                    nowUnixTimeSeconds = now,
+                )
+            }
             request.path.startsWith(CompanionSaveRoute.PREFIX) -> runBlocking {
                 CompanionSaveRoute.handle(
                     request = request,
