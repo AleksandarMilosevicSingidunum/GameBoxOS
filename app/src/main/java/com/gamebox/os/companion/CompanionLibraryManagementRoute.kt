@@ -16,7 +16,7 @@ internal object CompanionLibraryManagementRoute {
     ): CompanionHttpResponse {
         val segments = request.path.removePrefix(PREFIX).split('/')
         if (!request.path.startsWith(PREFIX) || segments.size != 3 ||
-            segments[1] != "favorite" || segments[0] !in gameIdPattern ||
+            segments[1] != "favorite" || !gameIdPattern.matches(segments[0]) ||
             segments[2] !in setOf("on", "off")) {
             return CompanionHttpResponse(404, """{"error":"not_found"}""")
         }
