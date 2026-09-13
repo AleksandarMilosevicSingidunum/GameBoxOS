@@ -36,7 +36,7 @@ internal class CompanionContentTransferStore(
         require(expectedLength > 0 && source.isFile && source.length() == expectedLength) {
             "Transferred content length does not match"
         }
-        val declared = requireNotNull(expectedSha256)?.lowercase()
+        val declared = requireNotNull(expectedSha256).lowercase()
         require(declared.matches(Regex("^[a-f0-9]{64}$"))) { "Transferred content checksum is invalid" }
 
         val storedRelative = RomImportPolicy.relativePath(id, safeName, game.platform)
