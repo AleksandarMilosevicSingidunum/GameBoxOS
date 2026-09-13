@@ -65,8 +65,14 @@
                     <ListBox x:Name="DeviceLibraryList" Background="Transparent" BorderThickness="0" Foreground="{StaticResource TextBrush}" MaxHeight="128" Margin="0,4,0,0" AutomationProperties.Name="Paired GameBox library">
                         <ListBox.ItemTemplate><DataTemplate><StackPanel Margin="2"><TextBlock Text="{Binding Title}" FontWeight="SemiBold"/><TextBlock Foreground="#9EADC0" Text="{Binding Platform}"/></StackPanel></DataTemplate></ListBox.ItemTemplate>
                     </ListBox>
+                    <Grid Margin="0,8,0,0">
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                        <Button x:Name="DownloadDeviceSaveButton" Content="Save to PC" Click="DownloadDeviceSave_Click" IsEnabled="False" AutomationProperties.Name="Download selected GameBox managed save"/>
+                        <Button x:Name="UploadDeviceSaveButton" Grid.Column="1" Content="Send save" Click="UploadDeviceSave_Click" IsEnabled="False" Margin="8,0,0,0" AutomationProperties.Name="Upload a managed save for selected GameBox game"/>
+                        <Button x:Name="CancelDeviceTransferButton" Grid.Column="2" Content="Cancel" Click="CancelDeviceTransfer_Click" IsEnabled="False" Margin="8,0,0,0" AutomationProperties.Name="Cancel active GameBox save transfer"/>
+                    </Grid>
                     <Separator Margin="0,22"/>
-                    <TextBlock Text="Launches only files you explicitly add. It never downloads content, deletes game files, or stores streaming credentials." Foreground="#9EADC0" TextWrapping="Wrap"/>
+                    <TextBlock Text="GameBox save transfers are paired, checksum-verified, limited to 16 MiB, and preserve a conflicting Android copy. Game binaries are never transferred." Foreground="#9EADC0" TextWrapping="Wrap"/>
                 </StackPanel>
             </Border>
         </Grid>
