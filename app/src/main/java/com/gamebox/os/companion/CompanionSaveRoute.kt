@@ -2,7 +2,7 @@ package com.gamebox.os.companion
 
 import java.util.Base64
 
-object CompanionSaveRoute {
+internal object CompanionSaveRoute {
     const val PREFIX = "/v1/saves/"
 
     suspend fun handle(
