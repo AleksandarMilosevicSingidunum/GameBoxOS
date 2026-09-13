@@ -547,6 +547,78 @@ try
         () => _ = new CompanionDiscoveryClient(TimeSpan.FromSeconds(11)),
         "Discovery must enforce a bounded response window.");
 
+    HttpRequestMessage? configurationGetRequest = null;
+    using var configurationGetHttp = new HttpClient(new StubHttpMessageHandler(request =>
+    {
+        configurationGetRequest = request;
+        return new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent(
+                "{\"protocolVersion\":1,\"reducedMotion\":true,\"showUnavailableGames\":false,\"showUnavailableShortcuts\":true,\"downloadsUnmeteredOnly\":false}")
+        };
+    }));
+    var deviceConfiguration = await new CompanionConfigurationClient(configurationGetHttp).GetAsync(
+        "192.168.1.22", 49_500, companionSecret);
+    Require(deviceConfiguration == new CompanionDeviceConfiguration(true, false, true, false),
+        "Device configuration GET must parse all managed preferences.");
+    Require(configurationGetRequest?.Method == HttpMethod.Get &&
+        configurationGetRequest.RequestUri?.AbsolutePath == "/v1/config" &&
+        configurationGetRequest.Headers.Contains(CompanionProtocol.AuthorizationHeader),
+        "Device configuration GET must authenticate the exact endpoint.");
+
+    HttpRequestMessage? configurationPutRequest = null;
+    using var configurationPutHttp = new HttpClient(new StubHttpMessageHandler(request =>
+    {
+        configurationPutRequest = request;
+        return new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent(
+                "{\"protocolVersion\":1,\"reducedMotion\":true,\"showUnavailableGames\":false,\"showUnavailableShortcuts\":true,\"downloadsUnmeteredOnly\":false}")
+        };
+    }));
+    var desiredConfiguration = new CompanionDeviceConfiguration(true, false, true, false);
+    var appliedConfiguration = await new CompanionConfigurationClient(configurationPutHttp).PutAsync(
+        "192.168.1.22", 49_500, companionSecret, desiredConfiguration);
+    Require(appliedConfiguration == desiredConfiguration,
+        "Device configuration PUT must verify the echoed preference snapshot.");
+    Require(configurationPutRequest?.Method == HttpMethod.Put &&
+        configurationPutRequest.Content is null &&
+        configurationPutRequest.Headers.GetValues(
+            CompanionConfigurationClient.ConfigurationHeader).Single() == "1010",
+        "Device configuration PUT must send exactly four body-free preference flags.");
+    var configurationHash = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(
+        System.Text.Encoding.ASCII.GetBytes("1010"))).ToLowerInvariant();
+    Require(configurationPutRequest!.Headers.GetValues(
+            CompanionConfigurationClient.ContentSha256Header).Single() == configurationHash,
+        "Device configuration PUT must declare the exact flag checksum.");
+    var configurationAuthorization = configurationPutRequest.Headers
+        .GetValues(CompanionProtocol.AuthorizationHeader).Single();
+    var configurationNow = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+    Require(CompanionProtocol.VerifyAuthorization(
+            companionSecret, "PUT", "/v1/config", configurationAuthorization,
+            configurationNow, bodySha256: configurationHash),
+        "Device configuration authorization must bind the exact preference flags.");
+    Require(!CompanionProtocol.VerifyAuthorization(
+            companionSecret, "PUT", "/v1/config", configurationAuthorization,
+            configurationNow, bodySha256: new string('0', 64)),
+        "Device configuration authorization must reject altered preference flags.");
+
+    using var badConfigurationHttp = new HttpClient(new StubHttpMessageHandler(_ =>
+        new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent(
+                "{\"protocolVersion\":2,\"reducedMotion\":false,\"showUnavailableGames\":false,\"showUnavailableShortcuts\":false,\"downloadsUnmeteredOnly\":false}")
+        }));
+    var incompatibleConfigurationRejected = false;
+    try
+    {
+        await new CompanionConfigurationClient(badConfigurationHttp).GetAsync(
+            "192.168.1.22", 49_500, companionSecret);
+    }
+    catch (InvalidDataException) { incompatibleConfigurationRejected = true; }
+    Require(incompatibleConfigurationRejected,
+        "Device configuration must reject incompatible protocol responses.");
+
     Console.WriteLine("GameBox Windows core tests passed.");
 }
 finally
