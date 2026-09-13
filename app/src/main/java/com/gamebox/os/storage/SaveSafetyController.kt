@@ -77,8 +77,12 @@ interface SaveSafetyController {
     fun uninstallPreview(): UninstallConfirmation
     fun uninstallTestContent()
     fun contentRemovalPreview(game: Game): ContentRemovalPreview
-    suspend fun cloudBackupPreflight(game: Game): CloudBackupPreflight
-    suspend fun uninstallContent(game: Game, allowWithoutCloudBackup: Boolean = false): String
+    suspend fun cloudBackupPreflight(game: Game): CloudBackupPreflight = CloudBackupPreflight(
+        CloudBackupPreflightStatus.NOT_REQUIRED,
+        "No managed save copy requires cloud protection.",
+    )
+    suspend fun uninstallContent(game: Game): String
+    suspend fun uninstallContent(game: Game, allowWithoutCloudBackup: Boolean): String = uninstallContent(game)
     fun backupSave()
     fun restoreSave()
     fun exportBackup(uri: Uri)
@@ -178,6 +182,8 @@ class DefaultSaveSafetyController(
             },
         )
     }
+
+    override suspend fun uninstallContent(game: Game): String = uninstallContent(game, false)
 
     override suspend fun uninstallContent(game: Game, allowWithoutCloudBackup: Boolean): String = withContext(Dispatchers.IO + NonCancellable) {
         require(game.id == gameId) { "Content controller does not belong to this game" }
