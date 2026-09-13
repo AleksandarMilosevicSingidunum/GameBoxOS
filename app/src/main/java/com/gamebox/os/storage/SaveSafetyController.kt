@@ -298,26 +298,7 @@ class DefaultSaveSafetyController(
             val relativePath = state.value.relativePath ?: return@launchSaveOperation noSave("Cloud upload")
             operation.value = SaveOperation("Uploading encrypted-credential cloud save…")
             val result = runCatching {
-                val cloud = cloudAccess()
-                val saveFile = resolveSave(relativePath)
-                require(saveFile.isFile) { "Save file is missing" }
-                require(saveFile.length() <= CloudSaveEnvelopeCodec.MAX_RAW_PAYLOAD_BYTES) {
-                    "Save exceeds the 15 MiB cloud payload limit"
-                }
-                val payload = saveFile.readBytes()
-                val envelope = CloudSaveEnvelopeCodec.encode(
-                    gameId.value,
-                    state.value.updatedAtMillis.coerceAtLeast(0L),
-                    payload,
-                )
-                val request = CloudSaveSyncRequest(
-                    gameId = gameId.value,
-                    endpoint = cloud.endpoint,
-                    payloadBytes = envelope.size.toLong(),
-                    credentialKey = "cloud-save",
-                    expectedSha256 = CloudSaveEnvelopeCodec.sha256(envelope),
-                )
-                cloud.client.upload(request, envelope, cloud.credentials)
+                uploadCloudSaveNow(relativePath, state.value.updatedAtMillis)
             }
             operation.value = result.fold(
                 onSuccess = { SaveOperation("Cloud save uploaded and verified") },
@@ -443,6 +424,29 @@ class DefaultSaveSafetyController(
 
     private fun noSave(action: String) {
         operation.value = SaveOperation("$action failed: no save record", false)
+    }
+
+    private suspend fun uploadCloudSaveNow(relativePath: String, updatedAtMillis: Long) {
+        val cloud = cloudAccess()
+        val saveFile = resolveSave(relativePath)
+        require(saveFile.isFile) { "Save file is missing" }
+        require(saveFile.length() <= CloudSaveEnvelopeCodec.MAX_RAW_PAYLOAD_BYTES) {
+            "Save exceeds the 15 MiB cloud payload limit"
+        }
+        val payload = saveFile.readBytes()
+        val envelope = CloudSaveEnvelopeCodec.encode(
+            gameId.value,
+            updatedAtMillis.coerceAtLeast(0L),
+            payload,
+        )
+        val request = CloudSaveSyncRequest(
+            gameId = gameId.value,
+            endpoint = cloud.endpoint,
+            payloadBytes = envelope.size.toLong(),
+            credentialKey = "cloud-save",
+            expectedSha256 = CloudSaveEnvelopeCodec.sha256(envelope),
+        )
+        cloud.client.upload(request, envelope, cloud.credentials)
     }
 
     private suspend fun cloudAccess(): CloudAccess {
