@@ -557,6 +557,7 @@ internal fun NavButton(item: Destination, selected: Destination, onSelect: (Dest
         modifier = Modifier
             .graphicsLayer { scaleX = scale; scaleY = scale }
             .hoverable(interactionSource)
+            .focusDebugTarget()
             .onFocusChanged { focused = it.isFocused }
             .clickable(interactionSource = interactionSource, indication = null) { onSelect(item) }
             .semantics {
@@ -2265,6 +2266,7 @@ private fun DiscoveryGameCard(game: DiscoveryGame, modifier: Modifier, onClick: 
     )
     Surface(
         modifier.graphicsLayer { scaleX = scale; scaleY = scale }
+            .focusDebugTarget()
             .onFocusChanged { focused = it.isFocused }.hoverable(source)
             .clickable(interactionSource = source, indication = null, onClick = onClick)
             .semantics { contentDescription = game.title + ", " + game.platformId + ", discover only, import an authorized copy to play"; role = Role.Button },
@@ -2341,6 +2343,7 @@ internal fun GameCard(
     Surface(
         modifier.focusRequester(focusRequester)
             .semantics { contentDescription = GameBoxSemantics.gameCardDescription(game, hero); role = Role.Button }
+            .focusDebugTarget()
             .onFocusChanged { focused = it.isFocused; if (it.isFocused) onFocused(game.id) }
             .graphicsLayer { scaleX = scale; scaleY = scale }
             .hoverable(source)
@@ -3550,7 +3553,8 @@ internal fun BlueprintShortcutTile(
     val accent = shortcutAccent(shortcut.title)
     Surface(
         modifier = modifier.graphicsLayer { scaleX = scale; scaleY = scale }
-            .hoverable(interactionSource).onFocusChanged { focused = it.isFocused }
+            .hoverable(interactionSource).focusDebugTarget()
+            .onFocusChanged { focused = it.isFocused }
             .clickable(interactionSource = interactionSource, indication = null, onClick = onClick),
         shape = RoundedCornerShape(12.dp),
         color = Color.Transparent,
@@ -3664,6 +3668,7 @@ private fun ShortcutCard(
             .graphicsLayer { scaleX = scale; scaleY = scale }
             .hoverable(interactionSource)
             .semantics { contentDescription = shortcut.title + ", " + if (installed) "installed" else "not installed" }
+            .focusDebugTarget()
             .onFocusChanged { focused = it.isFocused }
             .clickable(interactionSource = interactionSource, indication = null, onClick = onClick),
         shape = RoundedCornerShape(16.dp),
@@ -4548,6 +4553,7 @@ private fun SettingsActionRow(title: String, icon: ImageVector, onClick: () -> U
             .fillMaxWidth()
             .padding(vertical = 4.dp)
             .hoverable(interactionSource)
+            .focusDebugTarget()
             .onFocusChanged { focused = it.isFocused }
             .clickable(interactionSource = interactionSource, indication = null, onClick = onClick),
         color = if (emphasized) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.55f)
