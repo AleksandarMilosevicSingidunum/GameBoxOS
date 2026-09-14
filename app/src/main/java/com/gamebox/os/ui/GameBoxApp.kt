@@ -2380,6 +2380,56 @@ internal fun GameCard(
     }
 }
 
+internal enum class DetailControllerPrimaryAction {
+    PRIMARY, OPEN_DOWNLOADS, OPEN_GAME_SETTINGS
+}
+
+internal data class DetailControllerActionPlan(
+    val xLabel: String,
+    val xAction: DetailControllerPrimaryAction,
+    val yLabel: String,
+)
+
+internal fun detailControllerActionPlan(
+    state: InstallState,
+    favorite: Boolean,
+    authorizedFixture: Boolean,
+    workerActive: Boolean,
+    hasRemoteSource: Boolean,
+): DetailControllerActionPlan {
+    val action = when {
+        workerActive -> DetailControllerPrimaryAction.OPEN_DOWNLOADS
+        state in setOf(
+            InstallState.QUEUED,
+            InstallState.DOWNLOADING,
+            InstallState.VERIFYING,
+            InstallState.INSTALLING,
+        ) -> DetailControllerPrimaryAction.OPEN_DOWNLOADS
+        state == InstallState.PAUSED && !hasRemoteSource ->
+            DetailControllerPrimaryAction.OPEN_DOWNLOADS
+        state in setOf(InstallState.NOT_INSTALLED, InstallState.FAILED, InstallState.MISSING_FILES) &&
+            !authorizedFixture && !hasRemoteSource ->
+            DetailControllerPrimaryAction.OPEN_GAME_SETTINGS
+        else -> DetailControllerPrimaryAction.PRIMARY
+    }
+    val label = when (action) {
+        DetailControllerPrimaryAction.OPEN_DOWNLOADS -> "View download"
+        DetailControllerPrimaryAction.OPEN_GAME_SETTINGS -> "Game settings"
+        DetailControllerPrimaryAction.PRIMARY -> when {
+            state in setOf(InstallState.INSTALLED, InstallState.UPDATE_AVAILABLE) -> "Play"
+            state == InstallState.PAUSED -> "Resume"
+            state == InstallState.FAILED -> "Retry"
+            authorizedFixture -> "Install game"
+            else -> state.primaryAction()
+        }
+    }
+    return DetailControllerActionPlan(
+        xLabel = label,
+        xAction = action,
+        yLabel = if (favorite) "Unfavorite" else "Favorite",
+    )
+}
+
 @Composable
 private fun DetailsScreen(
     game: Game,
@@ -2427,6 +2477,47 @@ private fun DetailsScreen(
     var showGameSettings by remember(game.id) { mutableStateOf(false) }
     val workerActive = authorizedState.status == AuthorizedDownloadState.Status.QUEUED ||
         authorizedState.status == AuthorizedDownloadState.Status.RUNNING
+    val hasRemoteSource = game.sourceUrl != null && game.expectedSha256 != null
+    fun performPrimaryAction() {
+        if (isAuthorizedFixture) {
+            authorizedDownloadController.install()
+        } else {
+            when (game.state) {
+                InstallState.NOT_INSTALLED, InstallState.FAILED, InstallState.MISSING_FILES ->
+                    if (hasRemoteSource) remoteDownloadController.install(game)
+                    else repository.setInstallState(game.id, InstallState.FAILED)
+                InstallState.PAUSED ->
+                    if (hasRemoteSource) remoteDownloadController.resume(game) else onDownloads()
+                InstallState.QUEUED, InstallState.DOWNLOADING, InstallState.VERIFYING,
+                InstallState.INSTALLING -> onDownloads()
+                InstallState.INSTALLED, InstallState.UPDATE_AVAILABLE ->
+                    gameLaunchController.launch(game)
+            }
+        }
+    }
+    val controllerActions = LocalControllerActions.current
+    val actionPlan = detailControllerActionPlan(
+        state = game.state,
+        favorite = game.favorite,
+        authorizedFixture = isAuthorizedFixture,
+        workerActive = workerActive,
+        hasRemoteSource = hasRemoteSource,
+    )
+    DisposableEffect(controllerActions, actionPlan, game) {
+        controllerActions?.configure(
+            xLabel = actionPlan.xLabel,
+            onX = {
+                when (actionPlan.xAction) {
+                    DetailControllerPrimaryAction.PRIMARY -> performPrimaryAction()
+                    DetailControllerPrimaryAction.OPEN_DOWNLOADS -> onDownloads()
+                    DetailControllerPrimaryAction.OPEN_GAME_SETTINGS -> showGameSettings = true
+                }
+            },
+            yLabel = actionPlan.yLabel,
+            onY = { repository.setFavorite(game.id, !game.favorite) },
+        )
+        onDispose { controllerActions?.clear() }
+    }
     val exportBackupLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("application/octet-stream")
     ) { uri -> uri?.let(saveSafetyController::exportBackup) }
@@ -2585,27 +2676,7 @@ private fun DetailsScreen(
                 Spacer(Modifier.height(18.dp))
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Button(
-                        onClick = {
-                            if (isAuthorizedFixture) {
-                                authorizedDownloadController.install()
-                            } else {
-                                when (game.state) {
-                                    InstallState.NOT_INSTALLED, InstallState.FAILED, InstallState.MISSING_FILES ->
-                                        if (game.sourceUrl != null && game.expectedSha256 != null) {
-                                            remoteDownloadController.install(game)
-                                        } else {
-                                            repository.setInstallState(game.id, InstallState.FAILED)
-                                        }
-                                    InstallState.PAUSED ->
-                                        if (game.sourceUrl != null && game.expectedSha256 != null) remoteDownloadController.resume(game)
-                                        else onDownloads()
-                                    InstallState.QUEUED, InstallState.DOWNLOADING, InstallState.VERIFYING,
-                                    InstallState.INSTALLING -> onDownloads()
-                                    InstallState.INSTALLED, InstallState.UPDATE_AVAILABLE ->
-                                        gameLaunchController.launch(game)
-                                }
-                            }
-                        },
+                        onClick = ::performPrimaryAction,
                         enabled = when {
                             isAuthorizedFixture -> !workerActive
                             game.state in setOf(
