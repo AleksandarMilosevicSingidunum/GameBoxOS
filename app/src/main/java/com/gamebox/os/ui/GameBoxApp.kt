@@ -174,7 +174,9 @@ fun GameBoxApp(
         .getOrDefault(Destination.HOME)
     val selectedGameId = uiState.selectedGameId?.let(::GameId)
     val restorableGameId = uiState.restoreFocus(destination.name, games.map { it.id.value })?.let(::GameId)
-    val rememberGameFocus: (GameId) -> Unit = { uiState.rememberFocus(destination.name, it.value) }
+    val rememberGameFocus: (GameId) -> Unit = { focused ->
+        uiState.rememberFocus(destination.name, focused.value, games.map { it.id.value })
+    }
 
     LaunchedEffect(navigationRequest?.requestId) {
         navigationRequest?.let { request ->
