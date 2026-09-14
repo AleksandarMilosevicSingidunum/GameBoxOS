@@ -41,6 +41,7 @@ data class GameBoxSettings(
     val moonlightHost: String = "",
     val moonlightPort: Int = 47_984,
     val platformEmulatorDefaults: Map<String, String> = emptyMap(),
+    val recentShortcutLaunches: List<ShortcutLaunchRecord> = emptyList(),
 )
 
 class SettingsRepository(private val context: Context) {
@@ -68,6 +69,7 @@ class SettingsRepository(private val context: Context) {
             moonlightHost = preferences[MOONLIGHT_HOST] ?: "",
             moonlightPort = (preferences[MOONLIGHT_PORT] ?: 47_984).coerceIn(1, 65_535),
             platformEmulatorDefaults = decodePlatformDefaults(preferences[PLATFORM_EMULATOR_DEFAULTS]),
+            recentShortcutLaunches = decodeShortcutLaunchHistory(preferences[RECENT_SHORTCUT_LAUNCHES]),
         )
     }
 
@@ -185,6 +187,21 @@ class SettingsRepository(private val context: Context) {
         }
     }
 
+    suspend fun recordShortcutLaunch(packageName: String, launchedAtEpochMs: Long = System.currentTimeMillis()) {
+        context.gameBoxDataStore.edit { preferences ->
+            val updated = addShortcutLaunch(
+                decodeShortcutLaunchHistory(preferences[RECENT_SHORTCUT_LAUNCHES]),
+                packageName,
+                launchedAtEpochMs,
+            )
+            preferences[RECENT_SHORTCUT_LAUNCHES] = encodeShortcutLaunchHistory(updated)
+        }
+    }
+
+    suspend fun clearShortcutLaunchHistory() {
+        context.gameBoxDataStore.edit { it.remove(RECENT_SHORTCUT_LAUNCHES) }
+    }
+
     suspend fun setExternalLibraryUri(value: String) {
         context.gameBoxDataStore.edit { preferences ->
             if (value.isBlank()) preferences.remove(EXTERNAL_LIBRARY_URI)
@@ -279,6 +296,7 @@ class SettingsRepository(private val context: Context) {
         val MOONLIGHT_HOST = stringPreferencesKey("moonlight_host")
         val MOONLIGHT_PORT = androidx.datastore.preferences.core.intPreferencesKey("moonlight_port")
         val PLATFORM_EMULATOR_DEFAULTS = stringPreferencesKey("platform_emulator_defaults")
+        val RECENT_SHORTCUT_LAUNCHES = stringPreferencesKey("recent_shortcut_launches")
         const val THEGAMESDB_API_KEY = "thegamesdb_api_key"
         const val CLOUD_SAVE_USERNAME = "cloud_save_username"
         const val CLOUD_SAVE_PASSWORD = "cloud_save_password"
