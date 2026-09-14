@@ -3113,6 +3113,7 @@ private fun AppHubScreen(
             shortcuts = visibleShortcuts,
             installedPackages = launchIntents.filterValues { it != null }.keys,
             moonlightStatus = moonlightStatus,
+            settingsRepository = settingsRepository,
             message = message,
             onLaunch = ::launchShortcut,
         )
@@ -3161,7 +3162,8 @@ private fun AppHubScreen(
 @Composable
 private fun BlueprintAppHubScreen(
     title: String, subtitle: String, shortcuts: List<AppShortcut>, installedPackages: Set<String>,
-    moonlightStatus: MoonlightStatus, message: String?, onLaunch: (AppShortcut) -> Unit,
+    moonlightStatus: MoonlightStatus, settingsRepository: SettingsRepository,
+    message: String?, onLaunch: (AppShortcut) -> Unit,
 ) {
     val isPc = title == "PC Hub"
     val context = LocalContext.current
