@@ -32,6 +32,17 @@ coverage and the Windows client against the Android device endpoint. This change
 does not implement file transfer/synchronization, durable pairing discovery, or
 general save management, and does not close the full EXT-14 acceptance gate.
 
+
+## Nearest-neighbor controller focus recovery (UI-42)
+
+Game-card focus now persists both the stable game ID and its ordered position for each
+primary destination. When the focused title is removed by uninstall/catalog changes,
+the UI first selects the title that moved into the same position, or the preceding
+title when the removed card was last. Empty collections retain no invalid focus target.
+The position survives activity/process state restoration while older saved-state data
+continues to decode. JVM tests cover middle removal, end removal after serialization,
+stable repeated restoration, empty collections, and legacy focus state.
+
 ## Next critical-path work
 
 Durable launch-session work (DATA-07, audit P1 session recovery): database version 12
