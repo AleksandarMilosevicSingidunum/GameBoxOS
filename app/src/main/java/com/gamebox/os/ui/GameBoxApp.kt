@@ -323,7 +323,14 @@ fun GameBoxApp(
                             focusSearchOnEnter = focusStoreSearchOnEnter,
                             onSearchFocusHandled = { focusStoreSearchOnEnter = false },
                         ) { uiState.openGame(it.id.value) }
-                        Destination.DOWNLOADS -> DownloadsScreen(repository, downloadRepository, remoteDownloadController, compact)
+                        Destination.DOWNLOADS -> DownloadsScreen(
+                            repository,
+                            downloadRepository,
+                            remoteDownloadController,
+                            compact,
+                            onStore = { uiState.openDestination(Destination.STORE.name) },
+                            onSettings = { uiState.openDestination(Destination.SETTINGS.name) },
+                        )
                         Destination.MEDIA -> AppHubScreen(
                             "Media",
                             "Launch your living-room apps and return to GameBox",
@@ -2810,10 +2817,84 @@ internal fun DownloadProgressIndicator(job: com.gamebox.os.domain.DownloadJob, m
     )
 }
 
+internal enum class DownloadControllerAction {
+    OPEN_STORE, RETRY_FAILED, OPEN_SETTINGS, PAUSE_ACTIVE, RESUME_PAUSED
+}
+
+internal data class DownloadControllerActionPlan(
+    val xLabel: String,
+    val xAction: DownloadControllerAction,
+    val yLabel: String,
+    val yAction: DownloadControllerAction,
+)
+
+internal fun downloadControllerActionPlan(statuses: Collection<DownloadStatus>): DownloadControllerActionPlan {
+    val xAction = if (statuses.any { it == DownloadStatus.FAILED || it == DownloadStatus.CANCELLED }) {
+        DownloadControllerAction.RETRY_FAILED
+    } else {
+        DownloadControllerAction.OPEN_STORE
+    }
+    val yAction = when {
+        DownloadStatus.DOWNLOADING in statuses -> DownloadControllerAction.PAUSE_ACTIVE
+        DownloadStatus.PAUSED in statuses -> DownloadControllerAction.RESUME_PAUSED
+        else -> DownloadControllerAction.OPEN_SETTINGS
+    }
+    return DownloadControllerActionPlan(
+        xLabel = if (xAction == DownloadControllerAction.RETRY_FAILED) "Retry failed" else "Browse Store",
+        xAction = xAction,
+        yLabel = when (yAction) {
+            DownloadControllerAction.PAUSE_ACTIVE -> "Pause all"
+            DownloadControllerAction.RESUME_PAUSED -> "Resume all"
+            else -> "Settings"
+        },
+        yAction = yAction,
+    )
+}
+
 @Composable
-private fun DownloadsScreen(repository: GameRepository, downloadRepository: DownloadRepository, remoteDownloadController: RemoteDownloadController, compact: Boolean) {
+private fun DownloadsScreen(
+    repository: GameRepository,
+    downloadRepository: DownloadRepository,
+    remoteDownloadController: RemoteDownloadController,
+    compact: Boolean,
+    onStore: () -> Unit,
+    onSettings: () -> Unit,
+) {
     val jobs by downloadRepository.observeJobs().collectAsState()
     val context = LocalContext.current
+    val controllerActions = LocalControllerActions.current
+    val actionable = jobs.mapNotNull { job ->
+        repository.game(job.gameId)
+            ?.takeIf { it.sourceUrl != null && it.expectedSha256 != null }
+            ?.let { game -> job to game }
+    }
+    val actionPlan = downloadControllerActionPlan(actionable.map { it.first.status })
+    DisposableEffect(controllerActions, actionPlan, actionable) {
+        controllerActions?.configure(
+            xLabel = actionPlan.xLabel,
+            onX = {
+                when (actionPlan.xAction) {
+                    DownloadControllerAction.RETRY_FAILED -> actionable
+                        .filter { it.first.status == DownloadStatus.FAILED || it.first.status == DownloadStatus.CANCELLED }
+                        .forEach { remoteDownloadController.install(it.second) }
+                    else -> onStore()
+                }
+            },
+            yLabel = actionPlan.yLabel,
+            onY = {
+                when (actionPlan.yAction) {
+                    DownloadControllerAction.PAUSE_ACTIVE -> actionable
+                        .filter { it.first.status == DownloadStatus.DOWNLOADING }
+                        .forEach { remoteDownloadController.pause(it.second) }
+                    DownloadControllerAction.RESUME_PAUSED -> actionable
+                        .filter { it.first.status == DownloadStatus.PAUSED }
+                        .forEach { remoteDownloadController.resume(it.second) }
+                    else -> onSettings()
+                }
+            },
+        )
+        onDispose { controllerActions?.clear() }
+    }
     val telemetryTracker = remember { DownloadTelemetryTracker() }
     Column(Modifier.fillMaxSize().verticalScroll(restoredScrollState("downloads"))) {
         Text(if (compact) "Downloads" else "Download Manager", fontSize = if (compact) 28.sp else 17.sp, fontWeight = FontWeight.Bold)
