@@ -41,6 +41,19 @@ interface GameDao {
     @Query("UPDATE games SET installState = :state WHERE id = :id")
     suspend fun updateInstallState(id: String, state: String)
 
+    @Query("""
+        UPDATE games
+        SET installState = 'NOT_INSTALLED',
+            localContentRelativePath = NULL,
+            localContentSha256 = NULL,
+            localContentMimeType = NULL,
+            localContentFilesJson = NULL
+        WHERE id = :id
+          AND installState = 'MISSING_FILES'
+          AND localContentRelativePath IS NOT NULL
+    """)
+    suspend fun forgetMissingImportedContent(id: String): Int
+
     @Query("UPDATE games SET emulatorPackage = :packageName, graphicsProfile = :profile WHERE id = :id")
     suspend fun updateEmulatorSettings(id: String, packageName: String?, profile: String)
 

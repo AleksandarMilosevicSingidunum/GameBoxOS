@@ -89,6 +89,9 @@ class RoomGameRepository(
         dao.upsert(mergeImportedGame(existing, imported).toEntity())
     }
 
+    override suspend fun forgetMissingImportedContent(id: GameId): Boolean =
+        dao.forgetMissingImportedContent(id.value) == 1
+
     override suspend fun registerManagedSave(
         id: GameId,
         relativePath: String,

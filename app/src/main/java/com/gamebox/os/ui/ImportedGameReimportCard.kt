@@ -4,6 +4,8 @@ import android.provider.OpenableColumns
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.*
@@ -30,6 +32,7 @@ internal fun ImportedGameReimportCard(game: Game, importer: AuthorizedRomImporte
     val scope = rememberCoroutineScope()
     var busy by remember(game.id) { mutableStateOf(false) }
     var message by remember(game.id) { mutableStateOf<String?>(null) }
+    var confirmForget by remember(game.id) { mutableStateOf(false) }
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
         if (uris.isEmpty()) message = "No files selected" else {
             busy = true
@@ -81,14 +84,52 @@ internal fun ImportedGameReimportCard(game: Game, importer: AuthorizedRomImporte
             }
         }
     }
+    if (confirmForget) {
+        AlertDialog(
+            onDismissRequest = { confirmForget = false },
+            title = { Text("Forget missing game files?") },
+            text = {
+                Text("GameBox will remove only its stale file references. Saves, backups, artwork, favorites, metadata and play history are retained. You can import or install the game again later.")
+            },
+            confirmButton = {
+                Button(onClick = {
+                    confirmForget = false
+                    busy = true
+                    scope.launch {
+                        message = try {
+                            val forgotten = withContext(Dispatchers.IO + NonCancellable) {
+                                repository.forgetMissingImportedContent(game.id)
+                            }
+                            if (forgotten) "Missing file references forgotten. Saves and library metadata retained."
+                            else "Nothing changed because the game state changed; reopen Details and retry."
+                        } catch (error: Exception) {
+                            if (error is CancellationException) throw error
+                            "Could not forget missing files: " +
+                                (error.message?.take(160) ?: "check storage and retry")
+                        } finally { busy = false }
+                    }
+                }) { Text("Forget file references") }
+            },
+            dismissButton = { TextButton(onClick = { confirmForget = false }) { Text("Cancel") } },
+        )
+    }
     if (game.canReimportContent() || busy || message != null) {
         Surface(Modifier.fillMaxWidth().padding(bottom = 12.dp), color = MaterialTheme.colorScheme.surfaceVariant) {
             Column(Modifier.padding(16.dp)) {
-                Text("Restore imported game", style = MaterialTheme.typography.titleMedium)
-                Text("Select the original game file, or the descriptor and all tracks with their original filenames. Checksums must match. Saves and history are kept.")
+                Text(
+                    if (game.canReimportContent()) "Repair missing game files" else "Game file repair",
+                    style = MaterialTheme.typography.titleMedium,
+                )
+                Text("Select the original game file, or the descriptor and all tracks with their original filenames. Checksums must match. You can instead forget stale file references. Saves and history are always kept.")
                 if (busy) LinearProgressIndicator(Modifier.fillMaxWidth())
-                Button(enabled = enabled && !busy && game.canReimportContent(),
-                    onClick = { picker.launch(arrayOf("*/*")) }) { Text("Select game files to reimport") }
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(enabled = enabled && !busy && game.canReimportContent(),
+                        onClick = { picker.launch(arrayOf("*/*")) }) { Text("Locate files") }
+                    TextButton(
+                        enabled = enabled && !busy && game.canReimportContent(),
+                        onClick = { confirmForget = true },
+                    ) { Text("Forget") }
+                }
                 message?.let { Text(it) }
             }
         }
