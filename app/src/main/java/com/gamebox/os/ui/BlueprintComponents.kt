@@ -60,6 +60,7 @@ internal fun BlueprintViewport(
     focusDebugOverlayEnabled: Boolean = false,
     controllerActions: ControllerActionRegistry? = null,
     uiState: GameBoxUiState? = null,
+    runtimeDeviceStatus: RuntimeDeviceStatus = RuntimeDeviceStatus(),
     content: @Composable () -> Unit,
 ) {
     val density = LocalDensity.current
@@ -83,6 +84,7 @@ internal fun BlueprintViewport(
                 LocalReducedMotion provides reducedMotion,
                 LocalControllerActions provides controllerActions,
                 LocalGameBoxUiState provides uiState,
+                LocalRuntimeDeviceStatus provides runtimeDeviceStatus,
                 LocalFocusDebugRegistry provides focusDebugRegistry.takeIf { focusDebugOverlayEnabled },
             ) {
                 content()
