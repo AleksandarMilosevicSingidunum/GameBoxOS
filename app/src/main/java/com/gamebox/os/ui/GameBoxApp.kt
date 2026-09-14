@@ -3016,6 +3016,14 @@ private fun DownloadMetricCard(icon: ImageVector, value: String, label: String, 
 }
 
 
+internal data class HubControllerLabels(val xLabel: String, val yLabel: String)
+
+internal fun hubControllerLabels(title: String, showUnavailable: Boolean): HubControllerLabels =
+    HubControllerLabels(
+        xLabel = if (showUnavailable) "Installed only" else "Show setup",
+        yLabel = if (title == "PC Hub") "Desktop mode" else "Audio",
+    )
+
 internal data class AppShortcut(
     val title: String,
     val description: String,
@@ -3039,7 +3047,6 @@ private val pcShortcuts = listOf(
     AppShortcut("Termux", "Linux terminal", "com.termux"),
     AppShortcut("Files", "Android document manager", "com.google.android.documentsui"),
     AppShortcut("Chrome", "Web browser", "com.android.chrome"),
-    AppShortcut("Android desktop", "Return to the DeX or Android home screen", "__android_home__")
 )
 
 @Composable
@@ -3054,6 +3061,28 @@ private fun AppHubScreen(
     val currentSettings by settingsRepository.settings.collectAsState(
         initial = com.gamebox.os.settings.GameBoxSettings()
     )
+    val controllerActions = LocalControllerActions.current
+    val scope = rememberCoroutineScope()
+    val controllerLabels = hubControllerLabels(title, currentSettings.showUnavailableShortcuts)
+    DisposableEffect(controllerActions, controllerLabels) {
+        controllerActions?.configure(
+            xLabel = controllerLabels.xLabel,
+            onX = {
+                scope.launch {
+                    settingsRepository.setShowUnavailableShortcuts(
+                        !currentSettings.showUnavailableShortcuts
+                    )
+                }
+            },
+            yLabel = controllerLabels.yLabel,
+            onY = {
+                val intent = if (title == "PC Hub") desktopHomeIntent()
+                    else Intent(Settings.ACTION_SOUND_SETTINGS)
+                runCatching { context.startActivity(intent) }
+            },
+        )
+        onDispose { controllerActions?.clear() }
+    }
     val launchIntents = remember(shortcuts) {
         shortcuts.associate { shortcut ->
             shortcut.packageName to if (shortcut.packageName == "__android_home__") {
