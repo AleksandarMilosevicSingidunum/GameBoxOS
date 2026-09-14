@@ -64,6 +64,50 @@ class GameDaoIntegrationTest {
         }
     }
 
+
+    @Test
+    fun forgettingMissingImportClearsOnlyStaleContentReferences() = runBlocking {
+        val missing = GameEntity(
+            id = "missing-import", title = "Missing Import", platform = "PS2", year = 2001,
+            genre = "RPG", sizeMb = 4096, installState = InstallState.MISSING_FILES.name,
+            lastPlayed = "2026-09-10T12:00:00Z", minutesPlayed = 75, favorite = true,
+            artworkUrl = "https://example.com/cover.jpg", description = "Retained metadata",
+            emulatorPackage = "xyz.aethersx2.android", graphicsProfile = "Compatibility",
+            localContentRelativePath = "missing-import/game.chd",
+            localContentSha256 = "a".repeat(64),
+            localContentMimeType = "application/x-chd",
+            localContentFilesJson = "[]",
+        )
+        val installed = missing.copy(id = "installed-import", installState = InstallState.INSTALLED.name)
+        val remoteMissing = missing.copy(
+            id = "remote-missing", localContentRelativePath = null,
+            localContentSha256 = null, localContentMimeType = null, localContentFilesJson = null,
+            sourceUrl = "https://example.com/game.chd", expectedSha256 = "b".repeat(64),
+        )
+        dao.upsertAll(listOf(missing, installed, remoteMissing))
+
+        assertEquals(1, dao.forgetMissingImportedContent("missing-import"))
+        assertEquals(0, dao.forgetMissingImportedContent("missing-import"))
+        assertEquals(0, dao.forgetMissingImportedContent("installed-import"))
+        assertEquals(0, dao.forgetMissingImportedContent("remote-missing"))
+
+        val forgotten = requireNotNull(dao.getById("missing-import"))
+        assertEquals(InstallState.NOT_INSTALLED.name, forgotten.installState)
+        assertEquals(null, forgotten.localContentRelativePath)
+        assertEquals(null, forgotten.localContentSha256)
+        assertEquals(null, forgotten.localContentMimeType)
+        assertEquals(null, forgotten.localContentFilesJson)
+        assertTrue(forgotten.favorite)
+        assertEquals(75, forgotten.minutesPlayed)
+        assertEquals("2026-09-10T12:00:00Z", forgotten.lastPlayed)
+        assertEquals("https://example.com/cover.jpg", forgotten.artworkUrl)
+        assertEquals("Retained metadata", forgotten.description)
+        assertEquals("xyz.aethersx2.android", forgotten.emulatorPackage)
+        assertEquals("Compatibility", forgotten.graphicsProfile)
+        assertEquals(InstallState.INSTALLED.name, dao.getById("installed-import")?.installState)
+        assertEquals(InstallState.MISSING_FILES.name, dao.getById("remote-missing")?.installState)
+    }
+
     @Test
     fun upsertAndUpdatePreserveRichMetadata() = runBlocking {
         dao.upsertAll(
