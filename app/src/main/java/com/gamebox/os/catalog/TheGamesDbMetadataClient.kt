@@ -1,6 +1,7 @@
 package com.gamebox.os.catalog
 
 import com.gamebox.os.domain.Game
+import com.gamebox.os.domain.normalizeCatalogTitle
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
@@ -70,15 +71,26 @@ internal object TheGamesDbMetadataParser {
     fun enrich(game: Game, payload: String, json: Json = Json { ignoreUnknownKeys = true }): Game =
         runCatching {
             val root = json.parseToJsonElement(payload).jsonObject
-            val first = root["data"]?.jsonObject
+            val candidates = root["data"]?.jsonObject
                 ?.get("games")?.jsonArray
-                ?.firstOrNull()?.jsonObject
-                ?: return@runCatching game
-            val overview = first["overview"]?.jsonPrimitive?.contentOrNull
+                ?.mapNotNull { runCatching { it.jsonObject }.getOrNull() }
+                .orEmpty()
+            val requestedTitle = normalizeCatalogTitle(game.title)
+            if (requestedTitle.isEmpty()) return@runCatching game
+            val exactMatches = candidates.filter { candidate ->
+                val providerTitle = candidate["game_title"]?.jsonPrimitive?.contentOrNull
+                    ?: candidate["title"]?.jsonPrimitive?.contentOrNull
+                normalizeCatalogTitle(providerTitle.orEmpty()) == requestedTitle
+            }
+            // Name lookup can return similarly named games and the same title on several
+            // platforms. Never attach metadata automatically unless the title identifies
+            // exactly one candidate; ambiguous results require an explicit user choice.
+            val selected = exactMatches.singleOrNull() ?: return@runCatching game
+            val overview = selected["overview"]?.jsonPrimitive?.contentOrNull
                 ?.trim()
                 ?.takeIf { it.isNotEmpty() }
                 ?.take(4_000)
-            val artworkPath = first["boxart"]?.jsonObject
+            val artworkPath = selected["boxart"]?.jsonObject
                 ?.get("thumb")?.jsonPrimitive?.contentOrNull
             val artworkBase = root["include"]?.jsonObject
                 ?.get("boxart")?.jsonObject
