@@ -23,6 +23,8 @@ data class GameBoxSettings(
     val safeAreaPercent: Float = 0.04f,
     val reducedMotion: Boolean = false,
     val focusDebugOverlayEnabled: Boolean = false,
+    val developerLayoutMode: DeveloperLayoutMode = DeveloperLayoutMode.AUTO,
+    val catalogFailureSimulation: CatalogFailureSimulation = CatalogFailureSimulation.LIVE,
     val activeProfileName: String = "Local player",
     val showUnavailableGames: Boolean = true,
     val showUnavailableShortcuts: Boolean = true,
@@ -48,6 +50,8 @@ class SettingsRepository(private val context: Context) {
             safeAreaPercent = preferences[SAFE_AREA] ?: 0.04f,
             reducedMotion = preferences[REDUCED_MOTION] ?: false,
             focusDebugOverlayEnabled = preferences[FOCUS_DEBUG_OVERLAY] ?: false,
+            developerLayoutMode = DeveloperLayoutMode.fromStored(preferences[DEVELOPER_LAYOUT_MODE]),
+            catalogFailureSimulation = CatalogFailureSimulation.fromStored(preferences[CATALOG_FAILURE_SIMULATION]),
             activeProfileName = preferences[ACTIVE_PROFILE] ?: "Local player",
             showUnavailableGames = preferences[SHOW_UNAVAILABLE] ?: true,
             showUnavailableShortcuts = preferences[SHOW_UNAVAILABLE_SHORTCUTS] ?: true,
@@ -220,6 +224,14 @@ class SettingsRepository(private val context: Context) {
         context.gameBoxDataStore.edit { it[FOCUS_DEBUG_OVERLAY] = value }
     }
 
+    suspend fun setDeveloperLayoutMode(value: DeveloperLayoutMode) {
+        context.gameBoxDataStore.edit { it[DEVELOPER_LAYOUT_MODE] = value.name }
+    }
+
+    suspend fun setCatalogFailureSimulation(value: CatalogFailureSimulation) {
+        context.gameBoxDataStore.edit { it[CATALOG_FAILURE_SIMULATION] = value.name }
+    }
+
     suspend fun setActiveProfileName(value: String) {
         require(value in setOf("Local player", "Guest")) { "Unsupported local profile" }
         context.gameBoxDataStore.edit { it[ACTIVE_PROFILE] = value }
@@ -249,6 +261,8 @@ class SettingsRepository(private val context: Context) {
         val SAFE_AREA = floatPreferencesKey("safe_area_percent")
         val REDUCED_MOTION = booleanPreferencesKey("reduced_motion")
         val FOCUS_DEBUG_OVERLAY = booleanPreferencesKey("focus_debug_overlay")
+        val DEVELOPER_LAYOUT_MODE = stringPreferencesKey("developer_layout_mode")
+        val CATALOG_FAILURE_SIMULATION = stringPreferencesKey("catalog_failure_simulation")
         val ACTIVE_PROFILE = stringPreferencesKey("active_profile")
         val SHOW_UNAVAILABLE = booleanPreferencesKey("show_unavailable_games")
         val SHOW_UNAVAILABLE_SHORTCUTS = booleanPreferencesKey("show_unavailable_shortcuts")
