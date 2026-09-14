@@ -59,7 +59,7 @@ internal fun rememberRuntimeDeviceStatus(): RuntimeDeviceStatus {
         val inputManager = context.getSystemService(InputManager::class.java)
         val audioManager = context.getSystemService(AudioManager::class.java)
         val connectivityManager = context.getSystemService(ConnectivityManager::class.java)
-        val changed = { revision++ }
+        val changed: () -> Unit = { revision += 1 }
 
         val inputListener = object : InputManager.InputDeviceListener {
             override fun onInputDeviceAdded(deviceId: Int) = changed()
