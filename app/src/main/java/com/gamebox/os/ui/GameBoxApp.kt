@@ -106,6 +106,7 @@ import com.gamebox.os.storage.ExternalStorageState
 import com.gamebox.os.settings.SettingsRepository
 import com.gamebox.os.settings.DeveloperLayoutMode
 import com.gamebox.os.settings.CatalogFailureSimulation
+import com.gamebox.os.settings.ShortcutLaunchRecord
 import com.gamebox.os.catalog.validateAuthorizedCatalogUrl
 import com.gamebox.os.catalog.CatalogSyncResult
 import com.gamebox.os.catalog.legalSourceLinks
@@ -3268,7 +3269,12 @@ private fun AppHubScreen(
     ).toSet()
     val visibleShortcuts = shortcuts.filter { it.packageName in visiblePackages }
     var message by remember { mutableStateOf<String?>(null) }
-    var recentMoonlightSessions by remember { mutableStateOf(emptyList<String>()) }
+    val shortcutsByPackage = remember(shortcuts) { shortcuts.associateBy(AppShortcut::packageName) }
+    val recentLaunches = currentSettings.recentShortcutLaunches
+        .filter { it.packageName in shortcutsByPackage }
+    val recentMoonlightSessions = recentLaunches
+        .filter { it.packageName == "com.limelight" }
+        .map { "Moonlight · " + formatShortcutLaunchTime(it.launchedAtEpochMs) }
     val moonlightStatus = remember(launchIntents, recentMoonlightSessions) {
         val connectivityManager = context.getSystemService(ConnectivityManager::class.java)
         val network = connectivityManager?.activeNetwork
@@ -3290,11 +3296,8 @@ private fun AppHubScreen(
         } else {
             try {
                 context.startActivity(launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-                if (shortcut.title == "Moonlight") {
-                    recentMoonlightSessions = addRecentMoonlightSession(
-                        recentMoonlightSessions,
-                        "Moonlight session " + java.time.LocalTime.now().withNano(0)
-                    )
+                scope.launch {
+                    settingsRepository.recordShortcutLaunch(shortcut.packageName)
                 }
                 message = "Opened " + shortcut.title
             } catch (_: ActivityNotFoundException) {
@@ -3310,6 +3313,7 @@ private fun AppHubScreen(
             installedPackages = launchIntents.filterValues { it != null }.keys,
             moonlightStatus = moonlightStatus,
             settingsRepository = settingsRepository,
+            recentLaunches = recentLaunches,
             message = message,
             onLaunch = ::launchShortcut,
         )
@@ -3356,6 +3360,19 @@ private fun AppHubScreen(
                 repeat((if (compact) 1 else 3) - row.size) { Spacer(Modifier.weight(1f)) }
             }
         }
+        if (recentLaunches.isNotEmpty()) {
+            Spacer(Modifier.height(8.dp))
+            Text("Recently opened", fontWeight = FontWeight.SemiBold)
+            recentLaunches.take(3).forEach { launch ->
+                val shortcut = shortcutsByPackage[launch.packageName]
+                if (shortcut != null) {
+                    Text(
+                        shortcut.title + " · " + formatShortcutLaunchTime(launch.launchedAtEpochMs),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+        }
         message?.let {
             Text(it, color = MaterialTheme.colorScheme.primary)
         }
@@ -3371,6 +3388,7 @@ internal fun desktopHomeIntent(): Intent =
 private fun BlueprintAppHubScreen(
     title: String, subtitle: String, shortcuts: List<AppShortcut>, installedPackages: Set<String>,
     moonlightStatus: MoonlightStatus, settingsRepository: SettingsRepository,
+    recentLaunches: List<ShortcutLaunchRecord>,
     message: String?, onLaunch: (AppShortcut) -> Unit,
 ) {
     val isPc = title == "PC Hub"
@@ -3409,7 +3427,7 @@ private fun BlueprintAppHubScreen(
                 }
                 Text("Recent sessions", fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
                 BlueprintPanel(Modifier.fillMaxWidth()) {
-                    if (moonlightStatus.recentSessions.isEmpty()) Text("No streaming sessions opened during this visit.", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp)
+                    if (moonlightStatus.recentSessions.isEmpty()) Text("No Moonlight sessions opened yet.", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp)
                     moonlightStatus.recentSessions.take(3).forEach { Text(it, fontSize = 11.sp) }
                 }
                 Text("Connection setup", fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
@@ -3433,9 +3451,25 @@ private fun BlueprintAppHubScreen(
                     }
                 }
                 BlueprintPanel(Modifier.fillMaxWidth()) {
-                    Text("Pick up where you left off", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-                    Text("Open a media app to access its watch history, playlists and downloads. GameBox does not read your viewing history.",
-                        color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp)
+                    Text("Recently opened", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                    if (recentLaunches.isEmpty()) {
+                        Text(
+                            "No media apps opened yet. GameBox does not read private viewing history.",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontSize = 11.sp,
+                        )
+                    } else {
+                        val shortcutNames = shortcuts.associateBy(AppShortcut::packageName)
+                        recentLaunches.take(3).forEach { launch ->
+                            shortcutNames[launch.packageName]?.let { shortcut ->
+                                Text(
+                                    shortcut.title + " · " + formatShortcutLaunchTime(launch.launchedAtEpochMs),
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    fontSize = 11.sp,
+                                )
+                            }
+                        }
+                    }
                 }
             }
             Text("Quick actions", fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
@@ -3485,6 +3519,12 @@ private fun BlueprintAppHubScreen(
         }
     }
 }
+
+private fun formatShortcutLaunchTime(epochMs: Long): String =
+    java.text.DateFormat.getDateTimeInstance(
+        java.text.DateFormat.MEDIUM,
+        java.text.DateFormat.SHORT,
+    ).format(java.util.Date(epochMs))
 
 @Composable
 internal fun BlueprintShortcutTile(
