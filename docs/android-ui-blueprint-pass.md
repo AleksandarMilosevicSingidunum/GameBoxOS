@@ -30,12 +30,15 @@ aspect ratios necessarily change the rendered result.
 ## Verification
 
 The Android workflow builds the APK and runs unit/instrumentation tests.
-Its separate phone and DeX visual jobs install the production APK on API 35
-emulators and capture the real MainActivity, game details and all seven tabs.
-Screenshots and instrumentation/logcat output are published as
-`gamebox-ui-phone-<sha>` and `gamebox-ui-dex-<sha>` artifacts.
+Its separate phone, DeX and enlarged-text visual jobs install the production APK
+on API 35 emulators and capture the real MainActivity, game details and all seven
+tabs. Screenshots and instrumentation/logcat output are published as
+`gamebox-ui-phone-<sha>`, `gamebox-ui-dex-<sha>` and
+`gamebox-ui-large-text-<sha>` artifacts.
 
-Profile sizes: phone 1080 × 2400 at 420 dpi; DeX 1920 × 1080 at 160 dpi.
+Profile sizes: phone 1080 × 2400 at 420 dpi; DeX 1920 × 1080 at 160 dpi;
+large text 1920 × 1080 at 160 dpi with Android font scale set and verified at
+130%. The large-text profile is a repeatable layout regression gate, but
 Visual capture is not equivalent to a pixel-difference test or physical DeX,
 controller, emulator-launch or streaming acceptance testing.
 
