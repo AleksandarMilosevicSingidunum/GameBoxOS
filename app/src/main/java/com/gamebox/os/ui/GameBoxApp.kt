@@ -3126,6 +3126,13 @@ private fun AppHubScreen(
             MoonlightStatusPanel(moonlightStatus, compact)
             Spacer(Modifier.height(12.dp))
             MoonlightHostProbePanel(settingsRepository, Modifier.fillMaxWidth())
+            OutlinedButton(
+                onClick = { runCatching { context.startActivity(desktopHomeIntent()) } },
+                modifier = Modifier.semantics { contentDescription = "Return to Android or DeX desktop" },
+            ) {
+                Icon(Icons.Rounded.DesktopWindows, null, Modifier.size(16.dp))
+                Text("Desktop mode", Modifier.padding(start = 6.dp))
+            }
             Spacer(Modifier.height(18.dp))
         } else {
             Spacer(Modifier.height(18.dp))
@@ -3158,6 +3165,11 @@ private fun AppHubScreen(
         }
     }
 }
+
+internal fun desktopHomeIntent(): Intent =
+    Intent(Intent.ACTION_MAIN)
+        .addCategory(Intent.CATEGORY_HOME)
+        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
 
 @Composable
 private fun BlueprintAppHubScreen(
@@ -3242,6 +3254,15 @@ private fun BlueprintAppHubScreen(
                 }
                 shortcuts.firstOrNull { it.title == "Files" }?.let { files ->
                     OutlinedButton(onClick = { onLaunch(files) }) { Text("Open files", fontSize = 11.sp) }
+                }
+                if (isPc) {
+                    OutlinedButton(
+                        onClick = { runCatching { context.startActivity(desktopHomeIntent()) } },
+                        modifier = Modifier.semantics { contentDescription = "Return to Android or DeX desktop" },
+                    ) {
+                        Icon(Icons.Rounded.DesktopWindows, null, Modifier.size(16.dp))
+                        Text("Desktop mode", Modifier.padding(start = 6.dp), fontSize = 11.sp)
+                    }
                 }
             }
             message?.let { Text(it, color = MaterialTheme.colorScheme.primary, fontSize = 12.sp,
