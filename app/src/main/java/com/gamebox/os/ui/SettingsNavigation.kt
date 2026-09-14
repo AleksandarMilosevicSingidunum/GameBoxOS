@@ -6,6 +6,12 @@ enum class SettingsSection(val label: String) {
     SAVES_CLOUD("Saves & Cloud Sync"), SYSTEM("System"),
 }
 
+internal fun adjacentSettingsSection(current: SettingsSection, offset: Int): SettingsSection {
+    val sections = SettingsSection.entries
+    val index = (current.ordinal + offset).mod(sections.size)
+    return sections[index]
+}
+
 object SettingsNavigationPolicy {
     fun selectedSection(
         scrollOffset: Int,
