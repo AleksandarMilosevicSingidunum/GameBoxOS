@@ -3683,6 +3683,7 @@ private fun SettingsScreen(
     downloadRepository: DownloadRepository
 ) {
     val context = LocalContext.current
+    val controllerActions = LocalControllerActions.current
     val currentSettings by settingsRepository.settings.collectAsState(initial = com.gamebox.os.settings.GameBoxSettings())
     val diagnosticGames by gameRepository.observeGames().collectAsState()
     val diagnosticDownloads by downloadRepository.observeJobs().collectAsState()
@@ -4263,6 +4264,15 @@ private fun SettingsScreen(
     val navigateToSection: (SettingsSection) -> Unit = { section ->
         selectedSection = section
         scope.launch { scrollState.animateScrollTo(sectionOffsets[section] ?: 0) }
+    }
+    DisposableEffect(controllerActions, selectedSection, sectionOffsets.size) {
+        controllerActions?.configure(
+            xLabel = "Next section",
+            onX = { navigateToSection(adjacentSettingsSection(selectedSection, 1)) },
+            yLabel = "Previous section",
+            onY = { navigateToSection(adjacentSettingsSection(selectedSection, -1)) },
+        )
+        onDispose { controllerActions?.clear() }
     }
     if (compact) {
         Column(Modifier.fillMaxSize()) {
