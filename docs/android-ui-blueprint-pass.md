@@ -39,7 +39,7 @@ tabs. Screenshots and instrumentation/logcat output are published as
 Profile sizes: phone 1080 × 2400 at 420 dpi; DeX 1920 × 1080 at 160 dpi;
 large text 1920 × 1080 at 160 dpi with Android font scale set and verified at
 130%. The large-text profile is a repeatable layout regression gate, but
-Visual capture is not equivalent to a pixel-difference test or physical DeX,
+visual capture is not equivalent to a pixel-difference test or physical DeX,
 controller, emulator-launch or streaming acceptance testing.
 
 ## Playing games
