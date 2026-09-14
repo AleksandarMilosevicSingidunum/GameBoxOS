@@ -196,6 +196,7 @@ fun GameBoxApp(
     BlueprintViewport(
         safeAreaPercent = appSettings.safeAreaPercent,
         reducedMotion = appSettings.reducedMotion,
+        focusDebugOverlayEnabled = appSettings.focusDebugOverlayEnabled,
         controllerActions = controllerActions,
         uiState = uiState,
     ) {
@@ -4163,6 +4164,29 @@ private fun SettingsScreen(
         Spacer(Modifier.height(12.dp))
         Spacer(Modifier.height(18.dp))
         SettingsSectionHeader("Developer and diagnostics")
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(Modifier.weight(1f)) {
+                Text("Focus diagnostics overlay")
+                Text(
+                    "Shows the focused Blueprint control, live bounds, and nearest directional targets.",
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.62f),
+                    fontSize = 12.sp,
+                )
+            }
+            Switch(
+                checked = currentSettings.focusDebugOverlayEnabled,
+                onCheckedChange = { enabled ->
+                    scope.launch { settingsRepository.setFocusDebugOverlayEnabled(enabled) }
+                },
+                modifier = Modifier.semantics {
+                    contentDescription = "Focus diagnostics overlay"
+                },
+            )
+        }
         Text(
             "Export a sanitized recovery bundle when troubleshooting. Credentials, remote URLs, checksums, paths, and save contents are excluded.",
             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.62f),

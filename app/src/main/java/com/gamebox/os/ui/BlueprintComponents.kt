@@ -57,11 +57,13 @@ internal val LocalReducedMotion = staticCompositionLocalOf { false }
 internal fun BlueprintViewport(
     safeAreaPercent: Float = 0f,
     reducedMotion: Boolean = false,
+    focusDebugOverlayEnabled: Boolean = false,
     controllerActions: ControllerActionRegistry? = null,
     uiState: GameBoxUiState? = null,
     content: @Composable () -> Unit,
 ) {
     val density = LocalDensity.current
+    val focusDebugRegistry = remember { FocusDebugRegistry() }
     BoxWithConstraints(Modifier.fillMaxSize()) {
         val useTvSafeArea = maxWidth >= 900.dp && maxWidth / maxHeight >= 1.5f
         val inset = safeAreaPercent.coerceIn(0f, 0.1f)
@@ -81,9 +83,11 @@ internal fun BlueprintViewport(
                 LocalReducedMotion provides reducedMotion,
                 LocalControllerActions provides controllerActions,
                 LocalGameBoxUiState provides uiState,
+                LocalFocusDebugRegistry provides focusDebugRegistry.takeIf { focusDebugOverlayEnabled },
             ) {
                 content()
             }
+            if (focusDebugOverlayEnabled) FocusDebugOverlay(focusDebugRegistry)
         }
     }
 }
@@ -104,6 +108,7 @@ internal fun Modifier.blueprintClick(onClick: () -> Unit): Modifier = composed {
         label = "blueprint-action",
     )
     this.graphicsLayer { scaleX = scale; scaleY = scale }
+        .focusDebugTarget()
         .onFocusChanged { focused = it.isFocused }
         .hoverable(source)
         .clickable(interactionSource = source, indication = androidx.compose.foundation.LocalIndication.current, onClick = onClick)
