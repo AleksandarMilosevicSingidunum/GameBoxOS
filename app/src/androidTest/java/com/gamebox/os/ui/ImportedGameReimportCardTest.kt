@@ -27,13 +27,27 @@ class ImportedGameReimportCardTest {
             ImportedGameReimportCard(game.value, app.container.authorizedRomImporter,
                 app.container.gameRepository, enabled = true)
         } }
-        compose.onNodeWithText("Select game files to reimport").assertIsDisplayed().assertIsEnabled()
+        compose.onNodeWithText("Locate files").assertIsDisplayed().assertIsEnabled()
         compose.runOnIdle { game.value = retained.copy(state = InstallState.INSTALLED) }
-        compose.onNodeWithText("Select game files to reimport").assertDoesNotExist()
+        compose.onNodeWithText("Locate files").assertDoesNotExist()
         compose.runOnIdle { game.value = retained.copy(state = InstallState.MISSING_FILES) }
-        compose.onNodeWithText("Select game files to reimport").assertIsEnabled()
+        compose.onNodeWithText("Locate files").assertIsEnabled()
         compose.runOnIdle { game.value = retained.copy(localContentRelativePath = null) }
-        compose.onNodeWithText("Restore imported game").assertDoesNotExist()
+        compose.onNodeWithText("Repair missing game files").assertDoesNotExist()
+    }
+
+    @Test fun forgetRequiresExplicitSaveSafeConfirmation() {
+        val app = ApplicationProvider.getApplicationContext<GameBoxApplication>()
+        compose.setContent { MaterialTheme {
+            ImportedGameReimportCard(retained.copy(state = InstallState.MISSING_FILES),
+                app.container.authorizedRomImporter, app.container.gameRepository, enabled = true)
+        } }
+
+        compose.onNodeWithText("Forget").assertIsDisplayed().performClick()
+        compose.onNodeWithText("Forget missing game files?").assertIsDisplayed()
+        compose.onNodeWithText("Forget file references").assertIsDisplayed()
+        compose.onNodeWithText("Cancel").performClick()
+        compose.onNodeWithText("Forget missing game files?").assertDoesNotExist()
     }
 
     @Test fun launchOrRecoveryGateDisablesPickerUntilSafe() {
@@ -43,9 +57,9 @@ class ImportedGameReimportCardTest {
             ImportedGameReimportCard(retained, app.container.authorizedRomImporter,
                 app.container.gameRepository, enabled = enabled.value)
         } }
-        compose.onNodeWithText("Select game files to reimport").assertIsNotEnabled()
+        compose.onNodeWithText("Locate files").assertIsNotEnabled()
         compose.runOnIdle { enabled.value = true }
-        compose.onNodeWithText("Select game files to reimport").assertIsEnabled()
+        compose.onNodeWithText("Locate files").assertIsEnabled()
     }
 }
 
