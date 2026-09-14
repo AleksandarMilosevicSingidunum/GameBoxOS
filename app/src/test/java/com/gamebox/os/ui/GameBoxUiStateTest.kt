@@ -34,6 +34,29 @@ class GameBoxUiStateTest {
         assertEquals("galaxy-patrol", legacy.restoreFocus("LIBRARY", listOf("galaxy-patrol")))
     }
 
+    @Test fun removedFocusedCardFallsForwardToSamePosition() {
+        val state = GameBoxUiState.create()
+        state.rememberFocus("LIBRARY", "middle", listOf("first", "middle", "last"))
+
+        assertEquals("last", state.restoreFocus("LIBRARY", listOf("first", "last")))
+        assertEquals("last", state.restoreFocus("LIBRARY", listOf("first", "last")))
+    }
+
+    @Test fun removedLastCardFallsBackToPreviousNeighborAfterStateRestore() {
+        val state = GameBoxUiState.create()
+        state.rememberFocus("STORE", "last", listOf("first", "middle", "last"))
+        val restored = GameBoxUiState.decode(state.encode())
+
+        assertEquals("middle", restored.restoreFocus("STORE", listOf("first", "middle")))
+    }
+
+    @Test fun removalFromEmptyCollectionHasNoFocusTarget() {
+        val state = GameBoxUiState.create()
+        state.rememberFocus("HOME", "only", listOf("only"))
+
+        assertNull(state.restoreFocus("HOME", emptyList()))
+    }
+
     @Test fun invalidOrUnavailableStateFallsBackSafely() {
         val restored = GameBoxUiState.decode(listOf("broken"))
         assertEquals("HOME", restored.destination)
