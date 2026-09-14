@@ -2,6 +2,7 @@ package com.gamebox.os
 
 import com.gamebox.os.ui.SettingsNavigationPolicy
 import com.gamebox.os.ui.SettingsSection
+import com.gamebox.os.ui.adjacentSettingsSection
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -26,6 +27,28 @@ class SettingsNavigationPolicyTest {
 
     @Test fun `lead distance activates an approaching heading`() {
         assertEquals(SettingsSection.DOWNLOADS, SettingsNavigationPolicy.selectedSection(820, anchors, 40))
+    }
+
+    @Test fun `next and previous settings sections follow declaration order`() {
+        assertEquals(
+            SettingsSection.CONTROLLERS,
+            adjacentSettingsSection(SettingsSection.STORAGE, 1),
+        )
+        assertEquals(
+            SettingsSection.SAVES_CLOUD,
+            adjacentSettingsSection(SettingsSection.SYSTEM, -1),
+        )
+    }
+
+    @Test fun `settings section navigation wraps in both directions`() {
+        assertEquals(
+            SettingsSection.STORAGE,
+            adjacentSettingsSection(SettingsSection.SYSTEM, 1),
+        )
+        assertEquals(
+            SettingsSection.SYSTEM,
+            adjacentSettingsSection(SettingsSection.STORAGE, -1),
+        )
     }
 }
 
