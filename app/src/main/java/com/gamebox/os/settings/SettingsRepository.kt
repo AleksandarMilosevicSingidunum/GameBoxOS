@@ -35,6 +35,8 @@ data class GameBoxSettings(
     val cloudSaveRegion: String = "us-east-1",
     val companionEnabled: Boolean = false,
     val companionPort: Int = 49_500,
+    val moonlightHost: String = "",
+    val moonlightPort: Int = 47_984,
     val platformEmulatorDefaults: Map<String, String> = emptyMap(),
 )
 
@@ -57,6 +59,8 @@ class SettingsRepository(private val context: Context) {
             cloudSaveRegion = preferences[CLOUD_SAVE_REGION] ?: "us-east-1",
             companionEnabled = preferences[COMPANION_ENABLED] ?: false,
             companionPort = (preferences[COMPANION_PORT] ?: 49_500).coerceIn(10_240, 65_535),
+            moonlightHost = preferences[MOONLIGHT_HOST] ?: "",
+            moonlightPort = (preferences[MOONLIGHT_PORT] ?: 47_984).coerceIn(1, 65_535),
             platformEmulatorDefaults = decodePlatformDefaults(preferences[PLATFORM_EMULATOR_DEFAULTS]),
         )
     }
@@ -141,6 +145,22 @@ class SettingsRepository(private val context: Context) {
         context.gameBoxDataStore.edit { preferences ->
             preferences[COMPANION_ENABLED] = enabled
             preferences[COMPANION_PORT] = port
+        }
+    }
+
+    suspend fun setMoonlightHost(host: String, port: Int) {
+        val normalized = normalizeMoonlightHost(host)
+        requireMoonlightPort(port)
+        context.gameBoxDataStore.edit { preferences ->
+            preferences[MOONLIGHT_HOST] = normalized
+            preferences[MOONLIGHT_PORT] = port
+        }
+    }
+
+    suspend fun clearMoonlightHost() {
+        context.gameBoxDataStore.edit { preferences ->
+            preferences.remove(MOONLIGHT_HOST)
+            preferences.remove(MOONLIGHT_PORT)
         }
     }
 
@@ -235,6 +255,8 @@ class SettingsRepository(private val context: Context) {
         val CLOUD_SAVE_REGION = stringPreferencesKey("cloud_save_region")
         val COMPANION_ENABLED = booleanPreferencesKey("companion_enabled")
         val COMPANION_PORT = androidx.datastore.preferences.core.intPreferencesKey("companion_port")
+        val MOONLIGHT_HOST = stringPreferencesKey("moonlight_host")
+        val MOONLIGHT_PORT = androidx.datastore.preferences.core.intPreferencesKey("moonlight_port")
         val PLATFORM_EMULATOR_DEFAULTS = stringPreferencesKey("platform_emulator_defaults")
         const val THEGAMESDB_API_KEY = "thegamesdb_api_key"
         const val CLOUD_SAVE_USERNAME = "cloud_save_username"
@@ -263,3 +285,24 @@ internal fun decodePlatformDefaults(value: String?): Map<String, String> =
         platform.all(Char::isLetterOrDigit) &&
             packageName.all { it.isLetterOrDigit() || it == '.' || it == '_' }
     }.toMap()
+
+
+internal fun normalizeMoonlightHost(value: String): String {
+    val trimmed = value.trim()
+    val bracketed = trimmed.startsWith('[') || trimmed.endsWith(']')
+    require(!bracketed || (trimmed.startsWith('[') && trimmed.endsWith(']'))) {
+        "IPv6 address brackets are incomplete"
+    }
+    val normalized = if (bracketed) trimmed.substring(1, trimmed.lastIndex) else trimmed
+    require(normalized.isNotEmpty() && normalized.length <= 253 &&
+        normalized.none(Char::isWhitespace) &&
+        normalized.none { it == '/' || it == '\\' || it == '?' || it == '#' || it == '@' }) {
+        "Enter a host name or IP address without a scheme or path"
+    }
+    return normalized
+}
+
+internal fun requireMoonlightPort(value: Int): Int {
+    require(value in 1..65_535) { "Moonlight port must be between 1 and 65535" }
+    return value
+}

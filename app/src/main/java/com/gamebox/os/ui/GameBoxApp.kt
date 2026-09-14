@@ -3113,6 +3113,7 @@ private fun AppHubScreen(
             shortcuts = visibleShortcuts,
             installedPackages = launchIntents.filterValues { it != null }.keys,
             moonlightStatus = moonlightStatus,
+            settingsRepository = settingsRepository,
             message = message,
             onLaunch = ::launchShortcut,
         )
@@ -3124,7 +3125,7 @@ private fun AppHubScreen(
         if (title == "PC Hub") {
             MoonlightStatusPanel(moonlightStatus, compact)
             Spacer(Modifier.height(12.dp))
-            MoonlightHostProbePanel(Modifier.fillMaxWidth())
+            MoonlightHostProbePanel(settingsRepository, Modifier.fillMaxWidth())
             Spacer(Modifier.height(18.dp))
         } else {
             Spacer(Modifier.height(18.dp))
@@ -3161,7 +3162,8 @@ private fun AppHubScreen(
 @Composable
 private fun BlueprintAppHubScreen(
     title: String, subtitle: String, shortcuts: List<AppShortcut>, installedPackages: Set<String>,
-    moonlightStatus: MoonlightStatus, message: String?, onLaunch: (AppShortcut) -> Unit,
+    moonlightStatus: MoonlightStatus, settingsRepository: SettingsRepository,
+    message: String?, onLaunch: (AppShortcut) -> Unit,
 ) {
     val isPc = title == "PC Hub"
     val context = LocalContext.current
@@ -3203,7 +3205,7 @@ private fun BlueprintAppHubScreen(
                     moonlightStatus.recentSessions.take(3).forEach { Text(it, fontSize = 11.sp) }
                 }
                 Text("Connection setup", fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
-                MoonlightHostProbePanel(Modifier.fillMaxWidth())
+                MoonlightHostProbePanel(settingsRepository, Modifier.fillMaxWidth())
             } else {
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp), contentPadding = PaddingValues(3.dp)) {
                     items(shortcuts, key = { it.packageName }) { shortcut ->

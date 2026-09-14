@@ -53,6 +53,15 @@ or concurrently changed records and retains saves, backups, metadata, artwork, f
 emulator preferences and play history. Instrumentation covers the confirmation UX and
 Room integration covers accepted, repeated and rejected resets plus retained fields.
 
+## Persistent PC streaming host configuration
+
+Both compact and wide PC Hub layouts now restore the configured Moonlight/Sunshine host
+and port from DataStore. **Check and save host** validates and persists DNS, IPv4, or
+bracketed IPv6 input before the bounded reachability probe; unreachable hosts remain saved
+for a later retry. **Clear saved host** removes both values. Schemes, paths, credentials,
+whitespace, broken brackets, and invalid ports are rejected without storing them. JVM
+tests cover normalization and rejection boundaries. Credentials remain owned by Moonlight.
+
 ## Next critical-path work
 
 Durable launch-session work (DATA-07, audit P1 session recovery): database version 12
