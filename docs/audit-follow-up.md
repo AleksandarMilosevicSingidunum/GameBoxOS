@@ -43,6 +43,16 @@ The position survives activity/process state restoration while older saved-state
 continues to decode. JVM tests cover middle removal, end removal after serialization,
 stable repeated restoration, empty collections, and legacy focus state.
 
+## Missing-content repair and safe forget (FILE-15)
+
+Imported titles whose files disappear now expose two explicit Details actions. **Locate
+files** reuses the checksum-verified single/multi-file reimport path. **Forget** requires
+confirmation, then atomically clears only stale imported-file references and changes the
+title to not installed. The guarded database update refuses installed, remote-download,
+or concurrently changed records and retains saves, backups, metadata, artwork, favorites,
+emulator preferences and play history. Instrumentation covers the confirmation UX and
+Room integration covers accepted, repeated and rejected resets plus retained fields.
+
 ## Next critical-path work
 
 Durable launch-session work (DATA-07, audit P1 session recovery): database version 12
