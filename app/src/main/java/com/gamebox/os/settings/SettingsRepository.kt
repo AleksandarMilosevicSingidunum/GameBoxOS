@@ -149,13 +149,8 @@ class SettingsRepository(private val context: Context) {
     }
 
     suspend fun setMoonlightHost(host: String, port: Int) {
-        val normalized = host.trim().removePrefix("[").removeSuffix("]")
-        require(normalized.isNotEmpty() && normalized.length <= 253 &&
-            normalized.none(Char::isWhitespace) &&
-            normalized.none { it == '/' || it == '\\' || it == '?' || it == '#' || it == '@' }) {
-            "Enter a host name or IP address without a scheme or path"
-        }
-        require(port in 1..65_535) { "Moonlight port must be between 1 and 65535" }
+        val normalized = normalizeMoonlightHost(host)
+        requireMoonlightPort(port)
         context.gameBoxDataStore.edit { preferences ->
             preferences[MOONLIGHT_HOST] = normalized
             preferences[MOONLIGHT_PORT] = port
@@ -290,3 +285,24 @@ internal fun decodePlatformDefaults(value: String?): Map<String, String> =
         platform.all(Char::isLetterOrDigit) &&
             packageName.all { it.isLetterOrDigit() || it == '.' || it == '_' }
     }.toMap()
+
+
+internal fun normalizeMoonlightHost(value: String): String {
+    val trimmed = value.trim()
+    val bracketed = trimmed.startsWith('[') || trimmed.endsWith(']')
+    require(!bracketed || (trimmed.startsWith('[') && trimmed.endsWith(']'))) {
+        "IPv6 address brackets are incomplete"
+    }
+    val normalized = if (bracketed) trimmed.substring(1, trimmed.lastIndex) else trimmed
+    require(normalized.isNotEmpty() && normalized.length <= 253 &&
+        normalized.none(Char::isWhitespace) &&
+        normalized.none { it == '/' || it == '\\' || it == '?' || it == '#' || it == '@' }) {
+        "Enter a host name or IP address without a scheme or path"
+    }
+    return normalized
+}
+
+internal fun requireMoonlightPort(value: Int): Int {
+    require(value in 1..65_535) { "Moonlight port must be between 1 and 65535" }
+    return value
+}
