@@ -165,6 +165,7 @@ fun GameBoxApp(
     val appSettings by settingsRepository.settings.collectAsState(
         initial = com.gamebox.os.settings.GameBoxSettings()
     )
+    val runtimeDeviceStatus = rememberRuntimeDeviceStatus()
     val controllerActions = remember { ControllerActionRegistry() }
     val appScope = rememberCoroutineScope()
     var showProfileSwitcher by remember { mutableStateOf(false) }
@@ -201,6 +202,7 @@ fun GameBoxApp(
         focusDebugOverlayEnabled = appSettings.focusDebugOverlayEnabled,
         controllerActions = controllerActions,
         uiState = uiState,
+        runtimeDeviceStatus = runtimeDeviceStatus,
     ) {
     BoxWithConstraints(
         Modifier.fillMaxSize()
@@ -781,9 +783,7 @@ BlueprintPanel(Modifier.fillMaxWidth()) {
     val hero = history.firstOrNull() ?: installed.firstOrNull()
         ?: games.firstOrNull { it.id.value == "galaxy-patrol" } ?: games.first()
     val focusTarget = restoreGameId?.takeIf { id -> games.any { it.id == id } } ?: hero.id
-    val networkService = context.getSystemService(ConnectivityManager::class.java)
-    val network = networkService?.getNetworkCapabilities(networkService.activeNetwork)
-    val networkLabel = if (network?.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED) == true) "Connected" else "Offline"
+    val networkLabel = LocalRuntimeDeviceStatus.current.networkLabel
     val storage = context.filesDir
     val usedPercent = if (storage.totalSpace > 0L) ((storage.totalSpace - storage.usableSpace) * 100L / storage.totalSpace).toInt() else 0
 
@@ -3280,16 +3280,14 @@ private fun AppHubScreen(
     val recentMoonlightSessions = recentLaunches
         .filter { it.packageName == "com.limelight" }
         .map { "Moonlight · " + formatShortcutLaunchTime(it.launchedAtEpochMs) }
-    val moonlightStatus = remember(launchIntents, recentMoonlightSessions) {
-        val connectivityManager = context.getSystemService(ConnectivityManager::class.java)
-        val network = connectivityManager?.activeNetwork
-        val capabilities = network?.let(connectivityManager::getNetworkCapabilities)
+    val runtimeStatus = LocalRuntimeDeviceStatus.current
+    val moonlightStatus = remember(launchIntents, recentMoonlightSessions, runtimeStatus.networkState) {
         MoonlightStatus(
-            connectivity = classifyMoonlightConnectivity(
-                hasNetwork = capabilities != null,
-                hasLocalTransport = capabilities?.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) == true ||
-                    capabilities?.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET) == true
-            ),
+            connectivity = when (runtimeStatus.networkState) {
+                GameBoxNetworkState.OFFLINE -> MoonlightConnectivity.OFFLINE
+                GameBoxNetworkState.LOCAL -> MoonlightConnectivity.LOCAL_NETWORK
+                GameBoxNetworkState.INTERNET -> MoonlightConnectivity.INTERNET
+            },
             moonlightInstalled = launchIntents["com.limelight"] != null,
             recentSessions = recentMoonlightSessions
         )
@@ -3403,11 +3401,8 @@ private fun BlueprintAppHubScreen(
     val audio = context.getSystemService(android.media.AudioManager::class.java)
     val volume = audio?.getStreamVolume(android.media.AudioManager.STREAM_MUSIC) ?: 0
     val volumeMax = audio?.getStreamMaxVolume(android.media.AudioManager.STREAM_MUSIC) ?: 1
-    val networkLabel = when (moonlightStatus.connectivity) {
-        MoonlightConnectivity.OFFLINE -> "Offline"
-        MoonlightConnectivity.LOCAL_NETWORK -> "Local network available"
-        MoonlightConnectivity.INTERNET -> "Internet available"
-    }
+    val runtimeStatus = LocalRuntimeDeviceStatus.current
+    val networkLabel = runtimeStatus.networkLabel
     Row(Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
         Column(Modifier.weight(1f).fillMaxHeight().verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -3512,8 +3507,12 @@ private fun BlueprintAppHubScreen(
                 HomeStatusItem(Icons.Rounded.SportsEsports, "Controller", connectedControllerLabel())
                 HomeStatusItem(Icons.Rounded.Smartphone, "Android ${Build.VERSION.RELEASE}", Build.MODEL)
             } else {
-                HomeStatusItem(Icons.AutoMirrored.Rounded.VolumeUp, "Media volume", "${(volume * 100 / volumeMax.coerceAtLeast(1))}%",
-                    volume.toFloat() / volumeMax.coerceAtLeast(1))
+                HomeStatusItem(
+                    Icons.AutoMirrored.Rounded.VolumeUp,
+                    "Media volume",
+                    "${(volume * 100 / volumeMax.coerceAtLeast(1))}% · ${runtimeStatus.audioOutputLabel}",
+                    volume.toFloat() / volumeMax.coerceAtLeast(1),
+                )
                 HomeStatusItem(Icons.Rounded.Wifi, "Network", networkLabel)
                 HomeStatusItem(Icons.Rounded.SportsEsports, "Controller", connectedControllerLabel())
                 BlueprintPanel(Modifier.fillMaxWidth()) {
@@ -3845,11 +3844,8 @@ private fun SettingsScreen(
     }
     val totalStorage = storageRoot.totalSpace
     val usableStorage = storageRoot.usableSpace
-    val connectedControllers = InputDevice.getDeviceIds().count { id ->
-        val sources = InputDevice.getDevice(id)?.sources ?: 0
-        sources and InputDevice.SOURCE_GAMEPAD == InputDevice.SOURCE_GAMEPAD ||
-            sources and InputDevice.SOURCE_JOYSTICK == InputDevice.SOURCE_JOYSTICK
-    }
+    val runtimeStatus = LocalRuntimeDeviceStatus.current
+    val connectedControllers = runtimeStatus.controllerNames.size
     val activeDownloads = diagnosticDownloads.count {
         it.status !in setOf(DownloadStatus.COMPLETED, DownloadStatus.FAILED, DownloadStatus.CANCELLED)
     }
@@ -4607,14 +4603,6 @@ private fun DownloadStatus.displayName() = name.lowercase().replace('_', ' ')
 private fun InstallState.displayName() = name.lowercase().replace('_', ' ')
 
 
-private fun connectedControllerLabel(): String {
-    val controller = InputDevice.getDeviceIds()
-        .asSequence()
-        .mapNotNull { id -> InputDevice.getDevice(id) }
-        .firstOrNull { device ->
-            val sources = device.sources
-            sources and InputDevice.SOURCE_GAMEPAD == InputDevice.SOURCE_GAMEPAD ||
-                sources and InputDevice.SOURCE_JOYSTICK == InputDevice.SOURCE_JOYSTICK
-        }
-    return controller?.name?.takeIf { it.isNotBlank() } ?: "Not connected"
-}
+@Composable
+private fun connectedControllerLabel(): String =
+    LocalRuntimeDeviceStatus.current.controllerLabel
