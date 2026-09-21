@@ -65,6 +65,26 @@ interface CatalogProvider {
     }
 }
 
+class SelectingCatalogProvider(
+    private val selected: suspend () -> String,
+    providers: Map<String, CatalogProvider>,
+) : CatalogProvider {
+    private val providers = providers.mapKeys { it.key.uppercase() }
+
+    private suspend fun delegate(): CatalogProvider =
+        providers[selected().uppercase()]
+            ?: throw IllegalArgumentException("Unsupported catalog transport")
+
+    override val capabilities: CatalogProviderCapabilities
+        get() = CatalogProviderCapabilities()
+
+    override suspend fun load(): CatalogSnapshot = delegate().load()
+    override suspend fun refresh(): CatalogSnapshot = delegate().refresh()
+    override suspend fun testConnection(): CatalogConnectionResult = delegate().testConnection()
+    override suspend fun resolveSource(gameId: GameId): CatalogSourceResolution =
+        delegate().resolveSource(gameId)
+}
+
 enum class CatalogFallbackReason {
     NONE, OFFLINE, REMOTE_FAILURE
 }
