@@ -82,7 +82,7 @@ class LaunchSessionRecoveryTest {
                 it.version = 11
             }
             val migrated = Room.databaseBuilder(context, GameBoxDatabase::class.java, name)
-                .addMigrations(MIGRATION_11_12).build()
+                .addMigrations(MIGRATION_11_12, MIGRATION_12_13).build()
             database = migrated
             assertEquals(game(), migrated.gameDao().getById("session-test"))
             assertNull(migrated.launchSessionDao().pending())
