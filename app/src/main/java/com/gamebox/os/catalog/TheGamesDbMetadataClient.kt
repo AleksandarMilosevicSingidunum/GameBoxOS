@@ -18,21 +18,46 @@ import javax.net.ssl.HttpsURLConnection
  * Callers provide an API key through the credential store and merge only the returned
  * artwork/description fields into their authorized catalog.
  */
+data class MetadataMatchCandidate(
+    val externalId: String,
+    val title: String,
+    val platform: String? = null,
+    val year: Int? = null,
+    val genre: String? = null,
+    val description: String? = null,
+    val artworkUrl: String? = null,
+) {
+    init {
+        require(externalId.isNotBlank() && externalId.length <= 80)
+        require(title.isNotBlank() && title.length <= 240)
+        require(year == null || year in 1900..2100)
+        require(description == null || description.length <= 4_000)
+    }
+}
+
 class TheGamesDbMetadataClient(
     private val apiKey: suspend () -> String?,
     private val maxResponseBytes: Int = 2 * 1024 * 1024,
     private val json: Json = Json { ignoreUnknownKeys = true }
 ) {
     suspend fun enrich(game: Game): Game = withContext(Dispatchers.IO) {
+        val payload = fetchByName(game.title) ?: return@withContext game
+        TheGamesDbMetadataParser.enrich(game, payload, json)
+    }
+
+    suspend fun findCandidates(game: Game): List<MetadataMatchCandidate> = withContext(Dispatchers.IO) {
+        val payload = fetchByName(game.title) ?: return@withContext emptyList()
+        TheGamesDbMetadataParser.candidates(game, payload, json)
+    }
+
+    private suspend fun fetchByName(title: String): String? {
         val key = apiKey()?.trim().orEmpty()
-        if (key.isBlank()) return@withContext game
+        if (key.isBlank()) return null
         val endpoint = "https://api.thegamesdb.net/v1/Games/ByGameName?apikey=" +
             java.net.URLEncoder.encode(key, "UTF-8") +
-            "&name=" + java.net.URLEncoder.encode(game.title, "UTF-8") +
-            "&fields=overview,boxart"
-        val payload = runCatching { fetch(endpoint) }.getOrNull()
-            ?: return@withContext game
-        TheGamesDbMetadataParser.enrich(game, payload, json)
+            "&name=" + java.net.URLEncoder.encode(title, "UTF-8") +
+            "&fields=overview,boxart,players,publishers,genres"
+        return runCatching { fetch(endpoint) }.getOrNull()
     }
 
     private fun fetch(value: String): String {
@@ -68,6 +93,48 @@ class TheGamesDbMetadataClient(
 
 
 internal object TheGamesDbMetadataParser {
+    fun candidates(
+        game: Game,
+        payload: String,
+        json: Json = Json { ignoreUnknownKeys = true },
+    ): List<MetadataMatchCandidate> = runCatching {
+        val root = json.parseToJsonElement(payload).jsonObject
+        val artworkBase = root["include"]?.jsonObject
+            ?.get("boxart")?.jsonObject
+            ?.get("base_url")?.jsonObject
+            ?.get("thumb")?.jsonPrimitive?.contentOrNull
+        val requestedTitle = normalizeCatalogTitle(game.title)
+        root["data"]?.jsonObject?.get("games")?.jsonArray
+            ?.mapNotNull { runCatching { it.jsonObject }.getOrNull() }
+            ?.filter { candidate ->
+                val title = candidate["game_title"]?.jsonPrimitive?.contentOrNull
+                    ?: candidate["title"]?.jsonPrimitive?.contentOrNull
+                normalizeCatalogTitle(title.orEmpty()) == requestedTitle
+            }
+            ?.take(20)
+            ?.mapNotNull { candidate ->
+                val externalId = candidate["id"]?.jsonPrimitive?.contentOrNull?.trim().orEmpty()
+                val title = (candidate["game_title"]?.jsonPrimitive?.contentOrNull
+                    ?: candidate["title"]?.jsonPrimitive?.contentOrNull)?.trim().orEmpty()
+                if (externalId.isEmpty() || title.isEmpty()) return@mapNotNull null
+                val release = candidate["release_date"]?.jsonPrimitive?.contentOrNull.orEmpty()
+                MetadataMatchCandidate(
+                    externalId = externalId,
+                    title = title.take(240),
+                    platform = candidate["platform"]?.jsonPrimitive?.contentOrNull?.trim()?.take(120),
+                    year = release.take(4).toIntOrNull()?.takeIf { it in 1900..2100 },
+                    genre = candidate["genre"]?.jsonPrimitive?.contentOrNull?.trim()?.take(120),
+                    description = candidate["overview"]?.jsonPrimitive?.contentOrNull
+                        ?.trim()?.takeIf(String::isNotEmpty)?.take(4_000),
+                    artworkUrl = resolveHttpsArtwork(
+                        candidate["boxart"]?.jsonObject?.get("thumb")?.jsonPrimitive?.contentOrNull,
+                        artworkBase,
+                    ),
+                )
+            }
+            .orEmpty()
+    }.getOrDefault(emptyList())
+
     fun enrich(game: Game, payload: String, json: Json = Json { ignoreUnknownKeys = true }): Game =
         runCatching {
             val root = json.parseToJsonElement(payload).jsonObject
@@ -102,7 +169,7 @@ internal object TheGamesDbMetadataParser {
             )
         }.getOrDefault(game)
 
-    private fun resolveHttpsArtwork(path: String?, base: String?): String? {
+    internal fun resolveHttpsArtwork(path: String?, base: String?): String? {
         val value = path?.trim().orEmpty()
         if (value.isEmpty()) return null
         return runCatching {
