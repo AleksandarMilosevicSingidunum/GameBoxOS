@@ -11,6 +11,7 @@ import com.gamebox.os.data.local.toEntity
 import com.gamebox.os.domain.CatalogRefreshState
 import com.gamebox.os.domain.Game
 import com.gamebox.os.domain.GameId
+import com.gamebox.os.domain.GameMetadataOverrides
 import com.gamebox.os.domain.InstallState
 import com.gamebox.os.domain.GraphicsProfiles
 import kotlinx.coroutines.CoroutineScope
@@ -92,6 +93,20 @@ class RoomGameRepository(
     override suspend fun forgetMissingImportedContent(id: GameId): Boolean =
         dao.forgetMissingImportedContent(id.value) == 1
 
+    override suspend fun setMetadataOverrides(id: GameId, overrides: GameMetadataOverrides) {
+        val normalized = normalizeMetadataOverrides(overrides)
+        require(
+            dao.updateMetadataOverrides(
+                id = id.value,
+                title = normalized.title,
+                year = normalized.year,
+                genre = normalized.genre,
+                artworkUrl = normalized.artworkUrl,
+                description = normalized.description,
+            ) == 1
+        ) { "Game was not found" }
+    }
+
     override suspend fun registerManagedSave(
         id: GameId,
         relativePath: String,
@@ -168,6 +183,7 @@ fun mergeCatalogPreservingLocalState(existing: List<Game>, incoming: List<Game>)
             favorite = local.favorite,
             emulatorPackage = local.emulatorPackage,
             graphicsProfile = local.graphicsProfile,
+            metadataOverrides = local.metadataOverrides,
             localContentRelativePath = local.localContentRelativePath,
             localContentSha256 = local.localContentSha256,
             localContentMimeType = local.localContentMimeType,
