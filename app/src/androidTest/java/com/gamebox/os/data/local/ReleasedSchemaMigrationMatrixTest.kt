@@ -29,6 +29,7 @@ class ReleasedSchemaMigrationMatrixTest {
         MIGRATION_10_11,
         MIGRATION_11_12,
         MIGRATION_12_13,
+        MIGRATION_13_14,
     )
 
     @Test
@@ -46,7 +47,8 @@ class ReleasedSchemaMigrationMatrixTest {
                 database.query(
                     """
                     SELECT title, favorite, graphicsProfile, localContentFilesJson,
-                           userTitle, userYear, userGenre, userArtworkUrl, userDescription
+                           userTitle, userYear, userGenre, userArtworkUrl, userDescription,
+                           metadataProvider, metadataExternalId, metadataMatchedAtMillis
                     FROM games WHERE id = ?
                     """.trimIndent(),
                     arrayOf("sentinel-${startVersion}"),
@@ -58,6 +60,9 @@ class ReleasedSchemaMigrationMatrixTest {
                     assertTrue(cursor.isNull(3))
                     for (column in 4..8) {
                         assertTrue("user override column $column must default to null", cursor.isNull(column))
+                    }
+                    for (column in 9..11) {
+                        assertTrue("provider provenance column $column must default to null", cursor.isNull(column))
                     }
                 }
                 assertEquals(
