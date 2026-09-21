@@ -17,14 +17,19 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.gamebox.os.data.GameRepository
+import com.gamebox.os.catalog.MetadataMatchCandidate
+import com.gamebox.os.catalog.TheGamesDbMetadataClient
+import com.gamebox.os.settings.SettingsRepository
 import com.gamebox.os.domain.Game
 import com.gamebox.os.domain.GameMetadataOverrides
+import com.gamebox.os.domain.ProviderMetadataSelection
 import kotlinx.coroutines.launch
 
 @Composable
 internal fun GameMetadataEditorDialog(
     game: Game,
     repository: GameRepository,
+    settingsRepository: SettingsRepository,
     onDismiss: () -> Unit,
 ) {
     var title by remember(game.id) { mutableStateOf(game.metadataOverrides.title.orEmpty()) }
@@ -34,7 +39,13 @@ internal fun GameMetadataEditorDialog(
     var description by remember(game.id) { mutableStateOf(game.metadataOverrides.description.orEmpty()) }
     var error by remember(game.id) { mutableStateOf<String?>(null) }
     var saving by remember(game.id) { mutableStateOf(false) }
+    var findingMatches by remember(game.id) { mutableStateOf(false) }
+    var matchSearchCompleted by remember(game.id) { mutableStateOf(false) }
+    var candidates by remember(game.id) { mutableStateOf<List<MetadataMatchCandidate>>(emptyList()) }
     val scope = rememberCoroutineScope()
+    val metadataClient = remember(settingsRepository) {
+        TheGamesDbMetadataClient(settingsRepository::theGamesDbApiKey)
+    }
 
     fun persist(overrides: GameMetadataOverrides) {
         if (saving) return
@@ -45,6 +56,51 @@ internal fun GameMetadataEditorDialog(
                 .onSuccess { onDismiss() }
                 .onFailure {
                     error = it.message ?: "Metadata changes could not be saved"
+                    saving = false
+                }
+        }
+    }
+
+    fun findMatches() {
+        if (findingMatches || saving) return
+        findingMatches = true
+        error = null
+        scope.launch {
+            runCatching { metadataClient.findCandidates(game) }
+                .onSuccess {
+                    candidates = it
+                    matchSearchCompleted = true
+                    findingMatches = false
+                }
+                .onFailure {
+                    error = it.message ?: "Metadata candidates could not be loaded"
+                    findingMatches = false
+                }
+        }
+    }
+
+    fun applyMatch(candidate: MetadataMatchCandidate) {
+        if (saving) return
+        saving = true
+        error = null
+        scope.launch {
+            runCatching {
+                repository.applyProviderMetadataMatch(
+                    game.id,
+                    ProviderMetadataSelection(
+                        provider = "THE_GAMES_DB",
+                        externalId = candidate.externalId,
+                        title = candidate.title,
+                        year = candidate.year,
+                        genre = candidate.genre,
+                        artworkUrl = candidate.artworkUrl,
+                        description = candidate.description,
+                        matchedAtMillis = System.currentTimeMillis(),
+                    )
+                )
+            }.onSuccess { onDismiss() }
+                .onFailure {
+                    error = it.message ?: "The metadata match could not be saved"
                     saving = false
                 }
         }
@@ -100,6 +156,48 @@ internal fun GameMetadataEditorDialog(
                     maxLines = 7,
                     modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
                 )
+                Text(
+                    game.metadataExternalId?.let {
+                        "Confirmed TheGamesDB match: " + it
+                    } ?: "No provider match has been confirmed",
+                    modifier = Modifier.padding(top = 12.dp),
+                )
+                OutlinedButton(
+                    enabled = !saving && !findingMatches,
+                    onClick = ::findMatches,
+                    modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
+                ) {
+                    Text(if (findingMatches) "Finding matches…" else "Find TheGamesDB match")
+                }
+                if (matchSearchCompleted && candidates.isEmpty()) {
+                    Text(
+                        "No exact-title candidates were returned. Your existing metadata was not changed.",
+                        modifier = Modifier.padding(top = 6.dp),
+                    )
+                }
+                candidates.forEach { candidate ->
+                    OutlinedButton(
+                        enabled = !saving,
+                        onClick = { applyMatch(candidate) },
+                        modifier = Modifier.fillMaxWidth().padding(top = 6.dp)
+                            .semantics {
+                                contentDescription = "Use metadata match " + candidate.title +
+                                    " " + (candidate.platform ?: "unknown platform")
+                            },
+                    ) {
+                        Column(Modifier.fillMaxWidth()) {
+                            Text(candidate.title)
+                            Text(
+                                listOfNotNull(
+                                    candidate.platform,
+                                    candidate.year?.toString(),
+                                    "TheGamesDB #" + candidate.externalId,
+                                ).joinToString(" • ")
+                            )
+                            Text("Use this match")
+                        }
+                    }
+                }
                 error?.let {
                     Text(it, modifier = Modifier.padding(top = 8.dp))
                 }
