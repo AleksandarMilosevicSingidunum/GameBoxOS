@@ -15,7 +15,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.NonCancellable
 import com.gamebox.os.domain.InstallState
-import com.gamebox.os.download.AssetDownloadWorker
 import com.gamebox.os.download.AuthorizedHomebrewDownload
 import com.gamebox.os.save.CloudSaveEndpointPolicy
 import com.gamebox.os.save.CloudSaveEnvelopeCodec
@@ -88,8 +87,6 @@ interface SaveSafetyController {
     fun observeBusy(): StateFlow<Boolean> = MutableStateFlow(false)
     fun observeState(): StateFlow<SaveSafetyState>
     fun importInitialSave(uri: Uri)
-    fun uninstallPreview(): UninstallConfirmation
-    fun uninstallTestContent()
     fun contentRemovalPreview(game: Game): ContentRemovalPreview
     suspend fun cloudBackupPreflight(game: Game): CloudBackupPreflight = CloudBackupPreflight(
         CloudBackupPreflightStatus.NOT_REQUIRED,
@@ -396,54 +393,6 @@ class DefaultSaveSafetyController(
                     )
                 },
                 onFailure = { SaveOperation("Cloud download failed: " + safeCloudError(it), false) },
-            )
-        }
-    }
-
-    override fun uninstallPreview(): UninstallConfirmation {
-        require(gameId.value == "galaxy-patrol") { "Use the general content-removal flow for this game" }
-        val contentFile = applicationContext.filesDir
-            .resolve(AssetDownloadWorker.INSTALL_ROOT)
-            .resolve(AuthorizedHomebrewDownload.RELATIVE_PATH)
-        val artifacts = buildList {
-            add(
-                StoredArtifact(
-                    gameId,
-                    "internal://installed-content",
-                    ArtifactKind.GAME_CONTENT,
-                    contentFile.takeIf { it.isFile }?.length() ?: 0L
-                )
-            )
-            state.value.relativePath?.let {
-                add(
-                    StoredArtifact(
-                        gameId,
-                        "internal://save-data",
-                        ArtifactKind.SAVE_DATA,
-                        state.value.sizeBytes.coerceAtLeast(0L)
-                    )
-                )
-            }
-        }
-        return UninstallPlanner().plan(gameId, artifacts).toConfirmation()
-    }
-
-    override fun uninstallTestContent() {
-        require(gameId.value == "galaxy-patrol") { "Use the general content-removal flow for this game" }
-        launchSaveOperation {
-            val result = runCatching {
-                FileContentUninstaller(
-                    applicationContext.filesDir.resolve(AssetDownloadWorker.INSTALL_ROOT)
-                ).uninstall(AuthorizedHomebrewDownload.RELATIVE_PATH)
-            }
-            if (result.isFailure) {
-                operation.value = SaveOperation("Uninstall failed safely", false)
-                return@launchSaveOperation
-            }
-            gameRepository.setInstallState(gameId, InstallState.NOT_INSTALLED)
-            operation.value = SaveOperation(
-                if (result.getOrDefault(false)) "Content removed; save retained"
-                else "Content already absent; save retained"
             )
         }
     }
