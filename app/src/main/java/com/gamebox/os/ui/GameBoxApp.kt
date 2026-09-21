@@ -2500,6 +2500,7 @@ private fun DetailsScreen(
     val saveSafetyState by saveSafetyController.observeState().collectAsState()
     var showUninstallConfirmation by remember(game.id) { mutableStateOf(false) }
     var showGameSettings by remember(game.id) { mutableStateOf(false) }
+    var showMetadataEditor by remember(game.id) { mutableStateOf(false) }
     val workerActive = authorizedState.status == AuthorizedDownloadState.Status.QUEUED ||
         authorizedState.status == AuthorizedDownloadState.Status.RUNNING
     val hasRemoteSource = game.sourceUrl != null && game.expectedSha256 != null
@@ -2554,6 +2555,9 @@ private fun DetailsScreen(
     ) { uri -> uri?.let(saveSafetyController::importBackup) }
     if (showUninstallConfirmation) {
         ContentRemovalDialog(game, contentSafetyController) { showUninstallConfirmation = false }
+    }
+    if (showMetadataEditor) {
+        GameMetadataEditorDialog(game, repository) { showMetadataEditor = false }
     }
     Column(Modifier.fillMaxSize().verticalScroll(restoredScrollState("details." + game.id.value))) {
         ImportedGameReimportCard(game, importer, repository,
@@ -2647,9 +2651,22 @@ private fun DetailsScreen(
             }
         }
         Spacer(Modifier.height(8.dp))
-        OutlinedButton(onClick = { showGameSettings = !showGameSettings }) {
-            Icon(Icons.Rounded.Tune, null, Modifier.size(16.dp))
-            Text(if (showGameSettings) "Hide game settings" else "Game settings & emulator", Modifier.padding(start = 7.dp), fontSize = 12.sp)
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            OutlinedButton(onClick = { showGameSettings = !showGameSettings }) {
+                Icon(Icons.Rounded.Tune, null, Modifier.size(16.dp))
+                Text(if (showGameSettings) "Hide game settings" else "Game settings & emulator", Modifier.padding(start = 7.dp), fontSize = 12.sp)
+            }
+            OutlinedButton(
+                onClick = { showMetadataEditor = true },
+                modifier = Modifier.semantics { contentDescription = "Edit game metadata and artwork" },
+            ) {
+                Icon(Icons.Rounded.Edit, null, Modifier.size(16.dp))
+                Text(
+                    if (game.metadataOverrides.isEmpty) "Edit metadata" else "Metadata corrected",
+                    Modifier.padding(start = 7.dp),
+                    fontSize = 12.sp,
+                )
+            }
         }
         if (LocalReducedMotion.current) {
             if (showGameSettings) {
