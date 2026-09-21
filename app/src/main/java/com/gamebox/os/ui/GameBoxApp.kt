@@ -2582,7 +2582,7 @@ private fun DetailsScreen(
         ContentRemovalDialog(game, contentSafetyController) { showUninstallConfirmation = false }
     }
     if (showMetadataEditor) {
-        GameMetadataEditorDialog(game, repository) { showMetadataEditor = false }
+        GameMetadataEditorDialog(game, repository, settingsRepository) { showMetadataEditor = false }
     }
     Column(Modifier.fillMaxSize().verticalScroll(restoredScrollState("details." + game.id.value))) {
         ImportedGameReimportCard(game, importer, repository,
