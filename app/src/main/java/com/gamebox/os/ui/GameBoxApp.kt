@@ -108,6 +108,7 @@ import com.gamebox.os.settings.SettingsRepository
 import com.gamebox.os.settings.DeveloperLayoutMode
 import com.gamebox.os.settings.CatalogFailureSimulation
 import com.gamebox.os.settings.ShortcutLaunchRecord
+import com.gamebox.os.catalog.CatalogProvider
 import com.gamebox.os.catalog.validateAuthorizedCatalogUrl
 import com.gamebox.os.catalog.CatalogSyncResult
 import com.gamebox.os.catalog.ProviderHealth
@@ -160,6 +161,7 @@ fun GameBoxApp(
     gameLaunchController: GameLaunchController,
     saveSafetyController: SaveSafetyController,
     settingsRepository: SettingsRepository,
+    catalogProvider: CatalogProvider,
     catalogDiscoveryRepository: CatalogDiscoveryRepository,
     authorizedRomImporter: AuthorizedRomImporter,
     managedSaveDiscovery: com.gamebox.os.storage.ManagedSaveDiscovery,
@@ -361,7 +363,7 @@ fun GameBoxApp(
                             compact,
                             settingsRepository
                         )
-                        Destination.SETTINGS -> SettingsScreen(compact, settingsRepository, repository, downloadRepository)
+                        Destination.SETTINGS -> SettingsScreen(compact, settingsRepository, repository, downloadRepository, catalogProvider)
                         }
                     }
                 }
@@ -3795,7 +3797,8 @@ private fun SettingsScreen(
     compact: Boolean,
     settingsRepository: SettingsRepository,
     gameRepository: GameRepository,
-    downloadRepository: DownloadRepository
+    downloadRepository: DownloadRepository,
+    catalogProvider: CatalogProvider,
 ) {
     val context = LocalContext.current
     val controllerActions = LocalControllerActions.current
