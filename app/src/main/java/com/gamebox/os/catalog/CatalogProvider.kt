@@ -8,8 +8,60 @@ import javax.net.ssl.HttpsURLConnection
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
+data class CatalogProviderCapabilities(
+    val refresh: Boolean = true,
+    val connectionTest: Boolean = true,
+    val sourceResolution: Boolean = true,
+)
+
+data class CatalogConnectionResult(
+    val success: Boolean,
+    val providerId: String? = null,
+    val providerName: String? = null,
+    val gameCount: Int = 0,
+    val message: String,
+)
+
+data class CatalogSourceResolution(
+    val gameId: GameId,
+    val sourceUrl: String?,
+    val expectedSha256: String?,
+) {
+    val downloadable: Boolean
+        get() = sourceUrl != null && expectedSha256 != null
+}
+
 interface CatalogProvider {
+    val capabilities: CatalogProviderCapabilities
+        get() = CatalogProviderCapabilities()
+
     suspend fun load(): CatalogSnapshot
+
+    /** Forces a provider refresh. Implementations with caches must attempt their remote source first. */
+    suspend fun refresh(): CatalogSnapshot = load()
+
+    /** Executes the same authenticated, bounded production request used by refresh. */
+    suspend fun testConnection(): CatalogConnectionResult = try {
+        val snapshot = refresh()
+        CatalogConnectionResult(
+            success = true,
+            providerId = snapshot.providerId,
+            providerName = snapshot.providerName,
+            gameCount = snapshot.games.size,
+            message = "Connected to ${snapshot.providerName} (${snapshot.games.size} games)",
+        )
+    } catch (error: Exception) {
+        CatalogConnectionResult(
+            success = false,
+            message = error.message?.take(180) ?: "Catalog connection failed",
+        )
+    }
+
+    /** Resolves an authorized binary source without treating metadata-only entries as downloadable. */
+    suspend fun resolveSource(gameId: GameId): CatalogSourceResolution {
+        val game = load().games.firstOrNull { it.id == gameId }
+        return CatalogSourceResolution(gameId, game?.sourceUrl, game?.expectedSha256)
+    }
 }
 
 enum class CatalogFallbackReason {
