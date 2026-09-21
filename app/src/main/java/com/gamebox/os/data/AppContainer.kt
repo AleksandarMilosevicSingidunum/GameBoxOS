@@ -54,6 +54,7 @@ import kotlinx.coroutines.flow.stateIn
 
 interface AppContainer {
     val managedSaveDiscovery: com.gamebox.os.storage.ManagedSaveDiscovery
+    val catalogProvider: com.gamebox.os.catalog.CatalogProvider
     val gameRepository: GameRepository
     val settingsRepository: SettingsRepository
     val downloadRepository: DownloadRepository
@@ -118,7 +119,7 @@ class DefaultAppContainer(context: Context) : AppContainer {
     override val catalogDiscoveryRepository: CatalogDiscoveryRepository =
         RoomCatalogDiscoveryRepository(database.catalogDiscoveryDao(), catalogDiscoverySync)
 
-    private val catalogProvider = MetadataEnrichingCatalogProvider(
+    override val catalogProvider = MetadataEnrichingCatalogProvider(
         base = configuredCatalogProvider,
         enrich = metadataClient::enrich,
     )
