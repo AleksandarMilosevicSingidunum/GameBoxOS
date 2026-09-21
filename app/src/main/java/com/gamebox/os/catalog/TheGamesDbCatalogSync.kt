@@ -6,6 +6,8 @@ import com.gamebox.os.data.local.CatalogGameEntity
 import com.gamebox.os.data.local.CatalogPlatformEntity
 import com.gamebox.os.domain.MetadataProviderId
 import com.gamebox.os.domain.normalizeCatalogTitle
+import com.gamebox.os.provider.ProviderFailureKind
+import com.gamebox.os.provider.ProviderRecoveryPolicy
 import java.net.URI
 
 fun interface TheGamesDbCatalogTransport {
@@ -16,7 +18,11 @@ sealed interface CatalogSyncResult {
     data class Success(val platformId: String, val pages: Int, val games: Int) : CatalogSyncResult
     data object MissingApiKey : CatalogSyncResult
     data class PlatformNotFound(val requestedName: String) : CatalogSyncResult
-    data class Failed(val reason: String) : CatalogSyncResult
+    data class Failed(
+        val reason: String,
+        val kind: ProviderFailureKind = ProviderFailureKind.PERMANENT,
+        val retryAfterMillis: Long? = null,
+    ) : CatalogSyncResult
 }
 
 /**
@@ -29,6 +35,7 @@ class TheGamesDbCatalogSync(
     private val maxPagesPerRun: Int = 100,
     private val maxGamesPerPlatform: Int = 20,
     private val nowMillis: () -> Long = System::currentTimeMillis,
+    private val onHealthChanged: suspend (ProviderHealth) -> Unit = {},
 ) {
     init {
         require(maxPagesPerRun in 1..1_000)
@@ -36,17 +43,56 @@ class TheGamesDbCatalogSync(
     }
 
     suspend fun syncPlatform(platformName: String): CatalogSyncResult {
+        val attemptedAt = nowMillis()
         val key = apiKey()?.trim().orEmpty()
-        if (key.isEmpty()) return CatalogSyncResult.MissingApiKey
+        if (key.isEmpty()) {
+            onHealthChanged(
+                ProviderHealth(
+                    status = ProviderHealthStatus.NOT_CONFIGURED,
+                    lastAttemptAtMillis = attemptedAt,
+                    message = "Add an API key in Settings",
+                )
+            )
+            return CatalogSyncResult.MissingApiKey
+        }
         val requested = normalizeCatalogTitle(platformName)
-        if (requested.isEmpty()) return CatalogSyncResult.PlatformNotFound(platformName)
+        if (requested.isEmpty()) {
+            onHealthChanged(
+                ProviderHealth(
+                    status = ProviderHealthStatus.DEGRADED,
+                    lastAttemptAtMillis = attemptedAt,
+                    message = "The requested platform name is empty",
+                )
+            )
+            return CatalogSyncResult.PlatformNotFound(platformName)
+        }
         return runCatching {
             val platformsPayload = transport.get(TheGamesDbCatalogRequest.platforms(key))
             val platform = TheGamesDbCatalogParser.parsePlatforms(platformsPayload)
                 .firstOrNull { it.matchesRequestedName(requested) }
-                ?: return CatalogSyncResult.PlatformNotFound(platformName)
+                ?: run {
+                    onHealthChanged(
+                        ProviderHealth(
+                            status = ProviderHealthStatus.DEGRADED,
+                            lastAttemptAtMillis = attemptedAt,
+                            latencyMillis = (nowMillis() - attemptedAt).coerceAtLeast(0L),
+                            message = "Platform was not found by TheGamesDB",
+                        )
+                    )
+                    return CatalogSyncResult.PlatformNotFound(platformName)
+                }
             val providerPlatformId = platform.externalIds[MetadataProviderId.THE_GAMES_DB]
-                ?: return CatalogSyncResult.PlatformNotFound(platformName)
+                ?: run {
+                    onHealthChanged(
+                        ProviderHealth(
+                            status = ProviderHealthStatus.DEGRADED,
+                            lastAttemptAtMillis = attemptedAt,
+                            latencyMillis = (nowMillis() - attemptedAt).coerceAtLeast(0L),
+                            message = "Platform has no TheGamesDB identifier",
+                        )
+                    )
+                    return CatalogSyncResult.PlatformNotFound(platformName)
+                }
 
             var pageNumber = 1
             var pageCount = 0
@@ -102,9 +148,35 @@ class TheGamesDbCatalogSync(
                 if (gameCount >= maxGamesPerPlatform) break
                 pageNumber = page.nextPage ?: break
             }
+            val completedAt = nowMillis()
+            onHealthChanged(
+                ProviderHealth(
+                    status = ProviderHealthStatus.HEALTHY,
+                    lastAttemptAtMillis = attemptedAt,
+                    lastSuccessAtMillis = completedAt,
+                    latencyMillis = (completedAt - attemptedAt).coerceAtLeast(0L),
+                    message = "Synchronized $gameCount games",
+                )
+            )
             CatalogSyncResult.Success(platform.id, pageCount, gameCount)
         }.getOrElse { error ->
-            CatalogSyncResult.Failed(error.message?.take(200) ?: "Catalog synchronization failed")
+            val transportFailure = error as? TheGamesDbTransportException
+            val decision = transportFailure?.let {
+                ProviderRecoveryPolicy.classify(it.httpStatus, it)
+            } ?: ProviderRecoveryPolicy.classify(null, error)
+            val reason = (error.message ?: decision.userMessage).take(200)
+            val retryAfter = transportFailure?.retryAfterMillis
+                ?: decision.delayMillis.takeIf { it > 0L }?.let { nowMillis() + it }
+            onHealthChanged(
+                ProviderHealth(
+                    status = decision.kind.toProviderHealthStatus(),
+                    lastAttemptAtMillis = attemptedAt,
+                    latencyMillis = (nowMillis() - attemptedAt).coerceAtLeast(0L),
+                    retryAfterMillis = retryAfter,
+                    message = reason,
+                )
+            )
+            CatalogSyncResult.Failed(reason, decision.kind, retryAfter)
         }
     }
 
