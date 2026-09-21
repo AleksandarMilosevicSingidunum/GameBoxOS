@@ -39,6 +39,25 @@ data class GameMetadataOverrides(
         get() = title == null && year == null && genre == null && artworkUrl == null && description == null
 }
 
+data class ProviderMetadataSelection(
+    val provider: String,
+    val externalId: String,
+    val title: String,
+    val year: Int? = null,
+    val genre: String? = null,
+    val artworkUrl: String? = null,
+    val description: String? = null,
+    val matchedAtMillis: Long,
+) {
+    init {
+        require(provider.matches(Regex("^[A-Z0-9_]{2,40}$")))
+        require(externalId.isNotBlank() && externalId.length <= 80)
+        require(title.isNotBlank() && title.length <= 240)
+        require(year == null || year in 1900..2100)
+        require(matchedAtMillis >= 0L)
+    }
+}
+
 data class Game(
     val id: GameId,
     val title: String,
@@ -71,6 +90,9 @@ data class Game(
     val providerGenre: String = genre,
     val providerArtworkUrl: String? = artworkUrl,
     val providerDescription: String? = description,
+    val metadataProvider: String? = null,
+    val metadataExternalId: String? = null,
+    val metadataMatchedAtMillis: Long? = null,
 )
 
 enum class DownloadStatus {
