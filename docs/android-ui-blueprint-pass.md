@@ -59,3 +59,14 @@ and has a living-room aspect ratio of at least 1.5:1. Phone and narrow-window
 layouts intentionally remain edge-to-edge. The policy clamps invalid values and
 is covered by unit tests; the DeX visual profile exercises the default 4% inset.
 Physical television overscan acceptance remains a separate hardware check.
+
+
+## Reduced motion (UI-48)
+
+Settings → Interface → Reduce motion is persisted and applied by the production
+composition. When enabled, screen-entry and expandable-panel transitions are
+replaced with immediate content, focus/hover/press scaling is disabled, focus
+and fill color changes snap without interpolation, and Settings section
+navigation scrolls directly to its destination. Focus borders, selected states,
+and non-color semantic labels remain available, so reducing motion does not
+remove navigation feedback.

@@ -22,6 +22,8 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.snap
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -542,14 +544,17 @@ internal fun NavButton(item: Destination, selected: Destination, onSelect: (Dest
     val reducedMotion = LocalReducedMotion.current
     val scale by animateFloatAsState(
         targetValue = if (reducedMotion) 1f else if (pressed) 0.96f else if (hovered || focused) 1.025f else 1f,
+        animationSpec = if (reducedMotion) snap() else spring(),
         label = "nav-scale"
     )
     val border by animateColorAsState(
         if (emphasized) MaterialTheme.colorScheme.primary else Color.Transparent,
+        animationSpec = if (reducedMotion) snap() else spring(),
         label = "nav-border",
     )
     val fill by animateColorAsState(
         if (emphasized) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f) else Color.Transparent,
+        animationSpec = if (reducedMotion) snap() else spring(),
         label = "nav-fill",
     )
     Surface(
@@ -2261,7 +2266,8 @@ private fun DiscoveryGameCard(game: DiscoveryGame, modifier: Modifier, onClick: 
     val pressed by source.collectIsPressedAsState()
     val reducedMotion = LocalReducedMotion.current
     val scale by animateFloatAsState(
-        if (reducedMotion) 1f else if (pressed) .97f else if (focused || hovered) 1.018f else 1f,
+        targetValue = if (reducedMotion) 1f else if (pressed) .97f else if (focused || hovered) 1.018f else 1f,
+        animationSpec = if (reducedMotion) snap() else spring(),
         label = "discovery-scale",
     )
     Surface(
@@ -2336,7 +2342,8 @@ internal fun GameCard(
     val emphasized = focused || hovered
     val reducedMotion = LocalReducedMotion.current
     val scale by animateFloatAsState(
-        if (reducedMotion) 1f else if (pressed) .975f else if (emphasized) 1.018f else 1f,
+        targetValue = if (reducedMotion) 1f else if (pressed) .975f else if (emphasized) 1.018f else 1f,
+        animationSpec = if (reducedMotion) snap() else spring(),
         label = "game-scale",
     )
     LaunchedEffect(restoreFocus) { if (restoreFocus) focusRequester.requestFocus() }
@@ -3546,7 +3553,8 @@ internal fun BlueprintShortcutTile(
     val emphasized = focused || hovered
     val reducedMotion = LocalReducedMotion.current
     val scale by animateFloatAsState(
-        if (reducedMotion) 1f else if (pressed) 0.95f else if (emphasized) 1.04f else 1f,
+        targetValue = if (reducedMotion) 1f else if (pressed) 0.95f else if (emphasized) 1.04f else 1f,
+        animationSpec = if (reducedMotion) snap() else spring(),
         label = "hub-tile-scale",
     )
     val accent = shortcutAccent(shortcut.title)
@@ -3656,10 +3664,12 @@ private fun ShortcutCard(
     val reducedMotion = LocalReducedMotion.current
     val border by animateColorAsState(
         if (emphasized) MaterialTheme.colorScheme.primary else Color.Transparent,
+        animationSpec = if (reducedMotion) snap() else spring(),
         label = "shortcut-focus"
     )
     val scale by animateFloatAsState(
         targetValue = if (reducedMotion) 1f else if (pressed) 0.97f else if (emphasized) 1.02f else 1f,
+        animationSpec = if (reducedMotion) snap() else spring(),
         label = "shortcut-scale"
     )
     Surface(
@@ -4456,7 +4466,11 @@ private fun SettingsScreen(
     }
     val navigateToSection: (SettingsSection) -> Unit = { section ->
         selectedSection = section
-        scope.launch { scrollState.animateScrollTo(sectionOffsets[section] ?: 0) }
+        scope.launch {
+            val target = sectionOffsets[section] ?: 0
+            if (currentSettings.reducedMotion) scrollState.scrollTo(target)
+            else scrollState.animateScrollTo(target)
+        }
     }
     DisposableEffect(controllerActions, selectedSection, sectionOffsets.size) {
         controllerActions?.configure(
@@ -4569,8 +4583,10 @@ private fun SettingsActionRow(title: String, icon: ImageVector, onClick: () -> U
     val hovered by interactionSource.collectIsHoveredAsState()
     var focused by remember { mutableStateOf(false) }
     val emphasized = hovered || focused
+    val reducedMotion = LocalReducedMotion.current
     val border by animateColorAsState(
         if (emphasized) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
+        animationSpec = if (reducedMotion) snap() else spring(),
         label = "settings-row-border",
     )
     Surface(

@@ -1,6 +1,8 @@
 package com.gamebox.os.ui
 
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.snap
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.hoverable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -119,7 +121,8 @@ internal fun Modifier.blueprintClick(onClick: () -> Unit): Modifier = composed {
     var focused by remember { mutableStateOf(false) }
     val reducedMotion = LocalReducedMotion.current
     val scale by animateFloatAsState(
-        if (reducedMotion) 1f else if (pressed) .97f else if (hovered || focused) 1.018f else 1f,
+        targetValue = if (reducedMotion) 1f else if (pressed) .97f else if (hovered || focused) 1.018f else 1f,
+        animationSpec = if (reducedMotion) snap() else spring(),
         label = "blueprint-action",
     )
     this.graphicsLayer { scaleX = scale; scaleY = scale }
