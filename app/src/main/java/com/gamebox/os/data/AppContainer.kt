@@ -111,6 +111,7 @@ class DefaultAppContainer(context: Context) : AppContainer {
         apiKey = settingsRepository::theGamesDbApiKey,
         transport = HttpsTheGamesDbCatalogTransport(),
         dao = database.catalogDiscoveryDao(),
+        onHealthChanged = settingsRepository::setTheGamesDbHealth,
     )
 
     override val catalogDiscoveryRepository: CatalogDiscoveryRepository =
