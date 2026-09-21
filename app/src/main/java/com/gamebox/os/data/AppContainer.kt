@@ -65,11 +65,10 @@ interface AppContainer {
     val remoteDownloadController: RemoteDownloadController
     val gameLaunchController: GameLaunchController
     val saveSafetyController: SaveSafetyController
-    fun createSaveSafetyController(gameId: com.gamebox.os.domain.GameId,
-        scope: CoroutineScope): SaveSafetyController {
-        require(gameId.value == "galaxy-patrol") { "Per-game save controls are not configured" }
-        return saveSafetyController
-    }
+    fun createSaveSafetyController(
+        gameId: com.gamebox.os.domain.GameId,
+        scope: CoroutineScope,
+    ): SaveSafetyController
     val catalogDiscoverySync: TheGamesDbCatalogSync
     val catalogDiscoveryRepository: CatalogDiscoveryRepository
     val authorizedRomImporter: AuthorizedRomImporter

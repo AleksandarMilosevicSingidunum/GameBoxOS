@@ -114,12 +114,18 @@ class AuthorizedInstallLifecycleTest {
         withTimeout(120_000) {
             container.saveSafetyController.observeState().first { it.backupPresent && it.operationSuccessful }
         }
-        val preview = container.saveSafetyController.uninstallPreview()
-        assertEquals(AuthorizedHomebrewDownload.SIZE_BYTES, preview.bytesFreed)
-        assertTrue(preview.retainsProgress)
-        assertEquals(originalSave.size.toLong(), preview.retainedSaveBytes)
+        val installedGame = requireNotNull(container.gameRepository.game(gameId))
+        val preview = container.saveSafetyController.contentRemovalPreview(installedGame)
+        assertEquals(AuthorizedHomebrewDownload.SIZE_BYTES, preview.bytes)
+        assertEquals(1, preview.files)
+        val preflight = container.saveSafetyController.cloudBackupPreflight(installedGame)
+        assertTrue(preflight.requiresAcknowledgement)
+        val removalMessage = container.saveSafetyController.uninstallContent(
+            installedGame,
+            allowWithoutCloudBackup = true,
+        )
+        assertTrue(removalMessage.contains("Saves, backups, metadata and history retained"))
 
-        container.saveSafetyController.uninstallTestContent()
         withTimeout(120_000) {
             container.gameRepository.observeGames().first { games ->
                 games.any { it.id == gameId && it.state == InstallState.NOT_INSTALLED }

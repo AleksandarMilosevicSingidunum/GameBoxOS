@@ -60,6 +60,17 @@ internal fun PerGameSaveCard(game: Game, controller: SaveSafetyController, enabl
                 Text("No managed save copy. Select a save you exported from this game's emulator.")
                 Button(onClick = { pickerTarget = controller; importSave.launch(arrayOf("*/*")) }, enabled = actionsEnabled) { Text("Import save copy") }
             }
+            HorizontalDivider(Modifier.padding(vertical = 8.dp))
+            Text("Encrypted cloud copy", style = MaterialTheme.typography.titleSmall)
+            Text("Uses the WebDAV or S3-compatible provider configured in Settings. A different local copy is preserved before cloud restore.")
+            Button(
+                onClick = controller::uploadCloudSave,
+                enabled = actionsEnabled && state.saveRecordPresent,
+            ) { Text("Upload cloud copy") }
+            OutlinedButton(
+                onClick = controller::downloadCloudSave,
+                enabled = actionsEnabled,
+            ) { Text("Restore cloud copy") }
             state.operationMessage?.let { Text(it,
                 color = if (state.operationSuccessful) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.error) }
         }
