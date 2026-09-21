@@ -33,6 +33,8 @@ class PerGameSaveCardTest {
         compose.onNodeWithText("Restore save copy").assertIsNotEnabled()
         compose.onNodeWithText("Export save backup").assertIsNotEnabled()
         compose.onNodeWithText("Import save backup").assertIsNotEnabled()
+        compose.onNodeWithText("Upload cloud copy").assertIsNotEnabled()
+        compose.onNodeWithText("Restore cloud copy").assertIsNotEnabled()
         compose.runOnIdle { busy.value = false }
         compose.onNodeWithText("Back up save copy").assertIsEnabled()
         compose.onNodeWithText("Restore save copy").assertIsEnabled()
@@ -86,4 +88,25 @@ class PerGameSaveCardTest {
         compose.onNodeWithText("Cancel").performClick()
         compose.onNodeWithText("Choose backup file").assertDoesNotExist()
     }
+    @Test fun cloudControlsUseTheSelectedGamesController() {
+        val app = ApplicationProvider.getApplicationContext<GameBoxApplication>()
+        val state = MutableStateFlow(SaveSafetyState(saveRecordPresent = true))
+        var uploads = 0
+        var downloads = 0
+        val controller = object : SaveSafetyController by app.container.saveSafetyController {
+            override fun observeState() = state
+            override fun uploadCloudSave() { uploads++ }
+            override fun downloadCloudSave() { downloads++ }
+        }
+        compose.setContent { MaterialTheme { PerGameSaveCard(game, controller, enabled = true) } }
+
+        compose.onNodeWithText("Upload cloud copy").performClick()
+        compose.onNodeWithText("Restore cloud copy").performClick()
+
+        compose.runOnIdle {
+            assertEquals(1, uploads)
+            assertEquals(1, downloads)
+        }
+    }
+
 }
