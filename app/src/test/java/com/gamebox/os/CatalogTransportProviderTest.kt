@@ -8,8 +8,11 @@ import com.gamebox.os.catalog.CatalogParser
 import com.gamebox.os.catalog.CatalogCredentials
 import com.gamebox.os.catalog.InMemoryCatalogCredentialStore
 import com.gamebox.os.catalog.NoopCatalogTransportClient
+import com.gamebox.os.domain.GameId
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Assert.assertThrows
 import org.junit.Test
 
@@ -27,4 +30,69 @@ class CatalogTransportProviderTest {
         assertEquals("u", store.credentials("main")?.username)
         assertEquals("https://example.test", (CatalogProviderConfig(CatalogTransport.WebDav("https://example.test"), "main").transport as CatalogTransport.WebDav).baseUrl)
     }
+    @Test
+    fun productionContractTestsConnectionAndResolvesAuthorizedSource() = runBlocking {
+        val payload = """
+            {
+              "schemaVersion": 1,
+              "provider": {"id": "authorized", "displayName": "Authorized Catalog"},
+              "games": [{
+                "id": "demo",
+                "title": "Demo",
+                "platform": "Homebrew",
+                "year": 2026,
+                "genre": "Arcade",
+                "sizeMb": 1,
+                "contentPolicy": "authorized",
+                "source": "https://example.test/demo.nes",
+                "checksum": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+              }, {
+                "id": "metadata-only",
+                "title": "Metadata",
+                "platform": "Homebrew",
+                "year": 2026,
+                "genre": "Arcade",
+                "sizeMb": 0,
+                "contentPolicy": "metadata"
+              }]
+            }
+        """.trimIndent()
+        val provider = CatalogTransportProvider(
+            client = object : CatalogTransportClient {
+                override suspend fun fetch(
+                    transport: CatalogTransport,
+                    credentials: CatalogCredentials?,
+                ): String = payload
+            },
+            parser = CatalogParser(),
+            config = { CatalogProviderConfig(CatalogTransport.Https("https://example.test/catalog.json")) },
+        )
+
+        val connection = provider.testConnection()
+        assertTrue(connection.success)
+        assertEquals("authorized", connection.providerId)
+        assertEquals(2, connection.gameCount)
+
+        val downloadable = provider.resolveSource(GameId("demo"))
+        assertTrue(downloadable.downloadable)
+        assertEquals("https://example.test/demo.nes", downloadable.sourceUrl)
+
+        val metadataOnly = provider.resolveSource(GameId("metadata-only"))
+        assertFalse(metadataOnly.downloadable)
+    }
+
+    @Test
+    fun connectionTestReturnsFailureInsteadOfThrowing() = runBlocking {
+        val provider = CatalogTransportProvider(
+            client = NoopCatalogTransportClient(),
+            parser = CatalogParser(),
+            config = { CatalogProviderConfig(CatalogTransport.Https("https://example.test/catalog.json")) },
+        )
+
+        val result = provider.testConnection()
+
+        assertFalse(result.success)
+        assertTrue(result.message.contains("No catalog transport client"))
+    }
+
 }

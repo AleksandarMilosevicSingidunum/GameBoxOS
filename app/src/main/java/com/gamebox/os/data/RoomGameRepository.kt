@@ -70,7 +70,7 @@ class RoomGameRepository(
         scope.launch {
             refreshState.value = CatalogRefreshState.REFRESHING
             try {
-                val incoming = catalogProvider.load().games
+                val incoming = catalogProvider.refresh().games
                 val fallbackReason = consumeFallbackReason()
                 val existing = dao.getAllOnce().map { it.toDomain() }
                 dao.upsertAll(mergeCatalogPreservingLocalState(existing, incoming).map { it.toEntity() })
