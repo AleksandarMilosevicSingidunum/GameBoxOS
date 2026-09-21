@@ -8,6 +8,9 @@ import com.gamebox.os.catalog.CatalogParser
 import com.gamebox.os.catalog.CatalogCredentials
 import com.gamebox.os.catalog.InMemoryCatalogCredentialStore
 import com.gamebox.os.catalog.NoopCatalogTransportClient
+import com.gamebox.os.catalog.CatalogProvider
+import com.gamebox.os.catalog.CatalogSnapshot
+import com.gamebox.os.catalog.SelectingCatalogProvider
 import com.gamebox.os.domain.GameId
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
@@ -93,6 +96,28 @@ class CatalogTransportProviderTest {
 
         assertFalse(result.success)
         assertTrue(result.message.contains("No catalog transport client"))
+    }
+
+    @Test
+    fun selectingProviderDelegatesToCurrentProductionTransport() = runBlocking {
+        var selected = "HTTPS"
+        fun provider(id: String) = object : CatalogProvider {
+            override suspend fun load() = CatalogSnapshot(id, id, emptyList())
+        }
+        val provider = SelectingCatalogProvider(
+            selected = { selected },
+            providers = mapOf(
+                "HTTPS" to provider("https"),
+                "WEBDAV" to provider("webdav"),
+                "S3" to provider("s3"),
+            ),
+        )
+
+        assertEquals("https", provider.refresh().providerId)
+        selected = "WEBDAV"
+        assertEquals("webdav", provider.testConnection().providerId)
+        selected = "S3"
+        assertEquals("s3", provider.load().providerId)
     }
 
 }
