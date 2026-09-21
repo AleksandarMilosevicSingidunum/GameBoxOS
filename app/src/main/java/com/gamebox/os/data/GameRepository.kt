@@ -5,6 +5,7 @@ import com.gamebox.os.domain.Game
 import com.gamebox.os.domain.GameId
 import com.gamebox.os.domain.GameMetadataOverrides
 import com.gamebox.os.domain.InstallState
+import com.gamebox.os.domain.ProviderMetadataSelection
 import kotlinx.coroutines.flow.StateFlow
 
 interface GameRepository {
@@ -14,6 +15,9 @@ interface GameRepository {
     fun setEmulatorSettings(id: GameId, packageName: String?, graphicsProfile: String)
     suspend fun setMetadataOverrides(id: GameId, overrides: GameMetadataOverrides) {
         error("Metadata corrections are unavailable")
+    }
+    suspend fun applyProviderMetadataMatch(id: GameId, selection: ProviderMetadataSelection) {
+        error("Provider metadata matching is unavailable")
     }
     fun setInstallState(id: GameId, state: InstallState)
     suspend fun setInstallStateAndAwait(id: GameId, state: InstallState) { setInstallState(id, state) }
