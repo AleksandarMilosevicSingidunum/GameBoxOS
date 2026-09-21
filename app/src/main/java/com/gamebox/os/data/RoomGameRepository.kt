@@ -13,6 +13,7 @@ import com.gamebox.os.domain.Game
 import com.gamebox.os.domain.GameId
 import com.gamebox.os.domain.GameMetadataOverrides
 import com.gamebox.os.domain.InstallState
+import com.gamebox.os.domain.ProviderMetadataSelection
 import com.gamebox.os.domain.GraphicsProfiles
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
@@ -107,6 +108,25 @@ class RoomGameRepository(
         ) { "Game was not found" }
     }
 
+    override suspend fun applyProviderMetadataMatch(
+        id: GameId,
+        selection: ProviderMetadataSelection,
+    ) {
+        require(
+            dao.applyProviderMetadataMatch(
+                id = id.value,
+                provider = selection.provider,
+                externalId = selection.externalId,
+                title = selection.title.trim(),
+                year = selection.year,
+                genre = selection.genre?.trim()?.takeIf(String::isNotEmpty),
+                artworkUrl = selection.artworkUrl,
+                description = selection.description?.trim()?.takeIf(String::isNotEmpty),
+                matchedAtMillis = selection.matchedAtMillis,
+            ) == 1
+        ) { "Game was not found" }
+    }
+
     override suspend fun registerManagedSave(
         id: GameId,
         relativePath: String,
@@ -189,6 +209,9 @@ fun mergeCatalogPreservingLocalState(existing: List<Game>, incoming: List<Game>)
             artworkUrl = local.metadataOverrides.artworkUrl ?: remote.providerArtworkUrl,
             description = local.metadataOverrides.description ?: remote.providerDescription,
             metadataOverrides = local.metadataOverrides,
+            metadataProvider = local.metadataProvider,
+            metadataExternalId = local.metadataExternalId,
+            metadataMatchedAtMillis = local.metadataMatchedAtMillis,
             localContentRelativePath = local.localContentRelativePath,
             localContentSha256 = local.localContentSha256,
             localContentMimeType = local.localContentMimeType,
