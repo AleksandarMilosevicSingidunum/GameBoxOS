@@ -15,6 +15,8 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import com.gamebox.os.catalog.CatalogCredentials
+import com.gamebox.os.catalog.ProviderHealth
+import com.gamebox.os.catalog.ProviderHealthStatus
 import java.security.SecureRandom
 
 private val Context.gameBoxDataStore: DataStore<Preferences> by preferencesDataStore(name = "gamebox_settings")
@@ -31,6 +33,7 @@ data class GameBoxSettings(
     val downloadsUnmeteredOnly: Boolean = true,
     val catalogSeededAtEpochMs: Long? = null,
     val catalogRefreshedAtEpochMs: Long? = null,
+    val theGamesDbHealth: ProviderHealth = ProviderHealth(),
     val catalogUrl: String = "",
     val externalLibraryUri: String = "",
     val cloudSaveProvider: String = "WEBDAV",
@@ -60,6 +63,18 @@ class SettingsRepository(private val context: Context) {
             downloadsUnmeteredOnly = preferences[DOWNLOADS_UNMETERED_ONLY] ?: true,
             catalogSeededAtEpochMs = preferences[CATALOG_SEEDED_AT],
             catalogRefreshedAtEpochMs = preferences[CATALOG_REFRESHED_AT],
+            theGamesDbHealth = ProviderHealth(
+                status = runCatching {
+                    ProviderHealthStatus.valueOf(
+                        preferences[THEGAMESDB_HEALTH_STATUS] ?: ProviderHealthStatus.NOT_CONFIGURED.name
+                    )
+                }.getOrDefault(ProviderHealthStatus.NOT_CONFIGURED),
+                lastAttemptAtMillis = preferences[THEGAMESDB_LAST_ATTEMPT],
+                lastSuccessAtMillis = preferences[THEGAMESDB_LAST_SUCCESS],
+                latencyMillis = preferences[THEGAMESDB_LATENCY],
+                retryAfterMillis = preferences[THEGAMESDB_RETRY_AFTER],
+                message = preferences[THEGAMESDB_HEALTH_MESSAGE],
+            ),
             catalogUrl = preferences[CATALOG_URL] ?: "",
             externalLibraryUri = preferences[EXTERNAL_LIBRARY_URI] ?: "",
             cloudSaveProvider = preferences[CLOUD_SAVE_PROVIDER] ?: "WEBDAV",
@@ -292,6 +307,22 @@ class SettingsRepository(private val context: Context) {
         context.gameBoxDataStore.edit { it[CATALOG_SEEDED_AT] = epochMs }
     }
 
+    suspend fun setTheGamesDbHealth(health: ProviderHealth) {
+        context.gameBoxDataStore.edit { preferences ->
+            preferences[THEGAMESDB_HEALTH_STATUS] = health.status.name
+            health.lastAttemptAtMillis?.let { preferences[THEGAMESDB_LAST_ATTEMPT] = it }
+                ?: preferences.remove(THEGAMESDB_LAST_ATTEMPT)
+            // A failed refresh must not erase the last known successful contact.
+            health.lastSuccessAtMillis?.let { preferences[THEGAMESDB_LAST_SUCCESS] = it }
+            health.latencyMillis?.let { preferences[THEGAMESDB_LATENCY] = it }
+                ?: preferences.remove(THEGAMESDB_LATENCY)
+            health.retryAfterMillis?.let { preferences[THEGAMESDB_RETRY_AFTER] = it }
+                ?: preferences.remove(THEGAMESDB_RETRY_AFTER)
+            health.message?.take(200)?.let { preferences[THEGAMESDB_HEALTH_MESSAGE] = it }
+                ?: preferences.remove(THEGAMESDB_HEALTH_MESSAGE)
+        }
+    }
+
     private companion object {
         val SAFE_AREA = floatPreferencesKey("safe_area_percent")
         val REDUCED_MOTION = booleanPreferencesKey("reduced_motion")
@@ -304,6 +335,12 @@ class SettingsRepository(private val context: Context) {
         val DOWNLOADS_UNMETERED_ONLY = booleanPreferencesKey("downloads_unmetered_only")
         val CATALOG_SEEDED_AT = longPreferencesKey("catalog_seeded_at_epoch_ms")
         val CATALOG_REFRESHED_AT = longPreferencesKey("catalog_refreshed_at_epoch_ms")
+        val THEGAMESDB_HEALTH_STATUS = stringPreferencesKey("thegamesdb_health_status")
+        val THEGAMESDB_LAST_ATTEMPT = longPreferencesKey("thegamesdb_last_attempt")
+        val THEGAMESDB_LAST_SUCCESS = longPreferencesKey("thegamesdb_last_success")
+        val THEGAMESDB_LATENCY = longPreferencesKey("thegamesdb_latency")
+        val THEGAMESDB_RETRY_AFTER = longPreferencesKey("thegamesdb_retry_after")
+        val THEGAMESDB_HEALTH_MESSAGE = stringPreferencesKey("thegamesdb_health_message")
         val CATALOG_URL = stringPreferencesKey("catalog_url")
         val EXTERNAL_LIBRARY_URI = stringPreferencesKey("external_library_uri")
         val CLOUD_SAVE_PROVIDER = stringPreferencesKey("cloud_save_provider")
