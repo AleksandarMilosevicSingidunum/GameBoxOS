@@ -2,6 +2,7 @@ package com.gamebox.os.catalog
 
 import android.content.Context
 import com.gamebox.os.domain.Game
+import com.gamebox.os.domain.GameId
 import java.net.URI
 import java.net.URL
 import javax.net.ssl.HttpsURLConnection
