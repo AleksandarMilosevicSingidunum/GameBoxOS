@@ -110,6 +110,9 @@ import com.gamebox.os.settings.CatalogFailureSimulation
 import com.gamebox.os.settings.ShortcutLaunchRecord
 import com.gamebox.os.catalog.validateAuthorizedCatalogUrl
 import com.gamebox.os.catalog.CatalogSyncResult
+import com.gamebox.os.catalog.ProviderHealth
+import com.gamebox.os.catalog.ProviderHealthStatus
+import com.gamebox.os.catalog.providerHealthSummary
 import com.gamebox.os.catalog.legalSourceLinks
 import com.gamebox.os.save.CloudSaveEndpointPolicy
 import com.gamebox.os.save.CloudSaveProvider
@@ -331,6 +334,7 @@ fun GameBoxApp(
                         Destination.STORE -> CatalogScreen(
                             repository, catalogDiscoveryRepository, authorizedRomImporter, games, restorableGameId, rememberGameFocus, compact,
                             catalogFailureSimulation = appSettings.catalogFailureSimulation,
+                            providerHealth = appSettings.theGamesDbHealth,
                             uiState = uiState,
                             focusSearchOnEnter = focusStoreSearchOnEnter,
                             onSearchFocusHandled = { focusStoreSearchOnEnter = false },
@@ -920,6 +924,7 @@ private fun CatalogScreen(
     onFocused: (GameId) -> Unit,
     compact: Boolean,
     catalogFailureSimulation: CatalogFailureSimulation = CatalogFailureSimulation.LIVE,
+    providerHealth: ProviderHealth = ProviderHealth(),
     uiState: GameBoxUiState,
     focusSearchOnEnter: Boolean = false,
     onSearchFocusHandled: () -> Unit = {},
@@ -1061,6 +1066,7 @@ val allDiscoveryGames by discoveryRepository.observeGames(null, "", 250).collect
             discoverySyncing = discoverySyncing,
             discoverySyncProgress = discoverySyncProgress,
             discoverySyncMessage = discoverySyncMessage,
+            providerHealth = providerHealth,
             onRefresh = repository::refreshCatalog,
             onSync = ::syncDiscovery,
             openAuthorized = open,
@@ -1174,6 +1180,12 @@ val allDiscoveryGames by discoveryRepository.observeGames(null, "", 250).collect
                     "Metadata, box art and screenshots — import an authorized copy to play",
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.68f),
                 )
+                Text(
+                    providerHealthSummary(providerHealth),
+                    color = if (providerHealth.status == ProviderHealthStatus.HEALTHY)
+                        MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.error,
+                    fontSize = 11.sp,
+                )
             }
             Button(
                 enabled = !discoverySyncing && (selectedConsole == null || selectedConsole.theGamesDbName != null),
@@ -1258,6 +1270,7 @@ private fun BlueprintCatalogScreen(
     discoverySyncing: Boolean,
     discoverySyncProgress: Float,
     discoverySyncMessage: String?,
+    providerHealth: ProviderHealth,
     onRefresh: () -> Unit,
     onSync: () -> Unit,
     openAuthorized: (Game) -> Unit,
@@ -1452,6 +1465,18 @@ private fun BlueprintCatalogScreen(
                         BlueprintGameTile(game, false, { _ -> }, openAuthorized)
                     }
                 }
+            }
+            Text(
+                "TheGamesDB • " + providerHealthSummary(providerHealth),
+                color = if (providerHealth.status == ProviderHealthStatus.HEALTHY)
+                    MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.error,
+                fontSize = 10.sp,
+                modifier = Modifier.semantics {
+                    contentDescription = "TheGamesDB provider " + providerHealthSummary(providerHealth)
+                },
+            )
+            providerHealth.message?.let { message ->
+                Text(message, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 10.sp)
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
             Button(
