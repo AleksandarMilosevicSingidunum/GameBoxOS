@@ -4113,6 +4113,35 @@ private fun SettingsScreen(
         Spacer(Modifier.height(18.dp))
         SettingsSectionHeader("Display", sectionAnchor(SettingsSection.DISPLAY))
         SettingsStatusCard(Icons.Rounded.Monitor, "Responsive display mode", if (compact) "Phone layout active" else "Wide / DeX layout active")
+        Text("TV safe area", fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 10.dp))
+        Text(
+            "Keeps the complete GameBox viewport inside a television's visible area. This setting applies only to wide TV / DeX layouts.",
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.62f),
+            fontSize = 12.sp,
+        )
+        Row(
+            modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())
+                .padding(top = 7.dp, bottom = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            listOf(0f, 0.02f, 0.04f, 0.06f, 0.08f, 0.1f).forEach { percent ->
+                val label = if (percent == 0f) "Off" else (percent * 100).roundToInt().toString() + "%"
+                FilterChip(
+                    selected = kotlin.math.abs(currentSettings.safeAreaPercent - percent) < 0.001f,
+                    onClick = { scope.launch { settingsRepository.setSafeAreaPercent(percent) } },
+                    label = { Text(label) },
+                    modifier = Modifier.semantics {
+                        contentDescription = "TV safe area $label"
+                    },
+                )
+            }
+        }
+        Text(
+            if (compact) "Preview this setting in TV / DeX layout."
+            else "Active inset: " + (currentSettings.safeAreaPercent * 100).roundToInt() + "% on every edge.",
+            color = MaterialTheme.colorScheme.primary,
+            fontSize = 11.sp,
+        )
         SettingsActionRow("Open Android display settings", Icons.Rounded.Monitor) {
             launchSystemSettings(Settings.ACTION_DISPLAY_SETTINGS)
         }

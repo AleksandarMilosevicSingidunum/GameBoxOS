@@ -52,6 +52,16 @@ internal val LocalControllerActions = staticCompositionLocalOf<ControllerActionR
 internal val LocalGameBoxUiState = staticCompositionLocalOf<GameBoxUiState?> { null }
 internal val LocalReducedMotion = staticCompositionLocalOf { false }
 
+internal fun effectiveTvSafeAreaPercent(
+    widthDp: Float,
+    heightDp: Float,
+    requestedPercent: Float,
+): Float {
+    if (!widthDp.isFinite() || !heightDp.isFinite() || widthDp <= 0f || heightDp <= 0f) return 0f
+    val wideLivingRoomViewport = widthDp >= 900f && widthDp / heightDp >= 1.5f
+    return if (wideLivingRoomViewport) requestedPercent.coerceIn(0f, 0.1f) else 0f
+}
+
 /** Keep the dashboard's proportions on large DeX displays without shrinking phone text. */
 @Composable
 internal fun BlueprintViewport(
@@ -66,10 +76,13 @@ internal fun BlueprintViewport(
     val density = LocalDensity.current
     val focusDebugRegistry = remember { FocusDebugRegistry() }
     BoxWithConstraints(Modifier.fillMaxSize()) {
-        val useTvSafeArea = maxWidth >= 900.dp && maxWidth / maxHeight >= 1.5f
-        val inset = safeAreaPercent.coerceIn(0f, 0.1f)
-        val horizontalInset = if (useTvSafeArea) maxWidth * inset else 0.dp
-        val verticalInset = if (useTvSafeArea) maxHeight * inset else 0.dp
+        val inset = effectiveTvSafeAreaPercent(
+            widthDp = maxWidth.value,
+            heightDp = maxHeight.value,
+            requestedPercent = safeAreaPercent,
+        )
+        val horizontalInset = maxWidth * inset
+        val verticalInset = maxHeight * inset
         val contentWidth = maxWidth - horizontalInset * 2
         val contentHeight = maxHeight - verticalInset * 2
         val scale = minOf(contentWidth.value / 1280f, contentHeight.value / 720f).coerceIn(1f, 2f)
