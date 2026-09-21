@@ -254,6 +254,8 @@ class SettingsRepository(private val context: Context) {
 
     suspend fun catalogUrl(): String = settings.first().catalogUrl
 
+    suspend fun catalogTransport(): String = settings.first().catalogTransport.uppercase()
+
     suspend fun catalogConfigured(): Boolean = settings.first().catalogUrl.isNotBlank()
 
     suspend fun catalogProviderConfig(): CatalogProviderConfig {
