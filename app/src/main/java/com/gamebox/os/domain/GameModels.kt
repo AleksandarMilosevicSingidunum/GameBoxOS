@@ -28,6 +28,17 @@ enum class InstallState {
     INSTALLING, INSTALLED, UPDATE_AVAILABLE, MISSING_FILES, FAILED
 }
 
+data class GameMetadataOverrides(
+    val title: String? = null,
+    val year: Int? = null,
+    val genre: String? = null,
+    val artworkUrl: String? = null,
+    val description: String? = null,
+) {
+    val isEmpty: Boolean
+        get() = title == null && year == null && genre == null && artworkUrl == null && description == null
+}
+
 data class Game(
     val id: GameId,
     val title: String,
@@ -54,6 +65,12 @@ data class Game(
     val localContentSha256: String? = null,
     val localContentMimeType: String? = null,
     val localContentFiles: List<LocalContentFile> = emptyList(),
+    val metadataOverrides: GameMetadataOverrides = GameMetadataOverrides(),
+    val providerTitle: String = title,
+    val providerYear: Int = year,
+    val providerGenre: String = genre,
+    val providerArtworkUrl: String? = artworkUrl,
+    val providerDescription: String? = description,
 )
 
 enum class DownloadStatus {
