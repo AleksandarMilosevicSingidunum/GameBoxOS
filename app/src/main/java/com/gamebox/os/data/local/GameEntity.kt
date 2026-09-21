@@ -4,6 +4,7 @@ import androidx.room.Entity
 import androidx.room.PrimaryKey
 import com.gamebox.os.domain.Game
 import com.gamebox.os.domain.GameId
+import com.gamebox.os.domain.GameMetadataOverrides
 import com.gamebox.os.domain.InstallState
 import com.gamebox.os.domain.LocalContentFile
 
@@ -32,14 +33,19 @@ data class GameEntity(
     val localContentSha256: String? = null,
     val localContentMimeType: String? = null,
     val localContentFilesJson: String? = null,
+    val userTitle: String? = null,
+    val userYear: Int? = null,
+    val userGenre: String? = null,
+    val userArtworkUrl: String? = null,
+    val userDescription: String? = null,
 )
 
 fun GameEntity.toDomain(): Game = Game(
     id = GameId(id),
-    title = title,
+    title = userTitle ?: title,
     platform = platform,
-    year = year,
-    genre = genre,
+    year = userYear ?: year,
+    genre = userGenre ?: genre,
     sizeMb = sizeMb,
     state = runCatching { InstallState.valueOf(installState) }.getOrDefault(InstallState.FAILED),
     lastPlayed = lastPlayed,
@@ -49,8 +55,8 @@ fun GameEntity.toDomain(): Game = Game(
     expectedSha256 = expectedSha256,
     emulatorPackage = emulatorPackage,
     graphicsProfile = graphicsProfile,
-    artworkUrl = artworkUrl,
-    description = description,
+    artworkUrl = userArtworkUrl ?: artworkUrl,
+    description = userDescription ?: description,
     players = players,
     language = language,
     region = region,
@@ -58,14 +64,26 @@ fun GameEntity.toDomain(): Game = Game(
     localContentSha256 = localContentSha256,
     localContentMimeType = localContentMimeType,
     localContentFiles = decodeLocalContentFiles(localContentFilesJson),
+    metadataOverrides = GameMetadataOverrides(
+        title = userTitle,
+        year = userYear,
+        genre = userGenre,
+        artworkUrl = userArtworkUrl,
+        description = userDescription,
+    ),
+    providerTitle = title,
+    providerYear = year,
+    providerGenre = genre,
+    providerArtworkUrl = artworkUrl,
+    providerDescription = description,
 )
 
 fun Game.toEntity(): GameEntity = GameEntity(
     id = id.value,
-    title = title,
+    title = providerTitle,
     platform = platform,
-    year = year,
-    genre = genre,
+    year = providerYear,
+    genre = providerGenre,
     sizeMb = sizeMb,
     installState = state.name,
     lastPlayed = lastPlayed,
@@ -75,8 +93,8 @@ fun Game.toEntity(): GameEntity = GameEntity(
     expectedSha256 = expectedSha256,
     emulatorPackage = emulatorPackage,
     graphicsProfile = graphicsProfile,
-    artworkUrl = artworkUrl,
-    description = description,
+    artworkUrl = providerArtworkUrl,
+    description = providerDescription,
     players = players,
     language = language,
     region = region,
@@ -84,6 +102,11 @@ fun Game.toEntity(): GameEntity = GameEntity(
     localContentSha256 = localContentSha256,
     localContentMimeType = localContentMimeType,
     localContentFilesJson = encodeLocalContentFiles(localContentFiles),
+    userTitle = metadataOverrides.title,
+    userYear = metadataOverrides.year,
+    userGenre = metadataOverrides.genre,
+    userArtworkUrl = metadataOverrides.artworkUrl,
+    userDescription = metadataOverrides.description,
 )
 
 private fun encodeLocalContentFiles(files: List<LocalContentFile>): String? =

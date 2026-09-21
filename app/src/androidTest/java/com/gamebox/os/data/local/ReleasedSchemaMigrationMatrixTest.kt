@@ -28,6 +28,7 @@ class ReleasedSchemaMigrationMatrixTest {
         MIGRATION_9_10,
         MIGRATION_10_11,
         MIGRATION_11_12,
+        MIGRATION_12_13,
     )
 
     @Test
@@ -44,7 +45,8 @@ class ReleasedSchemaMigrationMatrixTest {
                 val database = room.openHelper.writableDatabase
                 database.query(
                     """
-                    SELECT title, favorite, graphicsProfile, localContentFilesJson
+                    SELECT title, favorite, graphicsProfile, localContentFilesJson,
+                           userTitle, userYear, userGenre, userArtworkUrl, userDescription
                     FROM games WHERE id = ?
                     """.trimIndent(),
                     arrayOf("sentinel-${startVersion}"),
@@ -54,6 +56,9 @@ class ReleasedSchemaMigrationMatrixTest {
                     assertEquals(0, cursor.getInt(1))
                     assertEquals("Balanced", cursor.getString(2))
                     assertTrue(cursor.isNull(3))
+                    for (column in 4..8) {
+                        assertTrue("user override column $column must default to null", cursor.isNull(column))
+                    }
                 }
                 assertEquals(
                     GAMEBOX_DATABASE_VERSION,

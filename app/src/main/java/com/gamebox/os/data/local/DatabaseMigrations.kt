@@ -163,3 +163,14 @@ val MIGRATION_11_12 = object : Migration(11, 12) {
         """.trimIndent())
     }
 }
+
+
+val MIGRATION_12_13 = object : Migration(12, 13) {
+    override fun migrate(database: SupportSQLiteDatabase) {
+        database.execSQL("ALTER TABLE games ADD COLUMN userTitle TEXT")
+        database.execSQL("ALTER TABLE games ADD COLUMN userYear INTEGER")
+        database.execSQL("ALTER TABLE games ADD COLUMN userGenre TEXT")
+        database.execSQL("ALTER TABLE games ADD COLUMN userArtworkUrl TEXT")
+        database.execSQL("ALTER TABLE games ADD COLUMN userDescription TEXT")
+    }
+}

@@ -7,13 +7,12 @@ import com.gamebox.os.data.GameRepository
 import com.gamebox.os.domain.GameId
 import com.gamebox.os.domain.InstallState
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
 
 data class AuthorizedDownloadState(
     val status: Status = Status.IDLE,
@@ -47,12 +46,28 @@ class WorkManagerAuthorizedDownloadController(
     private val contentValidator = InstalledContentValidator(
         applicationContext.filesDir.resolve(AssetDownloadWorker.INSTALL_ROOT)
     )
-    private val state = workManager
-        .getWorkInfosForUniqueWorkFlow(AuthorizedHomebrewDownload.UNIQUE_WORK_NAME)
-        .map { workInfos -> workInfos.lastOrNull().toAuthorizedState() }
-        .stateIn(scope, SharingStarted.Eagerly, AuthorizedDownloadState())
+    private val state = MutableStateFlow(AuthorizedDownloadState())
 
     init {
+        scope.launch(Dispatchers.IO) {
+            // WorkManager's observable query can be delayed while its database and
+            // lifecycle observer initialize. Read one persisted snapshot first so a
+            // cold-started GameBox can reconcile completed work immediately, then
+            // remain subscribed to every subsequent transition.
+            runCatching {
+                workManager
+                    .getWorkInfosForUniqueWork(AuthorizedHomebrewDownload.UNIQUE_WORK_NAME)
+                    .get()
+                    .lastOrNull()
+                    .toAuthorizedState()
+            }.getOrNull()?.let { state.value = it }
+
+            workManager
+                .getWorkInfosForUniqueWorkFlow(AuthorizedHomebrewDownload.UNIQUE_WORK_NAME)
+                .collect { workInfos ->
+                    state.value = workInfos.lastOrNull().toAuthorizedState()
+                }
+        }
         scope.launch {
             // Room seeding and WorkManager restoration race on a cold start.
             // StateFlow retains the latest work state while we wait for its target row.

@@ -59,6 +59,24 @@ interface GameDao {
 
     @Query("""
         UPDATE games
+        SET userTitle = :title,
+            userYear = :year,
+            userGenre = :genre,
+            userArtworkUrl = :artworkUrl,
+            userDescription = :description
+        WHERE id = :id
+    """)
+    suspend fun updateMetadataOverrides(
+        id: String,
+        title: String?,
+        year: Int?,
+        genre: String?,
+        artworkUrl: String?,
+        description: String?,
+    ): Int
+
+    @Query("""
+        UPDATE games
         SET lastPlayed = :lastPlayed,
             minutesPlayed = minutesPlayed + :additionalMinutes
         WHERE id = :id
