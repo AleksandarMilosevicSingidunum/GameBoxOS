@@ -10,7 +10,9 @@ import com.gamebox.os.GameBoxApplication
 import com.gamebox.os.data.local.GameBoxDatabase
 import com.gamebox.os.data.local.SaveRecordEntity
 import com.gamebox.os.data.local.SaveRecordDao
+import com.gamebox.os.domain.Game
 import com.gamebox.os.domain.GameId
+import com.gamebox.os.domain.InstallState
 import com.gamebox.os.settings.SettingsRepository
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.first
@@ -82,7 +84,8 @@ class PerGameSaveControllerTest {
             database.saveRecordDao().upsert(SaveRecordEntity("first-game", "second-game/save.dat", 1, 1))
             withTimeout(5_000) { first.observeState().first { !it.saveRecordPresent } }
             assertTrue(second.observeState().value.saveRecordPresent)
-            assertThrows(IllegalArgumentException::class.java) { first.uninstallTestContent() }
+            val wrongGame = Game(GameId("second-game"), "Second", "Retro", 2026, "Test", 1, InstallState.INSTALLED)
+            assertThrows(IllegalArgumentException::class.java) { first.contentRemovalPreview(wrongGame) }
         } finally {
             scope.coroutineContext[Job]?.cancelAndJoin()
             database.close()
