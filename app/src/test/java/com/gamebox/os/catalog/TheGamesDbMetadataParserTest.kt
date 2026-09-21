@@ -117,4 +117,24 @@ class TheGamesDbMetadataParserTest {
         assertEquals(game, TheGamesDbMetadataParser.enrich(game, "not-json"))
         assertEquals(game, TheGamesDbMetadataParser.enrich(game, """{"data":{"games":[]}}"""))
     }
+    @Test
+    fun ambiguousCandidatesRetainProviderIdentityForExplicitSelection() {
+        val payload = """
+            {
+              "data":{"games":[
+                {"id":101,"game_title":"Catalog Test","platform":"PlayStation","release_date":"1999-01-01","overview":"First","boxart":{"thumb":"first.jpg"}},
+                {"id":202,"game_title":"Catalog Test","platform":"Dreamcast","release_date":"2000-06-01","overview":"Second"},
+                {"id":303,"game_title":"Catalog Test Deluxe","platform":"PlayStation"}
+              ]},
+              "include":{"boxart":{"base_url":{"thumb":"https://cdn.example/"}}}
+            }
+        """.trimIndent()
+
+        val candidates = TheGamesDbMetadataParser.candidates(game, payload)
+
+        assertEquals(listOf("101", "202"), candidates.map { it.externalId })
+        assertEquals(listOf("PlayStation", "Dreamcast"), candidates.map { it.platform })
+        assertEquals(listOf(1999, 2000), candidates.map { it.year })
+        assertEquals("https://cdn.example/first.jpg", candidates.first().artworkUrl)
+    }
 }

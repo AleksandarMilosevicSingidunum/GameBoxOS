@@ -77,6 +77,30 @@ interface GameDao {
 
     @Query("""
         UPDATE games
+        SET title = :title,
+            year = COALESCE(:year, year),
+            genre = COALESCE(:genre, genre),
+            artworkUrl = COALESCE(:artworkUrl, artworkUrl),
+            description = COALESCE(:description, description),
+            metadataProvider = :provider,
+            metadataExternalId = :externalId,
+            metadataMatchedAtMillis = :matchedAtMillis
+        WHERE id = :id
+    """)
+    suspend fun applyProviderMetadataMatch(
+        id: String,
+        provider: String,
+        externalId: String,
+        title: String,
+        year: Int?,
+        genre: String?,
+        artworkUrl: String?,
+        description: String?,
+        matchedAtMillis: Long,
+    ): Int
+
+    @Query("""
+        UPDATE games
         SET lastPlayed = :lastPlayed,
             minutesPlayed = minutesPlayed + :additionalMinutes
         WHERE id = :id

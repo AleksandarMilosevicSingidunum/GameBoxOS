@@ -3,7 +3,7 @@ package com.gamebox.os.data.local
 import androidx.room.Database
 import androidx.room.RoomDatabase
 
-internal const val GAMEBOX_DATABASE_VERSION = 13
+internal const val GAMEBOX_DATABASE_VERSION = 14
 
 @Database(
     entities = [

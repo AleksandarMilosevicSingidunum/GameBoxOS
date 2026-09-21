@@ -38,6 +38,9 @@ data class GameEntity(
     val userGenre: String? = null,
     val userArtworkUrl: String? = null,
     val userDescription: String? = null,
+    val metadataProvider: String? = null,
+    val metadataExternalId: String? = null,
+    val metadataMatchedAtMillis: Long? = null,
 )
 
 fun GameEntity.toDomain(): Game = Game(
@@ -76,6 +79,9 @@ fun GameEntity.toDomain(): Game = Game(
     providerGenre = genre,
     providerArtworkUrl = artworkUrl,
     providerDescription = description,
+    metadataProvider = metadataProvider,
+    metadataExternalId = metadataExternalId,
+    metadataMatchedAtMillis = metadataMatchedAtMillis,
 )
 
 fun Game.toEntity(): GameEntity = GameEntity(
@@ -107,6 +113,9 @@ fun Game.toEntity(): GameEntity = GameEntity(
     userGenre = metadataOverrides.genre,
     userArtworkUrl = metadataOverrides.artworkUrl,
     userDescription = metadataOverrides.description,
+    metadataProvider = metadataProvider,
+    metadataExternalId = metadataExternalId,
+    metadataMatchedAtMillis = metadataMatchedAtMillis,
 )
 
 private fun encodeLocalContentFiles(files: List<LocalContentFile>): String? =

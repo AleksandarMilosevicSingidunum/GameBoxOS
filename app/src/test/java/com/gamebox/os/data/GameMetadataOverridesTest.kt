@@ -99,4 +99,26 @@ class GameMetadataOverridesTest {
         assertEquals("Updated provider description", merged.description)
         assertEquals("My title", merged.metadataOverrides.title)
     }
+    @Test fun providerProvenanceSurvivesEntityRoundTripAndCatalogRefresh() {
+        val local = game().copy(
+            metadataProvider = "THE_GAMES_DB",
+            metadataExternalId = "12345",
+            metadataMatchedAtMillis = 42L,
+            metadataOverrides = GameMetadataOverrides(title = "My title"),
+            title = "My title",
+        )
+        val restored = local.toEntity().toDomain()
+        assertEquals("THE_GAMES_DB", restored.metadataProvider)
+        assertEquals("12345", restored.metadataExternalId)
+        assertEquals(42L, restored.metadataMatchedAtMillis)
+
+        val merged = mergeCatalogPreservingLocalState(
+            listOf(restored),
+            listOf(game(title = "Refreshed provider title")),
+        ).single()
+        assertEquals("THE_GAMES_DB", merged.metadataProvider)
+        assertEquals("12345", merged.metadataExternalId)
+        assertEquals("My title", merged.title)
+        assertEquals("Refreshed provider title", merged.providerTitle)
+    }
 }
