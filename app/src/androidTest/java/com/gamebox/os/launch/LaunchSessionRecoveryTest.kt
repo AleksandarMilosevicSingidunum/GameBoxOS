@@ -75,14 +75,21 @@ class LaunchSessionRecoveryTest {
             database = initial
             initial.gameDao().upsert(game())
             initial.close()
-            // Version 12 changes only this table. Recreate the preceding structure;
-            // this is not a substitute for a full released-schema migration matrix.
+            // Recreate the pre-session table state. This fixture began as the current
+            // schema, so its metadata-override columns already exist; the dedicated
+            // released-schema matrix exercises the real 11 -> 12 -> 13 chain.
             SQLiteDatabase.openDatabase(context.getDatabasePath(name).path, null, SQLiteDatabase.OPEN_READWRITE).use {
                 it.execSQL("DROP TABLE pending_launch_session")
                 it.version = 11
             }
+            val sessionFixtureMigration =
+                object : androidx.room.migration.Migration(11, GAMEBOX_DATABASE_VERSION) {
+                    override fun migrate(database: androidx.sqlite.db.SupportSQLiteDatabase) {
+                        MIGRATION_11_12.migrate(database)
+                    }
+                }
             val migrated = Room.databaseBuilder(context, GameBoxDatabase::class.java, name)
-                .addMigrations(MIGRATION_11_12, MIGRATION_12_13).build()
+                .addMigrations(sessionFixtureMigration).build()
             database = migrated
             assertEquals(game(), migrated.gameDao().getById("session-test"))
             assertNull(migrated.launchSessionDao().pending())
