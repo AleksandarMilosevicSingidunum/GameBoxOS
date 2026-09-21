@@ -3815,6 +3815,7 @@ private fun SettingsScreen(
     }
     var catalogUrl by remember(currentSettings.catalogUrl) { mutableStateOf(currentSettings.catalogUrl) }
     var catalogMessage by remember { mutableStateOf<String?>(null) }
+    var catalogTesting by remember { mutableStateOf(false) }
     var theGamesDbApiKey by remember { mutableStateOf("") }
     var theGamesDbConfigured by remember { mutableStateOf(false) }
     var cloudProvider by remember(currentSettings.cloudSaveProvider) {
@@ -4435,25 +4436,59 @@ private fun SettingsScreen(
             singleLine = true,
             modifier = Modifier.fillMaxWidth()
         )
-        Button(
-            onClick = {
-                val trimmed = catalogUrl.trim()
-                val validationError = if (trimmed.isEmpty()) null else
-                    runCatching { validateAuthorizedCatalogUrl(trimmed) }.exceptionOrNull()
-                if (validationError != null) {
-                    catalogMessage = validationError.message ?: "Invalid catalog URL"
-                } else {
-                    scope.launch {
-                        settingsRepository.setCatalogUrl(trimmed)
-                        catalogMessage = if (trimmed.isEmpty())
-                            "Bundled offline catalog selected"
-                        else "Catalog URL saved. Open Store and choose Refresh."
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.padding(top = 8.dp),
+        ) {
+            Button(
+                onClick = {
+                    val trimmed = catalogUrl.trim()
+                    val validationError = if (trimmed.isEmpty()) null else
+                        runCatching { validateAuthorizedCatalogUrl(trimmed) }.exceptionOrNull()
+                    if (validationError != null) {
+                        catalogMessage = validationError.message ?: "Invalid catalog URL"
+                    } else {
+                        scope.launch {
+                            settingsRepository.setCatalogUrl(trimmed)
+                            catalogMessage = if (trimmed.isEmpty())
+                                "Bundled offline catalog selected"
+                            else "Catalog URL saved. Open Store and choose Refresh."
+                        }
                     }
-                }
-            },
-            modifier = Modifier.padding(top = 8.dp)
-        ) { Text("Save catalog source") }
-        catalogMessage?.let { Text(it, color = MaterialTheme.colorScheme.primary) }
+                },
+            ) { Text("Save source") }
+            OutlinedButton(
+                enabled = !catalogTesting,
+                onClick = {
+                    val trimmed = catalogUrl.trim()
+                    val validationError = if (trimmed.isEmpty()) null else
+                        runCatching { validateAuthorizedCatalogUrl(trimmed) }.exceptionOrNull()
+                    if (validationError != null) {
+                        catalogMessage = validationError.message ?: "Invalid catalog URL"
+                    } else {
+                        scope.launch {
+                            catalogTesting = true
+                            settingsRepository.setCatalogUrl(trimmed)
+                            val result = catalogProvider.testConnection()
+                            catalogMessage = result.message
+                            catalogTesting = false
+                        }
+                    }
+                },
+            ) { Text(if (catalogTesting) "Testing…" else "Save & test") }
+        }
+        Text(
+            "Capabilities: refresh, connection test, authorized source resolution",
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.62f),
+            fontSize = 12.sp,
+        )
+        catalogMessage?.let {
+            Text(
+                it,
+                color = if (it.startsWith("Connected") || it.contains("available"))
+                    MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
+            )
+        }
         Spacer(Modifier.height(18.dp))
         Text("TheGamesDB metadata", fontWeight = FontWeight.Bold)
         Text(
