@@ -127,6 +127,17 @@ class ConfiguredCatalogProvider(
         }
     }
 
+    override suspend fun testConnection(): CatalogConnectionResult {
+        val url = configuredUrl()
+        if (url.isBlank()) {
+            return fallback.testConnection().copy(message = "Bundled offline catalog is available")
+        }
+        if (!networkAvailable()) {
+            return CatalogConnectionResult(false, message = "No validated internet connection")
+        }
+        return remote.testConnection()
+    }
+
     override fun consumeFallbackReason(): CatalogFallbackReason =
         fallbackReason.getAndSet(CatalogFallbackReason.NONE)
 }
@@ -210,6 +221,11 @@ class MetadataEnrichingCatalogProvider(
     private val base: CatalogProvider,
     private val enrich: suspend (Game) -> Game
 ) : CatalogProvider, CatalogFallbackStatus {
+    override val capabilities: CatalogProviderCapabilities
+        get() = base.capabilities
+
+    override suspend fun testConnection(): CatalogConnectionResult = base.testConnection()
+
     override suspend fun load(): CatalogSnapshot {
         val snapshot = base.load()
         val enriched = snapshot.games.map { game ->
