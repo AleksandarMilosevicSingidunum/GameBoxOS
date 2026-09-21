@@ -15,6 +15,8 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import com.gamebox.os.catalog.CatalogCredentials
+import com.gamebox.os.catalog.CatalogProviderConfig
+import com.gamebox.os.catalog.CatalogTransport
 import com.gamebox.os.catalog.ProviderHealth
 import com.gamebox.os.catalog.ProviderHealthStatus
 import java.security.SecureRandom
@@ -35,6 +37,10 @@ data class GameBoxSettings(
     val catalogRefreshedAtEpochMs: Long? = null,
     val theGamesDbHealth: ProviderHealth = ProviderHealth(),
     val catalogUrl: String = "",
+    val catalogTransport: String = "HTTPS",
+    val catalogBucket: String = "",
+    val catalogPrefix: String = "",
+    val catalogRegion: String = "us-east-1",
     val externalLibraryUri: String = "",
     val cloudSaveProvider: String = "WEBDAV",
     val cloudSaveEndpoint: String = "",
@@ -76,6 +82,10 @@ class SettingsRepository(private val context: Context) {
                 message = preferences[THEGAMESDB_HEALTH_MESSAGE],
             ),
             catalogUrl = preferences[CATALOG_URL] ?: "",
+            catalogTransport = preferences[CATALOG_TRANSPORT] ?: "HTTPS",
+            catalogBucket = preferences[CATALOG_BUCKET] ?: "",
+            catalogPrefix = preferences[CATALOG_PREFIX] ?: "",
+            catalogRegion = preferences[CATALOG_REGION] ?: "us-east-1",
             externalLibraryUri = preferences[EXTERNAL_LIBRARY_URI] ?: "",
             cloudSaveProvider = preferences[CLOUD_SAVE_PROVIDER] ?: "WEBDAV",
             cloudSaveEndpoint = preferences[CLOUD_SAVE_ENDPOINT] ?: "",
@@ -244,8 +254,98 @@ class SettingsRepository(private val context: Context) {
 
     suspend fun catalogUrl(): String = settings.first().catalogUrl
 
+    suspend fun catalogTransport(): String = settings.first().catalogTransport.uppercase()
+
+    suspend fun catalogConfigured(): Boolean = settings.first().catalogUrl.isNotBlank()
+
+    suspend fun catalogProviderConfig(): CatalogProviderConfig {
+        val current = settings.first()
+        val transport = when (current.catalogTransport.uppercase()) {
+            "WEBDAV" -> CatalogTransport.WebDav(current.catalogUrl)
+            "S3" -> CatalogTransport.S3(
+                endpoint = current.catalogUrl,
+                bucket = current.catalogBucket,
+                prefix = current.catalogPrefix,
+                region = current.catalogRegion,
+            )
+            else -> CatalogTransport.Https(current.catalogUrl)
+        }
+        val credentialKey = when (current.catalogTransport.uppercase()) {
+            "WEBDAV" -> CATALOG_WEBDAV_CREDENTIALS.takeIf { catalogCredentials(it) != null }
+            "S3" -> CATALOG_S3_CREDENTIALS
+            else -> CATALOG_HTTPS_CREDENTIALS.takeIf { catalogCredentials(it) != null }
+        }
+        return CatalogProviderConfig(transport, credentialKey)
+    }
+
+    fun catalogCredentials(key: String): CatalogCredentials? = when (key) {
+        CATALOG_WEBDAV_CREDENTIALS, CATALOG_HTTPS_CREDENTIALS -> CatalogCredentials(
+            username = secretStore.get(CATALOG_USERNAME),
+            password = secretStore.get(CATALOG_PASSWORD),
+        ).takeIf(CatalogCredentials::hasBasicAuth)
+        CATALOG_S3_CREDENTIALS -> CatalogCredentials(
+            accessKey = secretStore.get(CATALOG_ACCESS_KEY),
+            secretKey = secretStore.get(CATALOG_SECRET_KEY),
+        ).takeIf(CatalogCredentials::hasS3Auth)
+        else -> null
+    }
+
+    suspend fun hasCatalogCredentials(transport: String): Boolean = withContext(Dispatchers.IO) {
+        catalogCredentials(catalogCredentialKey(transport)) != null
+    }
+
+    suspend fun setCatalogCredentials(transport: String, identity: String?, secret: String?) =
+        withContext(Dispatchers.IO) {
+            when (transport.uppercase()) {
+                "S3" -> {
+                    secretStore.put(CATALOG_ACCESS_KEY, identity)
+                    secretStore.put(CATALOG_SECRET_KEY, secret)
+                    secretStore.put(CATALOG_USERNAME, null)
+                    secretStore.put(CATALOG_PASSWORD, null)
+                }
+                "HTTPS", "WEBDAV" -> {
+                    secretStore.put(CATALOG_USERNAME, identity)
+                    secretStore.put(CATALOG_PASSWORD, secret)
+                    secretStore.put(CATALOG_ACCESS_KEY, null)
+                    secretStore.put(CATALOG_SECRET_KEY, null)
+                }
+                else -> require(false) { "Unsupported catalog transport" }
+            }
+        }
+
+    suspend fun clearCatalogCredentials() = withContext(Dispatchers.IO) {
+        secretStore.put(CATALOG_USERNAME, null)
+        secretStore.put(CATALOG_PASSWORD, null)
+        secretStore.put(CATALOG_ACCESS_KEY, null)
+        secretStore.put(CATALOG_SECRET_KEY, null)
+    }
+
+    suspend fun setCatalogConfiguration(
+        transport: String,
+        endpoint: String,
+        bucket: String = "",
+        prefix: String = "",
+        region: String = "us-east-1",
+    ) {
+        val normalizedTransport = transport.uppercase()
+        require(normalizedTransport in setOf("HTTPS", "WEBDAV", "S3")) { "Unsupported catalog transport" }
+        context.gameBoxDataStore.edit { preferences ->
+            preferences[CATALOG_TRANSPORT] = normalizedTransport
+            preferences[CATALOG_URL] = endpoint.trim()
+            preferences[CATALOG_BUCKET] = bucket.trim()
+            preferences[CATALOG_PREFIX] = prefix.trim().trim('/')
+            preferences[CATALOG_REGION] = region.trim().ifEmpty { "us-east-1" }
+        }
+    }
+
     suspend fun setCatalogUrl(value: String) {
-        context.gameBoxDataStore.edit { it[CATALOG_URL] = value.trim() }
+        setCatalogConfiguration("HTTPS", value)
+    }
+
+    private fun catalogCredentialKey(transport: String): String = when (transport.uppercase()) {
+        "S3" -> CATALOG_S3_CREDENTIALS
+        "WEBDAV" -> CATALOG_WEBDAV_CREDENTIALS
+        else -> CATALOG_HTTPS_CREDENTIALS
     }
 
     suspend fun setSafeAreaPercent(value: Float) {
@@ -342,6 +442,10 @@ class SettingsRepository(private val context: Context) {
         val THEGAMESDB_RETRY_AFTER = longPreferencesKey("thegamesdb_retry_after")
         val THEGAMESDB_HEALTH_MESSAGE = stringPreferencesKey("thegamesdb_health_message")
         val CATALOG_URL = stringPreferencesKey("catalog_url")
+        val CATALOG_TRANSPORT = stringPreferencesKey("catalog_transport")
+        val CATALOG_BUCKET = stringPreferencesKey("catalog_bucket")
+        val CATALOG_PREFIX = stringPreferencesKey("catalog_prefix")
+        val CATALOG_REGION = stringPreferencesKey("catalog_region")
         val EXTERNAL_LIBRARY_URI = stringPreferencesKey("external_library_uri")
         val CLOUD_SAVE_PROVIDER = stringPreferencesKey("cloud_save_provider")
         val CLOUD_SAVE_ENDPOINT = stringPreferencesKey("cloud_save_endpoint")
@@ -354,6 +458,13 @@ class SettingsRepository(private val context: Context) {
         val RECENT_SHORTCUT_LAUNCHES = stringPreferencesKey("recent_shortcut_launches")
         val HIDDEN_SHORTCUT_PACKAGES = stringPreferencesKey("hidden_shortcut_packages")
         const val THEGAMESDB_API_KEY = "thegamesdb_api_key"
+        const val CATALOG_USERNAME = "catalog_username"
+        const val CATALOG_PASSWORD = "catalog_password"
+        const val CATALOG_ACCESS_KEY = "catalog_access_key"
+        const val CATALOG_SECRET_KEY = "catalog_secret_key"
+        const val CATALOG_HTTPS_CREDENTIALS = "catalog-https"
+        const val CATALOG_WEBDAV_CREDENTIALS = "catalog-webdav"
+        const val CATALOG_S3_CREDENTIALS = "catalog-s3"
         const val CLOUD_SAVE_USERNAME = "cloud_save_username"
         const val CLOUD_SAVE_PASSWORD = "cloud_save_password"
         const val CLOUD_SAVE_ACCESS_KEY = "cloud_save_access_key"

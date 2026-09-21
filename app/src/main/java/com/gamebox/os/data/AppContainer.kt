@@ -8,6 +8,9 @@ import com.gamebox.os.catalog.AssetCatalogProvider
 import com.gamebox.os.catalog.ConfiguredCatalogProvider
 import com.gamebox.os.catalog.HttpsCatalogProvider
 import com.gamebox.os.catalog.MetadataEnrichingCatalogProvider
+import com.gamebox.os.catalog.CatalogCredentialStore
+import com.gamebox.os.catalog.CatalogProviderFactory
+import com.gamebox.os.catalog.SelectingCatalogProvider
 import com.gamebox.os.catalog.TheGamesDbMetadataClient
 import com.gamebox.os.catalog.TheGamesDbCatalogSync
 import com.gamebox.os.catalog.HttpsTheGamesDbCatalogTransport
@@ -102,9 +105,32 @@ class DefaultAppContainer(context: Context) : AppContainer {
     }
     override val authorizedRomImporter = AuthorizedRomImporter(applicationContext)
     private val assetCatalogProvider = AssetCatalogProvider(applicationContext)
+    private val catalogCredentialStore = object : CatalogCredentialStore {
+        override fun credentials(key: String) = settingsRepository.catalogCredentials(key)
+    }
+    private val transportCatalogProvider = CatalogProviderFactory(
+        credentials = catalogCredentialStore,
+    ).create(settingsRepository::catalogProviderConfig)
+    private val selectedRemoteCatalogProvider = SelectingCatalogProvider(
+        selected = settingsRepository::catalogTransport,
+        providers = mapOf(
+            "HTTPS" to HttpsCatalogProvider(
+                applicationContext,
+                settingsRepository::catalogUrl,
+                credentialStore = catalogCredentialStore,
+                credentialKey = {
+                    "catalog-https".takeIf {
+                        catalogCredentialStore.credentials("catalog-https") != null
+                    }
+                },
+            ),
+            "WEBDAV" to transportCatalogProvider,
+            "S3" to transportCatalogProvider,
+        ),
+    )
     private val configuredCatalogProvider = ConfiguredCatalogProvider(
         fallback = assetCatalogProvider,
-        remote = HttpsCatalogProvider(applicationContext, settingsRepository::catalogUrl),
+        remote = selectedRemoteCatalogProvider,
         configuredUrl = settingsRepository::catalogUrl,
         networkAvailable = { isNetworkAvailable(applicationContext) }
     )

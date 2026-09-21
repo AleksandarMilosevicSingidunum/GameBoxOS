@@ -109,6 +109,8 @@ import com.gamebox.os.settings.DeveloperLayoutMode
 import com.gamebox.os.settings.CatalogFailureSimulation
 import com.gamebox.os.settings.ShortcutLaunchRecord
 import com.gamebox.os.catalog.CatalogProvider
+import com.gamebox.os.catalog.CatalogProviderConfig
+import com.gamebox.os.catalog.CatalogTransport
 import com.gamebox.os.catalog.validateAuthorizedCatalogUrl
 import com.gamebox.os.catalog.CatalogSyncResult
 import com.gamebox.os.catalog.ProviderHealth
@@ -3816,6 +3818,13 @@ private fun SettingsScreen(
     var catalogUrl by remember(currentSettings.catalogUrl) { mutableStateOf(currentSettings.catalogUrl) }
     var catalogMessage by remember { mutableStateOf<String?>(null) }
     var catalogTesting by remember { mutableStateOf(false) }
+    var catalogTransport by remember(currentSettings.catalogTransport) { mutableStateOf(currentSettings.catalogTransport) }
+    var catalogBucket by remember(currentSettings.catalogBucket) { mutableStateOf(currentSettings.catalogBucket) }
+    var catalogPrefix by remember(currentSettings.catalogPrefix) { mutableStateOf(currentSettings.catalogPrefix) }
+    var catalogRegion by remember(currentSettings.catalogRegion) { mutableStateOf(currentSettings.catalogRegion) }
+    var catalogIdentity by remember { mutableStateOf("") }
+    var catalogSecret by remember { mutableStateOf("") }
+    var catalogCredentialsConfigured by remember { mutableStateOf(false) }
     var theGamesDbApiKey by remember { mutableStateOf("") }
     var theGamesDbConfigured by remember { mutableStateOf(false) }
     var cloudProvider by remember(currentSettings.cloudSaveProvider) {
@@ -3834,6 +3843,9 @@ private fun SettingsScreen(
     var companionSecret by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(settingsRepository) {
         theGamesDbConfigured = settingsRepository.hasTheGamesDbApiKey()
+    }
+    LaunchedEffect(settingsRepository, catalogTransport) {
+        catalogCredentialsConfigured = settingsRepository.hasCatalogCredentials(catalogTransport)
     }
     LaunchedEffect(settingsRepository, cloudProvider) {
         cloudCredentialsConfigured = settingsRepository.hasCloudSaveCredentials(cloudProvider)
@@ -4426,16 +4438,89 @@ private fun SettingsScreen(
         Spacer(Modifier.height(18.dp))
         Text("Authorized catalog provider", fontWeight = FontWeight.Bold)
         Text(
-            "Leave blank to use the bundled offline fixture. Remote catalogs must use HTTPS.",
+            "Choose HTTPS, WebDAV, or S3-compatible storage. Credentials are encrypted with Android Keystore.",
             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.62f)
         )
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.padding(vertical = 8.dp),
+        ) {
+            listOf("HTTPS", "WEBDAV", "S3").forEach { transport ->
+                FilterChip(
+                    selected = catalogTransport == transport,
+                    onClick = {
+                        catalogTransport = transport
+                        catalogMessage = null
+                    },
+                    label = { Text(if (transport == "WEBDAV") "WebDAV" else transport) },
+                )
+            }
+        }
         OutlinedTextField(
             value = catalogUrl,
             onValueChange = { catalogUrl = it },
-            label = { Text("HTTPS catalog URL") },
+            label = {
+                Text(
+                    when (catalogTransport) {
+                        "WEBDAV" -> "WebDAV collection URL"
+                        "S3" -> "S3-compatible endpoint"
+                        else -> "HTTPS catalog URL"
+                    }
+                )
+            },
             singleLine = true,
             modifier = Modifier.fillMaxWidth()
         )
+        if (catalogTransport == "S3") {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(
+                    value = catalogBucket,
+                    onValueChange = { catalogBucket = it },
+                    label = { Text("Bucket") },
+                    singleLine = true,
+                    modifier = Modifier.weight(1f),
+                )
+                OutlinedTextField(
+                    value = catalogRegion,
+                    onValueChange = { catalogRegion = it },
+                    label = { Text("Region") },
+                    singleLine = true,
+                    modifier = Modifier.weight(1f),
+                )
+            }
+            OutlinedTextField(
+                value = catalogPrefix,
+                onValueChange = { catalogPrefix = it },
+                label = { Text("Optional prefix") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
+        Text(
+            if (catalogCredentialsConfigured) "Credentials configured securely" else
+                if (catalogTransport == "HTTPS") "Optional Basic authentication" else "Credentials required for authenticated catalogs",
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.62f),
+            fontSize = 12.sp,
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            OutlinedTextField(
+                value = catalogIdentity,
+                onValueChange = { catalogIdentity = it },
+                label = { Text(if (catalogTransport == "S3") "Access key" else "Username") },
+                singleLine = true,
+                modifier = Modifier.weight(1f),
+            )
+            OutlinedTextField(
+                value = catalogSecret,
+                onValueChange = { catalogSecret = it },
+                label = { Text(if (catalogTransport == "S3") "Secret key" else "Password") },
+                singleLine = true,
+                visualTransformation = PasswordVisualTransformation(),
+                modifier = Modifier.weight(1f).semantics {
+                    contentDescription = "Catalog secret, hidden"
+                },
+            )
+        }
         Row(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             modifier = Modifier.padding(top = 8.dp),
@@ -4443,16 +4528,48 @@ private fun SettingsScreen(
             Button(
                 onClick = {
                     val trimmed = catalogUrl.trim()
-                    val validationError = if (trimmed.isEmpty()) null else
-                        runCatching { validateAuthorizedCatalogUrl(trimmed) }.exceptionOrNull()
+                    val validationError = runCatching {
+                        if (trimmed.isNotEmpty()) {
+                            val transport = when (catalogTransport) {
+                                "WEBDAV" -> CatalogTransport.WebDav(trimmed)
+                                "S3" -> CatalogTransport.S3(
+                                    trimmed,
+                                    catalogBucket.trim(),
+                                    catalogPrefix.trim(),
+                                    catalogRegion.trim().ifEmpty { "us-east-1" },
+                                )
+                                else -> CatalogTransport.Https(trimmed)
+                            }
+                            CatalogProviderConfig(transport)
+                        }
+                        require(
+                            (catalogIdentity.isBlank() && catalogSecret.isBlank()) ||
+                                (catalogIdentity.isNotBlank() && catalogSecret.isNotBlank())
+                        ) { "Enter both credential fields or leave both blank" }
+                    }.exceptionOrNull()
                     if (validationError != null) {
-                        catalogMessage = validationError.message ?: "Invalid catalog URL"
+                        catalogMessage = validationError.message ?: "Invalid catalog configuration"
                     } else {
                         scope.launch {
-                            settingsRepository.setCatalogUrl(trimmed)
+                            settingsRepository.setCatalogConfiguration(
+                                catalogTransport,
+                                trimmed,
+                                catalogBucket,
+                                catalogPrefix,
+                                catalogRegion,
+                            )
+                            if (catalogIdentity.isNotBlank()) {
+                                settingsRepository.setCatalogCredentials(
+                                    catalogTransport,
+                                    catalogIdentity,
+                                    catalogSecret,
+                                )
+                                catalogIdentity = ""
+                                catalogSecret = ""
+                                catalogCredentialsConfigured = true
+                            }
                             catalogMessage = if (trimmed.isEmpty())
-                                "Bundled offline catalog selected"
-                            else "Catalog URL saved. Open Store and choose Refresh."
+                                "Bundled offline catalog selected" else "Catalog configuration saved"
                         }
                     }
                 },
@@ -4460,22 +4577,40 @@ private fun SettingsScreen(
             OutlinedButton(
                 enabled = !catalogTesting,
                 onClick = {
-                    val trimmed = catalogUrl.trim()
-                    val validationError = if (trimmed.isEmpty()) null else
-                        runCatching { validateAuthorizedCatalogUrl(trimmed) }.exceptionOrNull()
-                    if (validationError != null) {
-                        catalogMessage = validationError.message ?: "Invalid catalog URL"
-                    } else {
-                        scope.launch {
-                            catalogTesting = true
-                            settingsRepository.setCatalogUrl(trimmed)
-                            val result = catalogProvider.testConnection()
-                            catalogMessage = result.message
-                            catalogTesting = false
+                    scope.launch {
+                        catalogTesting = true
+                        settingsRepository.setCatalogConfiguration(
+                            catalogTransport,
+                            catalogUrl,
+                            catalogBucket,
+                            catalogPrefix,
+                            catalogRegion,
+                        )
+                        if (catalogIdentity.isNotBlank() && catalogSecret.isNotBlank()) {
+                            settingsRepository.setCatalogCredentials(
+                                catalogTransport,
+                                catalogIdentity,
+                                catalogSecret,
+                            )
+                            catalogCredentialsConfigured = true
                         }
+                        val result = catalogProvider.testConnection()
+                        catalogMessage = result.message
+                        catalogTesting = false
                     }
                 },
             ) { Text(if (catalogTesting) "Testing…" else "Save & test") }
+            if (catalogCredentialsConfigured) {
+                OutlinedButton(
+                    onClick = {
+                        scope.launch {
+                            settingsRepository.clearCatalogCredentials()
+                            catalogCredentialsConfigured = false
+                            catalogMessage = "Catalog credentials cleared"
+                        }
+                    },
+                ) { Text("Clear credentials") }
+            }
         }
         Text(
             "Capabilities: refresh, connection test, authorized source resolution",
@@ -4485,7 +4620,7 @@ private fun SettingsScreen(
         catalogMessage?.let {
             Text(
                 it,
-                color = if (it.startsWith("Connected") || it.contains("available"))
+                color = if (it.startsWith("Connected") || it.contains("available") || it.contains("saved"))
                     MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
             )
         }

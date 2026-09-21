@@ -51,13 +51,15 @@ class WorkManagerAuthorizedDownloadController(
     init {
         scope.launch(Dispatchers.IO) {
             // WorkManager's observable query can be delayed while its database and
-            // lifecycle observer initialize. Read one persisted snapshot first so a
+            // lifecycle observer initialize. Bound the synchronous snapshot so a stalled
+            // WorkManager future cannot prevent the durable Flow subscription below.
+            // Read one persisted snapshot first so a
             // cold-started GameBox can reconcile completed work immediately, then
             // remain subscribed to every subsequent transition.
             runCatching {
                 workManager
                     .getWorkInfosForUniqueWork(AuthorizedHomebrewDownload.UNIQUE_WORK_NAME)
-                    .get()
+                    .get(5, java.util.concurrent.TimeUnit.SECONDS)
                     .lastOrNull()
                     .toAuthorizedState()
             }.getOrNull()?.let { state.value = it }
