@@ -58,9 +58,13 @@ class BlueprintScreenshotsTest {
             if (title == "Store" &&
                 rule.activity.resources.configuration.screenWidthDp >= 900
             ) {
-                rule.onNodeWithText("Genre: All").assertIsDisplayed()
-                rule.onNodeWithText("Region: All").assertIsDisplayed()
-                rule.onNodeWithText("Language: All").assertIsDisplayed()
+                listOf("Genre: All", "Region: All", "Language: All").forEach { label ->
+                    val filter = rule.onNodeWithText(label)
+                    // At enlarged font scales the horizontal filter rail intentionally scrolls.
+                    // Prove each control is reachable before requiring it to be visible.
+                    runCatching { filter.performScrollTo() }
+                    filter.assertIsDisplayed()
+                }
             }
             capture("${index + 3}-${title.lowercase()}")
         }
