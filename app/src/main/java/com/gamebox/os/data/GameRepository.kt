@@ -12,7 +12,9 @@ interface GameRepository {
     fun game(id: GameId): Game?
     fun setFavorite(id: GameId, favorite: Boolean)
     fun setEmulatorSettings(id: GameId, packageName: String?, graphicsProfile: String)
-    suspend fun setMetadataOverrides(id: GameId, overrides: GameMetadataOverrides)
+    suspend fun setMetadataOverrides(id: GameId, overrides: GameMetadataOverrides) {
+        error("Metadata corrections are unavailable")
+    }
     fun setInstallState(id: GameId, state: InstallState)
     suspend fun setInstallStateAndAwait(id: GameId, state: InstallState) { setInstallState(id, state) }
     fun recordPlaySession(id: GameId, endedAtMillis: Long, minutesPlayed: Int)
