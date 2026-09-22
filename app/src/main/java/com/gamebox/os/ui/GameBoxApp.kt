@@ -310,6 +310,7 @@ fun GameBoxApp(
                             gameLaunchController,
                             saveSafetyController,
                             managedSaveDiscovery,
+                            discoveryRepository = catalogDiscoveryRepository,
                             importer = authorizedRomImporter,
                             saveControllerFactory = saveControllerFactory,
                             compact = compact,
@@ -2119,6 +2120,7 @@ private fun DiscoveryDetailsScreen(
                                 artworkUrl = game.coverUrl,
                                 description = game.description,
                                 players = game.players,
+                                region = game.region,
                             )
                         )
                         "$importPlatformLabel copy verified and added to Library. SHA-256 " +
@@ -2180,6 +2182,7 @@ private fun DiscoveryDetailsScreen(
                                 artworkUrl = game.coverUrl,
                                 description = game.description,
                                 players = game.players,
+                                region = game.region,
                                 additionalFiles = importedFiles.filterNot { it.relativePath == launchPath },
                             )
                         )
@@ -2197,15 +2200,6 @@ private fun DiscoveryDetailsScreen(
         }
     }
 
-    var selectedScreenshot by remember(game.id) { mutableStateOf<String?>(null) }
-    selectedScreenshot?.let { screenshot ->
-        AlertDialog(
-            onDismissRequest = { selectedScreenshot = null },
-            title = { Text(detail.title, maxLines = 2) },
-            text = { RemoteArtwork(screenshot, Modifier.fillMaxWidth().height(300.dp), contentScale = androidx.compose.ui.layout.ContentScale.Fit) },
-            confirmButton = { TextButton(onClick = { selectedScreenshot = null }) { Text("Close") } },
-        )
-    }
     BoxWithConstraints(Modifier.fillMaxSize()) {
         val narrow = maxWidth < 700.dp
         Column(Modifier.fillMaxSize().verticalScroll(restoredScrollState("discovery." + game.id.value)), verticalArrangement = Arrangement.spacedBy(14.dp)) {
@@ -2250,21 +2244,7 @@ private fun DiscoveryDetailsScreen(
                 Text(message, color = if (message.startsWith("Import failed") || message.startsWith("Import rejected")) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
                     modifier = Modifier.semantics { contentDescription = message; liveRegion = LiveRegionMode.Polite })
             }
-            if (game.screenshots.isNotEmpty()) {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text("Screenshots", fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
-                    Text("Select to enlarge · ${game.screenshots.size}", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 10.sp)
-                }
-                LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp), contentPadding = PaddingValues(3.dp)) {
-                    items(game.screenshots.distinct(), key = { it }) { screenshot ->
-                        Surface(Modifier.width(if (narrow) 236.dp else 260.dp).height(146.dp)
-                            .blueprintClick { selectedScreenshot = screenshot }.semantics { contentDescription = "Enlarge screenshot of ${game.title}" },
-                            shape = RoundedCornerShape(7.dp), border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)) {
-                            RemoteArtwork(screenshot, Modifier.fillMaxSize(), fallbackKey = game.title)
-                        }
-                    }
-                }
-            }
+            GameScreenshotGallery(detail, narrow)
             BlueprintPanel(Modifier.fillMaxWidth()) {
                 Text("Bring your game", fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
                 Text("Accepted for $importPlatformLabel: $importFormats", color = MaterialTheme.colorScheme.primary, fontSize = 11.sp)
@@ -2526,12 +2506,16 @@ private fun DetailsScreen(
     saveSafetyController: SaveSafetyController,
     managedSaveDiscovery: com.gamebox.os.storage.ManagedSaveDiscovery,
     importer: AuthorizedRomImporter,
+    discoveryRepository: CatalogDiscoveryRepository,
     saveControllerFactory: ((GameId, kotlinx.coroutines.CoroutineScope) -> SaveSafetyController)?,
     compact: Boolean,
     onDownloads: () -> Unit,
     onBack: () -> Unit
 ) {
-    val detail = remember(game) { GameDetailPresentation.from(game) }
+    val discovery by remember(game.id, discoveryRepository) {
+        discoveryRepository.observeGame(game.id)
+    }.collectAsState(initial = null)
+    val detail = remember(game, discovery) { GameDetailPresentation.from(game, discovery) }
     val isAuthorizedFixture = game.id.value == "galaxy-patrol"
     val parentSaveScope = rememberCoroutineScope()
     val saveScope = remember(game.id, saveControllerFactory) {
@@ -2709,6 +2693,15 @@ private fun DetailsScreen(
                 }
             }
         }
+        BlueprintPanel(Modifier.fillMaxWidth().padding(top = 10.dp)) {
+            Text("About this game", fontWeight = FontWeight.SemiBold)
+            Text(detail.description, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                detail.region?.let { DetailMetric(Icons.Rounded.Public, it) }
+                detail.ratingLabel?.let { DetailMetric(Icons.Rounded.Star, it) }
+            }
+        }
+        GameScreenshotGallery(detail, compact)
         Spacer(Modifier.height(8.dp))
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             OutlinedButton(onClick = { showGameSettings = !showGameSettings }) {
@@ -4896,3 +4889,33 @@ private fun InstallState.displayName() = name.lowercase().replace('_', ' ')
 @Composable
 private fun connectedControllerLabel(): String =
     LocalRuntimeDeviceStatus.current.controllerLabel
+
+@Composable
+private fun GameScreenshotGallery(detail: GameDetailPresentation, compact: Boolean) {
+    var selectedScreenshot by remember(detail.id) { mutableStateOf<String?>(null) }
+    selectedScreenshot?.let { screenshot ->
+        AlertDialog(
+            onDismissRequest = { selectedScreenshot = null },
+            title = { Text(detail.title, maxLines = 2) },
+            text = { RemoteArtwork(screenshot, Modifier.fillMaxWidth().height(300.dp), contentScale = androidx.compose.ui.layout.ContentScale.Fit) },
+            confirmButton = { TextButton(onClick = { selectedScreenshot = null }) { Text("Close") } },
+        )
+    }
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            if (detail.screenshots.isNotEmpty()) {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text("Screenshots", fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                    Text("Select to enlarge · ${detail.screenshots.size}", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 10.sp)
+                }
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp), contentPadding = PaddingValues(3.dp)) {
+                    items(detail.screenshots.distinct(), key = { it }) { screenshot ->
+                        Surface(Modifier.width(if (compact) 236.dp else 260.dp).height(146.dp)
+                            .blueprintClick { selectedScreenshot = screenshot }.semantics { contentDescription = "Enlarge screenshot of ${detail.title}" },
+                            shape = RoundedCornerShape(7.dp), border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)) {
+                            RemoteArtwork(screenshot, Modifier.fillMaxSize(), fallbackKey = detail.title)
+                        }
+                    }
+                }
+            }
+    }
+}
