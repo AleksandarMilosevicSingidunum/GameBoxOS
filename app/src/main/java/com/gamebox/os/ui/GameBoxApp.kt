@@ -4891,8 +4891,8 @@ private fun connectedControllerLabel(): String =
     LocalRuntimeDeviceStatus.current.controllerLabel
 
 @Composable
-private fun GameScreenshotGallery(detail: GameDetailPresentation, compact: Boolean) {
-    var selectedScreenshot by remember(detail.id) { mutableStateOf<String?>(null) }
+internal fun GameScreenshotGallery(detail: GameDetailPresentation, compact: Boolean) {
+    var selectedScreenshot by remember(detail.id, detail.screenshots) { mutableStateOf<String?>(null) }
     selectedScreenshot?.let { screenshot ->
         AlertDialog(
             onDismissRequest = { selectedScreenshot = null },
