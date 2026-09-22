@@ -52,6 +52,7 @@ interface CatalogProvider {
             message = "Connected to ${snapshot.providerName} (${snapshot.games.size} games)",
         )
     } catch (error: Exception) {
+        if (error is kotlinx.coroutines.CancellationException) throw error
         CatalogConnectionResult(
             success = false,
             message = error.message?.take(180) ?: "Catalog connection failed",
@@ -127,7 +128,11 @@ class ConfiguredCatalogProvider(
 ) : CatalogProvider, CatalogFallbackStatus {
     private val fallbackReason = java.util.concurrent.atomic.AtomicReference(CatalogFallbackReason.NONE)
 
-    override suspend fun load(): CatalogSnapshot {
+    override suspend fun load(): CatalogSnapshot = loadSelected(forceRefresh = false)
+
+    override suspend fun refresh(): CatalogSnapshot = loadSelected(forceRefresh = true)
+
+    private suspend fun loadSelected(forceRefresh: Boolean): CatalogSnapshot {
         val url = configuredUrl()
         if (url.isBlank()) {
             fallbackReason.set(CatalogFallbackReason.NONE)
@@ -138,10 +143,11 @@ class ConfiguredCatalogProvider(
             return fallback.load()
         }
         return try {
-            val snapshot = remote.load()
+            val snapshot = if (forceRefresh) remote.refresh() else remote.load()
             fallbackReason.set(CatalogFallbackReason.NONE)
             snapshot
-        } catch (_: Exception) {
+        } catch (error: Exception) {
+            if (error is kotlinx.coroutines.CancellationException) throw error
             fallbackReason.set(CatalogFallbackReason.REMOTE_FAILURE)
             fallback.load()
         }
@@ -168,16 +174,23 @@ class HttpsCatalogProvider(
     private val credentialStore: CatalogCredentialStore? = null,
     private val credentialKey: suspend () -> String? = { null },
     private val parser: CatalogParser = CatalogParser(),
-    private val maxResponseBytes: Int = 1_048_576
+    private val maxResponseBytes: Int = 1_048_576,
+    private val fetchOverride: ((String, CatalogCredentials?) -> String)? = null,
 ) : CatalogProvider {
     private val cacheFile = context.filesDir.resolve("catalog/remote-catalog.json")
     private val cacheUrlFile = context.filesDir.resolve("catalog/remote-catalog.url")
 
-    override suspend fun load(): CatalogSnapshot = withContext(Dispatchers.IO) {
+    override suspend fun load(): CatalogSnapshot = loadCatalog(allowCachedFallback = true)
+
+    // Save & test calls refresh through the provider contract. A cached success
+    // cannot establish that this endpoint or its current credentials still work.
+    override suspend fun refresh(): CatalogSnapshot = loadCatalog(allowCachedFallback = false)
+
+    private suspend fun loadCatalog(allowCachedFallback: Boolean): CatalogSnapshot = withContext(Dispatchers.IO) {
         val url = validateAuthorizedCatalogUrl(configuredUrl())
         val credentials = credentialStore?.let { store -> credentialKey()?.let(store::credentials) }
         try {
-            val text = fetch(url, credentials)
+            val text = fetchOverride?.invoke(url, credentials) ?: fetch(url, credentials)
             val snapshot = parser.parse(text)
             cacheFile.parentFile?.mkdirs()
             val temporary = cacheFile.resolveSibling(cacheFile.name + ".tmp")
@@ -189,8 +202,10 @@ class HttpsCatalogProvider(
             cacheUrlFile.writeText(url)
             snapshot
         } catch (error: Exception) {
-            if (cacheFile.isFile && cacheUrlFile.readText().trim() == url) parser.parse(cacheFile.readText())
-            else throw error
+            if (error is kotlinx.coroutines.CancellationException) throw error
+            val matchingCache = allowCachedFallback && cacheFile.isFile &&
+                runCatching { cacheUrlFile.readText().trim() == url }.getOrDefault(false)
+            if (matchingCache) parser.parse(cacheFile.readText()) else throw error
         }
     }
 
@@ -246,10 +261,16 @@ class MetadataEnrichingCatalogProvider(
 
     override suspend fun testConnection(): CatalogConnectionResult = base.testConnection()
 
-    override suspend fun load(): CatalogSnapshot {
-        val snapshot = base.load()
+    override suspend fun load(): CatalogSnapshot = enrichSnapshot(base.load())
+
+    override suspend fun refresh(): CatalogSnapshot = enrichSnapshot(base.refresh())
+
+    private suspend fun enrichSnapshot(snapshot: CatalogSnapshot): CatalogSnapshot {
         val enriched = snapshot.games.map { game ->
-            runCatching { enrich(game) }.getOrDefault(game)
+            try { enrich(game) } catch (error: Exception) {
+                if (error is kotlinx.coroutines.CancellationException) throw error
+                game
+            }
         }
         return snapshot.copy(games = enriched)
     }
