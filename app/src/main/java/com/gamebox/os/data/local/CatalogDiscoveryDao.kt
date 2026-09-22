@@ -34,6 +34,9 @@ interface CatalogDiscoveryDao {
         offset: Int,
     ): Flow<List<CatalogGameEntity>>
 
+    @Query("SELECT * FROM catalog_games WHERE id = :gameId LIMIT 1")
+    fun observeGame(gameId: String): Flow<CatalogGameEntity?>
+
     @Query("SELECT * FROM catalog_platforms ORDER BY name COLLATE NOCASE ASC")
     fun observePlatforms(): Flow<List<CatalogPlatformEntity>>
 
