@@ -39,6 +39,20 @@ class AuthorizedInstallLifecycleTest {
             container.gameRepository.observeGames().first { games -> games.any { it.id == gameId } }
         }
         assertEquals(InstallState.NOT_INSTALLED, container.gameRepository.game(gameId)?.state)
+        suspend fun awaitStage(name: String, block: suspend () -> Unit) {
+            try {
+                withTimeout(120_000) { block() }
+            } catch (timeout: kotlinx.coroutines.TimeoutCancellationException) {
+                throw AssertionError(
+                    "Lifecycle stage '$name' timed out: download=" +
+                        container.authorizedDownloadController.observeState().value +
+                        ", game=" + container.gameRepository.game(gameId)?.state +
+                        ", save=" + container.saveSafetyController.observeState().value +
+                        ", saveBusy=" + container.saveSafetyController.observeBusy().value,
+                    timeout,
+                )
+            }
+        }
         val validator = InstalledContentValidator(app.filesDir.resolve(AssetDownloadWorker.INSTALL_ROOT))
 
         suspend fun installAndVerify() {
@@ -88,7 +102,7 @@ class AuthorizedInstallLifecycleTest {
             )
             // Shared CI emulators can pause Room/WorkManager dispatch while the other
             // instrumentation classes finish; use a bounded eventual-state assertion that tolerates emulator contention.
-            withTimeout(120_000) {
+            awaitStage("restore completed work") {
                 restoredController.observeState().first {
                     it.status == AuthorizedDownloadState.Status.SUCCEEDED
                 }
@@ -104,16 +118,20 @@ class AuthorizedInstallLifecycleTest {
         val selectedSave = java.io.File.createTempFile("selected-save-", ".dat", app.cacheDir)
         selectedSave.writeText("SAVE")
         container.saveSafetyController.importInitialSave(android.net.Uri.fromFile(selectedSave))
-        withTimeout(120_000) {
+        awaitStage("import save") {
             container.saveSafetyController.observeState().first { it.saveRecordPresent }
         }
+        // Room can emit the new record before the import job releases its operation gate.
+        // Match the production UI, which disables the next action while that job is busy.
+        withTimeout(20_000) { container.saveSafetyController.observeBusy().first { !it } }
         val originalSave = save.readBytes()
         selectedSave.delete()
         assertTrue(originalSave.isNotEmpty())
         container.saveSafetyController.backupSave()
-        withTimeout(120_000) {
-            container.saveSafetyController.observeState().first { it.backupPresent && it.operationSuccessful }
+        awaitStage("backup save") {
+            container.saveSafetyController.observeState().first { it.backupPresent && it.operationSuccessful && it.operationMessage == "Backup completed" }
         }
+        withTimeout(20_000) { container.saveSafetyController.observeBusy().first { !it } }
         val installedGame = requireNotNull(container.gameRepository.game(gameId))
         val preview = container.saveSafetyController.contentRemovalPreview(installedGame)
         assertEquals(AuthorizedHomebrewDownload.SIZE_BYTES, preview.bytes)
@@ -126,7 +144,7 @@ class AuthorizedInstallLifecycleTest {
         )
         assertTrue(removalMessage.contains("Saves, backups, metadata and history retained"))
 
-        withTimeout(120_000) {
+        awaitStage("remove content") {
             container.gameRepository.observeGames().first { games ->
                 games.any { it.id == gameId && it.state == InstallState.NOT_INSTALLED }
             }
@@ -142,7 +160,7 @@ class AuthorizedInstallLifecycleTest {
         // Exercise the actual restore service after changing this test-owned save.
         save.writeText("CHANGED BY LIFECYCLE TEST")
         container.saveSafetyController.restoreSave()
-        withTimeout(120_000) {
+        awaitStage("restore save") {
             container.saveSafetyController.observeState().first {
                 it.operationSuccessful && it.operationMessage == "Restore completed"
             }
