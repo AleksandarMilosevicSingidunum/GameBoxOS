@@ -47,6 +47,8 @@ class TheGamesDbCatalogSyncTest {
         override suspend fun upsertExternalIds(ids: List<CatalogExternalIdEntity>) = Unit
         override fun observeGames(platformId: String?, normalizedQuery: String, limit: Int, offset: Int) =
             kotlinx.coroutines.flow.emptyFlow<List<CatalogGameEntity>>()
+        override fun observeGame(gameId: String): kotlinx.coroutines.flow.Flow<CatalogGameEntity?> =
+            kotlinx.coroutines.flow.flowOf(null)
         override fun observePlatforms() = kotlinx.coroutines.flow.emptyFlow<List<CatalogPlatformEntity>>()
         override suspend fun countGames(platformId: String) = 0
         override suspend fun setFavorite(gameId: String, favorite: Boolean) = Unit

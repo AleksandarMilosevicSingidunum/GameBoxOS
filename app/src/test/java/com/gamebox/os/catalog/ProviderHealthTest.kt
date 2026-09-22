@@ -114,6 +114,8 @@ class ProviderHealthTest {
         override suspend fun upsertExternalIds(ids: List<CatalogExternalIdEntity>) = Unit
         override fun observeGames(platformId: String?, normalizedQuery: String, limit: Int, offset: Int):
             Flow<List<CatalogGameEntity>> = flowOf(emptyList())
+        override fun observeGame(gameId: String): kotlinx.coroutines.flow.Flow<CatalogGameEntity?> =
+            kotlinx.coroutines.flow.flowOf(null)
         override fun observePlatforms(): Flow<List<CatalogPlatformEntity>> = flowOf(emptyList())
         override suspend fun countGames(platformId: String): Int = 0
         override suspend fun setFavorite(gameId: String, favorite: Boolean) = Unit

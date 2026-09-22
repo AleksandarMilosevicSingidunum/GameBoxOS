@@ -42,30 +42,35 @@ data class ImportedGameRegistration(
     }
 }
 
-fun mergeImportedGame(existing: Game?, imported: ImportedGameRegistration): Game = Game(
-    id = imported.id,
-    title = imported.title,
-    platform = imported.platform,
-    year = imported.year,
-    genre = existing?.genre?.takeUnless { it.isBlank() } ?: "Imported",
-    sizeMb = if (imported.sizeBytes == 0L) 0 else ceil(imported.sizeBytes / (1024.0 * 1024.0)).toInt().coerceAtLeast(1),
-    state = InstallState.INSTALLED,
-    lastPlayed = existing?.lastPlayed,
-    minutesPlayed = existing?.minutesPlayed ?: 0,
-    favorite = existing?.favorite ?: imported.favorite,
-    sourceUrl = existing?.sourceUrl,
-    expectedSha256 = existing?.expectedSha256,
-    emulatorPackage = existing?.emulatorPackage,
-    graphicsProfile = existing?.graphicsProfile ?: "Balanced",
-    artworkUrl = imported.artworkUrl ?: existing?.artworkUrl,
-    description = imported.description ?: existing?.description,
-    players = imported.players ?: existing?.players,
-    language = existing?.language,
-    region = imported.region ?: existing?.region,
-    localContentRelativePath = imported.relativePath,
-    localContentSha256 = imported.sha256,
-    localContentMimeType = imported.mimeType,
-    localContentFiles = listOf(
-        LocalContentFile(imported.relativePath, imported.sha256, imported.mimeType)
-    ) + imported.additionalFiles,
-)
+fun mergeImportedGame(existing: Game?, imported: ImportedGameRegistration): Game {
+    require(existing == null || existing.id == imported.id) {
+        "Replacement content must belong to the same game"
+    }
+    // Replacing files must not replace the user's identity, corrections or the
+    // underlying provider values used by Reset metadata.
+    val metadata = existing ?: Game(
+        id = imported.id,
+        title = imported.title,
+        platform = imported.platform,
+        year = imported.year,
+        genre = "Imported",
+        sizeMb = 0,
+        state = InstallState.NOT_INSTALLED,
+        favorite = imported.favorite,
+        artworkUrl = imported.artworkUrl,
+        description = imported.description,
+        players = imported.players,
+        region = imported.region,
+    )
+    return metadata.copy(
+        sizeMb = if (imported.sizeBytes == 0L) 0 else
+            ceil(imported.sizeBytes / (1024.0 * 1024.0)).toInt().coerceAtLeast(1),
+        state = InstallState.INSTALLED,
+        localContentRelativePath = imported.relativePath,
+        localContentSha256 = imported.sha256,
+        localContentMimeType = imported.mimeType,
+        localContentFiles = listOf(
+            LocalContentFile(imported.relativePath, imported.sha256, imported.mimeType)
+        ) + imported.additionalFiles,
+    )
+}

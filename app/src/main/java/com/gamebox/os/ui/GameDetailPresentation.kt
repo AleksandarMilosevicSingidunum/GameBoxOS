@@ -24,7 +24,10 @@ data class GameDetailPresentation(
     val source: GameDetailSource,
 ) {
     companion object {
-        fun from(game: Game): GameDetailPresentation = GameDetailPresentation(
+        fun from(game: Game, discovery: DiscoveryGame? = null): GameDetailPresentation {
+            // Do not reuse the old identity's gallery after an explicit metadata rematch.
+            val cached = discovery?.takeIf { it.id == game.id && game.metadataExternalId == null }
+            return GameDetailPresentation(
             id = game.id.value,
             title = game.title,
             platform = game.platform,
@@ -32,16 +35,20 @@ data class GameDetailPresentation(
             genre = game.genre.takeIf(String::isNotBlank),
             playersLabel = game.players?.takeIf(String::isNotBlank)?.let(::formatPlayers),
             region = game.region?.takeIf(String::isNotBlank),
-            ratingLabel = null,
+            ratingLabel = cached?.rating?.let { rating ->
+                if (rating % 1.0 == 0.0) rating.toInt().toString() else "%.1f".format(rating)
+            },
             description = game.description?.takeIf(String::isNotBlank)
                 ?: "No description is available for this title.",
             coverUrl = game.artworkUrl,
-            heroUrl = game.artworkUrl,
-            screenshots = emptyList(),
+            heroUrl = game.metadataOverrides.artworkUrl ?: cached?.backgroundUrl
+                ?: cached?.screenshots?.firstOrNull() ?: game.artworkUrl,
+            screenshots = cached?.screenshots?.distinct().orEmpty(),
             favorite = game.favorite,
             installed = game.state in setOf(InstallState.INSTALLED, InstallState.UPDATE_AVAILABLE),
             source = GameDetailSource.LIBRARY,
         )
+        }
 
         fun from(game: DiscoveryGame, platformName: String): GameDetailPresentation =
             GameDetailPresentation(
