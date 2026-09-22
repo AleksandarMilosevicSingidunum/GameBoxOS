@@ -1059,6 +1059,13 @@ val allDiscoveryGames by discoveryRepository.observeGames(null, "", 250).collect
     if (!compact) {
         BlueprintCatalogScreen(
             authorizedGames = filtered,
+            allAuthorizedGames = games,
+            genreFilter = genre, onGenre = { genre = it },
+            regionFilter = region, onRegion = { region = it },
+            languageFilter = language, onLanguage = { language = it },
+            favoritesOnly = favoritesOnly, onFavoritesOnly = { favoritesOnly = it },
+            onClearPlatform = { platform = null },
+            uiState = uiState,
             discoveryGames = discoveryGames,
             allDiscoveryGames = allDiscoveryGames,
             discoveryPlatformNames = discoveryPlatforms.associate { it.id to it.name },
@@ -1265,6 +1272,13 @@ val allDiscoveryGames by discoveryRepository.observeGames(null, "", 250).collect
 @Composable
 private fun BlueprintCatalogScreen(
     authorizedGames: List<Game>,
+    allAuthorizedGames: List<Game>,
+    genreFilter: String?, onGenre: (String?) -> Unit,
+    regionFilter: String?, onRegion: (String?) -> Unit,
+    languageFilter: String?, onLanguage: (String?) -> Unit,
+    favoritesOnly: Boolean, onFavoritesOnly: (Boolean) -> Unit,
+    onClearPlatform: () -> Unit,
+    uiState: GameBoxUiState,
     discoveryGames: List<DiscoveryGame>,
     query: String,
     onQuery: (String) -> Unit,
@@ -1283,20 +1297,11 @@ private fun BlueprintCatalogScreen(
     discoveryPlatformNames: Map<String, String> = emptyMap(),
     searchFocusRequester: FocusRequester? = null,
 ) {
-    var favoritesOnly by remember { mutableStateOf(false) }
-    var installedOnly by remember { mutableStateOf(false) }
-    var sortByRating by remember { mutableStateOf(false) }
-    var genreFilter by remember { mutableStateOf<String?>(null) }
-    var regionFilter by remember { mutableStateOf<String?>(null) }
-    var languageFilter by remember { mutableStateOf<String?>(null) }
-    val genres = authorizedGames.map { it.genre }.filter(String::isNotBlank).distinct().sorted()
-    val regions = (authorizedGames.mapNotNull { it.region } + allDiscoveryGames.mapNotNull { it.region })
-        .filter(String::isNotBlank).distinct().sorted()
-    val languages = authorizedGames.mapNotNull { it.language }.filter(String::isNotBlank).distinct().sorted()
-    fun cycle(current: String?, values: List<String>): String? {
-        if (values.isEmpty()) return null
-        val index = current?.let(values::indexOf) ?: -1
-        return if (index < 0) values.first() else values.getOrNull(index + 1)
+    var installedOnly by remember(uiState) { mutableStateOf(uiState.screenValue("store.installed") == "true") }
+    var sortByRating by remember(uiState) { mutableStateOf(uiState.screenValue("store.rating") == "true") }
+    LaunchedEffect(installedOnly, sortByRating) {
+        uiState.rememberScreenValue("store.installed", installedOnly.toString())
+        uiState.rememberScreenValue("store.rating", sortByRating.toString())
     }
     val consoleGames = authorizedGames.filter { game ->
         selectedConsole == null || storeConsoleMatches(selectedConsole, game.platform) ||
@@ -1346,33 +1351,24 @@ private fun BlueprintCatalogScreen(
             HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.65f))
             Text("FILTERS", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 9.sp)
             FilterChip(
-                selected = favoritesOnly, onClick = { favoritesOnly = !favoritesOnly },
+                selected = favoritesOnly, onClick = { onFavoritesOnly(!favoritesOnly) },
                 label = { Text("Favorites", fontSize = 11.sp) },
                 leadingIcon = { Icon(Icons.Rounded.FavoriteBorder, null, Modifier.size(14.dp)) },
                 modifier = Modifier.fillMaxWidth(),
             )
-            TextButton(
-                onClick = { genreFilter = cycle(genreFilter, genres) },
-                enabled = genres.isNotEmpty(),
-                modifier = Modifier.fillMaxWidth().height(30.dp),
-            ) { Text("Genre: " + (genreFilter ?: "All"), fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis) }
-            TextButton(
-                onClick = { regionFilter = cycle(regionFilter, regions) },
-                enabled = regions.isNotEmpty(),
-                modifier = Modifier.fillMaxWidth().height(30.dp),
-            ) { Text("Region: " + (regionFilter ?: "All"), fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis) }
-            TextButton(
-                onClick = { languageFilter = cycle(languageFilter, languages) },
-                enabled = languages.isNotEmpty(),
-                modifier = Modifier.fillMaxWidth().height(30.dp),
-            ) { Text("Language: " + (languageFilter ?: "All"), fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+            MetadataFilterControls(
+                games = allAuthorizedGames, genre = genreFilter, onGenre = onGenre,
+                region = regionFilter, onRegion = onRegion,
+                language = languageFilter, onLanguage = onLanguage,
+                extraRegions = allDiscoveryGames.mapNotNull { it.region },
+            )
             TextButton(onClick = { sortByRating = !sortByRating }, modifier = Modifier.fillMaxWidth().height(30.dp)) {
                 Text(if (sortByRating) "Sort: Rating ↓" else "Sort: Title A–Z", fontSize = 10.sp)
             }
             TextButton(onClick = {
-                favoritesOnly = false; installedOnly = false; sortByRating = false
-                genreFilter = null; regionFilter = null; languageFilter = null
-                onQuery(""); onSelectConsole(null)
+                onFavoritesOnly(false); installedOnly = false; sortByRating = false
+                onGenre(null); onRegion(null); onLanguage(null)
+                onQuery(""); onSelectConsole(null); onClearPlatform()
             }, modifier = Modifier.fillMaxWidth().height(30.dp)) {
                 Text("Clear filters", fontSize = 10.sp)
             }
@@ -1519,11 +1515,15 @@ private fun CollectionScreen(
     var query by remember(uiState) { mutableStateOf(uiState.screenValue("library.query").orEmpty()) }
     var platform by remember(uiState) { mutableStateOf(uiState.screenValue("library.platform")) }
     var genre by remember(uiState) { mutableStateOf(uiState.screenValue("library.genre")) }
+    var region by remember(uiState) { mutableStateOf(uiState.screenValue("library.region")) }
+    var language by remember(uiState) { mutableStateOf(uiState.screenValue("library.language")) }
     var favoritesOnly by remember(uiState) { mutableStateOf(uiState.screenValue("library.favorites") == "true") }
-    LaunchedEffect(query, platform, genre, favoritesOnly) {
+    LaunchedEffect(query, platform, genre, region, language, favoritesOnly) {
         uiState.rememberScreenValue("library.query", query)
         uiState.rememberScreenValue("library.platform", platform)
         uiState.rememberScreenValue("library.genre", genre)
+        uiState.rememberScreenValue("library.region", region)
+        uiState.rememberScreenValue("library.language", language)
         uiState.rememberScreenValue("library.favorites", favoritesOnly.toString())
     }
     DisposableEffect(controllerActions) {
@@ -1535,7 +1535,7 @@ private fun CollectionScreen(
         )
         onDispose { controllerActions?.clear() }
     }
-    val filtered = filterGames(games, query, platform, genre, favoritesOnly)
+    val filtered = filterGames(games, query, platform, genre, favoritesOnly, region, language)
     val focusTarget = restoreGameId?.takeIf { id -> filtered.any { it.id == id } }
         ?: filtered.firstOrNull()?.id
     val summary = summarizeLibrary(games)
@@ -1543,6 +1543,9 @@ private fun CollectionScreen(
         BlueprintLibraryScreen(
             games = games,
             filtered = filtered,
+            genre = genre, onGenre = { genre = it },
+            region = region, onRegion = { region = it },
+            language = language, onLanguage = { language = it },
             query = query,
             onQuery = { query = it },
             platform = platform,
@@ -1598,6 +1601,9 @@ private fun CollectionScreen(
         GameFilterBar(
             games, query, { query = it }, platform, { platform = it },
             genre, { genre = it }, favoritesOnly, { favoritesOnly = it },
+            showMetadataFilters = true,
+            region = region, onRegion = { region = it },
+            language = language, onLanguage = { language = it },
             searchFocusRequester = searchFocusRequester,
         )
         Spacer(Modifier.height(14.dp))
@@ -1633,6 +1639,12 @@ private fun CollectionScreen(
 private fun BlueprintLibraryScreen(
     games: List<Game>,
     filtered: List<Game>,
+    genre: String?,
+    onGenre: (String?) -> Unit,
+    region: String?,
+    onRegion: (String?) -> Unit,
+    language: String?,
+    onLanguage: (String?) -> Unit,
     query: String,
     onQuery: (String) -> Unit,
     platform: String?,
@@ -1681,6 +1693,15 @@ private fun BlueprintLibraryScreen(
             BlueprintRailItem("Favorites", summary.favorites, favoritesOnly, Icons.Rounded.Favorite) {
                 onFavoritesOnly(!favoritesOnly)
             }
+            MetadataFilterControls(
+                games = games, genre = genre, onGenre = onGenre,
+                region = region, onRegion = onRegion,
+                language = language, onLanguage = onLanguage,
+            )
+            TextButton(onClick = {
+                onQuery(""); onPlatform(null); onFavoritesOnly(false)
+                onGenre(null); onRegion(null); onLanguage(null)
+            }) { Text("Clear filters", fontSize = 10.sp) }
             Spacer(Modifier.weight(1f))
             Text("Sort by", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 10.sp)
             TextButton(onClick = { alphabetical = !alphabetical }, modifier = Modifier.fillMaxWidth()) {
@@ -1968,18 +1989,18 @@ private fun GameFilterBar(
                 FilterChip(selected = genre == value, onClick = { onGenre(value) }, label = { Text(value) })
             }
         }
-        if (showMetadataFilters && (regions.isNotEmpty() || languages.isNotEmpty())) {
+        if (showMetadataFilters && (regions.isNotEmpty() || languages.isNotEmpty() || region != null || language != null)) {
             Row(
                 Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                if (regions.isNotEmpty()) {
+                if (regions.isNotEmpty() || region != null) {
                     FilterChip(selected = region == null, onClick = { onRegion(null) }, label = { Text("All regions") })
                     regions.forEach { value ->
                         FilterChip(selected = region == value, onClick = { onRegion(value) }, label = { Text(value) })
                     }
                 }
-                if (languages.isNotEmpty()) {
+                if (languages.isNotEmpty() || language != null) {
                     FilterChip(selected = language == null, onClick = { onLanguage(null) }, label = { Text("All languages") })
                     languages.forEach { value ->
                         FilterChip(selected = language == value, onClick = { onLanguage(value) }, label = { Text(value) })
