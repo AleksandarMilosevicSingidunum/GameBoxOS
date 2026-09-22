@@ -96,6 +96,8 @@ class TheGamesDbCatalogSyncTest {
             limit: Int,
             offset: Int,
         ): Flow<List<CatalogGameEntity>> = flowOf(emptyList())
+        override fun observeGame(gameId: String): kotlinx.coroutines.flow.Flow<CatalogGameEntity?> =
+            kotlinx.coroutines.flow.flowOf(games.firstOrNull { it.id == gameId })
         override fun observePlatforms(): Flow<List<CatalogPlatformEntity>> = flowOf(emptyList())
         override suspend fun countGames(platformId: String): Int = games.count { it.platformId == platformId }
         override suspend fun setFavorite(gameId: String, favorite: Boolean) = Unit
