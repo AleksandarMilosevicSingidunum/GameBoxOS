@@ -34,6 +34,9 @@ interface CatalogDiscoveryRepository {
         offset: Int = 0,
     ): Flow<List<DiscoveryGame>>
 
+    /** Optional exact cached detail lookup; Room provides the production implementation. */
+    fun observeGame(gameId: GameId): Flow<DiscoveryGame?> = kotlinx.coroutines.flow.flowOf(null)
+
     fun observePlatforms(): Flow<List<DiscoveryPlatform>>
     suspend fun syncPlatform(platformName: String): CatalogSyncResult
     suspend fun setFavorite(gameId: GameId, favorite: Boolean)
@@ -52,8 +55,26 @@ class RoomCatalogDiscoveryRepository(
         require(limit in 1..250) { "Discovery page size must be between 1 and 250" }
         require(offset >= 0) { "Discovery offset must not be negative" }
         return dao.observeGames(platformId, normalizeCatalogTitle(query), limit, offset).map { rows ->
-            rows.map { row ->
-                DiscoveryGame(
+            rows.map { it.toDiscoveryGame() }
+        }
+    }
+
+    override fun observeGame(gameId: GameId): Flow<DiscoveryGame?> =
+        dao.observeGame(gameId.value).map { it?.toDiscoveryGame() }
+
+    override fun observePlatforms(): Flow<List<DiscoveryPlatform>> =
+        dao.observePlatforms().map { rows -> rows.map { DiscoveryPlatform(it.id, it.name) } }
+
+    override suspend fun syncPlatform(platformName: String): CatalogSyncResult =
+        sync.syncPlatform(platformName)
+
+    override suspend fun setFavorite(gameId: GameId, favorite: Boolean) =
+        dao.setFavorite(gameId.value, favorite)
+}
+
+private fun com.gamebox.os.data.local.CatalogGameEntity.toDiscoveryGame(): DiscoveryGame {
+    val row = this
+    return DiscoveryGame(
                     id = GameId(row.id),
                     title = row.title,
                     platformId = row.platformId,
@@ -71,16 +92,4 @@ class RoomCatalogDiscoveryRepository(
                         .filter(String::isNotEmpty),
                     favorite = row.favorite,
                 )
-            }
-        }
-    }
-
-    override fun observePlatforms(): Flow<List<DiscoveryPlatform>> =
-        dao.observePlatforms().map { rows -> rows.map { DiscoveryPlatform(it.id, it.name) } }
-
-    override suspend fun syncPlatform(platformName: String): CatalogSyncResult =
-        sync.syncPlatform(platformName)
-
-    override suspend fun setFavorite(gameId: GameId, favorite: Boolean) =
-        dao.setFavorite(gameId.value, favorite)
 }
