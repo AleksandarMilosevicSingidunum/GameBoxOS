@@ -3,6 +3,9 @@ package com.gamebox.os
 import com.gamebox.os.data.ImportedGameRegistration
 import com.gamebox.os.data.mergeImportedGame
 import com.gamebox.os.domain.Game
+import com.gamebox.os.domain.GameMetadataOverrides
+import com.gamebox.os.data.local.toDomain
+import com.gamebox.os.data.local.toEntity
 import com.gamebox.os.domain.GameId
 import com.gamebox.os.domain.InstallState
 import com.gamebox.os.domain.LocalContentFile
@@ -48,6 +51,53 @@ class ImportedGameRegistrationTest {
         assertThrows(IllegalArgumentException::class.java) {
             imported().copy(sha256 = "not-a-checksum")
         }
+    }
+
+    @Test fun replacementRetainsCorrectionsProviderIdentityAndResetValuesThroughPersistence() {
+        val overrides = GameMetadataOverrides(
+            title = "My title", year = 2005, genre = "My genre",
+            artworkUrl = "https://example.test/custom.jpg", description = "My notes",
+        )
+        val existing = Game(
+            GameId("game"), "My title", "PS2", 2005, "My genre", 1, InstallState.MISSING_FILES,
+            lastPlayed = "2026-09-20T10:00:00Z", minutesPlayed = 75, favorite = true,
+            artworkUrl = overrides.artworkUrl, description = overrides.description,
+            region = "EU", language = "French", players = "2",
+            metadataOverrides = overrides,
+            providerTitle = "Confirmed title", providerYear = 2004, providerGenre = "Racing",
+            providerArtworkUrl = "https://example.test/provider.jpg",
+            providerDescription = "Provider description",
+            metadataProvider = "THE_GAMES_DB", metadataExternalId = "123",
+            metadataMatchedAtMillis = 1000L,
+        )
+        val replacement = imported().copy(title = "Stale discovery", region = "US")
+        val merged = mergeImportedGame(existing, replacement)
+        val roundTrip = merged.toEntity().toDomain()
+        assertEquals(overrides, roundTrip.metadataOverrides)
+        assertEquals(existing.title, roundTrip.title)
+        assertEquals(existing.platform, roundTrip.platform)
+        assertEquals("EU", roundTrip.region)
+        assertEquals("French", roundTrip.language)
+        assertEquals("123", roundTrip.metadataExternalId)
+        assertEquals("THE_GAMES_DB", roundTrip.metadataProvider)
+        assertEquals(1000L, roundTrip.metadataMatchedAtMillis)
+        assertEquals(75, roundTrip.minutesPlayed)
+        assertEquals(InstallState.INSTALLED, roundTrip.state)
+        assertEquals(replacement.relativePath, roundTrip.localContentRelativePath)
+        val reset = merged.toEntity().copy(
+            userTitle = null, userYear = null, userGenre = null,
+            userArtworkUrl = null, userDescription = null,
+        ).toDomain()
+        assertEquals("Confirmed title", reset.title)
+        assertEquals(2004, reset.year)
+        assertEquals("Racing", reset.genre)
+        assertEquals("https://example.test/provider.jpg", reset.artworkUrl)
+        assertEquals("Provider description", reset.description)
+    }
+
+    @Test fun replacementRejectsDifferentGameIdentity() {
+        val other = Game(GameId("other"), "Other", "PS2", 2004, "Racing", 1, InstallState.INSTALLED)
+        assertThrows(IllegalArgumentException::class.java) { mergeImportedGame(other, imported()) }
     }
 
     private fun imported() = ImportedGameRegistration(
