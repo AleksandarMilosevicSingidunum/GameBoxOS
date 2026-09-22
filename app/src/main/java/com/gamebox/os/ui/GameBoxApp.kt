@@ -1167,6 +1167,7 @@ val allDiscoveryGames by discoveryRepository.observeGames(null, "", 250).collect
             games, query, { query = it }, platform, { platform = it },
             genre, { genre = it }, favoritesOnly, { favoritesOnly = it },
             showMetadataFilters = true,
+            extraRegions = allDiscoveryGames.mapNotNull { it.region },
             region = region,
             onRegion = { region = it },
             language = language,
@@ -1254,9 +1255,16 @@ val allDiscoveryGames by discoveryRepository.observeGames(null, "", 250).collect
             }
         }
         Spacer(Modifier.height(10.dp))
-        if (discoveryGames.isEmpty()) {
+        val visibleDiscovery = discoveryGames.filter {
+            (!favoritesOnly || it.favorite) && matchesStoreMetadataFilters(
+                null, it.region, null, genre, region, language,
+            )
+        }
+        if (visibleDiscovery.isEmpty()) {
             Text(
-                if (selectedConsole?.theGamesDbName == null) {
+                if (discoveryGames.isNotEmpty()) {
+                    "No discovery games match these filters. Clear filters to show all cached titles."
+                } else if (selectedConsole?.theGamesDbName == null) {
                     "Homebrew is local-first. Add authorized homebrew files through the Library importer."
                 } else {
                     "No cached games for this console. Add an API key in Settings, then sync up to 20 titles."
@@ -1264,7 +1272,7 @@ val allDiscoveryGames by discoveryRepository.observeGames(null, "", 250).collect
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         } else {
-            DiscoveryGameRow(discoveryGames, compact) { selectedDiscoveryId = it.id }
+            DiscoveryGameRow(visibleDiscovery, compact) { selectedDiscoveryId = it.id }
         }
     }
 }
@@ -1946,6 +1954,7 @@ private fun GameFilterBar(
     favoritesOnly: Boolean,
     onFavoritesOnly: (Boolean) -> Unit,
     showMetadataFilters: Boolean = false,
+    extraRegions: List<String> = emptyList(),
     region: String? = null,
     onRegion: (String?) -> Unit = {},
     language: String? = null,
@@ -1954,7 +1963,7 @@ private fun GameFilterBar(
 ) {
     val platforms = games.map { it.platform }.distinct().sorted()
     val genres = games.map { it.genre }.distinct().sorted()
-    val regions = games.mapNotNull { it.region }.filter(String::isNotBlank).distinct().sorted()
+    val regions = metadataFilterOptions(games.mapNotNull { it.region } + extraRegions)
     val languages = games.mapNotNull { it.language }.filter(String::isNotBlank).distinct().sorted()
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         OutlinedTextField(
