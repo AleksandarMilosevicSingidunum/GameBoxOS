@@ -68,6 +68,17 @@ class DownloadRecoveryPolicyTest {
         }
     }
 
+    @Test fun expectedSizeStillDetectsTruncationWhenServerOmitsLength() {
+        val target = FileStagingTarget(temporary.newFolder(), "game.nes")
+        val response = Connection(200, payload.copyOfRange(0, 3), -1)
+        val source = HttpsTransferSource("https://example.test/game.nes", 8, checksum,
+            connectionFactory = { response })
+        val result = transfer(source, target) as ResumableTransferResult.Failed
+        assertTrue(result.retryable)
+        assertEquals(3L, target.stagedBytes)
+        assertFalse(target.finalFile.exists())
+    }
+
     @Test fun cancellationIsNotConvertedToRetryFailure() {
         try {
             transferFailure(kotlinx.coroutines.CancellationException("cancelled"), 3)
