@@ -89,7 +89,7 @@ class HttpsTransferSource(
                     }
                 }
             }
-            return OpenedRange(stream, responseTotal)
+            return OpenedRange(stream, responseTotal ?: totalBytes)
         } catch (error: Exception) {
             connection.disconnect()
             throw error
