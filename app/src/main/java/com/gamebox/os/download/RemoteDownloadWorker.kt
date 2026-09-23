@@ -60,8 +60,16 @@ class RemoteDownloadWorker(
         }
 
         val result = runCatching {
+            val settings = com.gamebox.os.settings.SettingsRepository(applicationContext)
+            val authorization = if (settings.catalogConfigured()) {
+                val config = settings.catalogProviderConfig()
+                CatalogDownloadAuthorization(config, config.credentialKey?.let(settings::catalogCredentials))
+            } else null
             ResumableTransferEngine().transfer(
-                source = HttpsTransferSource(sourceUrl, totalBytes = null, expectedSha256 = checksum),
+                source = HttpsTransferSource(
+                    sourceUrl, totalBytes = null, expectedSha256 = checksum,
+                    requestHeaders = { url -> authorization?.headers(url).orEmpty() },
+                ),
                 staging = staging,
                 maxBytes = maxBytes,
                 isPausedOrCancelled = { isStopped },

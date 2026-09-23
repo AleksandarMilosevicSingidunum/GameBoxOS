@@ -4,6 +4,7 @@ import com.gamebox.os.catalog.validateAuthorizedCatalogUrl
 import java.io.FilterInputStream
 import java.io.InputStream
 import java.net.URL
+import java.net.HttpURLConnection
 import javax.net.ssl.HttpsURLConnection
 
 class RangeNotSupportedException(message: String) : IllegalStateException(message)
@@ -13,7 +14,11 @@ data class OpenedRange(val input: InputStream, val totalBytes: Long?)
 class HttpsTransferSource(
     sourceUrl: String,
     override val totalBytes: Long?,
-    override val expectedSha256: String
+    override val expectedSha256: String,
+    private val requestHeaders: (String) -> Map<String, String> = { emptyMap() },
+    private val connectionFactory: (String) -> HttpURLConnection = {
+        URL(it).openConnection() as HttpsURLConnection
+    },
 ) : TransferSource {
     private val validatedUrl = validateAuthorizedCatalogUrl(sourceUrl)
 
@@ -28,13 +33,16 @@ class HttpsTransferSource(
 
     fun openInputAt(offset: Long): OpenedRange {
         require(offset >= 0L) { "Range offset cannot be negative" }
-        val connection = URL(validatedUrl).openConnection() as HttpsURLConnection
+        val headers = requestHeaders(validatedUrl)
+        val connection = connectionFactory(validatedUrl)
+        try {
         connection.connectTimeout = 15_000
         connection.readTimeout = 30_000
         connection.instanceFollowRedirects = false
         connection.setRequestProperty("Accept", "application/octet-stream")
         connection.setRequestProperty("User-Agent", "GameBoxOS/0.1")
         if (offset > 0L) connection.setRequestProperty("Range", "bytes=$offset-")
+        headers.forEach { (name, value) -> connection.setRequestProperty(name, value) }
         val status = connection.responseCode
         if (status !in 200..299) {
             connection.disconnect()
@@ -77,5 +85,9 @@ class HttpsTransferSource(
             }
         }
         return OpenedRange(stream, responseTotal)
+        } catch (error: Exception) {
+            connection.disconnect()
+            throw error
+        }
     }
 }
