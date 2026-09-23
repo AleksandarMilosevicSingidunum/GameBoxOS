@@ -85,7 +85,10 @@ class RemoteDownloadWorker(
                     )
                 }
             )
-        }.getOrElse { return@withContext failure(it.message ?: "download configuration failed") }
+        }.getOrElse {
+            if (it is kotlinx.coroutines.CancellationException) throw it
+            return@withContext failure(it.message ?: "download configuration failed")
+        }
 
         when (result) {
             is ResumableTransferResult.Success -> {
