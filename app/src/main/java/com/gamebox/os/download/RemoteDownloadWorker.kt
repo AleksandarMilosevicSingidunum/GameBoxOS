@@ -53,6 +53,19 @@ class RemoteDownloadWorker(
             applicationContext.filesDir.resolve(AssetDownloadWorker.INSTALL_ROOT),
             relativePath
         )
+        val recoveredBytes = try {
+            CompletedTransferRecovery().recover(staging, checksum, maxBytes) {
+                if (isStopped) throw kotlinx.coroutines.CancellationException("Download stopped")
+            }
+        } catch (error: kotlinx.coroutines.CancellationException) {
+            throw error
+        } catch (_: Exception) {
+            return@withContext failure("Could not recover downloaded content; check storage and retry")
+        }
+        if (recoveredBytes != null) {
+            showCompletionNotification(gameId, recoveredBytes)
+            return@withContext Result.success(workDataOf(KEY_BYTES_TRANSFERRED to recoveredBytes))
+        }
         val remainingCapacity = (maxBytes - staging.stagedBytes).coerceAtLeast(0L)
         val requiredSpace = remainingCapacity + STORAGE_RESERVE_BYTES
         if (applicationContext.filesDir.usableSpace < requiredSpace) {
