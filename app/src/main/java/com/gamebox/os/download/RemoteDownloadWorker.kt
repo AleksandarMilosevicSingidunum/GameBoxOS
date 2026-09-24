@@ -85,7 +85,10 @@ class RemoteDownloadWorker(
                     )
                 }
             )
-        }.getOrElse { return@withContext failure(it.message ?: "download configuration failed") }
+        }.getOrElse {
+            if (it is kotlinx.coroutines.CancellationException) throw it
+            return@withContext failure(it.message ?: "download configuration failed")
+        }
 
         when (result) {
             is ResumableTransferResult.Success -> {
@@ -97,7 +100,7 @@ class RemoteDownloadWorker(
             is ResumableTransferResult.ChecksumMismatch -> failure("checksum mismatch")
             is ResumableTransferResult.SizeLimitExceeded -> failure("size limit exceeded")
             is ResumableTransferResult.Failed ->
-                if (runAttemptCount < MAX_RETRIES) Result.retry() else failure(result.reason)
+                if (shouldRetryTransfer(result, runAttemptCount)) Result.retry() else failure(result.reason)
         }
         }
     }
@@ -174,7 +177,6 @@ class RemoteDownloadWorker(
         const val KEY_TOTAL_BYTES = "total_bytes"
         const val KEY_ERROR = "error"
         const val STORAGE_RESERVE_BYTES = 128L * 1024L * 1024L
-        private const val MAX_RETRIES = 3
         private const val CHANNEL_ID = "gamebox_downloads"
         private const val NOTIFICATION_ID_BASE = 10_000
         private const val COMPLETION_REQUEST_MASK = 0x20000000

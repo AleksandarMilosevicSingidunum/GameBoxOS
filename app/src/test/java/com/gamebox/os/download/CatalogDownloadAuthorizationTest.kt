@@ -110,7 +110,7 @@ class CatalogDownloadAuthorizationTest {
         override fun disconnect() { disconnected = true }
         override fun usingProxy() = false
         override fun getResponseCode() = status
-        override fun getContentLengthLong() = 4L
+        override fun getContentLengthLong() = if (status == 206) 2L else 4L
         override fun getHeaderField(name: String): String? = if (name == "Content-Range") "bytes 2-3/4" else null
         override fun getInputStream() = ByteArrayInputStream(byteArrayOf(1, 2))
     }

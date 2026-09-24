@@ -1,11 +1,13 @@
 package com.gamebox.os.download
 
+import com.gamebox.os.provider.ProviderRecoveryPolicy
+
 sealed interface ResumableTransferResult {
     data class Success(val bytesTransferred: Long) : ResumableTransferResult
     data class Paused(val bytesTransferred: Long) : ResumableTransferResult
     data class ChecksumMismatch(val actualSha256: String) : ResumableTransferResult
     data class SizeLimitExceeded(val limitBytes: Long) : ResumableTransferResult
-    data class Failed(val reason: String, val bytesTransferred: Long) : ResumableTransferResult
+    data class Failed(val reason: String, val bytesTransferred: Long, val retryable: Boolean = false) : ResumableTransferResult
 }
 
 class ResumableTransferEngine(
@@ -38,16 +40,10 @@ class ResumableTransferEngine(
             try {
                 source.openInputAt(0L)
             } catch (error: Exception) {
-                return ResumableTransferResult.Failed(
-                    error.message ?: error::class.simpleName.orEmpty(),
-                    offset
-                )
+                return transferFailure(error, offset)
             }
         } catch (error: Exception) {
-            return ResumableTransferResult.Failed(
-                error.message ?: error::class.simpleName.orEmpty(),
-                offset
-            )
+            return transferFailure(error, offset)
         }
 
         val total = opened.totalBytes
@@ -81,6 +77,14 @@ class ResumableTransferEngine(
                     output.flush()
                 }
             }
+            if (total != null && transferred < total) {
+                return ResumableTransferResult.Failed(
+                    "Download interrupted before all bytes arrived; retry to resume", transferred, retryable = true)
+            }
+            if (total != null && transferred > total) {
+                staging.discard()
+                return ResumableTransferResult.Failed("Server sent more bytes than declared", transferred)
+            }
             when (val verification = staging.openInput().use {
                 verifier.verify(it, source.expectedSha256)
             }) {
@@ -94,10 +98,17 @@ class ResumableTransferEngine(
                 }
             }
         } catch (error: Exception) {
-            ResumableTransferResult.Failed(
-                error.message ?: error::class.simpleName.orEmpty(),
-                transferred
-            )
+            transferFailure(error, transferred)
         }
     }
 }
+
+internal fun transferFailure(error: Exception, bytesTransferred: Long): ResumableTransferResult.Failed {
+    if (error is kotlinx.coroutines.CancellationException) throw error
+    val recovery = ProviderRecoveryPolicy.classify((error as? DownloadRequestException)?.status, error)
+    return ResumableTransferResult.Failed(
+        error.message ?: recovery.userMessage, bytesTransferred, recovery.retryable)
+}
+
+internal fun shouldRetryTransfer(failure: ResumableTransferResult.Failed, attempt: Int): Boolean =
+    failure.retryable && attempt in 0 until 3
