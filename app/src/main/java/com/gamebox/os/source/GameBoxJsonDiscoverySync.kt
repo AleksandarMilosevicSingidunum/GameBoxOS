@@ -215,9 +215,9 @@ sealed interface ConfiguredDiscoverySyncResult {
 class GameBoxJsonDiscoverySync(
     private val dao: CatalogDiscoveryDao,
     private val transport: GameBoxJsonDiscoveryTransport = HttpsGameBoxJsonDiscoveryTransport(),
-    private val parser: GameBoxJsonDiscoveryParser = GameBoxJsonDiscoveryParser(),
     private val nowMillis: () -> Long = System::currentTimeMillis,
 ) {
+    private val parser = GameBoxJsonDiscoveryParser()
     suspend fun sync(source: GameSourceConfig): ConfiguredDiscoverySyncResult {
         if (!source.enabled) return ConfiguredDiscoverySyncResult.Disabled
         if (source.type != GameSourceProviderType.GAMEBOX_JSON) {
