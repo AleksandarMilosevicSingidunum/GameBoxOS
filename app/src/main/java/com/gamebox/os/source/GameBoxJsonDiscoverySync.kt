@@ -211,7 +211,14 @@ class GameBoxJsonDiscoverySync(
 
         return try {
             val payload = transport.get(URI(source.baseUrl))
-            val games = parser.parse(payload)
+            val parsedGames = parser.parse(payload)
+            val games = if (source.platforms.isEmpty()) parsedGames else {
+                val allowedPlatforms = source.platforms
+                    .mapTo(mutableSetOf()) { normalizeCatalogTitle(it) }
+                    .filter(String::isNotEmpty)
+                    .toSet()
+                parsedGames.filter { it.platformId in allowedPlatforms }
+            }
             val updatedAt = nowMillis()
             val gameIds = games.map { gameBoxJsonDiscoveryGameId(source.id, it.externalId) }
             val favoriteIds = if (gameIds.isEmpty()) emptySet() else
