@@ -36,6 +36,11 @@ class ImportTransactionRecovery(filesDirectory: File) {
 
         val entries = importsRoot.listFiles().orEmpty().toList()
         val transactions = mutableMapOf<TransactionKey, TransactionFiles>()
+        val pendingRegistrationKeys = entries.mapNotNull { entry ->
+            PENDING_REGISTRATION_NAME.matchEntire(entry.name)?.let { match ->
+                TransactionKey(match.groupValues[1], match.groupValues[2])
+            }
+        }.toSet()
 
         entries.forEach { entry ->
             parseTransaction(entry.name)?.let { (kind, key) ->
@@ -49,6 +54,7 @@ class ImportTransactionRecovery(filesDirectory: File) {
 
         transactions.toSortedMap(compareBy<TransactionKey>({ it.gameId }, { it.transactionId }))
             .forEach { (key, tx) ->
+                if (key in pendingRegistrationKeys) return@forEach
                 val result = runCatching {
                     requireSafeGameId(key.gameId)
                     val target = File(importsRoot, key.gameId)
