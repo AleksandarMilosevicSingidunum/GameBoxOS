@@ -4419,6 +4419,19 @@ private fun SettingsScreen(
         cloudMessage?.let { Text(it, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 6.dp)) }
         Spacer(Modifier.height(18.dp))
         SettingsSectionHeader("System", sectionAnchor(SettingsSection.SYSTEM))
+        Text(
+            "Console startup",
+            fontWeight = FontWeight.Bold,
+        )
+        Text(
+            "On a dedicated GameBox phone, choose GameBox as Android's default Home app so it becomes the normal surface after boot and unlock. Android still owns the lock screen and first unlock after restart.",
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.62f),
+            fontSize = 12.sp,
+            modifier = Modifier.padding(bottom = 6.dp),
+        )
+        SettingsActionRow("Choose default Home app", Icons.Rounded.Home) {
+            launchSystemSettings(Settings.ACTION_HOME_SETTINGS)
+        }
         SettingsActionRow("App storage", Icons.Rounded.Storage) { launchSystemSettings(Settings.ACTION_INTERNAL_STORAGE_SETTINGS) }
         SettingsActionRow("GameBox app details", Icons.Rounded.Info) { launchSystemSettings(Settings.ACTION_APPLICATION_DETAILS_SETTINGS) }
         SettingsActionRow("Android system settings", Icons.Rounded.Settings) { launchSystemSettings(Settings.ACTION_SETTINGS) }
