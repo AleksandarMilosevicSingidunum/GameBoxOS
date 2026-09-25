@@ -124,6 +124,7 @@ import com.gamebox.os.diagnostics.DiagnosticEventCollector
 import com.gamebox.os.diagnostics.buildDiagnosticsReport
 import com.gamebox.os.diagnostics.buildDiagnosticsRecoveryBundle
 import com.gamebox.os.navigation.GameBoxNavigationRequest
+import com.gamebox.os.source.ConfiguredDiscoverySyncResult
 import com.gamebox.os.source.GameSourceConfig
 import com.gamebox.os.source.GameSourceProviderType
 import com.gamebox.os.source.nextGameSourceId
@@ -1045,6 +1046,26 @@ val allDiscoveryGames by discoveryRepository.observeGames(null, "", 250).collect
     }
 
     fun openConfiguredSource(source: GameSourceConfig) {
+        if (source.type == GameSourceProviderType.GAMEBOX_JSON) {
+            discoverySyncing = true
+            discoverySyncProgress = 0f
+            scope.launch {
+                discoverySyncMessage = when (val result = discoveryRepository.syncConfiguredSource(source)) {
+                    is ConfiguredDiscoverySyncResult.Success ->
+                        "Synced " + result.games + " games from " + source.name
+                    is ConfiguredDiscoverySyncResult.Failed ->
+                        source.name + " sync failed: " + result.reason
+                    ConfiguredDiscoverySyncResult.Disabled ->
+                        source.name + " is disabled in Settings"
+                    ConfiguredDiscoverySyncResult.Unsupported ->
+                        source.name + " does not support in-app sync"
+                }
+                discoverySyncProgress = 1f
+                discoverySyncing = false
+            }
+            return
+        }
+
         val platformLabel = selectedConsole?.label.orEmpty()
         val target = runCatching {
             if (query.isBlank() && platformLabel.isBlank()) source.baseUrl
@@ -2158,7 +2179,7 @@ private fun DiscoveryDetailsScreen(
     }
     val configuredSources = remember(game.title, platformName, gameSources) {
         gameSources.filter { source ->
-            source.enabled && (
+            source.enabled && source.type == GameSourceProviderType.EXTERNAL_WEB && (
                 source.platforms.isEmpty() ||
                     source.platforms.any { normalizeCatalogTitle(it) == normalizeCatalogTitle(platformName) }
             )
@@ -3965,6 +3986,7 @@ private fun SettingsScreen(
     var catalogCredentialsConfigured by remember { mutableStateOf(false) }
     var theGamesDbApiKey by remember { mutableStateOf("") }
     var theGamesDbConfigured by remember { mutableStateOf(false) }
+    var sourceType by remember { mutableStateOf(GameSourceProviderType.EXTERNAL_WEB) }
     var sourceName by remember { mutableStateOf("") }
     var sourceBaseUrl by remember { mutableStateOf("") }
     var sourceSearchTemplate by remember { mutableStateOf("") }
@@ -4780,10 +4802,25 @@ private fun SettingsScreen(
         Spacer(Modifier.height(18.dp))
         Text("Game discovery sources", fontWeight = FontWeight.Bold)
         Text(
-            "Add optional HTTPS catalog or website sources used for discovery. These entries do not become installable content unless a trusted catalog separately provides a verified source and checksum.",
+            "Add HTTPS website searches or GameBox JSON metadata feeds. Discovery sources never become installable binaries unless a trusted catalog separately provides a verified source and checksum.",
             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.62f),
             fontSize = 12.sp,
         )
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            FilterChip(
+                selected = sourceType == GameSourceProviderType.EXTERNAL_WEB,
+                onClick = { sourceType = GameSourceProviderType.EXTERNAL_WEB },
+                label = { Text("External web") },
+            )
+            FilterChip(
+                selected = sourceType == GameSourceProviderType.GAMEBOX_JSON,
+                onClick = { sourceType = GameSourceProviderType.GAMEBOX_JSON },
+                label = { Text("GameBox JSON") },
+            )
+        }
         currentSettings.gameSources.forEach { source ->
             Surface(
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
@@ -4798,6 +4835,11 @@ private fun SettingsScreen(
                 ) {
                     Column(Modifier.weight(1f)) {
                         Text(source.name, fontWeight = FontWeight.SemiBold)
+                        Text(
+                            if (source.type == GameSourceProviderType.GAMEBOX_JSON) "GameBox JSON metadata" else "External web search",
+                            color = MaterialTheme.colorScheme.primary,
+                            fontSize = 10.sp,
+                        )
                         Text(
                             source.baseUrl,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -4833,18 +4875,27 @@ private fun SettingsScreen(
         OutlinedTextField(
             value = sourceBaseUrl,
             onValueChange = { sourceBaseUrl = it },
-            label = { Text("HTTPS base URL") },
+            label = { Text(if (sourceType == GameSourceProviderType.GAMEBOX_JSON) "HTTPS JSON manifest URL" else "HTTPS base URL") },
             singleLine = true,
             modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
         )
-        OutlinedTextField(
-            value = sourceSearchTemplate,
-            onValueChange = { sourceSearchTemplate = it },
-            label = { Text("Optional search URL template") },
-            supportingText = { Text("Supported placeholders: {query}, {title}, {platform}") },
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
-        )
+        if (sourceType == GameSourceProviderType.EXTERNAL_WEB) {
+            OutlinedTextField(
+                value = sourceSearchTemplate,
+                onValueChange = { sourceSearchTemplate = it },
+                label = { Text("Optional search URL template") },
+                supportingText = { Text("Supported placeholders: {query}, {title}, {platform}") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
+            )
+        } else {
+            Text(
+                "JSON schema 1 imports metadata only. Required fields per game: id, title and platform.",
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                fontSize = 11.sp,
+                modifier = Modifier.padding(top = 6.dp),
+            )
+        }
         OutlinedTextField(
             value = sourcePlatforms,
             onValueChange = { sourcePlatforms = it },
@@ -4861,13 +4912,14 @@ private fun SettingsScreen(
                     val source = GameSourceConfig(
                         id = nextGameSourceId(trimmedName, existingIds),
                         name = trimmedName,
-                        type = GameSourceProviderType.EXTERNAL_WEB,
+                        type = sourceType,
                         baseUrl = sourceBaseUrl.trim(),
                         platforms = sourcePlatforms.split(',')
                             .map(String::trim)
                             .filter(String::isNotEmpty)
                             .toSet(),
-                        searchUrlTemplate = sourceSearchTemplate.trim().takeIf(String::isNotEmpty),
+                        searchUrlTemplate = sourceSearchTemplate.trim()
+                            .takeIf { sourceType == GameSourceProviderType.EXTERNAL_WEB && it.isNotEmpty() },
                     )
                     scope.launch { settingsRepository.upsertGameSource(source) }
                     source
