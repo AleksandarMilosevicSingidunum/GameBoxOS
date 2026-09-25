@@ -22,6 +22,7 @@ data class PendingImportTransaction(
     val schemaVersion: Int = 1,
     val gameId: String,
     val transactionId: String,
+    val createdAtMillis: Long,
     val hadExistingTarget: Boolean,
     val files: List<PendingImportFile>,
 )
@@ -40,7 +41,10 @@ data class ImportRegistrationRecoveryReport(
  * be durable. On a later process start, registered bytes are confirmed; otherwise the
  * filesystem is rolled back to the pre-import state.
  */
-class ImportRegistrationJournal(filesDirectory: File) {
+class ImportRegistrationJournal(
+    filesDirectory: File,
+    private val nowMillis: () -> Long = System::currentTimeMillis,
+) {
     private val filesRoot = filesDirectory.canonicalFile
     private val importsRoot = File(filesRoot, "imports")
     private val json = Json {
@@ -80,6 +84,7 @@ class ImportRegistrationJournal(filesDirectory: File) {
         val pending = PendingImportTransaction(
             gameId = gameId.value,
             transactionId = transactionId,
+            createdAtMillis = nowMillis().coerceAtLeast(0L),
             hadExistingTarget = hadExistingTarget,
             files = files,
         )
@@ -185,7 +190,9 @@ class ImportRegistrationJournal(filesDirectory: File) {
 
     suspend fun reconcile(
         gameLookup: suspend (GameId) -> Game?,
+        createdBeforeMillis: Long = Long.MAX_VALUE,
     ): ImportRegistrationRecoveryReport {
+        require(createdBeforeMillis >= 0L) { "Import recovery cutoff is invalid" }
         var confirmed = 0
         var rolledBack = 0
         var failures = 0
@@ -195,7 +202,8 @@ class ImportRegistrationJournal(filesDirectory: File) {
             return ImportRegistrationRecoveryReport(failures = 1)
         }
 
-        records.groupBy { it.gameId }.toSortedMap().forEach { (gameId, transactions) ->
+        records.filter { it.createdAtMillis < createdBeforeMillis }
+            .groupBy { it.gameId }.toSortedMap().forEach { (gameId, transactions) ->
             if (transactions.size != 1) {
                 failures += transactions.size
                 return@forEach
@@ -234,6 +242,7 @@ class ImportRegistrationJournal(filesDirectory: File) {
         require(pending.schemaVersion == 1) { "Unsupported pending import journal schema" }
         requireSafeGameId(pending.gameId)
         requireUuid(pending.transactionId)
+        require(pending.createdAtMillis >= 0L) { "Pending import timestamp is invalid" }
         require(pending.files.isNotEmpty() && pending.files.size <= 64) {
             "Pending import file set is invalid"
         }
