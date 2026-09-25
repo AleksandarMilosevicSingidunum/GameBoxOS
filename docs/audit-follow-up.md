@@ -73,16 +73,20 @@ An interrupted, unconfirmed handoff adds no playtime. A database write failure b
 dispatch prevents opening the emulator. Recorded duration is time away from GameBox,
 not verified active gameplay; emulator progress/input is still unproven.
 
-Added Android tests for database close/reopen recovery, repeated completion,
-unconfirmed handoff, pending-record overwrite protection, and the 11-to-12 migration
-from the preceding table structure. These await CI and do not replace the missing
-full released-schema migration matrix or actual Android process-death/emulator UAT.
-Two duration tests and the pre-dispatch persistence-failure guard are locally testable.
+Android coverage now includes database close/reopen recovery, repeated completion,
+unconfirmed handoff, pending-record overwrite protection, and the launch-session
+migration path. A separate released-schema matrix now exercises every starting database
+version from 1 through 13 against the complete production migration registry and current
+version-14 schema, including sentinel preservation and current-table checks. This is
+automated schema evidence; it does not replace actual Android process-death/emulator UAT
+or a signed APK upgrade/downgrade rehearsal.
 Recovery failures now have a global retry banner, including cold starts with no
 selected game. New launches are blocked until reconciliation succeeds; a confirmation
 failure after dispatch is reported as uncertain session tracking, not a failed launch.
-Added controller tests for journal ordering, recreation, recovery/retry and persistence
-failures before/after dispatch, plus a production-banner UI callback test. CI pending.
+Controller tests cover journal ordering, recreation, recovery/retry and persistence
+failures before/after dispatch, plus the production recovery banner. The merged CI
+instrumentation path now includes this launch-session coverage; live emulator execution
+remains a separate acceptance gate.
 
 Launch preparation follow-up (audit P1 UI-thread blocker; EMU-02 integration):
 the production controller now publishes PREPARING synchronously, runs gateway file
@@ -101,10 +105,14 @@ launch lifecycle: persistent sessions, large-file frame measurements
 and live emulator gameplay remain pending. Intent dispatch is not proof of gameplay.
 
 1. One real emulator game/save/return/uninstall/reinstall proof, without synthetic-save claims.
-2. General game-ID-based content-only uninstall and actual emulator-save ownership.
-3. Background launch validation and durable play-session recovery.
-4. Authenticated provider/download/volume integration and core emulator setup.
-5. Unified rich details, complete controller behavior and populated Blueprint visual acceptance.
-6. Database upgrade matrix, monotonic release version codes, signing and rollback rehearsal.
+2. Actual emulator-save ownership and production-emulator validation across the supported adapter patterns.
+3. Live provider/download/volume validation against real configured endpoints and storage.
+4. Physical controller and Honor Magic5 Pro external-display recovery/soak acceptance.
+5. Signed production build, clean upgrade, update-channel and rollback rehearsal.
+6. Windows Companion end-to-end validation against the Android endpoint on a real LAN.
+
+The released-schema migration matrix and monotonic Android version-code generation are now
+implemented and exercised by automated CI. They remain prerequisites for the signed
+upgrade/rollback rehearsal rather than open implementation gaps.
 
 Physical hardware gates stay pending and do not prevent independent software work.
