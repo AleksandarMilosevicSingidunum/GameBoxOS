@@ -55,7 +55,17 @@ Lair**. GameBox requests only the corresponding alphabetical vault listing page,
 the matches as temporary discovery cards. The result is not written into the authorized
 catalog and does not create a download job.
 
-Selecting a result opens its `https://vimm.net/vault/<id>` details page externally.
+Selecting a Vimm search result now stays inside GameBox first. GameBox derives a stable,
+source-namespaced local identity from the configured source id plus Vimm's numeric vault
+id and opens the normal discovery Details flow. From there the user can:
+
+- open the exact `https://vimm.net/vault/<id>` page externally;
+- import a locally selected copy through the same format, SHA-256, transaction-journal
+  and Room registration path used by other discovery titles;
+- import a multi-file disc set when that console profile supports one.
+
+The external numeric id is hashed before it becomes a local GameBox game id. The Vimm
+result itself does not become a remote install source and does not enqueue a download.
 For already cached Store titles, the configured Vimm source also appears on the details
 screen and opens the appropriate platform/title browse page.
 

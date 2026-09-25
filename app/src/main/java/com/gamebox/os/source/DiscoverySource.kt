@@ -3,6 +3,7 @@ package com.gamebox.os.source
 import java.net.URI
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
+import java.security.MessageDigest
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
@@ -124,6 +125,18 @@ internal fun decodeGameSourceConfigs(value: String?): List<GameSourceConfig> {
             .take(32)
             .distinctBy { it.id.lowercase() }
     }.getOrDefault(emptyList())
+}
+
+internal fun configuredDiscoveryGameId(sourceId: String, externalId: String): String {
+    require(sourceId.matches(Regex("[a-z0-9][a-z0-9._-]{1,63}"))) {
+        "Configured discovery source id is invalid"
+    }
+    require(externalId.isNotBlank()) { "Configured discovery external id is required" }
+    val digest = MessageDigest.getInstance("SHA-256")
+        .digest(externalId.toByteArray(Charsets.UTF_8))
+        .joinToString("") { "%02x".format(it) }
+        .take(24)
+    return "src-" + sourceId + "-" + digest
 }
 
 fun nextGameSourceId(name: String, existingIds: Set<String>): String {
