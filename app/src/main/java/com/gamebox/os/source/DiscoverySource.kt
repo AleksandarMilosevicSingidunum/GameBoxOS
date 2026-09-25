@@ -166,7 +166,7 @@ fun GameSourceConfig.resolveBrowseUrl(title: String, platform: String): String {
     return resolved
 }
 
-private fun validateGameSourceUrl(value: String, label: String) {
+internal fun validateGameSourceUrl(value: String, label: String): String {
     val uri = try {
         URI(value.trim())
     } catch (error: Exception) {
@@ -178,4 +178,5 @@ private fun validateGameSourceUrl(value: String, label: String) {
     require(!uri.host.isNullOrBlank()) { "$label must include a host" }
     require(uri.userInfo == null) { "Credentials must not be embedded in the source URL" }
     require(uri.fragment == null) { "$label must not include a fragment" }
+    return uri.toASCIIString()
 }
