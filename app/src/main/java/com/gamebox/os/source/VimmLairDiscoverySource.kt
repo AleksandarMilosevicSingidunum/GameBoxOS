@@ -123,6 +123,29 @@ class VimmLairDiscoverySource(
         )
     }
 
+    suspend fun probe(selectedPlatform: String? = null): VimmLairProbeResult {
+        val platform = vimmLairSearchPlatforms(config, selectedPlatform, maxPlatforms = 1)
+            .firstOrNull()
+            ?: throw IllegalArgumentException("No supported Vimm console is configured")
+        val slug = requireNotNull(vimmLairPlatformSlug(platform)) {
+            "Vimm platform mapping is unavailable"
+        }
+        val url = vimmLairPlatformUrl(config.baseUrl, slug, "A")
+        val html = transport.get(URI(url))
+        val vaultLinks = Regex(
+            """<a\b[^>]*href\s*=\s*["']/vault/\d+["'][^>]*>""",
+            RegexOption.IGNORE_CASE,
+        ).findAll(html).count()
+        require(vaultLinks > 0) {
+            "Vimm responded, but the expected vault listing structure was not found"
+        }
+        return VimmLairProbeResult(
+            platform = platform,
+            url = url,
+            vaultLinks = vaultLinks,
+        )
+    }
+
     suspend fun hydrate(result: DiscoverySourceGame): DiscoverySourceGame {
         require(result.sourceId.equals(config.id, ignoreCase = true)) {
             "Vimm result belongs to another configured source"
@@ -140,6 +163,12 @@ class VimmLairDiscoverySource(
         )
     }
 }
+
+data class VimmLairProbeResult(
+    val platform: String,
+    val url: String,
+    val vaultLinks: Int,
+)
 
 internal fun parseVimmLairListing(
     html: String,
