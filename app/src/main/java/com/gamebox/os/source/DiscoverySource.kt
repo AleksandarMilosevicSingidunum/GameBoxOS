@@ -12,6 +12,7 @@ import kotlinx.serialization.json.Json
 enum class GameSourceProviderType {
     GAMEBOX_JSON,
     EXTERNAL_WEB,
+    VIMM_LAIR,
     WEBDAV,
     S3,
 }
@@ -149,6 +150,9 @@ fun GameSourceConfig.supportsPlatform(platform: String?): Boolean {
 }
 
 fun GameSourceConfig.resolveBrowseUrl(title: String, platform: String): String {
+    if (type == GameSourceProviderType.VIMM_LAIR) {
+        return vimmLairBrowseUrl(baseUrl, platform, title)
+    }
     val template = searchUrlTemplate?.trim().orEmpty()
     if (template.isEmpty()) return baseUrl.trim()
 
