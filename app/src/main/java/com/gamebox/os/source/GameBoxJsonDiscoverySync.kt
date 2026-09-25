@@ -6,7 +6,6 @@ import com.gamebox.os.data.local.CatalogGameEntity
 import com.gamebox.os.data.local.CatalogPlatformEntity
 import com.gamebox.os.domain.normalizeCatalogTitle
 import java.net.URI
-import java.security.MessageDigest
 import javax.net.ssl.HttpsURLConnection
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -143,13 +142,8 @@ internal fun canonicalDiscoveryPlatformId(value: String): String {
     }
 }
 
-internal fun gameBoxJsonDiscoveryGameId(sourceId: String, externalId: String): String {
-    val digest = MessageDigest.getInstance("SHA-256")
-        .digest(externalId.toByteArray(Charsets.UTF_8))
-        .joinToString("") { "%02x".format(it) }
-        .take(24)
-    return "src-$sourceId-$digest"
-}
+internal fun gameBoxJsonDiscoveryGameId(sourceId: String, externalId: String): String =
+    configuredDiscoveryGameId(sourceId, externalId)
 
 fun interface GameBoxJsonDiscoveryTransport {
     suspend fun get(uri: URI): String
