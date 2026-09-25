@@ -1310,9 +1310,18 @@ val allDiscoveryGames by discoveryRepository.observeGames(null, "", 250).collect
         if (configuredSources.isNotEmpty()) {
             Spacer(Modifier.height(14.dp))
             Text("Configured sources", fontSize = 15.sp, fontWeight = FontWeight.Bold)
+            val hasJsonSource = configuredSources.any { it.type == GameSourceProviderType.GAMEBOX_JSON }
             Text(
-                if (query.isBlank()) "Open a source for ${selectedConsole?.label ?: "all consoles"}."
-                else "Search configured sources for “$query”.",
+                when {
+                    hasJsonSource && query.isBlank() ->
+                        "Sync JSON metadata feeds or open web sources for ${selectedConsole?.label ?: "all consoles"}."
+                    hasJsonSource ->
+                        "Sync JSON metadata feeds or search web sources for “$query”."
+                    query.isBlank() ->
+                        "Open a web source for ${selectedConsole?.label ?: "all consoles"}."
+                    else ->
+                        "Search configured web sources for “$query”."
+                },
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 fontSize = 11.sp,
             )
@@ -1321,14 +1330,25 @@ val allDiscoveryGames by discoveryRepository.observeGames(null, "", 250).collect
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 configuredSources.forEach { source ->
+                    val jsonSource = source.type == GameSourceProviderType.GAMEBOX_JSON
                     OutlinedButton(
+                        enabled = !discoverySyncing,
                         onClick = { openConfiguredSource(source) },
                         modifier = Modifier.semantics {
-                            contentDescription = "Open ${source.name} configured game source"
+                            contentDescription = if (jsonSource)
+                                "Sync ${source.name} configured metadata source"
+                            else "Open ${source.name} configured web source"
                         },
                     ) {
-                        Icon(Icons.Rounded.OpenInNew, null, Modifier.size(15.dp))
-                        Text(source.name, Modifier.padding(start = 6.dp))
+                        Icon(
+                            if (jsonSource) Icons.Rounded.Sync else Icons.Rounded.OpenInNew,
+                            null,
+                            Modifier.size(15.dp),
+                        )
+                        Text(
+                            (if (jsonSource) "Sync " else "") + source.name,
+                            Modifier.padding(start = 6.dp),
+                        )
                     }
                 }
             }
@@ -1523,16 +1543,24 @@ private fun BlueprintCatalogScreen(
                 if (configuredSources.isNotEmpty()) {
                     Text("CONFIGURED SOURCES", color = MaterialTheme.colorScheme.primary, fontSize = 9.sp, fontWeight = FontWeight.Bold)
                     configuredSources.take(4).forEach { source ->
+                        val jsonSource = source.type == GameSourceProviderType.GAMEBOX_JSON
                         OutlinedButton(
+                            enabled = !discoverySyncing,
                             onClick = { onOpenConfiguredSource(source) },
                             modifier = Modifier.fillMaxWidth().heightIn(min = 34.dp).semantics {
-                                contentDescription = "Open ${source.name} configured game source"
+                                contentDescription = if (jsonSource)
+                                    "Sync ${source.name} configured metadata source"
+                                else "Open ${source.name} configured web source"
                             },
                             contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
                         ) {
-                            Icon(Icons.Rounded.OpenInNew, null, Modifier.size(13.dp))
+                            Icon(
+                                if (jsonSource) Icons.Rounded.Sync else Icons.Rounded.OpenInNew,
+                                null,
+                                Modifier.size(13.dp),
+                            )
                             Text(
-                                source.name,
+                                (if (jsonSource) "Sync " else "") + source.name,
                                 Modifier.padding(start = 5.dp).weight(1f),
                                 fontSize = 9.sp,
                                 maxLines = 1,
@@ -1553,7 +1581,13 @@ private fun BlueprintCatalogScreen(
             }
             if (visibleDiscovery.isEmpty()) {
                 BlueprintPanel(Modifier.fillMaxWidth()) {
-                    Text(if (favoritesOnly || query.isNotBlank()) "No discovered games match these filters." else "Sync this console to add games, box art and screenshots from TheGamesDB.", fontSize = 11.sp)
+                    Text(
+                        if (favoritesOnly || query.isNotBlank()) "No discovered games match these filters."
+                        else if (configuredSources.any { it.type == GameSourceProviderType.GAMEBOX_JSON })
+                            "Sync TheGamesDB or one of your configured JSON metadata sources to add titles."
+                        else "Sync this console to add games, box art and screenshots from TheGamesDB.",
+                        fontSize = 11.sp,
+                    )
                 }
             } else {
                 BoxWithConstraints(Modifier.fillMaxWidth()) {
