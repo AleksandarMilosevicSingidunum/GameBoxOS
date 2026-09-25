@@ -32,3 +32,11 @@ These values are diagnostic evidence, not a substitute for the physical checks a
 Record the displayed status before and after HDMI reconnect, controller reconnect, PD
 load, and Ethernet tests so a failure can be correlated with what Android actually
 reported to GameBox.
+
+
+For each acceptance checkpoint, export the **sanitized diagnostics recovery bundle** from
+GameBox Settings. The report now includes the runtime controller count, active audio route,
+network transport/state, detected external-display count/status, battery percentage, and
+power/charging state. Use those snapshots as supporting evidence before and after reconnect
+or soak steps; they do not replace direct observation of video stability, latency, frame
+pacing, charging current, or temperature.
