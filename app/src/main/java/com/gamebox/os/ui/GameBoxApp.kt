@@ -1213,7 +1213,27 @@ val allDiscoveryGames by discoveryRepository.observeGames(null, "", 250).collect
     }
 
     fun openConfiguredResult(result: DiscoverySourceGame) {
-        selectedConfiguredResult = result
+        val source = gameSources.firstOrNull { it.id.equals(result.sourceId, ignoreCase = true) }
+        if (source?.type != GameSourceProviderType.VIMM_LAIR) {
+            selectedConfiguredResult = result
+            return
+        }
+        discoverySyncing = true
+        discoverySyncMessage = "Loading " + source.name + " details…"
+        scope.launch {
+            val hydrated = runCatching {
+                VimmLairDiscoverySource(source).hydrate(result)
+            }
+            selectedConfiguredResult = hydrated.getOrElse { error ->
+                discoverySyncMessage = source.name + " details unavailable: " +
+                    (error.message?.take(180) ?: "unknown error")
+                result
+            }
+            if (hydrated.isSuccess) {
+                discoverySyncMessage = "Loaded details from " + source.name
+            }
+            discoverySyncing = false
+        }
     }
 
     fun syncDiscovery() {
@@ -5324,7 +5344,7 @@ private fun SettingsScreen(
             }
             GameSourceProviderType.VIMM_LAIR -> {
                 Text(
-                    "Searches Vimm vault listing pages and opens matching title pages externally. GameBox does not extract media IDs or download game binaries from this source.",
+                    "Searches Vimm vault listings, hydrates selected title metadata inside GameBox, and keeps the exact vault page available as an external link. GameBox does not extract media IDs or download game binaries from this source.",
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontSize = 11.sp,
                     modifier = Modifier.padding(top = 6.dp),

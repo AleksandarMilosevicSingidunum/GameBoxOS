@@ -55,9 +55,14 @@ Lair**. GameBox requests only the corresponding alphabetical vault listing page,
 the matches as temporary discovery cards. The result is not written into the authorized
 catalog and does not create a download job.
 
-Selecting a Vimm search result now stays inside GameBox first. GameBox derives a stable,
-source-namespaced local identity from the configured source id plus Vimm's numeric vault
-id and opens the normal discovery Details flow. From there the user can:
+Selecting a Vimm search result now stays inside GameBox first. Before opening the normal
+discovery Details flow, GameBox performs one bounded request to the exact numeric vault
+page and hydrates non-binary metadata when present: page title, system/platform, region,
+release year, and Vimm-hosted Open Graph artwork. If the detail request fails or the page
+is sparse, the original listing result remains usable.
+
+GameBox derives a stable, source-namespaced local identity from the configured source id
+plus Vimm's numeric vault id. From Details the user can:
 
 - open the exact `https://vimm.net/vault/<id>` page externally;
 - import a locally selected copy through the same format, SHA-256, transaction-journal
@@ -79,7 +84,8 @@ screen and opens the appropriate platform/title browse page.
 
 The adapter follows the category/game-link structure demonstrated by the
 `heywander/vimms-lair-scrape` project, but intentionally does not reproduce its
-`mediaId` extraction or binary download functions. GameBox sends a normal
+`mediaId` extraction or binary download functions. Detail hydration ignores download
+form fields and accepts artwork only from HTTPS `vimm.net` URLs. GameBox sends a normal
 `GameBoxOS/0.1` user agent, does not rotate proxies, does not bypass access controls,
 does not follow redirects, and bounds each HTML response to 2 MiB.
 

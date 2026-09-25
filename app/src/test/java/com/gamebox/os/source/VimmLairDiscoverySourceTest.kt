@@ -104,6 +104,91 @@ class VimmLairDiscoverySourceTest {
     }
 
     @Test
+    fun detailsParserExtractsSafeMetadataWithoutDownloadFields() {
+        val html = """
+            <html>
+              <head>
+                <meta property="og:title" content="God of War - Vimm's Lair">
+                <meta property="og:image" content="https://vimm.net/image.php?id=1234">
+                <title>Fallback title - Vimm's Lair</title>
+              </head>
+              <body>
+                <table>
+                  <tr><td>System</td><td>Sony PlayStation 2</td></tr>
+                  <tr><td>Region</td><td>USA</td></tr>
+                  <tr><td>Release Date</td><td>March 22, 2005</td></tr>
+                  <tr><td>Media ID</td><td>should-not-be-exposed</td></tr>
+                </table>
+                <input name="mediaId" value="99999">
+              </body>
+            </html>
+        """.trimIndent()
+
+        val game = parseVimmLairDetails(
+            html = html,
+            sourceId = "vimm",
+            externalId = "1234",
+            detailsUrl = "https://vimm.net/vault/1234",
+        )
+
+        assertEquals("God of War", game.title)
+        assertEquals("Sony PlayStation 2", game.platform)
+        assertEquals("USA", game.region)
+        assertEquals(2005, game.year)
+        assertEquals("https://vimm.net/image.php?id=1234", game.coverUrl)
+        assertEquals("https://vimm.net/vault/1234", game.detailsUrl)
+    }
+
+    @Test
+    fun hydratePreservesSearchIdentityWhenDetailPageIsSparse() = runBlocking {
+        val result = DiscoverySourceGame(
+            sourceId = "vimm",
+            externalId = "1234",
+            title = "God of War",
+            platform = "PS2",
+            region = "USA",
+            detailsUrl = "https://vimm.net/vault/1234",
+        )
+        val source = VimmLairDiscoverySource(
+            GameSourceConfig(
+                id = "vimm",
+                name = "Vimm's Lair",
+                type = GameSourceProviderType.VIMM_LAIR,
+                baseUrl = "https://vimm.net/vault",
+            ),
+            VimmLairTransport { uri ->
+                assertEquals("https://vimm.net/vault/1234", uri.toString())
+                "<html><head><title>Vimm's Lair</title></head><body></body></html>"
+            },
+        )
+
+        val hydrated = source.hydrate(result)
+
+        assertEquals(result.externalId, hydrated.externalId)
+        assertEquals("God of War", hydrated.title)
+        assertEquals("PS2", hydrated.platform)
+        assertEquals("USA", hydrated.region)
+        assertEquals("https://vimm.net/vault/1234", hydrated.detailsUrl)
+    }
+
+    @Test
+    fun detailsRejectsArtworkOutsideVimmHost() {
+        val html = """
+            <meta property="og:title" content="Example - Vimm's Lair">
+            <meta property="og:image" content="https://evil.example/cover.jpg">
+        """.trimIndent()
+
+        val game = parseVimmLairDetails(
+            html = html,
+            sourceId = "vimm",
+            externalId = "5",
+            detailsUrl = "https://vimm.net/vault/5",
+        )
+
+        assertEquals(null, game.coverUrl)
+    }
+
+    @Test
     fun sourceRejectsUnsupportedConsoleAndNonVimmHost() {
         assertThrows(IllegalArgumentException::class.java) {
             VimmLairDiscoverySource(
