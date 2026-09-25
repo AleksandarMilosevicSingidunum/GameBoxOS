@@ -49,6 +49,17 @@ class GameBoxJsonDiscoverySyncTest {
     }
 
     @Test
+    fun supportedConsoleAliasesUseTheGamesDbCompatiblePlatformIds() {
+        assertEquals("playstation2", canonicalDiscoveryPlatformId("PS2"))
+        assertEquals("nintendogamecube", canonicalDiscoveryPlatformId("GameCube"))
+        assertEquals("nintendowii", canonicalDiscoveryPlatformId("Nintendo Wii"))
+        assertEquals("playstationportable", canonicalDiscoveryPlatformId("PSP"))
+        assertEquals("segadreamcast", canonicalDiscoveryPlatformId("Dreamcast"))
+        assertEquals("nintendo3ds", canonicalDiscoveryPlatformId("3DS"))
+        assertEquals("nintendoswitch", canonicalDiscoveryPlatformId("Switch"))
+    }
+
+    @Test
     fun parserRejectsUnsafeArtworkAndDuplicateIds() {
         assertThrows(IllegalArgumentException::class.java) {
             parser.parse(
@@ -85,7 +96,7 @@ class GameBoxJsonDiscoverySyncTest {
     fun syncPreservesFavoritesExistingPlatformAndScopesConfiguredPlatforms() = runBlocking {
         val dao = FakeDiscoveryDao(
             existingPlatform = CatalogPlatformEntity(
-                id = "ps2",
+                id = "playstation2",
                 name = "Sony Playstation 2",
                 theGamesDbId = "11",
                 updatedAtMillis = 10L,
@@ -138,7 +149,7 @@ class GameBoxJsonDiscoverySyncTest {
         assertTrue(stored.favorite)
         assertFalse(stored.id.contains(".."))
         assertFalse(stored.id.contains("owned-game"))
-        assertEquals("ps2", stored.platformId)
+        assertEquals("playstation2", stored.platformId)
 
         val platform = dao.platforms.single()
         assertEquals("Sony Playstation 2", platform.name)
