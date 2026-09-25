@@ -72,7 +72,14 @@ internal fun ImportedGameReimportCard(game: Game, importer: AuthorizedRomImporte
                                         LocalContentFile(RomImportPolicy.importRootRelativePath(current.id, it.relativePath),
                                             it.hashes.sha256, it.mimeType)
                                     }))
-                                "Content verified and restored. Existing saves and history retained."
+                                val cleanupDeferred = runCatching {
+                                    importer.confirmRegistration(current.id, result.transactionId)
+                                }.isFailure
+                                if (cleanupDeferred) {
+                                    "Content verified and restored. Saves and history retained; transaction cleanup will finish after restart."
+                                } else {
+                                    "Content verified and restored. Existing saves and history retained."
+                                }
                             }
                             RomImportSetResult.SourceUnavailable -> "A selected file could not be opened; select the files again."
                             is RomImportSetResult.Rejected -> "Reimport rejected: ${result.reason}"
