@@ -11,6 +11,7 @@ import com.gamebox.os.data.local.SaveRecordEntity
 import com.gamebox.os.domain.GameId
 import com.gamebox.os.domain.Game
 import com.gamebox.os.content.GameContentPolicy
+import com.gamebox.os.content.GameMutationGate
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.NonCancellable
@@ -205,7 +206,14 @@ class DefaultSaveSafetyController(
 
     override suspend fun uninstallContent(game: Game): String = uninstallContent(game, false)
 
-    override suspend fun uninstallContent(game: Game, allowWithoutCloudBackup: Boolean): String = withContext(Dispatchers.IO + NonCancellable) {
+    override suspend fun uninstallContent(game: Game, allowWithoutCloudBackup: Boolean): String {
+        val saveOperationKey = savesRoot.canonicalPath + ":" + gameId.value
+        require(SaveOperationGate.acquire(saveOperationKey)) {
+            "A save operation is already running for this game"
+        }
+        return try {
+            GameMutationGate.withGameLock(game.id.value) {
+                withContext(Dispatchers.IO + NonCancellable) {
         require(game.id == gameId) { "Content controller does not belong to this game" }
         val current = requireNotNull(gameRepository.game(game.id)) { "Game is no longer in the library" }
         require(current.state in setOf(InstallState.INSTALLED, InstallState.UPDATE_AVAILABLE, InstallState.MISSING_FILES)) {
@@ -255,6 +263,11 @@ class DefaultSaveSafetyController(
         } catch (error: ContentRemovalFailed) {
             if (error.removedFiles > 0) gameRepository.setInstallStateAndAwait(game.id, InstallState.MISSING_FILES)
             throw IllegalStateException("Content removal stopped after ${error.removedFiles} file(s). Saves were not touched; retry to remove remaining content.", error)
+        }
+                }
+            }
+        } finally {
+            SaveOperationGate.release(saveOperationKey)
         }
     }
 

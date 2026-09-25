@@ -11,8 +11,13 @@ revision passed all five checks, including its Room/importer content-removal and
 reimport integration tests and confirmation-dialog tests. This UI follow-up needs
 its own Android build and regression run. No real-emulator save recovery is claimed.
 
-Still pending: process-death recovery during import, shared per-game mutation
-locking, end-to-end system-picker automation, and real emulator save validation.
+Shared per-game mutation locking is now implemented for production import/reimport,
+missing-file Forget, and content-only uninstall flows. The lock spans file mutation plus
+the matching library-state publication so those operations cannot interleave for the same
+game; unrelated games remain independent.
+
+Still pending: process-death recovery during import, end-to-end system-picker automation,
+and real emulator save validation.
 Restore now requires the retained filenames and SHA-256 checksums for the full
 file set. Identity is checked in staging before replacing content; a different
 edition must be imported separately. Three local identity regression tests pass.

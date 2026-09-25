@@ -14,6 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.gamebox.os.data.GameRepository
+import com.gamebox.os.content.GameMutationGate
 import com.gamebox.os.data.ImportedGameRegistration
 import com.gamebox.os.domain.Game
 import com.gamebox.os.domain.LocalContentFile
@@ -39,7 +40,8 @@ internal fun ImportedGameReimportCard(game: Game, importer: AuthorizedRomImporte
             scope.launch {
                 try {
                     // Once confirmed, finish registration even if navigation removes this card.
-                    message = withContext(Dispatchers.IO + NonCancellable) {
+                    message = GameMutationGate.withGameLock(game.id.value) {
+                        withContext(Dispatchers.IO + NonCancellable) {
                         val current = requireNotNull(repository.game(game.id)) { "Game is no longer in the library" }
                         require(current.canReimportContent()) { "Game state changed; reopen its details" }
                         val sources = uris.map { uri ->
@@ -76,6 +78,7 @@ internal fun ImportedGameReimportCard(game: Game, importer: AuthorizedRomImporte
                             is RomImportSetResult.Rejected -> "Reimport rejected: ${result.reason}"
                             is RomImportSetResult.Failed -> "Reimport failed: ${result.reason}"
                         }
+                        }
                     }
                 } catch (error: Exception) {
                     if (error is CancellationException) throw error
@@ -97,8 +100,10 @@ internal fun ImportedGameReimportCard(game: Game, importer: AuthorizedRomImporte
                     busy = true
                     scope.launch {
                         message = try {
-                            val forgotten = withContext(Dispatchers.IO + NonCancellable) {
-                                repository.forgetMissingImportedContent(game.id)
+                            val forgotten = GameMutationGate.withGameLock(game.id.value) {
+                                withContext(Dispatchers.IO + NonCancellable) {
+                                    repository.forgetMissingImportedContent(game.id)
+                                }
                             }
                             if (forgotten) "Missing file references forgotten. Saves and library metadata retained."
                             else "Nothing changed because the game state changed; reopen Details and retry."

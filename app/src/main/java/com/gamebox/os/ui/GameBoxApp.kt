@@ -74,6 +74,7 @@ import com.gamebox.os.data.GameRepository
 import com.gamebox.os.data.CatalogDiscoveryRepository
 import com.gamebox.os.data.DiscoveryGame
 import com.gamebox.os.data.ImportedGameRegistration
+import com.gamebox.os.content.GameMutationGate
 import com.gamebox.os.importer.AuthorizedRomImporter
 import com.gamebox.os.importer.RomImportPolicy
 import com.gamebox.os.importer.RomImportResult
@@ -2258,6 +2259,7 @@ private fun DiscoveryDetailsScreen(
             importing = true
             importMessage = "Importing and verifying " + displayName + "…"
             scope.launch {
+                GameMutationGate.withGameLock(game.id.value) {
                 importMessage = when (val result = importer.import(game.id, uri, displayName, platformName)) {
                     is RomImportResult.Imported -> runCatching {
                         repository.registerImportedGame(
@@ -2292,6 +2294,7 @@ private fun DiscoveryDetailsScreen(
                     is RomImportResult.Failed ->
                         "Import failed: " + result.reason
                 }
+                }
                 importing = false
             }
         }
@@ -2306,6 +2309,7 @@ private fun DiscoveryDetailsScreen(
             importing = true
             importMessage = "Importing and verifying ${sources.size} disc-set files…"
             scope.launch {
+                GameMutationGate.withGameLock(game.id.value) {
                 importMessage = when (val result = importer.importSet(game.id, sources, platformName)) {
                     is RomImportSetResult.Imported -> runCatching {
                         val importedFiles = result.files.map { file ->
@@ -2350,6 +2354,7 @@ private fun DiscoveryDetailsScreen(
                     RomImportSetResult.SourceUnavailable -> "One of the selected files could not be opened"
                     is RomImportSetResult.Rejected -> "Import rejected: " + result.reason
                     is RomImportSetResult.Failed -> "Import failed: " + result.reason
+                }
                 }
                 importing = false
             }
