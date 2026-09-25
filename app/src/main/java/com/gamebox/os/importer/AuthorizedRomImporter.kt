@@ -5,6 +5,8 @@ import android.net.Uri
 import com.gamebox.os.domain.GameId
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import java.io.File
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption
@@ -39,6 +41,8 @@ sealed interface RomImportResult {
     data class Rejected(val reason: String) : RomImportResult
     data class Failed(val reason: String) : RomImportResult
 }
+
+private val importTransactionMutex = Mutex()
 
 class AuthorizedRomImporter(
     context: Context,
@@ -97,7 +101,8 @@ class AuthorizedRomImporter(
         sources: List<RomImportSource>,
         platform: String? = null,
         expectedFiles: List<com.gamebox.os.domain.LocalContentFile>? = null,
-    ): RomImportSetResult = withContext(Dispatchers.IO) {
+    ): RomImportSetResult = importTransactionMutex.withLock {
+        withContext(Dispatchers.IO) {
         recoverBeforeMutation(gameId)?.let { return@withContext RomImportSetResult.Failed(it) }
         if (sources.isEmpty()) return@withContext RomImportSetResult.Rejected("Select at least one game file")
         if (sources.size > 64) return@withContext RomImportSetResult.Rejected("A disc set may contain at most 64 files")
@@ -188,6 +193,7 @@ class AuthorizedRomImporter(
             }
         } finally {
             if (pendingRegistration == null && staging.exists()) staging.deleteRecursively()
+        }
         }
     }
 
