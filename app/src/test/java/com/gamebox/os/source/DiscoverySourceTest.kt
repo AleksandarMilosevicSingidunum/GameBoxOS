@@ -59,6 +59,21 @@ class DiscoverySourceTest {
     }
 
     @Test
+    fun platformRestrictionsAreNormalizedAndDisabledSourcesAreExcluded() {
+        val source = GameSourceConfig(
+            id = "ps-source",
+            name = "PS source",
+            type = GameSourceProviderType.EXTERNAL_WEB,
+            baseUrl = "https://example.test",
+            platforms = setOf("PS2", "PlayStation Portable"),
+        )
+        assertEquals(true, source.supportsPlatform("ps2"))
+        assertEquals(true, source.supportsPlatform("PlayStation Portable"))
+        assertEquals(false, source.supportsPlatform("GameCube"))
+        assertEquals(false, source.copy(enabled = false).supportsPlatform("PS2"))
+    }
+
+    @Test
     fun sourceIdsAreGeneratedDeterministically() {
         val existing = setOf("my-library", "my-library-2")
         assertEquals("my-library-3", nextGameSourceId("My Library", existing))

@@ -139,6 +139,15 @@ fun nextGameSourceId(name: String, existingIds: Set<String>): String {
     }
 }
 
+fun GameSourceConfig.supportsPlatform(platform: String?): Boolean {
+    if (!enabled) return false
+    if (platform.isNullOrBlank() || platforms.isEmpty()) return true
+    val normalized = platform.lowercase().filter(Char::isLetterOrDigit)
+    return platforms.any { configured ->
+        configured.lowercase().filter(Char::isLetterOrDigit) == normalized
+    }
+}
+
 fun GameSourceConfig.resolveBrowseUrl(title: String, platform: String): String {
     val template = searchUrlTemplate?.trim().orEmpty()
     if (template.isEmpty()) return baseUrl.trim()
