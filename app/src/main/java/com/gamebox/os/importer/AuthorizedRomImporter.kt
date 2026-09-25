@@ -201,6 +201,9 @@ class AuthorizedRomImporter(
         val pending = registrationJournal.pendingFor(gameId)
             .singleOrNull { it.transactionId == transactionId }
             ?: throw IllegalStateException("Pending import registration was not found")
+        require(registrationJournal.targetMatchesPending(pending)) {
+            "Imported content changed before registration cleanup"
+        }
         registrationJournal.confirm(pending)
     }
 
