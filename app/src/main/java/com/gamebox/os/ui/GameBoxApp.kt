@@ -121,6 +121,7 @@ import com.gamebox.os.catalog.legalSourceLinks
 import com.gamebox.os.save.CloudSaveEndpointPolicy
 import com.gamebox.os.save.CloudSaveProvider
 import com.gamebox.os.diagnostics.DiagnosticsDevice
+import com.gamebox.os.diagnostics.DiagnosticsRuntime
 import com.gamebox.os.diagnostics.DiagnosticEventCollector
 import com.gamebox.os.diagnostics.buildDiagnosticsReport
 import com.gamebox.os.diagnostics.buildDiagnosticsRecoveryBundle
@@ -4170,6 +4171,7 @@ private fun SettingsScreen(
         else "Notification permission was not granted"
     }
     val storageRoot = context.filesDir
+    val runtimeStatus = LocalRuntimeDeviceStatus.current
     val diagnosticsReport = buildDiagnosticsReport(
         device = DiagnosticsDevice(
             manufacturer = Build.MANUFACTURER,
@@ -4182,7 +4184,17 @@ private fun SettingsScreen(
         ),
         settings = currentSettings,
         games = diagnosticGames,
-        downloads = diagnosticDownloads
+        downloads = diagnosticDownloads,
+        runtime = DiagnosticsRuntime(
+            controllerCount = runtimeStatus.controllerNames.size,
+            audioOutput = runtimeStatus.audioOutputLabel,
+            networkTransport = runtimeStatus.networkTransportLabel,
+            networkState = runtimeStatus.networkLabel,
+            externalDisplayCount = runtimeStatus.externalDisplayNames.size,
+            externalDisplaySummary = runtimeStatus.externalDisplayLabel,
+            batteryPercent = runtimeStatus.batteryPercent,
+            powerState = runtimeStatus.powerLabel,
+        ),
     )
     val diagnosticsBundle = remember(diagnosticsReport, diagnosticEvents.snapshot()) {
         buildDiagnosticsRecoveryBundle(diagnosticsReport, diagnosticEvents.snapshot())
@@ -4206,7 +4218,6 @@ private fun SettingsScreen(
     }
     val totalStorage = storageRoot.totalSpace
     val usableStorage = storageRoot.usableSpace
-    val runtimeStatus = LocalRuntimeDeviceStatus.current
     val connectedControllers = runtimeStatus.controllerNames.size
     val activeDownloads = diagnosticDownloads.count {
         it.status !in setOf(DownloadStatus.COMPLETED, DownloadStatus.FAILED, DownloadStatus.CANCELLED)
