@@ -22,10 +22,19 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.net.HttpURLConnection
+import java.net.URI
 import java.net.URL
 import java.security.MessageDigest
 
 private const val MAX_ARTWORK_BYTES = 4 * 1024 * 1024
+internal fun isSafeArtworkUrl(value: String?): Boolean {
+    val uri = runCatching { URI(value?.trim().orEmpty()) }.getOrNull() ?: return false
+    return uri.scheme.equals("https", ignoreCase = true) &&
+        !uri.host.isNullOrBlank() &&
+        uri.userInfo == null &&
+        uri.fragment == null
+}
+
 private val artworkCache = object : LruCache<String, Bitmap>(16 * 1024 * 1024) {
     override fun sizeOf(key: String, value: Bitmap): Int = value.allocationByteCount
 }
@@ -39,11 +48,12 @@ internal fun RemoteArtwork(
     contentScale: ContentScale = ContentScale.Crop,
 ) {
     val cacheDir = LocalContext.current.cacheDir
-    var bitmap by remember(url) { mutableStateOf(url?.let(artworkCache::get)) }
-    LaunchedEffect(url) {
-        if (bitmap != null || url.isNullOrBlank() || !url.startsWith("https://")) return@LaunchedEffect
+    val safeUrl = url?.takeIf(::isSafeArtworkUrl)
+    var bitmap by remember(safeUrl) { mutableStateOf(safeUrl?.let(artworkCache::get)) }
+    LaunchedEffect(safeUrl) {
+        if (bitmap != null || safeUrl == null) return@LaunchedEffect
         bitmap = withContext(Dispatchers.IO) {
-            try { loadArtwork(url, cacheDir) }
+            try { loadArtwork(safeUrl, cacheDir) }
             catch (cancelled: CancellationException) { throw cancelled }
             catch (_: Exception) { null }
         }
