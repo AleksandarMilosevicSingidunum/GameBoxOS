@@ -175,5 +175,8 @@ class ImportTransactionRecovery(filesDirectory: File) {
         val TRANSACTION_NAME = Regex(
             """\.(staging|backup)-([a-z0-9][a-z0-9-]{0,95})-([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})"""
         )
+        val PENDING_REGISTRATION_NAME = Regex(
+            """\.pending-registration-([a-z0-9][a-z0-9-]{0,95})-([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})\.json"""
+        )
     }
 }
