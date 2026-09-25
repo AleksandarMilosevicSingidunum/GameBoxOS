@@ -1,8 +1,8 @@
 # GameBox OS
 
-GameBox OS is a controller-first Android living-room shell for a docked phone. It presents one coherent interface for a local game library, authorized or homebrew catalog, media launchers, streaming tools, and Samsung DeX.
+GameBox OS is a controller-first Android living-room shell for a docked phone. It presents one coherent interface for a local game library, authorized or homebrew catalog, media launchers, streaming tools, and Android external-display/desktop modes such as Honor Desktop Mode or Samsung DeX.
 
-GameBox is an Android/DeX application, not a custom ROM or emulator. Game sources must be user-owned backups, homebrew, freeware, open-source, or otherwise authorized content. An optional native Windows Companion is provided for local Windows-library launching; it does not replace the Android/DeX shell.
+GameBox is an Android external-display application, not a custom ROM or emulator. Game sources must be user-owned backups, homebrew, freeware, open-source, or otherwise authorized content. An optional native Windows Companion is provided for local Windows-library launching; it does not replace the Android device shell.
 
 ## Current development status
 
@@ -39,8 +39,8 @@ Latest verified increments: the primary shell now includes an original scalable 
 | Diagnostics | Partial | Sanitized report, bounded redacted event collection, lifecycle wiring, visible download errors, and a 2 MiB ZIP recovery bundle export; physical failure validation remains |
 | CI and releases | Partial | Unit tests, debug APK builds, SHA-256 artifacts, alpha release workflow, deterministic channel-readiness gating, validated APK provenance manifests with size/hash/channel metadata, rollback tag metadata, and tag/channel consistency validation, release/rollback tag existence checks, serialized production publishing, and verified asset upload; protected signed-production workflow is implemented; configuring repository signing secrets and executing the real update channel remain |
 | External storage | Partial | SAF folder selection, persisted permissions, read/write status, real filesDir/installed discovery, exact migration planning, Settings confirmation/execution with result totals, verified document-tree cutover that removes internal sources only after size/SHA-256 confirmation, external-library emulator launch and content-only uninstall integration, explicit confirmation states, disconnect detection, and retryable outage classification; physical unplug testing remains |
-| Target hardware | Not validated | Galaxy A53 controller testing and Galaxy S23 Ultra/DeX/HDMI/Ethernet/thermal/SSD soak testing require physical hardware |
-| Enclosure/handoff | Handoff prepared | Blueprint-grounded entry gates, component criteria, measurement worksheet, DeX/hub/thermal/SSD validation matrix, CAD release checklist, prototype acceptance, BOM record, recovery path, and final handoff package are specified in [the hardware handoff](docs/hardware-enclosure-handoff.md); physical measurement, CAD, fabrication, and validation remain |
+| Target hardware | Partially observed, not validated | Honor Magic5 Pro wired external display has a preliminary low-latency observation using a non-final dock. Controller input, the purchased UGREEN 7-in-1 hub, HDMI reconnect, PD/Ethernet concurrency, thermal behavior, storage, cold-boot/no-touch recovery, and soak testing remain physical gates. |
+| Enclosure/handoff | Handoff prepared | Honor Magic5 Pro + UGREEN-hub entry gates, component criteria, measurement worksheet, external-display/hub/thermal/storage validation matrix, CAD release checklist, prototype acceptance, BOM record, recovery path, and final handoff package are specified in [the hardware handoff](docs/hardware-enclosure-handoff.md); exact hub measurement, final CAD, fabrication, and validation remain |
 
 ## Implemented highlights
 
@@ -75,10 +75,10 @@ The active implementation goal covers all remaining software work below. Physica
 - Validate authenticated cloud-save byte transfer against real WebDAV/S3 endpoints and real save adapters against production emulators
 - Complete physical disconnect/unplug safety tests for confirmed SAF migrations
 - Complete physical-device Compose accessibility/lifecycle validation and expand airplane-mode and failure-recovery scenarios (the hosted API-35 emulator instrumentation suite is now a required CI gate)
-- Complete physical controller testing on Galaxy A53
-- Complete Galaxy S23 Ultra DeX/HDMI/Ethernet/charging/thermal/reconnect soak testing
+- Complete physical controller testing on Honor Magic5 Pro
+- Complete Honor Magic5 Pro HDMI/Honor Desktop Mode/Ethernet/charging/thermal/reconnect soak testing with the purchased UGREEN 7-in-1 hub
 - Configure signed production builds and execute real update-channel/rollback validation using generated release manifests
-- Execute the prepared physical enclosure handoff: measure the final S23/hub/cable layout, select and validate the BOM, release CAD, fabricate, and complete prototype acceptance
+- Execute the prepared physical enclosure handoff: measure the final Honor Magic5 Pro/UGREEN hub/cable layout, select and validate the BOM, release CAD, fabricate, and complete prototype acceptance
 - Validate the implemented authenticated Windows managed-save synchronization on a real LAN; complete richer streaming integrations, installer signing, and physical Windows validation
 - Validate physical LAN/controller streaming and host-probe behavior on target devices
 
@@ -90,7 +90,7 @@ The remaining work is tracked in these concrete groups:
 - Verify physical disconnect recovery for Settings-driven migrations.
 - Validate adapter-specific save discovery/import/export against production emulators and exercise authenticated cloud byte transport against real WebDAV/S3 endpoints.
 - Run the Compose accessibility/migration/lifecycle suite on physical target devices and add offline/recovery scenarios; the same suite already runs on a clean API-35 emulator in CI.
-- Complete physical controller, DeX, HDMI, Ethernet, charging, thermal, SSD, and unplug/reattach validation.
+- Complete physical controller, Honor Desktop Mode/mirroring, HDMI, Ethernet, charging, thermal, SSD, and unplug/reattach validation.
 - Configure production signing and execute update-channel/rollback validation using generated artifact manifests.
 - Execute the repository hardware handoff specification: target measurements, BOM selection, CAD/fabrication, cooling/cabling validation, and prototype acceptance.
 
