@@ -37,6 +37,33 @@ class DiscoverySourceTest {
         assertEquals(listOf(source), registry.all())
     }
 
+
+    @Test
+    fun sourceConfigsRoundTripAndBrowseTemplateIsEncoded() {
+        val source = GameSourceConfig(
+            id = "external-library",
+            name = "External library",
+            type = GameSourceProviderType.EXTERNAL_WEB,
+            baseUrl = "https://example.test/library",
+            platforms = setOf("PS2", "PSP"),
+            searchUrlTemplate = "https://example.test/search?q={query}&platform={platform}",
+        )
+
+        val decoded = decodeGameSourceConfigs(encodeGameSourceConfigs(listOf(source)))
+
+        assertEquals(listOf(source), decoded)
+        assertEquals(
+            "https://example.test/search?q=God%20of%20War%20PS2&platform=PS2",
+            source.resolveBrowseUrl("God of War", "PS2"),
+        )
+    }
+
+    @Test
+    fun sourceIdsAreGeneratedDeterministically() {
+        val existing = setOf("my-library", "my-library-2")
+        assertEquals("my-library-3", nextGameSourceId("My Library", existing))
+    }
+
     @Test
     fun duplicateSourceIdsAreRejected() {
         assertThrows(IllegalArgumentException::class.java) {
