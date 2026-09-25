@@ -1043,6 +1043,7 @@ val allDiscoveryGames by discoveryRepository.observeGames(null, "", 250).collect
     var discoverySyncing by remember { mutableStateOf(false) }
     var discoverySyncProgress by remember { mutableStateOf(0f) }
     var configuredSourceResults by remember { mutableStateOf<List<DiscoverySourceGame>>(emptyList()) }
+    var selectedConfiguredResult by remember { mutableStateOf<DiscoverySourceGame?>(null) }
     var platform by remember(uiState) { mutableStateOf(uiState.screenValue("store.platform")) }
     var genre by remember(uiState) { mutableStateOf(uiState.screenValue("store.genre")) }
     var region by remember(uiState) { mutableStateOf(uiState.screenValue("store.region")) }
@@ -1061,8 +1062,8 @@ val allDiscoveryGames by discoveryRepository.observeGames(null, "", 250).collect
         uiState.rememberScreenValue("store.language", language)
         uiState.rememberScreenValue("store.favorites", favoritesOnly.toString())
     }
-    DisposableEffect(controllerActions, selectedDiscovery) {
-        if (selectedDiscovery == null) {
+    DisposableEffect(controllerActions, selectedDiscovery, selectedConfiguredResult) {
+        if (selectedDiscovery == null && selectedConfiguredResult == null) {
             controllerActions?.configure(
                 xLabel = "Search",
                 onX = { runCatching { searchFocusRequester.requestFocus() } },
@@ -1080,6 +1081,29 @@ val allDiscoveryGames by discoveryRepository.observeGames(null, "", 250).collect
     )
     val focusTarget = restoreGameId?.takeIf { id -> filtered.any { it.id == id } }
         ?: filtered.firstOrNull()?.id
+    if (selectedConfiguredResult != null) {
+        val result = selectedConfiguredResult!!
+        val source = gameSources.firstOrNull { it.id.equals(result.sourceId, ignoreCase = true) }
+        val directSource = result.detailsUrl?.let { url ->
+            ConfiguredSourceLink(
+                sourceId = result.sourceId,
+                label = source?.name ?: "Configured source",
+                url = url,
+            )
+        }
+        DiscoveryDetailsScreen(
+            game = configuredSourceResultToDiscoveryGame(result),
+            platformName = result.platform,
+            onBack = { selectedConfiguredResult = null },
+            onFavorite = {},
+            favoriteEnabled = false,
+            directSource = directSource,
+            importer = authorizedRomImporter,
+            repository = repository,
+            gameSources = gameSources,
+        )
+        return
+    }
     if (selectedDiscovery != null) {
         DiscoveryDetailsScreen(
             game = selectedDiscovery,
@@ -1189,19 +1213,7 @@ val allDiscoveryGames by discoveryRepository.observeGames(null, "", 250).collect
     }
 
     fun openConfiguredResult(result: DiscoverySourceGame) {
-        val source = gameSources.firstOrNull { it.id.equals(result.sourceId, ignoreCase = true) }
-        val target = result.detailsUrl ?: source?.let {
-            runCatching { it.resolveBrowseUrl(result.title, result.platform) }.getOrNull()
-        }
-        if (target == null) {
-            discoverySyncMessage = "No external page is available for " + result.title
-            return
-        }
-        try {
-            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(target)))
-        } catch (_: ActivityNotFoundException) {
-            discoverySyncMessage = "No browser is available to open " + result.title
-        }
+        selectedConfiguredResult = result
     }
 
     fun syncDiscovery() {
@@ -2406,6 +2418,8 @@ private fun DiscoveryDetailsScreen(
     importer: AuthorizedRomImporter,
     repository: GameRepository,
     gameSources: List<GameSourceConfig> = emptyList(),
+    favoriteEnabled: Boolean = true,
+    directSource: ConfiguredSourceLink? = null,
 ) {
     val detail = remember(game, platformName) { GameDetailPresentation.from(game, platformName) }
     val context = LocalContext.current
@@ -2413,20 +2427,31 @@ private fun DiscoveryDetailsScreen(
     val legalSources = remember(game.title, game.platformId) {
         legalSourceLinks(game.title, game.platformId)
     }
-    val configuredSources = remember(game.title, platformName, gameSources) {
-        gameSources.filter { source ->
-            source.enabled && source.type in setOf(
-                GameSourceProviderType.EXTERNAL_WEB,
-                GameSourceProviderType.VIMM_LAIR,
-            ) && (
-                source.platforms.isEmpty() ||
-                    source.platforms.any { normalizeCatalogTitle(it) == normalizeCatalogTitle(platformName) }
+    val configuredSources = remember(game.title, platformName, gameSources, directSource) {
+        buildList {
+            directSource?.let { source ->
+                add(source.label to source.url)
+            }
+            addAll(
+                gameSources.filter { source ->
+                    source.enabled &&
+                        source.id != directSource?.sourceId &&
+                        source.type in setOf(
+                            GameSourceProviderType.EXTERNAL_WEB,
+                            GameSourceProviderType.VIMM_LAIR,
+                        ) && (
+                            source.platforms.isEmpty() ||
+                                source.platforms.any {
+                                    normalizeCatalogTitle(it) == normalizeCatalogTitle(platformName)
+                                }
+                        )
+                }.mapNotNull { source ->
+                    runCatching {
+                        source.name to source.resolveBrowseUrl(game.title, platformName)
+                    }.getOrNull()
+                }
             )
-        }.mapNotNull { source ->
-            runCatching {
-                source.name to source.resolveBrowseUrl(game.title, platformName)
-            }.getOrNull()
-        }
+        }.distinctBy { it.second }
     }
     val importPlatformLabel = remember(platformName) {
         RomImportPolicy.profileLabel(platformName)
@@ -2621,9 +2646,11 @@ private fun DiscoveryDetailsScreen(
                                 Icon(Icons.Rounded.FileOpen, null, Modifier.size(16.dp))
                                 Text(if (importing) "Importing…" else "Import your copy", Modifier.padding(start = 6.dp), fontSize = 12.sp)
                             }
-                            OutlinedButton(onClick = onFavorite) {
-                                Icon(if (detail.favorite) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder, null, Modifier.size(16.dp))
-                                Text(if (detail.favorite) "Favorited" else "Favorite", Modifier.padding(start = 6.dp), fontSize = 12.sp)
+                            if (favoriteEnabled) {
+                                OutlinedButton(onClick = onFavorite) {
+                                    Icon(if (detail.favorite) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder, null, Modifier.size(16.dp))
+                                    Text(if (detail.favorite) "Favorited" else "Favorite", Modifier.padding(start = 6.dp), fontSize = 12.sp)
+                                }
                             }
                             TextButton(onClick = onBack) { Text("Back", fontSize = 12.sp) }
                         }
@@ -2638,8 +2665,11 @@ private fun DiscoveryDetailsScreen(
             BlueprintPanel(Modifier.fillMaxWidth()) {
                 Text("Bring your game", fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
                 Text("Accepted for $importPlatformLabel: $importFormats", color = MaterialTheme.colorScheme.primary, fontSize = 11.sp)
-                Text("TheGamesDB supplies metadata and artwork, not game files. Import copies and verifies your selected file into Library. You still need a compatible emulator and any required firmware or keys.",
-                    color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp)
+                Text(
+                    "Discovery providers supply metadata or source links, not trusted install content. Import copies and verifies your selected file into Library. You still need a compatible emulator and any required firmware or keys.",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontSize = 11.sp,
+                )
                 if (RomImportPolicy.supportsMultiFile(platformName)) {
                     OutlinedButton(enabled = !importing, onClick = { importSetLauncher.launch(arrayOf("*/*")) }) { Text("Import multi-file disc set", fontSize = 11.sp) }
                 }
@@ -2731,7 +2761,7 @@ private fun ConfiguredSourceResultCard(
             )
             Spacer(Modifier.weight(1f))
             Text(
-                "Open source page",
+                "View details / import",
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 fontSize = 9.sp,
             )
