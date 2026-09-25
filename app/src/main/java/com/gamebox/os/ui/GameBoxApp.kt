@@ -1213,7 +1213,27 @@ val allDiscoveryGames by discoveryRepository.observeGames(null, "", 250).collect
     }
 
     fun openConfiguredResult(result: DiscoverySourceGame) {
-        selectedConfiguredResult = result
+        val source = gameSources.firstOrNull { it.id.equals(result.sourceId, ignoreCase = true) }
+        if (source?.type != GameSourceProviderType.VIMM_LAIR) {
+            selectedConfiguredResult = result
+            return
+        }
+        discoverySyncing = true
+        discoverySyncMessage = "Loading " + source.name + " details…"
+        scope.launch {
+            val hydrated = runCatching {
+                VimmLairDiscoverySource(source).hydrate(result)
+            }
+            selectedConfiguredResult = hydrated.getOrElse { error ->
+                discoverySyncMessage = source.name + " details unavailable: " +
+                    (error.message?.take(180) ?: "unknown error")
+                result
+            }
+            if (hydrated.isSuccess) {
+                discoverySyncMessage = "Loaded details from " + source.name
+            }
+            discoverySyncing = false
+        }
     }
 
     fun syncDiscovery() {
