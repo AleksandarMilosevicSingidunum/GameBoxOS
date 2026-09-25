@@ -127,11 +127,13 @@ import com.gamebox.os.diagnostics.buildDiagnosticsReport
 import com.gamebox.os.diagnostics.buildDiagnosticsRecoveryBundle
 import com.gamebox.os.navigation.GameBoxNavigationRequest
 import com.gamebox.os.source.ConfiguredDiscoverySyncResult
+import com.gamebox.os.source.DiscoverySourceGame
 import com.gamebox.os.source.GameSourceConfig
 import com.gamebox.os.source.GameSourceProviderType
 import com.gamebox.os.source.nextGameSourceId
 import com.gamebox.os.source.resolveBrowseUrl
 import com.gamebox.os.source.supportsPlatform
+import com.gamebox.os.source.VimmLairDiscoverySource
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
@@ -1040,11 +1042,15 @@ val allDiscoveryGames by discoveryRepository.observeGames(null, "", 250).collect
     var discoverySyncMessage by remember { mutableStateOf<String?>(null) }
     var discoverySyncing by remember { mutableStateOf(false) }
     var discoverySyncProgress by remember { mutableStateOf(0f) }
+    var configuredSourceResults by remember { mutableStateOf<List<DiscoverySourceGame>>(emptyList()) }
     var platform by remember(uiState) { mutableStateOf(uiState.screenValue("store.platform")) }
     var genre by remember(uiState) { mutableStateOf(uiState.screenValue("store.genre")) }
     var region by remember(uiState) { mutableStateOf(uiState.screenValue("store.region")) }
     var language by remember(uiState) { mutableStateOf(uiState.screenValue("store.language")) }
     var favoritesOnly by remember(uiState) { mutableStateOf(uiState.screenValue("store.favorites") == "true") }
+    LaunchedEffect(query, selectedConsoleKey) {
+        configuredSourceResults = emptyList()
+    }
     LaunchedEffect(query, selectedConsoleKey, selectedDiscoveryId, platform, genre, region, language, favoritesOnly) {
         uiState.rememberScreenValue("store.query", query)
         uiState.rememberScreenValue("store.console", selectedConsoleKey)
@@ -1103,11 +1109,50 @@ val allDiscoveryGames by discoveryRepository.observeGames(null, "", 250).collect
             source.type in setOf(
                 GameSourceProviderType.EXTERNAL_WEB,
                 GameSourceProviderType.GAMEBOX_JSON,
+                GameSourceProviderType.VIMM_LAIR,
             ) && source.supportsPlatform(selectedConsole?.label)
         }
     }
 
     fun openConfiguredSource(source: GameSourceConfig) {
+        if (source.type == GameSourceProviderType.VIMM_LAIR) {
+            val platformLabel = selectedConsole?.label
+            if (query.isBlank()) {
+                discoverySyncMessage = "Enter a game title before searching " + source.name
+                configuredSourceResults = emptyList()
+                return
+            }
+            if (platformLabel.isNullOrBlank()) {
+                discoverySyncMessage = "Choose a console before searching " + source.name
+                configuredSourceResults = emptyList()
+                return
+            }
+            discoverySyncing = true
+            discoverySyncProgress = 0f
+            scope.launch {
+                val result = runCatching {
+                    VimmLairDiscoverySource(source).search(
+                        platform = platformLabel,
+                        query = query,
+                    ).games
+                }
+                result.onSuccess { games ->
+                    configuredSourceResults = games
+                    discoverySyncMessage = if (games.isEmpty()) {
+                        "No " + source.name + " results matched “" + query + "”"
+                    } else {
+                        "Found " + games.size + " result(s) from " + source.name
+                    }
+                }.onFailure { error ->
+                    configuredSourceResults = emptyList()
+                    discoverySyncMessage = source.name + " search failed: " +
+                        (error.message?.take(180) ?: "unknown error")
+                }
+                discoverySyncProgress = 1f
+                discoverySyncing = false
+            }
+            return
+        }
         if (source.type == GameSourceProviderType.GAMEBOX_JSON) {
             discoverySyncing = true
             discoverySyncProgress = 0f
