@@ -124,8 +124,10 @@ import com.gamebox.os.diagnostics.DiagnosticEventCollector
 import com.gamebox.os.diagnostics.buildDiagnosticsReport
 import com.gamebox.os.diagnostics.buildDiagnosticsRecoveryBundle
 import com.gamebox.os.navigation.GameBoxNavigationRequest
+import com.gamebox.os.source.DiscoverySourceGame
 import com.gamebox.os.source.GameSourceConfig
 import com.gamebox.os.source.GameSourceProviderType
+import com.gamebox.os.source.HttpsJsonDiscoverySource
 import com.gamebox.os.source.nextGameSourceId
 import com.gamebox.os.source.resolveBrowseUrl
 import com.gamebox.os.source.supportsPlatform
@@ -982,6 +984,8 @@ val allDiscoveryGames by discoveryRepository.observeGames(null, "", 250).collect
     var discoverySyncMessage by remember { mutableStateOf<String?>(null) }
     var discoverySyncing by remember { mutableStateOf(false) }
     var discoverySyncProgress by remember { mutableStateOf(0f) }
+    var configuredSourceResults by remember { mutableStateOf<List<DiscoverySourceGame>>(emptyList()) }
+    var configuredSourceSearching by remember { mutableStateOf(false) }
     var platform by remember(uiState) { mutableStateOf(uiState.screenValue("store.platform")) }
     var genre by remember(uiState) { mutableStateOf(uiState.screenValue("store.genre")) }
     var region by remember(uiState) { mutableStateOf(uiState.screenValue("store.region")) }
@@ -1060,6 +1064,60 @@ val allDiscoveryGames by discoveryRepository.observeGames(null, "", 250).collect
         }
     }
 
+    fun searchConfiguredJsonSources() {
+        val sources = configuredSources.filter { it.type == GameSourceProviderType.GAMEBOX_JSON }
+        if (sources.isEmpty()) {
+            discoverySyncMessage = "No GameBox JSON discovery sources are enabled for this console"
+            configuredSourceResults = emptyList()
+            return
+        }
+        configuredSourceSearching = true
+        discoverySyncMessage = "Searching configured catalogs…"
+        scope.launch {
+            val platformLabel = selectedConsole?.label
+            val collected = mutableListOf<DiscoverySourceGame>()
+            var failures = 0
+            sources.forEach { source ->
+                val result = runCatching {
+                    HttpsJsonDiscoverySource(source).search(
+                        platform = platformLabel,
+                        query = query,
+                    ).games
+                }
+                result.onSuccess(collected::addAll)
+                    .onFailure { failures += 1 }
+            }
+            configuredSourceResults = collected
+                .distinctBy { it.sourceId.lowercase() + ":" + it.externalId }
+                .sortedBy { it.title.lowercase() }
+            discoverySyncMessage = when {
+                configuredSourceResults.isNotEmpty() && failures == 0 ->
+                    "Found " + configuredSourceResults.size + " configured-source result(s)"
+                configuredSourceResults.isNotEmpty() ->
+                    "Found " + configuredSourceResults.size + " result(s); " + failures + " source(s) failed"
+                failures > 0 -> "Configured-source search failed"
+                else -> "No configured-source results matched"
+            }
+            configuredSourceSearching = false
+        }
+    }
+
+    fun openConfiguredResult(result: DiscoverySourceGame) {
+        val source = gameSources.firstOrNull { it.id.equals(result.sourceId, ignoreCase = true) }
+        val target = result.detailsUrl ?: source?.let {
+            runCatching { it.resolveBrowseUrl(result.title, result.platform) }.getOrNull()
+        }
+        if (target == null) {
+            discoverySyncMessage = "No page is available for " + result.title
+            return
+        }
+        try {
+            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(target)))
+        } catch (_: ActivityNotFoundException) {
+            discoverySyncMessage = "No browser is available to open " + result.title
+        }
+    }
+
     fun syncDiscovery() {
         discoverySyncing = true
         discoverySyncProgress = 0f
@@ -1109,7 +1167,11 @@ val allDiscoveryGames by discoveryRepository.observeGames(null, "", 250).collect
             discoverySyncMessage = discoverySyncMessage,
             providerHealth = providerHealth,
             configuredSources = configuredSources,
+            configuredSourceResults = configuredSourceResults,
+            configuredSourceSearching = configuredSourceSearching,
             onOpenConfiguredSource = ::openConfiguredSource,
+            onSearchConfiguredSources = ::searchConfiguredJsonSources,
+            onOpenConfiguredResult = ::openConfiguredResult,
             onRefresh = repository::refreshCatalog,
             onSync = ::syncDiscovery,
             openAuthorized = open,
@@ -1290,11 +1352,21 @@ val allDiscoveryGames by discoveryRepository.observeGames(null, "", 250).collect
             Spacer(Modifier.height(14.dp))
             Text("Configured sources", fontSize = 15.sp, fontWeight = FontWeight.Bold)
             Text(
-                if (query.isBlank()) "Open a source for ${selectedConsole?.label ?: "all consoles"}."
-                else "Search configured sources for “$query”.",
+                if (query.isBlank()) "Open a source for " + (selectedConsole?.label ?: "all consoles") + "."
+                else "Search configured sources for “" + query + "”.",
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 fontSize = 11.sp,
             )
+            if (configuredSources.any { it.type == GameSourceProviderType.GAMEBOX_JSON }) {
+                Button(
+                    onClick = ::searchConfiguredJsonSources,
+                    enabled = !configuredSourceSearching,
+                    modifier = Modifier.padding(top = 6.dp),
+                ) {
+                    Icon(Icons.Rounded.Search, null, Modifier.size(15.dp))
+                    Text(if (configuredSourceSearching) "Searching…" else "Search configured catalogs", Modifier.padding(start = 6.dp))
+                }
+            }
             Row(
                 Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(top = 6.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -1309,6 +1381,18 @@ val allDiscoveryGames by discoveryRepository.observeGames(null, "", 250).collect
                         Icon(Icons.Rounded.OpenInNew, null, Modifier.size(15.dp))
                         Text(source.name, Modifier.padding(start = 6.dp))
                     }
+                }
+            }
+        }
+        if (configuredSourceResults.isNotEmpty()) {
+            Spacer(Modifier.height(10.dp))
+            Text("Configured catalog results", fontSize = 15.sp, fontWeight = FontWeight.Bold)
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                items(
+                    configuredSourceResults,
+                    key = { it.sourceId + ":" + it.externalId },
+                ) { result ->
+                    ConfiguredSourceResultCard(result, onClick = { openConfiguredResult(result) })
                 }
             }
         }
@@ -1356,7 +1440,11 @@ private fun BlueprintCatalogScreen(
     discoverySyncMessage: String?,
     providerHealth: ProviderHealth,
     configuredSources: List<GameSourceConfig>,
+    configuredSourceResults: List<DiscoverySourceGame>,
+    configuredSourceSearching: Boolean,
     onOpenConfiguredSource: (GameSourceConfig) -> Unit,
+    onSearchConfiguredSources: () -> Unit,
+    onOpenConfiguredResult: (DiscoverySourceGame) -> Unit,
     onRefresh: () -> Unit,
     onSync: () -> Unit,
     openAuthorized: (Game) -> Unit,
@@ -1501,7 +1589,18 @@ private fun BlueprintCatalogScreen(
                 Text("Metadata includes artwork and details. Open a title to import a copy or view its sources.", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 10.sp, lineHeight = 14.sp)
                 if (configuredSources.isNotEmpty()) {
                     Text("CONFIGURED SOURCES", color = MaterialTheme.colorScheme.primary, fontSize = 9.sp, fontWeight = FontWeight.Bold)
-                    configuredSources.take(4).forEach { source ->
+                    if (configuredSources.any { it.type == GameSourceProviderType.GAMEBOX_JSON }) {
+                        Button(
+                            onClick = onSearchConfiguredSources,
+                            enabled = !configuredSourceSearching,
+                            modifier = Modifier.fillMaxWidth().heightIn(min = 34.dp),
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+                        ) {
+                            Icon(Icons.Rounded.Search, null, Modifier.size(13.dp))
+                            Text(if (configuredSourceSearching) "Searching…" else "Search catalogs", Modifier.padding(start = 5.dp), fontSize = 9.sp)
+                        }
+                    }
+                    configuredSources.filter { it.type == GameSourceProviderType.EXTERNAL_WEB }.take(4).forEach { source ->
                         OutlinedButton(
                             onClick = { onOpenConfiguredSource(source) },
                             modifier = Modifier.fillMaxWidth().heightIn(min = 34.dp).semantics {
@@ -1524,6 +1623,20 @@ private fun BlueprintCatalogScreen(
                     }
                 }
             }
+            }
+            if (configuredSourceResults.isNotEmpty() && !installedOnly) {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text("Configured Catalog Results", fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                    Text(configuredSourceResults.size.toString() + " titles", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 10.sp)
+                }
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    items(
+                        configuredSourceResults,
+                        key = { it.sourceId + ":" + it.externalId },
+                    ) { result ->
+                        ConfiguredSourceResultCard(result, onClick = { onOpenConfiguredResult(result) })
+                    }
+                }
             }
             if (!installedOnly) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
@@ -2389,6 +2502,47 @@ private fun DiscoveryDetailsScreen(
                     Text(it, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun ConfiguredSourceResultCard(
+    game: DiscoverySourceGame,
+    onClick: () -> Unit,
+) {
+    var focused by remember { mutableStateOf(false) }
+    val interaction = remember { MutableInteractionSource() }
+    val hovered by interaction.collectIsHoveredAsState()
+    Surface(
+        modifier = Modifier
+            .width(180.dp)
+            .height(116.dp)
+            .hoverable(interaction)
+            .focusDebugTarget()
+            .onFocusChanged { focused = it.isFocused }
+            .clickable(interactionSource = interaction, indication = null, onClick = onClick)
+            .semantics {
+                contentDescription = game.title + ", " + game.platform + ", configured source result"
+                role = Role.Button
+            },
+        shape = RoundedCornerShape(8.dp),
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(
+            if (focused || hovered) 2.dp else 1.dp,
+            if (focused || hovered) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant,
+        ),
+    ) {
+        Column(Modifier.fillMaxSize().padding(12.dp)) {
+            Text(game.platform.uppercase(), color = MaterialTheme.colorScheme.primary, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+            Text(game.title, fontWeight = FontWeight.SemiBold, fontSize = 13.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            Spacer(Modifier.weight(1f))
+            Text(
+                listOfNotNull(game.region, game.year?.toString()).joinToString(" • ").ifBlank { game.sourceId },
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                fontSize = 9.sp,
+                maxLines = 1,
+            )
         }
     }
 }
