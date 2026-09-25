@@ -28,6 +28,31 @@ class DiscoverySourceTest {
     }
 
     @Test
+    fun vimmSourceIsConfigurableButRestrictedToVimmHost() {
+        val source = GameSourceConfig(
+            id = "vimm-source",
+            name = "Vimm's Lair",
+            type = GameSourceProviderType.VIMM_LAIR,
+            baseUrl = "https://vimm.net/vault",
+            platforms = setOf("PS2", "GameCube"),
+        )
+
+        assertEquals(
+            "https://vimm.net/vault/PS2/G",
+            source.resolveBrowseUrl("God Hand", "PS2"),
+        )
+
+        assertThrows(IllegalArgumentException::class.java) {
+            GameSourceConfig(
+                id = "fake-vimm",
+                name = "Fake Vimm",
+                type = GameSourceProviderType.VIMM_LAIR,
+                baseUrl = "https://example.test/vault",
+            )
+        }
+    }
+
+    @Test
     fun registryResolvesSourcesCaseInsensitively() {
         val source = FakeSource("example", "Example")
         val registry = DiscoverySourceRegistry(listOf(source))

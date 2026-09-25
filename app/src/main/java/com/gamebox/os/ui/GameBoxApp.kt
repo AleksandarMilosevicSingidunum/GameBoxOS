@@ -127,11 +127,13 @@ import com.gamebox.os.diagnostics.buildDiagnosticsReport
 import com.gamebox.os.diagnostics.buildDiagnosticsRecoveryBundle
 import com.gamebox.os.navigation.GameBoxNavigationRequest
 import com.gamebox.os.source.ConfiguredDiscoverySyncResult
+import com.gamebox.os.source.DiscoverySourceGame
 import com.gamebox.os.source.GameSourceConfig
 import com.gamebox.os.source.GameSourceProviderType
 import com.gamebox.os.source.nextGameSourceId
 import com.gamebox.os.source.resolveBrowseUrl
 import com.gamebox.os.source.supportsPlatform
+import com.gamebox.os.source.VimmLairDiscoverySource
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
@@ -1040,11 +1042,15 @@ val allDiscoveryGames by discoveryRepository.observeGames(null, "", 250).collect
     var discoverySyncMessage by remember { mutableStateOf<String?>(null) }
     var discoverySyncing by remember { mutableStateOf(false) }
     var discoverySyncProgress by remember { mutableStateOf(0f) }
+    var configuredSourceResults by remember { mutableStateOf<List<DiscoverySourceGame>>(emptyList()) }
     var platform by remember(uiState) { mutableStateOf(uiState.screenValue("store.platform")) }
     var genre by remember(uiState) { mutableStateOf(uiState.screenValue("store.genre")) }
     var region by remember(uiState) { mutableStateOf(uiState.screenValue("store.region")) }
     var language by remember(uiState) { mutableStateOf(uiState.screenValue("store.language")) }
     var favoritesOnly by remember(uiState) { mutableStateOf(uiState.screenValue("store.favorites") == "true") }
+    LaunchedEffect(query, selectedConsoleKey) {
+        configuredSourceResults = emptyList()
+    }
     LaunchedEffect(query, selectedConsoleKey, selectedDiscoveryId, platform, genre, region, language, favoritesOnly) {
         uiState.rememberScreenValue("store.query", query)
         uiState.rememberScreenValue("store.console", selectedConsoleKey)
@@ -1103,11 +1109,50 @@ val allDiscoveryGames by discoveryRepository.observeGames(null, "", 250).collect
             source.type in setOf(
                 GameSourceProviderType.EXTERNAL_WEB,
                 GameSourceProviderType.GAMEBOX_JSON,
+                GameSourceProviderType.VIMM_LAIR,
             ) && source.supportsPlatform(selectedConsole?.label)
         }
     }
 
     fun openConfiguredSource(source: GameSourceConfig) {
+        if (source.type == GameSourceProviderType.VIMM_LAIR) {
+            val platformLabel = selectedConsole?.label
+            if (query.isBlank()) {
+                discoverySyncMessage = "Enter a game title before searching " + source.name
+                configuredSourceResults = emptyList()
+                return
+            }
+            if (platformLabel.isNullOrBlank()) {
+                discoverySyncMessage = "Choose a console before searching " + source.name
+                configuredSourceResults = emptyList()
+                return
+            }
+            discoverySyncing = true
+            discoverySyncProgress = 0f
+            scope.launch {
+                val result = runCatching {
+                    VimmLairDiscoverySource(source).search(
+                        platform = platformLabel,
+                        query = query,
+                    ).games
+                }
+                result.onSuccess { games ->
+                    configuredSourceResults = games
+                    discoverySyncMessage = if (games.isEmpty()) {
+                        "No " + source.name + " results matched “" + query + "”"
+                    } else {
+                        "Found " + games.size + " result(s) from " + source.name
+                    }
+                }.onFailure { error ->
+                    configuredSourceResults = emptyList()
+                    discoverySyncMessage = source.name + " search failed: " +
+                        (error.message?.take(180) ?: "unknown error")
+                }
+                discoverySyncProgress = 1f
+                discoverySyncing = false
+            }
+            return
+        }
         if (source.type == GameSourceProviderType.GAMEBOX_JSON) {
             discoverySyncing = true
             discoverySyncProgress = 0f
@@ -1140,6 +1185,22 @@ val allDiscoveryGames by discoveryRepository.observeGames(null, "", 250).collect
             context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(target)))
         } catch (_: ActivityNotFoundException) {
             discoverySyncMessage = "No browser is available to open " + source.name
+        }
+    }
+
+    fun openConfiguredResult(result: DiscoverySourceGame) {
+        val source = gameSources.firstOrNull { it.id.equals(result.sourceId, ignoreCase = true) }
+        val target = result.detailsUrl ?: source?.let {
+            runCatching { it.resolveBrowseUrl(result.title, result.platform) }.getOrNull()
+        }
+        if (target == null) {
+            discoverySyncMessage = "No external page is available for " + result.title
+            return
+        }
+        try {
+            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(target)))
+        } catch (_: ActivityNotFoundException) {
+            discoverySyncMessage = "No browser is available to open " + result.title
         }
     }
 
@@ -1192,7 +1253,9 @@ val allDiscoveryGames by discoveryRepository.observeGames(null, "", 250).collect
             discoverySyncMessage = discoverySyncMessage,
             providerHealth = providerHealth,
             configuredSources = configuredSources,
+            configuredSourceResults = configuredSourceResults,
             onOpenConfiguredSource = ::openConfiguredSource,
+            onOpenConfiguredResult = ::openConfiguredResult,
             onRefresh = repository::refreshCatalog,
             onSync = ::syncDiscovery,
             openAuthorized = open,
@@ -1373,8 +1436,13 @@ val allDiscoveryGames by discoveryRepository.observeGames(null, "", 250).collect
             Spacer(Modifier.height(14.dp))
             Text("Configured sources", fontSize = 15.sp, fontWeight = FontWeight.Bold)
             val hasJsonSource = configuredSources.any { it.type == GameSourceProviderType.GAMEBOX_JSON }
+            val hasVimmSource = configuredSources.any { it.type == GameSourceProviderType.VIMM_LAIR }
             Text(
                 when {
+                    hasVimmSource && query.isBlank() ->
+                        "Enter a title, choose a console, then search configured discovery sources."
+                    hasVimmSource ->
+                        "Search Vimm's Lair for “$query”, sync JSON feeds, or open web sources."
                     hasJsonSource && query.isBlank() ->
                         "Sync JSON metadata feeds or open web sources for ${selectedConsole?.label ?: "all consoles"}."
                     hasJsonSource ->
@@ -1393,25 +1461,62 @@ val allDiscoveryGames by discoveryRepository.observeGames(null, "", 250).collect
             ) {
                 configuredSources.forEach { source ->
                     val jsonSource = source.type == GameSourceProviderType.GAMEBOX_JSON
+                    val vimmSource = source.type == GameSourceProviderType.VIMM_LAIR
                     OutlinedButton(
                         enabled = !discoverySyncing,
                         onClick = { openConfiguredSource(source) },
                         modifier = Modifier.semantics {
-                            contentDescription = if (jsonSource)
-                                "Sync ${source.name} configured metadata source"
-                            else "Open ${source.name} configured web source"
+                            contentDescription = when {
+                                jsonSource -> "Sync ${source.name} configured metadata source"
+                                vimmSource -> "Search ${source.name} configured discovery source"
+                                else -> "Open ${source.name} configured web source"
+                            }
                         },
                     ) {
                         Icon(
-                            if (jsonSource) Icons.Rounded.Sync else Icons.Rounded.OpenInNew,
+                            when {
+                                jsonSource -> Icons.Rounded.Sync
+                                vimmSource -> Icons.Rounded.Search
+                                else -> Icons.Rounded.OpenInNew
+                            },
                             null,
                             Modifier.size(15.dp),
                         )
                         Text(
-                            (if (jsonSource) "Sync " else "") + source.name,
+                            (when {
+                                jsonSource -> "Sync "
+                                vimmSource -> "Search "
+                                else -> ""
+                            }) + source.name,
                             Modifier.padding(start = 6.dp),
                         )
                     }
+                }
+            }
+        }
+        if (configuredSourceResults.isNotEmpty()) {
+            Spacer(Modifier.height(10.dp))
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text("Configured source results", fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                Text(
+                    configuredSourceResults.size.toString() + " titles",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontSize = 10.sp,
+                )
+            }
+            LazyRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.padding(top = 6.dp),
+            ) {
+                items(
+                    configuredSourceResults,
+                    key = { it.sourceId + ":" + it.externalId },
+                ) { result ->
+                    ConfiguredSourceResultCard(
+                        game = result,
+                        modifier = Modifier.width(180.dp).height(130.dp),
+                        onClick = { openConfiguredResult(result) },
+                    )
                 }
             }
         }
@@ -1459,7 +1564,9 @@ private fun BlueprintCatalogScreen(
     discoverySyncMessage: String?,
     providerHealth: ProviderHealth,
     configuredSources: List<GameSourceConfig>,
+    configuredSourceResults: List<DiscoverySourceGame>,
     onOpenConfiguredSource: (GameSourceConfig) -> Unit,
+    onOpenConfiguredResult: (DiscoverySourceGame) -> Unit,
     onRefresh: () -> Unit,
     onSync: () -> Unit,
     openAuthorized: (Game) -> Unit,
@@ -1606,23 +1713,34 @@ private fun BlueprintCatalogScreen(
                     Text("CONFIGURED SOURCES", color = MaterialTheme.colorScheme.primary, fontSize = 9.sp, fontWeight = FontWeight.Bold)
                     configuredSources.take(4).forEach { source ->
                         val jsonSource = source.type == GameSourceProviderType.GAMEBOX_JSON
+                        val vimmSource = source.type == GameSourceProviderType.VIMM_LAIR
                         OutlinedButton(
                             enabled = !discoverySyncing,
                             onClick = { onOpenConfiguredSource(source) },
                             modifier = Modifier.fillMaxWidth().heightIn(min = 34.dp).semantics {
-                                contentDescription = if (jsonSource)
-                                    "Sync ${source.name} configured metadata source"
-                                else "Open ${source.name} configured web source"
+                                contentDescription = when {
+                                    jsonSource -> "Sync ${source.name} configured metadata source"
+                                    vimmSource -> "Search ${source.name} configured discovery source"
+                                    else -> "Open ${source.name} configured web source"
+                                }
                             },
                             contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
                         ) {
                             Icon(
-                                if (jsonSource) Icons.Rounded.Sync else Icons.Rounded.OpenInNew,
+                                when {
+                                    jsonSource -> Icons.Rounded.Sync
+                                    vimmSource -> Icons.Rounded.Search
+                                    else -> Icons.Rounded.OpenInNew
+                                },
                                 null,
                                 Modifier.size(13.dp),
                             )
                             Text(
-                                (if (jsonSource) "Sync " else "") + source.name,
+                                (when {
+                                    jsonSource -> "Sync "
+                                    vimmSource -> "Search "
+                                    else -> ""
+                                }) + source.name,
                                 Modifier.padding(start = 5.dp).weight(1f),
                                 fontSize = 9.sp,
                                 maxLines = 1,
@@ -1635,6 +1753,28 @@ private fun BlueprintCatalogScreen(
                     }
                 }
             }
+            }
+            if (configuredSourceResults.isNotEmpty() && !installedOnly) {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text("Configured source results", fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                    Text(
+                        configuredSourceResults.size.toString() + " titles",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontSize = 10.sp,
+                    )
+                }
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    items(
+                        configuredSourceResults,
+                        key = { it.sourceId + ":" + it.externalId },
+                    ) { result ->
+                        ConfiguredSourceResultCard(
+                            game = result,
+                            modifier = Modifier.width(156.dp).height(132.dp),
+                            onClick = { onOpenConfiguredResult(result) },
+                        )
+                    }
+                }
             }
             if (!installedOnly) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
@@ -2275,7 +2415,10 @@ private fun DiscoveryDetailsScreen(
     }
     val configuredSources = remember(game.title, platformName, gameSources) {
         gameSources.filter { source ->
-            source.enabled && source.type == GameSourceProviderType.EXTERNAL_WEB && (
+            source.enabled && source.type in setOf(
+                GameSourceProviderType.EXTERNAL_WEB,
+                GameSourceProviderType.VIMM_LAIR,
+            ) && (
                 source.platforms.isEmpty() ||
                     source.platforms.any { normalizeCatalogTitle(it) == normalizeCatalogTitle(platformName) }
             )
@@ -2540,6 +2683,58 @@ private fun DiscoveryDetailsScreen(
                     Text(it, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun ConfiguredSourceResultCard(
+    game: DiscoverySourceGame,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit,
+) {
+    var focused by remember { mutableStateOf(false) }
+    val source = remember { MutableInteractionSource() }
+    val hovered by source.collectIsHoveredAsState()
+    Surface(
+        modifier = modifier
+            .hoverable(source)
+            .focusDebugTarget()
+            .onFocusChanged { focused = it.isFocused }
+            .clickable(interactionSource = source, indication = null, onClick = onClick)
+            .semantics {
+                contentDescription = game.title + ", " + game.platform +
+                    ", external discovery result"
+                role = Role.Button
+            },
+        shape = RoundedCornerShape(8.dp),
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(
+            if (focused || hovered) 2.dp else 1.dp,
+            if (focused || hovered) MaterialTheme.colorScheme.primary
+            else MaterialTheme.colorScheme.outlineVariant,
+        ),
+    ) {
+        Column(Modifier.fillMaxSize().padding(12.dp)) {
+            Text(
+                game.platform.uppercase(),
+                color = MaterialTheme.colorScheme.primary,
+                fontSize = 9.sp,
+                fontWeight = FontWeight.Bold,
+            )
+            Text(
+                game.title,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 3,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Spacer(Modifier.weight(1f))
+            Text(
+                "Open source page",
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                fontSize = 9.sp,
+            )
         }
     }
 }
@@ -4980,6 +5175,11 @@ private fun SettingsScreen(
                 onClick = { sourceType = GameSourceProviderType.GAMEBOX_JSON },
                 label = { Text("GameBox JSON") },
             )
+            FilterChip(
+                selected = sourceType == GameSourceProviderType.VIMM_LAIR,
+                onClick = { sourceType = GameSourceProviderType.VIMM_LAIR },
+                label = { Text("Vimm's Lair") },
+            )
         }
         currentSettings.gameSources.forEach { source ->
             Surface(
@@ -4996,7 +5196,11 @@ private fun SettingsScreen(
                     Column(Modifier.weight(1f)) {
                         Text(source.name, fontWeight = FontWeight.SemiBold)
                         Text(
-                            if (source.type == GameSourceProviderType.GAMEBOX_JSON) "GameBox JSON metadata" else "External web search",
+                            when (source.type) {
+                                GameSourceProviderType.GAMEBOX_JSON -> "GameBox JSON metadata"
+                                GameSourceProviderType.VIMM_LAIR -> "Vimm's Lair discovery"
+                                else -> "External web search"
+                            },
                             color = MaterialTheme.colorScheme.primary,
                             fontSize = 10.sp,
                         )
@@ -5035,26 +5239,57 @@ private fun SettingsScreen(
         OutlinedTextField(
             value = sourceBaseUrl,
             onValueChange = { sourceBaseUrl = it },
-            label = { Text(if (sourceType == GameSourceProviderType.GAMEBOX_JSON) "HTTPS JSON manifest URL" else "HTTPS base URL") },
+            label = {
+                Text(
+                    when (sourceType) {
+                        GameSourceProviderType.GAMEBOX_JSON -> "HTTPS JSON manifest URL"
+                        GameSourceProviderType.VIMM_LAIR -> "Vimm vault base URL"
+                        else -> "HTTPS base URL"
+                    }
+                )
+            },
             singleLine = true,
             modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
         )
-        if (sourceType == GameSourceProviderType.EXTERNAL_WEB) {
-            OutlinedTextField(
-                value = sourceSearchTemplate,
-                onValueChange = { sourceSearchTemplate = it },
-                label = { Text("Optional search URL template") },
-                supportingText = { Text("Supported placeholders: {query}, {title}, {platform}") },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
-            )
-        } else {
-            Text(
-                "JSON schema 1 imports metadata only. Required fields per game: id, title and platform.",
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                fontSize = 11.sp,
-                modifier = Modifier.padding(top = 6.dp),
-            )
+        when (sourceType) {
+            GameSourceProviderType.EXTERNAL_WEB -> {
+                OutlinedTextField(
+                    value = sourceSearchTemplate,
+                    onValueChange = { sourceSearchTemplate = it },
+                    label = { Text("Optional search URL template") },
+                    supportingText = { Text("Supported placeholders: {query}, {title}, {platform}") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
+                )
+            }
+            GameSourceProviderType.GAMEBOX_JSON -> {
+                Text(
+                    "JSON schema 1 imports metadata only. Required fields per game: id, title and platform.",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontSize = 11.sp,
+                    modifier = Modifier.padding(top = 6.dp),
+                )
+            }
+            GameSourceProviderType.VIMM_LAIR -> {
+                Text(
+                    "Searches Vimm vault listing pages and opens matching title pages externally. GameBox does not extract media IDs or download game binaries from this source.",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontSize = 11.sp,
+                    modifier = Modifier.padding(top = 6.dp),
+                )
+                OutlinedButton(
+                    onClick = {
+                        sourceName = "Vimm's Lair"
+                        sourceBaseUrl = "https://vimm.net/vault"
+                        sourceSearchTemplate = ""
+                        sourcePlatforms = "PS2, GameCube, Wii, PSP, Dreamcast"
+                    },
+                    modifier = Modifier.padding(top = 6.dp),
+                ) {
+                    Text("Use Vimm's Lair preset")
+                }
+            }
+            else -> Unit
         }
         OutlinedTextField(
             value = sourcePlatforms,
