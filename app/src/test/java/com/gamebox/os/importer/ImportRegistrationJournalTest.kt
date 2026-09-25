@@ -124,7 +124,7 @@ class ImportRegistrationJournalTest {
     }
 
     @Test
-    fun registeredMetadataWithCorruptCommittedBytesRollsBack() = runBlocking {
+    fun registeredMetadataWithCorruptCommittedBytesFailsClosed() = runBlocking {
         val files = temporary.newFolder("files")
         val imports = File(files, "imports").apply { mkdirs() }
         val id = GameId("corrupt-game")
@@ -157,9 +157,11 @@ class ImportRegistrationJournalTest {
 
         val report = journal.reconcile { registered }
 
-        assertEquals(1, report.rolledBack)
-        assertEquals("old", target.resolve("game.iso").readText())
-        assertFalse(backup.exists())
+        assertEquals(1, report.failures)
+        assertEquals(0, report.rolledBack)
+        assertEquals("corrupt", target.resolve("game.iso").readText())
+        assertTrue(backup.exists())
+        assertEquals(1, journal.pending().size)
     }
 
     @Test
