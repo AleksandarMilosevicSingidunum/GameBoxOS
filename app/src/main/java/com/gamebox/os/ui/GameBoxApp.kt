@@ -771,6 +771,37 @@ private fun ControllerHint(letter: String, label: String, color: Color) {
 }
 
 @Composable
+private fun DefaultHomeSetupBanner(onChooseHome: () -> Unit) {
+    Surface(
+        modifier = Modifier.fillMaxWidth().semantics {
+            contentDescription = "GameBox is not the default Home app"
+        },
+        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.56f),
+        shape = RoundedCornerShape(8.dp),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.72f)),
+    ) {
+        Row(
+            Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 11.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Icon(Icons.Rounded.Home, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+            Column(Modifier.weight(1f)) {
+                Text("Finish console mode", fontWeight = FontWeight.SemiBold)
+                Text(
+                    "Choose GameBox as Android's default Home app so Home and normal launcher startup return here after unlock.",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontSize = 11.sp,
+                )
+            }
+            Button(onClick = onChooseHome) {
+                Text("Choose Home")
+            }
+        }
+    }
+}
+
+@Composable
 private fun HomeScreen(
     games: List<Game>,
     restoreGameId: GameId?,
@@ -781,6 +812,13 @@ private fun HomeScreen(
     openProfileSwitcher: () -> Unit,
     open: (Game) -> Unit
 ) {
+    val context = LocalContext.current
+    var defaultHome by remember(context) { mutableStateOf(isGameBoxDefaultHome(context)) }
+    val defaultHomeLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) {
+        defaultHome = isGameBoxDefaultHome(context)
+    }
     val controllerActions = LocalControllerActions.current
     DisposableEffect(controllerActions) {
         controllerActions?.configure(
@@ -792,13 +830,25 @@ private fun HomeScreen(
         onDispose { controllerActions?.clear() }
     }
     if (games.isEmpty()) {
-BlueprintPanel(Modifier.fillMaxWidth()) {
-            Text("Welcome to GameBox", fontWeight = FontWeight.Bold)
-            Text("Open Store to browse your catalog, then install an authorized title or import your own game.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Column(
+            Modifier.fillMaxWidth().verticalScroll(restoredScrollState("home-empty")),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            if (!defaultHome) {
+                DefaultHomeSetupBanner {
+                    defaultHomeLauncher.launch(defaultHomeSettingsIntent())
+                }
+            }
+            BlueprintPanel(Modifier.fillMaxWidth()) {
+                Text("Welcome to GameBox", fontWeight = FontWeight.Bold)
+                Text(
+                    "Open Store to browse your catalog, then install an authorized title or import your own game.",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
         return
     }
-    val context = LocalContext.current
     val installed = games.filter { it.state in setOf(InstallState.INSTALLED, InstallState.UPDATE_AVAILABLE) }
     val history = installed.filter { it.lastPlayed != null }.sortedByDescending { it.lastPlayed }
     val hero = history.firstOrNull() ?: installed.firstOrNull()
@@ -809,6 +859,11 @@ BlueprintPanel(Modifier.fillMaxWidth()) {
     val usedPercent = if (storage.totalSpace > 0L) ((storage.totalSpace - storage.usableSpace) * 100L / storage.totalSpace).toInt() else 0
 
     Column(Modifier.fillMaxWidth().verticalScroll(restoredScrollState("home")), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        if (!defaultHome) {
+            DefaultHomeSetupBanner {
+                defaultHomeLauncher.launch(defaultHomeSettingsIntent())
+            }
+        }
         Text(if (history.isEmpty()) "Ready to play" else "Continue Playing",
             fontSize = if (compact) 22.sp else 16.sp, fontWeight = FontWeight.SemiBold)
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
