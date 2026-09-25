@@ -16,8 +16,14 @@ missing-file Forget, and content-only uninstall flows. The lock spans file mutat
 the matching library-state publication so those operations cannot interleave for the same
 game; unrelated games remain independent.
 
-Still pending: process-death recovery during import, end-to-end system-picker automation,
-and real emulator save validation.
+Interrupted importer filesystem transactions now recover on the next importer startup or
+mutation: abandoned staging directories are removed, surviving backup directories roll
+the target back to its pre-import contents, and single-file partials are cleaned. New
+imports fail closed if that recovery cannot complete.
+
+Still pending: a durable journal spanning the narrow post-file-commit / pre-Library-
+registration window, end-to-end system-picker automation, and real emulator save
+validation.
 Restore now requires the retained filenames and SHA-256 checksums for the full
 file set. Identity is checked in staging before replacing content; a different
 edition must be imported separately. Three local identity regression tests pass.
