@@ -22,6 +22,7 @@ sealed interface RomImportSetResult {
     data class Imported(
         val launchFile: ImportedRomFile,
         val files: List<ImportedRomFile>,
+        val transactionId: String,
     ) : RomImportSetResult
     data object SourceUnavailable : RomImportSetResult
     data class Rejected(val reason: String) : RomImportSetResult
@@ -32,6 +33,7 @@ sealed interface RomImportResult {
     data class Imported(
         val relativePath: String,
         val hashes: RomHashes,
+        val transactionId: String,
     ) : RomImportResult
     data object SourceUnavailable : RomImportResult
     data class Rejected(val reason: String) : RomImportResult
@@ -44,6 +46,7 @@ class AuthorizedRomImporter(
 ) {
     private val applicationContext = context.applicationContext
     private val transactionRecovery = ImportTransactionRecovery(applicationContext.filesDir)
+    private val registrationJournal = ImportRegistrationJournal(applicationContext.filesDir)
     @Volatile private var startupRecoveryFailed = false
 
     init {
@@ -51,11 +54,17 @@ class AuthorizedRomImporter(
         startupRecoveryFailed = transactionRecovery.recover().failures > 0
     }
 
-    private fun recoverBeforeMutation(): String? {
+    private fun recoverBeforeMutation(gameId: GameId): String? {
         val report = transactionRecovery.recover()
         startupRecoveryFailed = report.failures > 0
-        return if (startupRecoveryFailed) {
-            "Interrupted import recovery could not complete; check app storage before retrying"
+        if (startupRecoveryFailed) {
+            return "Interrupted import recovery could not complete; check app storage before retrying"
+        }
+        val pending = runCatching { registrationJournal.pendingFor(gameId) }.getOrElse {
+            return "Pending import registration recovery could not be read; restart GameBox and retry"
+        }
+        return if (pending.isNotEmpty()) {
+            "A previous import for this game is still being reconciled; restart GameBox or retry shortly"
         } else null
     }
 
@@ -64,52 +73,22 @@ class AuthorizedRomImporter(
         source: Uri,
         displayName: String,
         platform: String? = null,
-    ): RomImportResult = withContext(Dispatchers.IO) {
-        recoverBeforeMutation()?.let { return@withContext RomImportResult.Failed(it) }
-        val relativePath = runCatching {
-            RomImportPolicy.relativePath(gameId, displayName, platform)
-        }.getOrElse { return@withContext RomImportResult.Rejected(it.message ?: "Invalid game file") }
-        val root = applicationContext.filesDir.resolve("imports").canonicalFile
-        val target = File(applicationContext.filesDir, relativePath).canonicalFile
-        val rootPrefix = root.path + File.separator
-        if (!target.path.startsWith(rootPrefix)) {
-            return@withContext RomImportResult.Rejected("Import path escaped app storage")
-        }
-        val input = applicationContext.contentResolver.openInputStream(source)
-            ?: return@withContext RomImportResult.SourceUnavailable
-        target.parentFile?.mkdirs()
-        val partial = File(target.parentFile, target.name + ".partial")
-        partial.delete()
-        runCatching {
-            val hashes = input.use { stream ->
-                partial.outputStream().buffered().use { output ->
-                    RomHasher.hash(stream, maxBytes) { buffer, count ->
-                        output.write(buffer, 0, count)
-                    }
-                }
-            }
-            runCatching {
-                Files.move(
-                    partial.toPath(),
-                    target.toPath(),
-                    StandardCopyOption.ATOMIC_MOVE,
-                    StandardCopyOption.REPLACE_EXISTING,
-                )
-            }.getOrElse {
-                Files.move(
-                    partial.toPath(),
-                    target.toPath(),
-                    StandardCopyOption.REPLACE_EXISTING,
-                )
-            }
-            RomImportResult.Imported(relativePath, hashes)
-        }.getOrElse { error ->
-            partial.delete()
-            if (error is IllegalArgumentException) {
-                RomImportResult.Rejected(error.message ?: "Import rejected")
-            } else {
-                RomImportResult.Failed(error.message?.take(200) ?: "Import failed")
-            }
+    ): RomImportResult {
+        return when (
+            val result = importSet(
+                gameId = gameId,
+                sources = listOf(RomImportSource(source, displayName)),
+                platform = platform,
+            )
+        ) {
+            is RomImportSetResult.Imported -> RomImportResult.Imported(
+                relativePath = result.launchFile.relativePath,
+                hashes = result.launchFile.hashes,
+                transactionId = result.transactionId,
+            )
+            RomImportSetResult.SourceUnavailable -> RomImportResult.SourceUnavailable
+            is RomImportSetResult.Rejected -> RomImportResult.Rejected(result.reason)
+            is RomImportSetResult.Failed -> RomImportResult.Failed(result.reason)
         }
     }
 
@@ -119,7 +98,7 @@ class AuthorizedRomImporter(
         platform: String? = null,
         expectedFiles: List<com.gamebox.os.domain.LocalContentFile>? = null,
     ): RomImportSetResult = withContext(Dispatchers.IO) {
-        recoverBeforeMutation()?.let { return@withContext RomImportSetResult.Failed(it) }
+        recoverBeforeMutation(gameId)?.let { return@withContext RomImportSetResult.Failed(it) }
         if (sources.isEmpty()) return@withContext RomImportSetResult.Rejected("Select at least one game file")
         if (sources.size > 64) return@withContext RomImportSetResult.Rejected("A disc set may contain at most 64 files")
         val safeNames = runCatching {
@@ -147,6 +126,7 @@ class AuthorizedRomImporter(
             return@withContext RomImportSetResult.Rejected("Import transaction path escaped app storage")
         }
         staging.mkdirs()
+        var pendingRegistration: PendingImportTransaction? = null
         try {
             var totalBytes = 0L
             val stagedFiles = mutableListOf<ImportedRomFile>()
@@ -181,20 +161,47 @@ class AuthorizedRomImporter(
                         it.hashes.sha256, it.mimeType)
                 })
             }
+            pendingRegistration = registrationJournal.prepare(
+                gameId = gameId,
+                transactionId = transactionId,
+                hadExistingTarget = targetDirectory.exists(),
+                files = stagedFiles.map {
+                    PendingImportFile(
+                        relativePath = RomImportPolicy.importRootRelativePath(gameId, it.relativePath),
+                        sha256 = it.hashes.sha256,
+                    )
+                },
+            )
             replaceDirectoryAtomically(targetDirectory, staging, backup)
             val ordered = listOf(launchFile) + stagedFiles.filterNot { it === launchFile }
-            RomImportSetResult.Imported(launchFile, ordered)
+            RomImportSetResult.Imported(launchFile, ordered, transactionId)
         } catch (error: Exception) {
-            if (error is IllegalArgumentException) {
+            val rollbackFailure = pendingRegistration?.let { pending ->
+                runCatching { registrationJournal.rollback(pending) }.exceptionOrNull()
+            }
+            if (rollbackFailure != null) {
+                RomImportSetResult.Failed("Import failed and rollback could not complete; restart GameBox before retrying")
+            } else if (error is IllegalArgumentException) {
                 RomImportSetResult.Rejected(error.message ?: "Disc set rejected")
             } else {
                 RomImportSetResult.Failed(error.message?.take(200) ?: "Disc set import failed")
             }
         } finally {
-            if (staging.exists()) staging.deleteRecursively()
-            if (backup.exists() && targetDirectory.exists()) backup.deleteRecursively()
+            if (pendingRegistration == null && staging.exists()) staging.deleteRecursively()
         }
     }
+
+    fun confirmRegistration(gameId: GameId, transactionId: String) {
+        val pending = registrationJournal.pendingFor(gameId)
+            .singleOrNull { it.transactionId == transactionId }
+            ?: throw IllegalStateException("Pending import registration was not found")
+        registrationJournal.confirm(pending)
+    }
+
+    suspend fun reconcilePendingRegistrations(
+        gameLookup: suspend (GameId) -> com.gamebox.os.domain.Game?,
+    ): ImportRegistrationRecoveryReport =
+        registrationJournal.reconcile(gameLookup)
 
     private fun replaceDirectoryAtomically(target: File, staging: File, backup: File) {
         var previousMoved = false
@@ -204,7 +211,6 @@ class AuthorizedRomImporter(
                 previousMoved = true
             }
             moveReplacing(staging, target)
-            if (backup.exists()) backup.deleteRecursively()
         } catch (error: Exception) {
             if (previousMoved && backup.exists()) {
                 if (target.exists()) target.deleteRecursively()
