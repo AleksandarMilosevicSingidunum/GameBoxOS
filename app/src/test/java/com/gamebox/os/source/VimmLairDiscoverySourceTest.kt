@@ -306,6 +306,47 @@ class VimmLairDiscoverySourceTest {
     }
 
     @Test
+    fun cachedTransportReusesFreshResponse() = runBlocking {
+        var requests = 0
+        var now = 1_000L
+        val cache = VimmLairPageCache(maxEntries = 4, ttlMillis = 5_000L) { now }
+        val uri = URI("https://vimm.net/vault/PS2/A")
+        val transport = CachedVimmLairTransport(
+            delegate = VimmLairTransport {
+                requests += 1
+                "body-" + requests
+            },
+            cache = cache,
+        )
+
+        assertEquals("body-1", transport.get(uri))
+        assertEquals("body-1", transport.get(uri))
+        assertEquals(1, requests)
+
+        now = 7_000L
+        assertEquals("body-2", transport.get(uri))
+        assertEquals(2, requests)
+    }
+
+    @Test
+    fun pageCacheEvictsLeastRecentlyUsedEntry() {
+        var now = 1_000L
+        val cache = VimmLairPageCache(maxEntries = 2, ttlMillis = 10_000L) { now }
+        val first = URI("https://vimm.net/vault/PS2/A")
+        val second = URI("https://vimm.net/vault/PS2/B")
+        val third = URI("https://vimm.net/vault/PS2/C")
+
+        cache.put(first, "A")
+        cache.put(second, "B")
+        assertEquals("A", cache.get(first))
+        cache.put(third, "C")
+
+        assertEquals("A", cache.get(first))
+        assertEquals(null, cache.get(second))
+        assertEquals("C", cache.get(third))
+    }
+
+    @Test
     fun sourceRejectsUnsupportedConsoleAndNonVimmHost() {
         assertThrows(IllegalArgumentException::class.java) {
             VimmLairDiscoverySource(
