@@ -28,7 +28,13 @@ set with the durable Room row. A committed registration finalizes the new files;
 uncommitted registration rolls back to the pre-import directory (or removes a brand-new
 unregistered import). A registration exception also attempts that rollback immediately.
 
-Still pending: end-to-end system-picker automation and real emulator save validation.
+Android instrumentation now drives the production reimport card through the real
+DocumentsUI picker on the API 35 Google APIs emulator. The test publishes a synthetic
+owned ISO into Downloads, selects it through the system picker, verifies the retained
+SHA-256 identity, completes the production importer + Room registration path, and checks
+that the transaction journal/staging/backup state is fully cleaned.
+
+Still pending: physical Honor Magic5 Pro picker behavior and real emulator save validation.
 Restore now requires the retained filenames and SHA-256 checksums for the full
 file set. Identity is checked in staging before replacing content; a different
 edition must be imported separately. Three local identity regression tests pass.
