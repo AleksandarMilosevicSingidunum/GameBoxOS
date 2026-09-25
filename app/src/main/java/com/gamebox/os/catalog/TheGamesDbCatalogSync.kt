@@ -105,6 +105,8 @@ class TheGamesDbCatalogSync(
                 val page = TheGamesDbCatalogParser.parsePlatformPage(payload, platform)
                 val updatedAt = nowMillis()
                 val pageGames = page.games.take(maxGamesPerPlatform - gameCount)
+                val favoriteIds = if (pageGames.isEmpty()) emptySet() else
+                    dao.favoriteGameIds(pageGames.map { it.id.value }).toSet()
                 dao.upsertPage(
                     platform = CatalogPlatformEntity(
                         id = platform.id,
@@ -129,7 +131,7 @@ class TheGamesDbCatalogSync(
                             backgroundUrl = game.media.background,
                             logoUrl = game.media.logo,
                             screenshotsJson = game.media.screenshots.take(12).joinToString("\n").ifBlank { null },
-                            favorite = false,
+                            favorite = game.id.value in favoriteIds,
                             updatedAtMillis = updatedAt,
                         )
                     },

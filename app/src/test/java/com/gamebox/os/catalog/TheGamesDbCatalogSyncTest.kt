@@ -52,6 +52,7 @@ class TheGamesDbCatalogSyncTest {
         override fun observePlatforms() = kotlinx.coroutines.flow.emptyFlow<List<CatalogPlatformEntity>>()
         override suspend fun countGames(platformId: String) = 0
         override suspend fun setFavorite(gameId: String, favorite: Boolean) = Unit
+        override suspend fun favoriteGameIds(gameIds: List<String>): List<String> = emptyList()
     }
 
     private fun URI.getQueryParameter(name: String): String? = rawQuery

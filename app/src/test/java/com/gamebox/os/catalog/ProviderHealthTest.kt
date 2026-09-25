@@ -119,5 +119,6 @@ class ProviderHealthTest {
         override fun observePlatforms(): Flow<List<CatalogPlatformEntity>> = flowOf(emptyList())
         override suspend fun countGames(platformId: String): Int = 0
         override suspend fun setFavorite(gameId: String, favorite: Boolean) = Unit
+        override suspend fun favoriteGameIds(gameIds: List<String>): List<String> = emptyList()
     }
 }
