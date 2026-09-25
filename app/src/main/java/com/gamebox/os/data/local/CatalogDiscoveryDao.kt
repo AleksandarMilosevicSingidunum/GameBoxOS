@@ -43,6 +43,9 @@ interface CatalogDiscoveryDao {
     @Query("SELECT COUNT(*) FROM catalog_games WHERE platformId = :platformId")
     suspend fun countGames(platformId: String): Int
 
+    @Query("SELECT * FROM catalog_platforms WHERE id = :platformId LIMIT 1")
+    suspend fun platform(platformId: String): CatalogPlatformEntity?
+
     @Query("UPDATE catalog_games SET favorite = :favorite WHERE id = :gameId")
     suspend fun setFavorite(gameId: String, favorite: Boolean)
 
