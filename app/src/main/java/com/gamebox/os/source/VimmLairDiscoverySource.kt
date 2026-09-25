@@ -265,6 +265,10 @@ internal fun parseVimmLairListing(
             )
         }
         .distinctBy { it.externalId }
+        .sortedWith(
+            compareBy<DiscoverySourceGame> { vimmLairMatchRank(it.title, query) }
+                .thenBy { it.title.lowercase() }
+        )
         .take(limit)
         .toList()
 }
@@ -446,7 +450,8 @@ suspend fun searchVimmLairAcrossPlatforms(
         games = games
             .distinctBy { it.sourceId.lowercase() + ":" + it.externalId }
             .sortedWith(
-                compareBy<DiscoverySourceGame> { it.platform.lowercase() }
+                compareBy<DiscoverySourceGame> { vimmLairMatchRank(it.title, query) }
+                    .thenBy { it.platform.lowercase() }
                     .thenBy { it.title.lowercase() }
             ),
         attemptedPlatforms = platforms,
@@ -502,6 +507,19 @@ internal fun vimmLairPlatformSlug(platform: String): String? {
         "genesis", "megadrive", "segagenesis" -> "Genesis"
         "saturn", "segasaturn" -> "Saturn"
         else -> null
+    }
+}
+
+internal fun vimmLairMatchRank(title: String, query: String): Int {
+    val normalizedTitle = normalizeCatalogTitle(title)
+    val normalizedQuery = normalizeCatalogTitle(query)
+    if (normalizedQuery.isBlank()) return 3
+    return when {
+        normalizedTitle == normalizedQuery -> 0
+        normalizedTitle.startsWith(normalizedQuery) -> 1
+        normalizedTitle.split(Regex("[^a-z0-9]+"))
+            .any { it.startsWith(normalizedQuery) } -> 2
+        else -> 3
     }
 }
 
