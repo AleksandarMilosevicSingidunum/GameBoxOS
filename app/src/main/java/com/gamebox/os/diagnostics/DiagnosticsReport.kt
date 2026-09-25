@@ -17,11 +17,23 @@ data class DiagnosticsDevice(
     val totalBytes: Long
 )
 
+data class DiagnosticsRuntime(
+    val controllerCount: Int,
+    val audioOutput: String,
+    val networkTransport: String,
+    val networkState: String,
+    val externalDisplayCount: Int,
+    val externalDisplaySummary: String,
+    val batteryPercent: Int?,
+    val powerState: String,
+)
+
 fun buildDiagnosticsReport(
     device: DiagnosticsDevice,
     settings: GameBoxSettings,
     games: List<Game>,
     downloads: List<DownloadJob>,
+    runtime: DiagnosticsRuntime? = null,
     generatedAt: Instant = Instant.now()
 ): String {
     val providerHost = settings.catalogUrl.takeIf { it.isNotBlank() }?.let { value ->
@@ -41,6 +53,19 @@ fun buildDiagnosticsReport(
         appendLine("Android SDK: ${device.sdk}")
         appendLine("Storage usable: ${formatDiagnosticBytes(device.usableBytes)}")
         appendLine("Storage total: ${formatDiagnosticBytes(device.totalBytes)}")
+        runtime?.let { status ->
+            appendLine("Controllers connected: " + status.controllerCount.coerceAtLeast(0))
+            appendLine("Audio output: " + status.audioOutput.take(120))
+            appendLine("Network transport: " + status.networkTransport.take(80))
+            appendLine("Network state: " + status.networkState.take(80))
+            appendLine("External displays: " + status.externalDisplayCount.coerceAtLeast(0))
+            appendLine("External display status: " + status.externalDisplaySummary.take(240))
+            appendLine(
+                "Battery: " + (status.batteryPercent?.coerceIn(0, 100)?.toString()?.plus("%")
+                    ?: "unavailable")
+            )
+            appendLine("Power: " + status.powerState.take(120))
+        }
         appendLine("Catalog provider host: ${providerHost}")
         appendLine("Catalog seeded: ${settings.catalogSeededAtEpochMs ?: "not recorded"}")
         appendLine("Catalog refreshed: ${settings.catalogRefreshedAtEpochMs ?: "not recorded"}")
