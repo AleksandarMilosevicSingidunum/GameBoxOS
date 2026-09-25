@@ -5,6 +5,7 @@ import com.gamebox.os.domain.GameId
 import java.io.File
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption
+import java.security.MessageDigest
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
@@ -106,7 +107,7 @@ class ImportRegistrationJournal(filesDirectory: File) {
         if (!importsRoot.isDirectory) return emptyList()
         return importsRoot.listFiles().orEmpty()
             .filter { MARKER_NAME.matches(it.name) && it.isFile && !Files.isSymbolicLink(it.toPath()) }
-            .sortedBy(File::getName)
+            .sortedBy { it.name }
             .map { marker ->
                 val parsed = try {
                     json.decodeFromString<PendingImportTransaction>(marker.readText(Charsets.UTF_8))
@@ -130,6 +131,18 @@ class ImportRegistrationJournal(filesDirectory: File) {
         return registered == expected
     }
 
+    fun targetMatchesPending(pending: PendingImportTransaction): Boolean {
+        validatePending(pending)
+        val target = targetDirectory(pending.gameId)
+        if (!target.isDirectory || Files.isSymbolicLink(target.toPath())) return false
+        return pending.files.all { expected ->
+            val file = File(importsRoot, expected.relativePath)
+            if (!file.isFile || Files.isSymbolicLink(file.toPath())) return@all false
+            if (!file.canonicalPath.startsWith(target.canonicalPath + File.separator)) return@all false
+            sha256(file) == expected.sha256
+        }
+    }
+
     fun confirm(pending: PendingImportTransaction) {
         validatePending(pending)
         val backup = backupDirectory(pending)
@@ -146,9 +159,20 @@ class ImportRegistrationJournal(filesDirectory: File) {
         val staging = stagingDirectory(pending)
 
         if (pending.hadExistingTarget) {
-            if (backup.exists()) {
-                if (target.exists()) deleteOwnedDirectory(target)
-                moveDirectory(backup, target)
+            when {
+                backup.exists() -> {
+                    if (target.exists()) deleteOwnedDirectory(target)
+                    moveDirectory(backup, target)
+                }
+                staging.exists() && target.isDirectory -> {
+                    // Marker publication happened, but the directory swap had not started.
+                    // The pre-import target is still authoritative.
+                }
+                else -> {
+                    throw IllegalStateException(
+                        "Previous import content cannot be restored safely; keep the recovery journal for retry"
+                    )
+                }
             }
         } else if (target.exists()) {
             deleteOwnedDirectory(target)
@@ -179,7 +203,7 @@ class ImportRegistrationJournal(filesDirectory: File) {
             val pending = transactions.single()
             runCatching {
                 val game = gameLookup(GameId(gameId))
-                if (matchesRegisteredGame(pending, game)) {
+                if (matchesRegisteredGame(pending, game) && targetMatchesPending(pending)) {
                     confirm(pending)
                     confirmed += 1
                 } else {
@@ -198,6 +222,9 @@ class ImportRegistrationJournal(filesDirectory: File) {
         require(marker.canonicalFile == marker.absoluteFile) {
             "Pending import marker redirects outside app storage"
         }
+        require(marker.canonicalPath.startsWith(importsRoot.canonicalPath + File.separator)) {
+            "Pending import marker escaped imports root"
+        }
         require(marker.name == markerFile(pending.gameId, pending.transactionId).name) {
             "Pending import marker identity does not match its payload"
         }
@@ -210,10 +237,17 @@ class ImportRegistrationJournal(filesDirectory: File) {
         require(pending.files.isNotEmpty() && pending.files.size <= 64) {
             "Pending import file set is invalid"
         }
+        require(pending.files.map { it.relativePath.lowercase() }.distinct().size == pending.files.size) {
+            "Pending import file paths must be unique"
+        }
         pending.files.forEach { file ->
             require(file.relativePath.startsWith(pending.gameId + "/")) {
                 "Pending import file belongs to another game"
             }
+            require(
+                file.relativePath.none { it == '\\' || it == '\u0000' } &&
+                    file.relativePath.split('/').none { it.isBlank() || it == "." || it == ".." }
+            ) { "Pending import file path is unsafe" }
             require(file.sha256.matches(Regex("^[a-f0-9]{64}$"))) {
                 "Pending import checksum is invalid"
             }
@@ -256,6 +290,19 @@ class ImportRegistrationJournal(filesDirectory: File) {
         }.getOrElse {
             Files.move(source.toPath(), target.toPath())
         }
+    }
+
+    private fun sha256(file: File): String {
+        val digest = MessageDigest.getInstance("SHA-256")
+        file.inputStream().buffered().use { input ->
+            val buffer = ByteArray(64 * 1024)
+            while (true) {
+                val count = input.read(buffer)
+                if (count < 0) break
+                digest.update(buffer, 0, count)
+            }
+        }
+        return digest.digest().joinToString("") { "%02x".format(it) }
     }
 
     private fun requireSafeGameId(value: String) {
