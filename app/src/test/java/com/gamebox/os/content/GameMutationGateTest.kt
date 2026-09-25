@@ -5,6 +5,7 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -61,9 +62,11 @@ class GameMutationGateTest {
         val first = async { enter("game-a") }
         val second = async { enter("game-b") }
 
-        bothEntered.await()
+        withTimeout(2_000) { bothEntered.await() }
         assertTrue(inside.get() >= 1)
-        first.await()
-        second.await()
+        withTimeout(2_000) {
+            first.await()
+            second.await()
+        }
     }
 }
