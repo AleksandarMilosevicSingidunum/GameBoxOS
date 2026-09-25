@@ -1,6 +1,8 @@
 package com.gamebox.os.ui
 
 import android.content.Intent
+import android.content.ComponentName
+import android.content.pm.ActivityInfo
 import android.content.pm.PackageManager
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -27,6 +29,20 @@ class DefaultHomeRegistrationTest {
                 candidate.activityInfo.packageName == context.packageName &&
                     candidate.activityInfo.name == MainActivity::class.java.name
             },
+        )
+    }
+
+    @Test
+    fun homeActivityUsesSingleTaskLaunchMode() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val activityInfo = context.packageManager.getActivityInfo(
+            ComponentName(context, MainActivity::class.java),
+            0,
+        )
+
+        assertTrue(
+            "GameBox Home activity should reuse one task",
+            activityInfo.launchMode == ActivityInfo.LAUNCH_SINGLE_TASK,
         )
     }
 }
