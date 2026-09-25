@@ -11,6 +11,7 @@ import javax.net.ssl.HttpsURLConnection
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.flow.first
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
@@ -225,8 +226,9 @@ class GameBoxJsonDiscoverySync(
                 dao.favoriteGameIds(gameIds).toSet()
             val providerId = "GAMEBOX_JSON:$source.id"
 
+            val existingPlatforms = dao.observePlatforms().first().associateBy { it.id }
             games.groupBy { it.platformId }.forEach { (platformId, platformGames) ->
-                val existingPlatform = dao.platform(platformId)
+                val existingPlatform = existingPlatforms[platformId]
                 val displayName = platformGames.first().platform
                 dao.upsertPage(
                     platform = CatalogPlatformEntity(
