@@ -19,6 +19,9 @@ import com.gamebox.os.catalog.CatalogProviderConfig
 import com.gamebox.os.catalog.CatalogTransport
 import com.gamebox.os.catalog.ProviderHealth
 import com.gamebox.os.catalog.ProviderHealthStatus
+import com.gamebox.os.source.GameSourceConfig
+import com.gamebox.os.source.decodeGameSourceConfigs
+import com.gamebox.os.source.encodeGameSourceConfigs
 import java.security.SecureRandom
 
 private val Context.gameBoxDataStore: DataStore<Preferences> by preferencesDataStore(name = "gamebox_settings")
@@ -41,6 +44,7 @@ data class GameBoxSettings(
     val catalogBucket: String = "",
     val catalogPrefix: String = "",
     val catalogRegion: String = "us-east-1",
+    val gameSources: List<GameSourceConfig> = emptyList(),
     val externalLibraryUri: String = "",
     val cloudSaveProvider: String = "WEBDAV",
     val cloudSaveEndpoint: String = "",
@@ -86,6 +90,7 @@ class SettingsRepository(private val context: Context) {
             catalogBucket = preferences[CATALOG_BUCKET] ?: "",
             catalogPrefix = preferences[CATALOG_PREFIX] ?: "",
             catalogRegion = preferences[CATALOG_REGION] ?: "us-east-1",
+            gameSources = decodeGameSourceConfigs(preferences[GAME_SOURCES]),
             externalLibraryUri = preferences[EXTERNAL_LIBRARY_URI] ?: "",
             cloudSaveProvider = preferences[CLOUD_SAVE_PROVIDER] ?: "WEBDAV",
             cloudSaveEndpoint = preferences[CLOUD_SAVE_ENDPOINT] ?: "",
@@ -342,6 +347,26 @@ class SettingsRepository(private val context: Context) {
         setCatalogConfiguration("HTTPS", value)
     }
 
+    suspend fun setGameSources(sources: List<GameSourceConfig>) {
+        val encoded = encodeGameSourceConfigs(sources)
+        context.gameBoxDataStore.edit { preferences ->
+            if (sources.isEmpty()) preferences.remove(GAME_SOURCES)
+            else preferences[GAME_SOURCES] = encoded
+        }
+    }
+
+    suspend fun upsertGameSource(source: GameSourceConfig) {
+        val current = settings.first().gameSources
+            .filterNot { it.id.equals(source.id, ignoreCase = true) }
+        setGameSources(current + source)
+    }
+
+    suspend fun removeGameSource(id: String) {
+        setGameSources(
+            settings.first().gameSources.filterNot { it.id.equals(id, ignoreCase = true) }
+        )
+    }
+
     private fun catalogCredentialKey(transport: String): String = when (transport.uppercase()) {
         "S3" -> CATALOG_S3_CREDENTIALS
         "WEBDAV" -> CATALOG_WEBDAV_CREDENTIALS
@@ -446,6 +471,7 @@ class SettingsRepository(private val context: Context) {
         val CATALOG_BUCKET = stringPreferencesKey("catalog_bucket")
         val CATALOG_PREFIX = stringPreferencesKey("catalog_prefix")
         val CATALOG_REGION = stringPreferencesKey("catalog_region")
+        val GAME_SOURCES = stringPreferencesKey("game_sources")
         val EXTERNAL_LIBRARY_URI = stringPreferencesKey("external_library_uri")
         val CLOUD_SAVE_PROVIDER = stringPreferencesKey("cloud_save_provider")
         val CLOUD_SAVE_ENDPOINT = stringPreferencesKey("cloud_save_endpoint")
