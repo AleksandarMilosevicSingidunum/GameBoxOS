@@ -212,9 +212,12 @@ class AuthorizedRomImporter(
     }
 
     suspend fun reconcilePendingRegistrations(
+        createdBeforeMillis: Long = Long.MAX_VALUE,
         gameLookup: suspend (GameId) -> com.gamebox.os.domain.Game?,
     ): ImportRegistrationRecoveryReport =
-        registrationJournal.reconcile(gameLookup)
+        importTransactionMutex.withLock {
+            registrationJournal.reconcile(gameLookup, createdBeforeMillis)
+        }
 
     private fun replaceDirectoryAtomically(target: File, staging: File, backup: File) {
         var previousMoved = false
