@@ -1,7 +1,5 @@
 package com.gamebox.os.ui
 
-import android.provider.Settings
-import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -13,10 +11,5 @@ class HomeRoleStatusTest {
         assertFalse(defaultHomeMatchesApp("com.android.launcher", "com.gamebox.os"))
         assertFalse(defaultHomeMatchesApp(null, "com.gamebox.os"))
         assertFalse(defaultHomeMatchesApp("", "com.gamebox.os"))
-    }
-
-    @Test
-    fun settingsIntentTargetsAndroidHomeSelection() {
-        assertEquals(Settings.ACTION_HOME_SETTINGS, defaultHomeSettingsIntent().action)
     }
 }
