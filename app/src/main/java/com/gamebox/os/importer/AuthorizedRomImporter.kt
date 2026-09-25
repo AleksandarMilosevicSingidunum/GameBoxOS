@@ -198,6 +198,13 @@ class AuthorizedRomImporter(
         registrationJournal.confirm(pending)
     }
 
+    fun rollbackRegistration(gameId: GameId, transactionId: String) {
+        val pending = registrationJournal.pendingFor(gameId)
+            .singleOrNull { it.transactionId == transactionId }
+            ?: throw IllegalStateException("Pending import registration was not found")
+        registrationJournal.rollback(pending)
+    }
+
     suspend fun reconcilePendingRegistrations(
         gameLookup: suspend (GameId) -> com.gamebox.os.domain.Game?,
     ): ImportRegistrationRecoveryReport =
