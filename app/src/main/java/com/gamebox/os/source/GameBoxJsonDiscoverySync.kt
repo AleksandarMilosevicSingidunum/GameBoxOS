@@ -238,7 +238,7 @@ class GameBoxJsonDiscoverySync(
             val gameIds = games.map { gameBoxJsonDiscoveryGameId(source.id, it.externalId) }
             val favoriteIds = if (gameIds.isEmpty()) emptySet() else
                 dao.favoriteGameIds(gameIds).toSet()
-            val providerId = "GAMEBOX_JSON:$source.id"
+            val providerId = "GAMEBOX_JSON:${source.id}"
 
             val existingPlatforms = dao.observePlatforms().first().associateBy { it.id }
             games.groupBy { it.platformId }.forEach { (platformId, platformGames) ->
