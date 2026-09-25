@@ -21,9 +21,14 @@ mutation: abandoned staging directories are removed, surviving backup directorie
 the target back to its pre-import contents, and single-file partials are cleaned. New
 imports fail closed if that recovery cannot complete.
 
-Still pending: a durable journal spanning the narrow post-file-commit / pre-Library-
-registration window, end-to-end system-picker automation, and real emulator save
-validation.
+The file-to-Library registration boundary is now journaled durably. A marker is written
+before the import directory swap, the previous directory is retained until Room
+registration is confirmed, and startup reconciliation compares the journaled SHA-256 file
+set with the durable Room row. A committed registration finalizes the new files; an
+uncommitted registration rolls back to the pre-import directory (or removes a brand-new
+unregistered import). A registration exception also attempts that rollback immediately.
+
+Still pending: end-to-end system-picker automation and real emulator save validation.
 Restore now requires the retained filenames and SHA-256 checksums for the full
 file set. Identity is checked in staging before replacing content; a different
 edition must be imported separately. Three local identity regression tests pass.
