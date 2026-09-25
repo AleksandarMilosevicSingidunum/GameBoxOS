@@ -49,11 +49,16 @@ Choose **Vimm's Lair** in Settings and use the preset to populate:
 All fields remain editable before saving, so Vimm integration is an optional configured
 source rather than a mandatory built-in Store backend.
 
-In Store, select a supported console, enter a game title, then choose **Search Vimm's
-Lair**. GameBox requests only the corresponding alphabetical vault listing page, parses
-`/vault/<numeric-id>` title links, filters them against the entered title, and displays
-the matches as temporary discovery cards. The result is not written into the authorized
-catalog and does not create a download job.
+In Store, enter a game title and choose **Search Vimm's Lair**. If a console is selected,
+GameBox requests only that console's corresponding alphabetical vault listing page. If no
+console is selected, GameBox searches the configured supported consoles sequentially (up
+to eight), merges the results, and reports partial failures without discarding successful
+matches. An unrestricted Vimm source defaults to the GameBox target set: PS2, GameCube,
+Wii, PSP, and Dreamcast.
+
+Each listing request parses `/vault/<numeric-id>` title links, filters them against the
+entered title, and displays the matches as temporary discovery cards. Results are not
+written into the authorized catalog and do not create download jobs.
 
 Selecting a Vimm search result now stays inside GameBox first. Before opening the normal
 discovery Details flow, GameBox performs one bounded request to the exact numeric vault
