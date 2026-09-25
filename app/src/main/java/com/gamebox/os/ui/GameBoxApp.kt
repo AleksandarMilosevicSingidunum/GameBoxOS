@@ -4120,6 +4120,7 @@ private fun SettingsScreen(
     var theGamesDbApiKey by remember { mutableStateOf("") }
     var theGamesDbConfigured by remember { mutableStateOf(false) }
     var sourceName by remember { mutableStateOf("") }
+    var sourceType by remember { mutableStateOf(GameSourceProviderType.EXTERNAL_WEB) }
     var sourceBaseUrl by remember { mutableStateOf("") }
     var sourceSearchTemplate by remember { mutableStateOf("") }
     var sourcePlatforms by remember { mutableStateOf("") }
@@ -4974,6 +4975,28 @@ private fun SettingsScreen(
             singleLine = true,
             modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
         )
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.padding(top = 6.dp),
+        ) {
+            FilterChip(
+                selected = sourceType == GameSourceProviderType.EXTERNAL_WEB,
+                onClick = { sourceType = GameSourceProviderType.EXTERNAL_WEB },
+                label = { Text("External website") },
+            )
+            FilterChip(
+                selected = sourceType == GameSourceProviderType.GAMEBOX_JSON,
+                onClick = { sourceType = GameSourceProviderType.GAMEBOX_JSON },
+                label = { Text("GameBox JSON") },
+            )
+        }
+        Text(
+            if (sourceType == GameSourceProviderType.GAMEBOX_JSON)
+                "JSON sources are searched inside GameBox. Expected response: { games: [...] }."
+            else "External websites open in the browser using the optional search template.",
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            fontSize = 11.sp,
+        )
         OutlinedTextField(
             value = sourceBaseUrl,
             onValueChange = { sourceBaseUrl = it },
@@ -5005,7 +5028,7 @@ private fun SettingsScreen(
                     val source = GameSourceConfig(
                         id = nextGameSourceId(trimmedName, existingIds),
                         name = trimmedName,
-                        type = GameSourceProviderType.EXTERNAL_WEB,
+                        type = sourceType,
                         baseUrl = sourceBaseUrl.trim(),
                         platforms = sourcePlatforms.split(',')
                             .map(String::trim)
@@ -5018,6 +5041,7 @@ private fun SettingsScreen(
                 }
                 result.onSuccess { source ->
                     sourceName = ""
+                    sourceType = GameSourceProviderType.EXTERNAL_WEB
                     sourceBaseUrl = ""
                     sourceSearchTemplate = ""
                     sourcePlatforms = ""
