@@ -5,6 +5,9 @@ import com.gamebox.os.catalog.TheGamesDbCatalogSync
 import com.gamebox.os.data.local.CatalogDiscoveryDao
 import com.gamebox.os.domain.GameId
 import com.gamebox.os.domain.normalizeCatalogTitle
+import com.gamebox.os.source.ConfiguredDiscoverySyncResult
+import com.gamebox.os.source.GameBoxJsonDiscoverySync
+import com.gamebox.os.source.GameSourceConfig
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
@@ -39,12 +42,17 @@ interface CatalogDiscoveryRepository {
 
     fun observePlatforms(): Flow<List<DiscoveryPlatform>>
     suspend fun syncPlatform(platformName: String): CatalogSyncResult
+
+    suspend fun syncConfiguredSource(source: GameSourceConfig): ConfiguredDiscoverySyncResult =
+        ConfiguredDiscoverySyncResult.Unsupported
+
     suspend fun setFavorite(gameId: GameId, favorite: Boolean)
 }
 
 class RoomCatalogDiscoveryRepository(
     private val dao: CatalogDiscoveryDao,
     private val sync: TheGamesDbCatalogSync,
+    private val configuredSync: GameBoxJsonDiscoverySync = GameBoxJsonDiscoverySync(dao),
 ) : CatalogDiscoveryRepository {
     override fun observeGames(
         platformId: String?,
@@ -67,6 +75,9 @@ class RoomCatalogDiscoveryRepository(
 
     override suspend fun syncPlatform(platformName: String): CatalogSyncResult =
         sync.syncPlatform(platformName)
+
+    override suspend fun syncConfiguredSource(source: GameSourceConfig): ConfiguredDiscoverySyncResult =
+        configuredSync.sync(source)
 
     override suspend fun setFavorite(gameId: GameId, favorite: Boolean) =
         dao.setFavorite(gameId.value, favorite)
