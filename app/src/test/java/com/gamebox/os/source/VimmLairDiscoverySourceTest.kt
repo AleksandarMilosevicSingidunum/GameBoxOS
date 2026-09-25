@@ -260,6 +260,52 @@ class VimmLairDiscoverySourceTest {
     }
 
     @Test
+    fun probeUsesOneConfiguredPlatformAndRequiresVaultStructure() = runBlocking {
+        var requested: URI? = null
+        val source = VimmLairDiscoverySource(
+            GameSourceConfig(
+                id = "vimm",
+                name = "Vimm",
+                type = GameSourceProviderType.VIMM_LAIR,
+                baseUrl = "https://vimm.net/vault",
+                platforms = setOf("PS2", "GameCube"),
+            ),
+            VimmLairTransport { uri ->
+                requested = uri
+                """
+                    <html><body>
+                      <a href="/vault/100">Alpha</a>
+                      <a href="/vault/101">Another</a>
+                    </body></html>
+                """.trimIndent()
+            },
+        )
+
+        val probe = source.probe()
+
+        assertEquals("GameCube", probe.platform)
+        assertEquals("https://vimm.net/vault/GameCube/A", requested.toString())
+        assertEquals(2, probe.vaultLinks)
+    }
+
+    @Test
+    fun probeFailsClosedWhenExpectedListingStructureIsMissing() {
+        val source = VimmLairDiscoverySource(
+            GameSourceConfig(
+                id = "vimm",
+                name = "Vimm",
+                type = GameSourceProviderType.VIMM_LAIR,
+                baseUrl = "https://vimm.net/vault",
+            ),
+            VimmLairTransport { "<html><body>maintenance</body></html>" },
+        )
+
+        assertThrows(IllegalArgumentException::class.java) {
+            runBlocking { source.probe("PS2") }
+        }
+    }
+
+    @Test
     fun sourceRejectsUnsupportedConsoleAndNonVimmHost() {
         assertThrows(IllegalArgumentException::class.java) {
             VimmLairDiscoverySource(
