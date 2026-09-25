@@ -12,7 +12,7 @@ The development blueprint is guidance. Work proceeds in small, testable incremen
 - [x] LB/RB tab switching and controller Back handling
 - [x] Fake install, pause, resume, verify, and install transitions
 - [x] CI-built debug APK with SHA-256 artifact
-- [ ] Physical controller check on Galaxy A53
+- [ ] Physical controller check on Honor Magic5 Pro
 - [x] Per-tab game-card focus restoration, including off-screen LazyRow items
 - [x] Focus-memory policy unit tests
 - [x] Compose navigation instrumentation tests
@@ -64,7 +64,7 @@ Browse -> details -> install an authorized test file -> verify -> Library -> lau
 
 ## 1.0 - Target hardware release
 
-Galaxy S23 Ultra and DeX validation, controller and HDMI reconnect tests, external-storage safety, soak testing, signed build, rollback procedure, and documented hardware handoff.
+Honor Magic5 Pro wired external-display/Honor Desktop Mode validation with the purchased UGREEN 7-in-1 hub, controller and HDMI reconnect tests, external-storage safety, soak testing, signed build, rollback procedure, and documented hardware handoff.
 
 
 ## Latest verification
@@ -76,5 +76,5 @@ Galaxy S23 Ultra and DeX validation, controller and HDMI reconnect tests, extern
 - [x] Clarified emulator content-handoff failure messaging
 - [x] Bundled authorized Galaxy Patrol NES fixture with pinned checksum and emulator-core requirement
 
-Physical Galaxy/DeX/controller testing, production signing credentials, real provider/emulator integration, and enclosure validation remain hardware/deployment gates rather than locally verifiable code tasks. A clean API-35 emulator now executes the Android instrumentation suite in CI; this does not replace physical-device acceptance testing.
+Physical Honor Magic5 Pro/external-display/controller testing, production signing credentials, real provider/emulator integration, and enclosure validation remain hardware/deployment gates rather than locally verifiable code tasks. A clean API-35 emulator now executes the Android instrumentation suite in CI; this does not replace physical-device acceptance testing.
 
