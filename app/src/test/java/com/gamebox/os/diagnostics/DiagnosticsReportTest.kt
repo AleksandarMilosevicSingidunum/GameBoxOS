@@ -25,11 +25,26 @@ class DiagnosticsReportTest {
                 )
             ),
             downloads = emptyList(),
+            runtime = DiagnosticsRuntime(
+                controllerCount = 1,
+                audioOutput = "HDMI",
+                networkTransport = "Ethernet",
+                networkState = "Internet connected",
+                externalDisplayCount = 1,
+                externalDisplaySummary = "Living room TV · 1920×1080",
+                batteryPercent = 77,
+                powerState = "77% · Charging over USB",
+            ),
             generatedAt = Instant.EPOCH
         )
 
         assertTrue(report.contains("catalog.example.com"))
         assertTrue(report.contains("Games installed: 1"))
+        assertTrue(report.contains("Controllers connected: 1"))
+        assertTrue(report.contains("Network transport: Ethernet"))
+        assertTrue(report.contains("External displays: 1"))
+        assertTrue(report.contains("Battery: 77%"))
+        assertTrue(report.contains("Power: 77% · Charging over USB"))
         assertFalse(report.contains("user:secret"))
         assertFalse(report.contains("/private/"))
         assertFalse(report.contains("token="))
