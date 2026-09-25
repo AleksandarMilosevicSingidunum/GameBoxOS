@@ -48,11 +48,12 @@ internal fun RemoteArtwork(
     contentScale: ContentScale = ContentScale.Crop,
 ) {
     val cacheDir = LocalContext.current.cacheDir
-    var bitmap by remember(url) { mutableStateOf(url?.let(artworkCache::get)) }
-    LaunchedEffect(url) {
-        if (bitmap != null || !isSafeArtworkUrl(url)) return@LaunchedEffect
+    val safeUrl = url?.takeIf(::isSafeArtworkUrl)
+    var bitmap by remember(safeUrl) { mutableStateOf(safeUrl?.let(artworkCache::get)) }
+    LaunchedEffect(safeUrl) {
+        if (bitmap != null || safeUrl == null) return@LaunchedEffect
         bitmap = withContext(Dispatchers.IO) {
-            try { loadArtwork(url, cacheDir) }
+            try { loadArtwork(safeUrl, cacheDir) }
             catch (cancelled: CancellationException) { throw cancelled }
             catch (_: Exception) { null }
         }
