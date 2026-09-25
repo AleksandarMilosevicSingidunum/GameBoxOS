@@ -69,6 +69,28 @@ class TheGamesDbCatalogSyncTest {
     }
 
     @Test
+    fun refreshPreservesExistingFavoriteFlag() = runBlocking {
+        val dao = RecordingCatalogDao().apply {
+            favoriteIds += "tgdb-playstation2-1"
+        }
+        val transport = TheGamesDbCatalogTransport { uri ->
+            if (uri.path.endsWith("/Platforms")) {
+                """{"data":{"platforms":[{"id":11,"name":"PlayStation 2"}]}}"""
+            } else {
+                """{"data":{"pages":{"current":1},"games":[{"id":1,"game_title":"Favorite"}]}}"""
+            }
+        }
+        val sync = TheGamesDbCatalogSync(
+            apiKey = { "key" },
+            transport = transport,
+            dao = dao,
+        )
+
+        assertTrue(sync.syncPlatform("PlayStation 2") is CatalogSyncResult.Success)
+        assertEquals(true, dao.games.single().favorite)
+    }
+
+    @Test
     fun missingKeyDoesNotTouchNetworkOrDatabase() = runBlocking {
         var requests = 0
         val dao = RecordingCatalogDao()
@@ -86,6 +108,7 @@ class TheGamesDbCatalogSyncTest {
     private class RecordingCatalogDao : CatalogDiscoveryDao {
         val games = mutableListOf<CatalogGameEntity>()
         val ids = mutableListOf<CatalogExternalIdEntity>()
+        val favoriteIds = mutableSetOf<String>()
 
         override suspend fun upsertPlatforms(platforms: List<CatalogPlatformEntity>) = Unit
         override suspend fun upsertGames(games: List<CatalogGameEntity>) { this.games += games }
@@ -100,7 +123,11 @@ class TheGamesDbCatalogSyncTest {
             kotlinx.coroutines.flow.flowOf(games.firstOrNull { it.id == gameId })
         override fun observePlatforms(): Flow<List<CatalogPlatformEntity>> = flowOf(emptyList())
         override suspend fun countGames(platformId: String): Int = games.count { it.platformId == platformId }
-        override suspend fun setFavorite(gameId: String, favorite: Boolean) = Unit
+        override suspend fun setFavorite(gameId: String, favorite: Boolean) {
+            if (favorite) favoriteIds += gameId else favoriteIds -= gameId
+        }
+        override suspend fun favoriteGameIds(gameIds: List<String>): List<String> =
+            gameIds.filter(favoriteIds::contains)
         override suspend fun upsertPage(
             platform: CatalogPlatformEntity,
             games: List<CatalogGameEntity>,
