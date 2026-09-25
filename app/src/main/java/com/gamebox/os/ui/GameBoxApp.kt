@@ -134,6 +134,7 @@ import com.gamebox.os.source.nextGameSourceId
 import com.gamebox.os.source.resolveBrowseUrl
 import com.gamebox.os.source.supportsPlatform
 import com.gamebox.os.source.VimmLairDiscoverySource
+import com.gamebox.os.source.searchVimmLairAcrossPlatforms
 import com.gamebox.os.source.vimmLairSearchPlatforms
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
@@ -1159,39 +1160,38 @@ val allDiscoveryGames by discoveryRepository.observeGames(null, "", 250).collect
             discoverySyncing = true
             discoverySyncProgress = 0f
             scope.launch {
-                val adapter = VimmLairDiscoverySource(source)
-                val collected = mutableListOf<DiscoverySourceGame>()
-                var failures = 0
-                platforms.forEachIndexed { index, platformLabel ->
-                    discoverySyncMessage = if (platforms.size == 1) {
-                        "Searching " + source.name + "…"
-                    } else {
-                        "Searching " + source.name + " · " + platformLabel +
-                            " (" + (index + 1) + "/" + platforms.size + ")…"
-                    }
-                    runCatching {
-                        adapter.search(platform = platformLabel, query = query).games
-                    }.onSuccess(collected::addAll)
-                        .onFailure { failures += 1 }
-                    discoverySyncProgress =
-                        (index + 1).toFloat() / platforms.size.coerceAtLeast(1).toFloat()
+                discoverySyncMessage = if (platforms.size == 1) {
+                    "Searching " + source.name + "…"
+                } else {
+                    "Searching " + source.name + " across " + platforms.size + " consoles…"
                 }
-                configuredSourceResults = collected
-                    .distinctBy { it.sourceId.lowercase() + ":" + it.externalId }
-                    .sortedWith(
-                        compareBy<DiscoverySourceGame> { it.platform.lowercase() }
-                            .thenBy { it.title.lowercase() }
+                val result = runCatching {
+                    searchVimmLairAcrossPlatforms(
+                        config = source,
+                        query = query,
+                        selectedPlatform = selectedConsole?.label,
                     )
-                discoverySyncMessage = when {
-                    configuredSourceResults.isNotEmpty() && failures == 0 ->
-                        "Found " + configuredSourceResults.size + " result(s) from " + source.name
-                    configuredSourceResults.isNotEmpty() ->
-                        "Found " + configuredSourceResults.size + " result(s); " +
-                            failures + " console search(es) failed"
-                    failures > 0 ->
-                        source.name + " search failed for " + failures + " console(s)"
-                    else ->
-                        "No " + source.name + " results matched “" + query + "”"
+                }
+                result.onSuccess { summary ->
+                    configuredSourceResults = summary.games
+                    discoverySyncProgress = 1f
+                    discoverySyncMessage = when {
+                        summary.games.isNotEmpty() && summary.failedPlatforms.isEmpty() ->
+                            "Found " + summary.games.size + " result(s) from " + source.name
+                        summary.games.isNotEmpty() ->
+                            "Found " + summary.games.size + " result(s); failed: " +
+                                summary.failedPlatforms.joinToString()
+                        summary.failedPlatforms.isNotEmpty() ->
+                            source.name + " search failed for " +
+                                summary.failedPlatforms.joinToString()
+                        else ->
+                            "No " + source.name + " results matched “" + query + "”"
+                    }
+                }.onFailure { error ->
+                    configuredSourceResults = emptyList()
+                    discoverySyncProgress = 1f
+                    discoverySyncMessage = source.name + " search failed: " +
+                        (error.message?.take(180) ?: "unknown error")
                 }
                 discoverySyncing = false
             }
