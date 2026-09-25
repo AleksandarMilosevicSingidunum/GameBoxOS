@@ -1092,7 +1092,7 @@ val allDiscoveryGames by discoveryRepository.observeGames(null, "", 250).collect
             )
         }
         DiscoveryDetailsScreen(
-            game = configuredSourceResultToDiscoveryGame(result),
+            game = configuredSourceResultToDiscoveryGame(result, allDiscoveryGames),
             platformName = result.platform,
             onBack = { selectedConfiguredResult = null },
             onFavorite = {},
@@ -1526,6 +1526,7 @@ val allDiscoveryGames by discoveryRepository.observeGames(null, "", 250).collect
                 ) { result ->
                     ConfiguredSourceResultCard(
                         game = result,
+                        presentation = configuredSourceResultToDiscoveryGame(result, allDiscoveryGames),
                         modifier = Modifier.width(180.dp).height(130.dp),
                         onClick = { openConfiguredResult(result) },
                     )
@@ -1782,6 +1783,7 @@ private fun BlueprintCatalogScreen(
                     ) { result ->
                         ConfiguredSourceResultCard(
                             game = result,
+                            presentation = configuredSourceResultToDiscoveryGame(result, allDiscoveryGames),
                             modifier = Modifier.width(156.dp).height(132.dp),
                             onClick = { onOpenConfiguredResult(result) },
                         )
@@ -2720,6 +2722,7 @@ private fun DiscoveryDetailsScreen(
 @Composable
 private fun ConfiguredSourceResultCard(
     game: DiscoverySourceGame,
+    presentation: DiscoveryGame = configuredSourceResultToDiscoveryGame(game),
     modifier: Modifier = Modifier,
     onClick: () -> Unit,
 ) {
@@ -2745,26 +2748,45 @@ private fun ConfiguredSourceResultCard(
             else MaterialTheme.colorScheme.outlineVariant,
         ),
     ) {
-        Column(Modifier.fillMaxSize().padding(12.dp)) {
-            Text(
-                game.platform.uppercase(),
-                color = MaterialTheme.colorScheme.primary,
-                fontSize = 9.sp,
-                fontWeight = FontWeight.Bold,
-            )
-            Text(
-                game.title,
-                fontSize = 13.sp,
-                fontWeight = FontWeight.SemiBold,
-                maxLines = 3,
-                overflow = TextOverflow.Ellipsis,
-            )
-            Spacer(Modifier.weight(1f))
-            Text(
-                "View details / import",
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                fontSize = 9.sp,
-            )
+        Box(Modifier.fillMaxSize()) {
+            presentation.coverUrl?.let { artwork ->
+                RemoteArtwork(
+                    artwork,
+                    Modifier.fillMaxSize(),
+                    fallbackKey = presentation.title,
+                )
+                Box(
+                    Modifier.fillMaxSize().background(
+                        Brush.verticalGradient(
+                            0f to Color(0x33030810),
+                            .45f to Color(0x77030810),
+                            1f to Color(0xF0030810),
+                        )
+                    )
+                )
+            }
+            Column(Modifier.fillMaxSize().padding(12.dp)) {
+                Text(
+                    game.platform.uppercase(),
+                    color = MaterialTheme.colorScheme.primary,
+                    fontSize = 9.sp,
+                    fontWeight = FontWeight.Bold,
+                )
+                Text(
+                    game.title,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 3,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Spacer(Modifier.weight(1f))
+                Text(
+                    if (presentation.coverUrl != null) "Cached metadata · View details"
+                    else "View details / import",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontSize = 9.sp,
+                )
+            }
         }
     }
 }

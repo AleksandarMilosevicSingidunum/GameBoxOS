@@ -66,6 +66,14 @@ id and opens the normal discovery Details flow. From there the user can:
 
 The external numeric id is hashed before it becomes a local GameBox game id. The Vimm
 result itself does not become a remote install source and does not enqueue a download.
+
+Before presenting a Vimm result, GameBox also checks its existing discovery cache for one
+and only one exact normalized title match on the same canonical platform. When that match
+is unambiguous, the temporary Vimm result reuses the cached description, rating, release
+metadata, cover/background/logo artwork and screenshots while retaining its Vimm-derived
+local identity and exact external vault link. Ambiguous same-title matches are deliberately
+left unenriched rather than guessed.
+
 For already cached Store titles, the configured Vimm source also appears on the details
 screen and opens the appropriate platform/title browse page.
 
