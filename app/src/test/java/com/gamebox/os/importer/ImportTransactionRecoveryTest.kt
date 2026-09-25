@@ -136,6 +136,46 @@ class ImportTransactionRecoveryTest {
     }
 
     @Test
+    fun markerShapedDirectoryDoesNotProtectInterruptedTransaction() {
+        val files = temporary.newFolder("files")
+        val imports = File(files, "imports").apply { mkdirs() }
+        val gameId = "fake-marker"
+        val tx = UUID.randomUUID().toString()
+        val target = File(imports, gameId).apply {
+            mkdirs()
+            resolve("game.iso").writeText("new")
+        }
+        val backup = File(imports, ".backup-" + gameId + "-" + tx).apply {
+            mkdirs()
+            resolve("game.iso").writeText("old")
+        }
+        File(imports, ".pending-registration-" + gameId + "-" + tx + ".json").mkdirs()
+
+        val report = ImportTransactionRecovery(files).recover()
+
+        assertEquals(1, report.rolledBackTransactions)
+        assertEquals("old", target.resolve("game.iso").readText())
+        assertFalse(backup.exists())
+    }
+
+    @Test
+    fun transactionNameRequiresLiteralLeadingDot() {
+        val files = temporary.newFolder("files")
+        val imports = File(files, "imports").apply { mkdirs() }
+        val gameId = "literal-dot"
+        val tx = UUID.randomUUID().toString()
+        val unrelated = File(imports, "xbackup-" + gameId + "-" + tx).apply {
+            mkdirs()
+            resolve("keep.iso").writeText("keep")
+        }
+
+        val report = ImportTransactionRecovery(files).recover()
+
+        assertEquals(0, report.rolledBackTransactions)
+        assertTrue(unrelated.resolve("keep.iso").isFile)
+    }
+
+    @Test
     fun malformedTransactionNamesAreIgnored() {
         val files = temporary.newFolder("files")
         val imports = File(files, "imports").apply { mkdirs() }
