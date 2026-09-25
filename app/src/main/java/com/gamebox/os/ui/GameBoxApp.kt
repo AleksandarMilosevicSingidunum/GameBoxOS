@@ -3968,6 +3968,7 @@ private fun SettingsScreen(
     var sourceName by remember { mutableStateOf("") }
     var sourceBaseUrl by remember { mutableStateOf("") }
     var sourceSearchTemplate by remember { mutableStateOf("") }
+    var sourcePlatforms by remember { mutableStateOf("") }
     var sourceMessage by remember { mutableStateOf<String?>(null) }
     var cloudProvider by remember(currentSettings.cloudSaveProvider) {
         mutableStateOf(currentSettings.cloudSaveProvider.uppercase())
@@ -4834,6 +4835,14 @@ private fun SettingsScreen(
             singleLine = true,
             modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
         )
+        OutlinedTextField(
+            value = sourcePlatforms,
+            onValueChange = { sourcePlatforms = it },
+            label = { Text("Optional consoles") },
+            supportingText = { Text("Comma-separated, for example: PS2, PSP, GameCube") },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
+        )
         Button(
             onClick = {
                 val existingIds = currentSettings.gameSources.map { it.id }.toSet()
@@ -4844,6 +4853,10 @@ private fun SettingsScreen(
                         name = trimmedName,
                         type = GameSourceProviderType.EXTERNAL_WEB,
                         baseUrl = sourceBaseUrl.trim(),
+                        platforms = sourcePlatforms.split(',')
+                            .map(String::trim)
+                            .filter(String::isNotEmpty)
+                            .toSet(),
                         searchUrlTemplate = sourceSearchTemplate.trim().takeIf(String::isNotEmpty),
                     )
                     scope.launch { settingsRepository.upsertGameSource(source) }
@@ -4853,6 +4866,7 @@ private fun SettingsScreen(
                     sourceName = ""
                     sourceBaseUrl = ""
                     sourceSearchTemplate = ""
+                    sourcePlatforms = ""
                     sourceMessage = "Added " + source.name
                 }.onFailure { error ->
                     sourceMessage = error.message ?: "Invalid game source"
