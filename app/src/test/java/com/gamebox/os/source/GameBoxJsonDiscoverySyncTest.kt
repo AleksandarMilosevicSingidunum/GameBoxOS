@@ -84,7 +84,6 @@ class GameBoxJsonDiscoverySyncTest {
     @Test
     fun syncPreservesFavoritesExistingPlatformAndScopesConfiguredPlatforms() = runBlocking {
         val dao = FakeDiscoveryDao(
-            favoriteExternalId = "../owned-game",
             existingPlatform = CatalogPlatformEntity(
                 id = "ps2",
                 name = "Sony Playstation 2",
@@ -183,7 +182,6 @@ class GameBoxJsonDiscoverySyncTest {
     }
 
     private class FakeDiscoveryDao(
-        private val favoriteExternalId: String? = null,
         private val existingPlatform: CatalogPlatformEntity? = null,
     ) : CatalogDiscoveryDao {
         val platforms = mutableListOf<CatalogPlatformEntity>()
