@@ -189,8 +189,8 @@ class ImportRegistrationJournal(
     }
 
     suspend fun reconcile(
-        gameLookup: suspend (GameId) -> Game?,
         createdBeforeMillis: Long = Long.MAX_VALUE,
+        gameLookup: suspend (GameId) -> Game?,
     ): ImportRegistrationRecoveryReport {
         require(createdBeforeMillis >= 0L) { "Import recovery cutoff is invalid" }
         var confirmed = 0
