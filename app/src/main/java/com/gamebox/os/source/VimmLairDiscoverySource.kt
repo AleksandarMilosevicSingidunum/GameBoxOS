@@ -252,11 +252,11 @@ private fun vimmMetaContent(html: String, property: String): String? {
     val escaped = Regex.escape(property)
     val patterns = listOf(
         Regex(
-            """<meta\\b[^>]*property\\s*=\\s*["']$escaped["'][^>]*content\\s*=\\s*["']([^"']+)["'][^>]*>""",
+            """<meta\b[^>]*property\s*=\s*["']$escaped["'][^>]*content\s*=\s*["']([^"']+)["'][^>]*>""",
             RegexOption.IGNORE_CASE,
         ),
         Regex(
-            """<meta\\b[^>]*content\\s*=\\s*["']([^"']+)["'][^>]*property\\s*=\\s*["']$escaped["'][^>]*>""",
+            """<meta\b[^>]*content\s*=\s*["']([^"']+)["'][^>]*property\s*=\s*["']$escaped["'][^>]*>""",
             RegexOption.IGNORE_CASE,
         ),
     )
@@ -268,7 +268,7 @@ private fun vimmMetaContent(html: String, property: String): String? {
 }
 
 private fun vimmHtmlTitle(html: String): String? =
-    Regex("""<title\\b[^>]*>(.*?)</title>""", setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL))
+    Regex("""<title\b[^>]*>(.*?)</title>""", setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL))
         .find(html)
         ?.groupValues
         ?.getOrNull(1)
@@ -278,13 +278,13 @@ private fun vimmHtmlTitle(html: String): String? =
 
 private fun cleanVimmPageTitle(value: String): String =
     value
-        .replace(Regex("""\\s*[-|:]\\s*Vimm['’]s Lair.*$""", RegexOption.IGNORE_CASE), "")
+        .replace(Regex("""\s*[-|:]\s*Vimm['’]s Lair.*$""", RegexOption.IGNORE_CASE), "")
         .replace(Regex("\\s+"), " ")
         .trim()
 
 private fun vimmLabeledValue(html: String, labels: Set<String>): String? {
     val row = Regex(
-        """<tr\\b[^>]*>\\s*<(?:th|td)\\b[^>]*>\\s*([^<]{1,40})\\s*</(?:th|td)>\\s*<td\\b[^>]*>(.*?)</td>\\s*</tr>""",
+        """<tr\b[^>]*>\s*<(?:th|td)\b[^>]*>\s*([^<]{1,40})\s*</(?:th|td)>\s*<td\b[^>]*>(.*?)</td>\s*</tr>""",
         setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL),
     )
     val normalizedLabels = labels.map { normalizeCatalogTitle(it) }.toSet()
