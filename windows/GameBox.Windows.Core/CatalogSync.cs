@@ -100,11 +100,3 @@ public sealed class WindowsCatalogSyncClient
     private sealed record RemoteEnvelope(List<RemoteCatalogGame>? Games);
     private sealed record RemoteCatalogGame(string Id, string Title, string Platform, string? SourceUrl = null);
 }
-
-public sealed class StubHttpMessageHandler : HttpMessageHandler
-{
-    private readonly Func<HttpRequestMessage, HttpResponseMessage> _handler;
-    public StubHttpMessageHandler(Func<HttpRequestMessage, HttpResponseMessage> handler) => _handler = handler;
-    protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken) =>
-        Task.FromResult(_handler(request));
-}
