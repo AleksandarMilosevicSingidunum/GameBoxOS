@@ -31,6 +31,7 @@ import com.gamebox.os.data.local.MIGRATION_11_12
 import com.gamebox.os.data.local.MIGRATION_12_13
 import com.gamebox.os.data.local.MIGRATION_13_14
 import com.gamebox.os.data.local.RoomLaunchSessionJournal
+import com.gamebox.os.data.local.toDomain
 import com.gamebox.os.download.AuthorizedDownloadController
 import com.gamebox.os.download.WorkManagerAuthorizedDownloadController
 import com.gamebox.os.download.RemoteDownloadController
@@ -54,6 +55,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 
 interface AppContainer {
     val managedSaveDiscovery: com.gamebox.os.storage.ManagedSaveDiscovery
@@ -160,6 +162,12 @@ class DefaultAppContainer(context: Context) : AppContainer {
         onCatalogSeeded = settingsRepository::markCatalogSeeded,
         onCatalogRefreshed = settingsRepository::markCatalogRefreshed
     )
+
+    private val importRegistrationRecovery = applicationScope.launch {
+        authorizedRomImporter.reconcilePendingRegistrations { gameId ->
+            database.gameDao().getById(gameId.value)?.toDomain()
+        }
+    }
 
     override val managedSaveDiscovery = com.gamebox.os.storage.ManagedSaveDiscovery(
         gameRepository,
