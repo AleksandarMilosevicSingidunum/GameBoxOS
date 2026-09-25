@@ -7,9 +7,15 @@ The manifest keeps the ordinary launcher and TV launcher entries and also advert
 `singleTask` so repeated Home resolution reuses the GameBox task instead of building
 duplicate launcher stacks. GameBox does not silently replace the user's launcher.
 
-Open **Settings → System → Choose default Home app** and select GameBox. After Android
-finishes booting and the required device unlock is completed, pressing Home and normal
-launcher resolution return to GameBox.
+If GameBox is not currently the resolved Android Home app, the GameBox Home screen shows
+an actionable **Finish console mode** banner. Choose **Choose Home** to open Android's
+Home-app selector. The same action remains available under **Settings → System → Choose
+default Home app**.
+
+After Android finishes booting and the required device unlock is completed, pressing Home
+and normal launcher resolution return to GameBox. When the Android selector returns to
+GameBox, the banner immediately rechecks the resolved Home package and disappears once
+GameBox is selected.
 
 ## Important limits
 
@@ -24,6 +30,7 @@ launcher resolution return to GameBox.
 - Selecting GameBox as Home is reversible through Android's default-app settings.
 
 Android instrumentation verifies that `MainActivity` remains discoverable as a HOME
-candidate and retains the expected single-task launch mode. These tests prove Android
+candidate and retains the expected single-task launch mode. Unit coverage verifies the
+package-match policy used by the Home status banner. These tests prove Android
 registration/configuration only; they do not prove Honor firmware boot, unlock or
 external-display behavior.
