@@ -128,6 +128,7 @@ import com.gamebox.os.source.GameSourceConfig
 import com.gamebox.os.source.GameSourceProviderType
 import com.gamebox.os.source.nextGameSourceId
 import com.gamebox.os.source.resolveBrowseUrl
+import com.gamebox.os.source.supportsPlatform
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
@@ -949,6 +950,7 @@ private fun CatalogScreen(
         CatalogFailureSimulation.ERROR -> CatalogRefreshState.ERROR
     }
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
     val controllerActions = LocalControllerActions.current
     val searchFocusRequester = remember { FocusRequester() }
     LaunchedEffect(focusSearchOnEnter) {
@@ -1038,6 +1040,26 @@ val allDiscoveryGames by discoveryRepository.observeGames(null, "", 250).collect
         )
         return
     }
+    val configuredSources = remember(gameSources, selectedConsole) {
+        gameSources.filter { it.supportsPlatform(selectedConsole?.label) }
+    }
+
+    fun openConfiguredSource(source: GameSourceConfig) {
+        val platformLabel = selectedConsole?.label.orEmpty()
+        val target = runCatching {
+            if (query.isBlank() && platformLabel.isBlank()) source.baseUrl
+            else source.resolveBrowseUrl(query, platformLabel)
+        }.getOrElse { error ->
+            discoverySyncMessage = error.message ?: "Configured source URL is invalid"
+            return
+        }
+        try {
+            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(target)))
+        } catch (_: ActivityNotFoundException) {
+            discoverySyncMessage = "No browser is available to open " + source.name
+        }
+    }
+
     fun syncDiscovery() {
         discoverySyncing = true
         discoverySyncProgress = 0f
@@ -1086,6 +1108,8 @@ val allDiscoveryGames by discoveryRepository.observeGames(null, "", 250).collect
             discoverySyncProgress = discoverySyncProgress,
             discoverySyncMessage = discoverySyncMessage,
             providerHealth = providerHealth,
+            configuredSources = configuredSources,
+            onOpenConfiguredSource = ::openConfiguredSource,
             onRefresh = repository::refreshCatalog,
             onSync = ::syncDiscovery,
             openAuthorized = open,
@@ -1262,6 +1286,32 @@ val allDiscoveryGames by discoveryRepository.observeGames(null, "", 250).collect
                 )
             }
         }
+        if (configuredSources.isNotEmpty()) {
+            Spacer(Modifier.height(14.dp))
+            Text("Configured sources", fontSize = 15.sp, fontWeight = FontWeight.Bold)
+            Text(
+                if (query.isBlank()) "Open a source for ${selectedConsole?.label ?: "all consoles"}."
+                else "Search configured sources for “$query”.",
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                fontSize = 11.sp,
+            )
+            Row(
+                Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(top = 6.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                configuredSources.forEach { source ->
+                    OutlinedButton(
+                        onClick = { openConfiguredSource(source) },
+                        modifier = Modifier.semantics {
+                            contentDescription = "Open ${source.name} configured game source"
+                        },
+                    ) {
+                        Icon(Icons.Rounded.OpenInNew, null, Modifier.size(15.dp))
+                        Text(source.name, Modifier.padding(start = 6.dp))
+                    }
+                }
+            }
+        }
         Spacer(Modifier.height(10.dp))
         val visibleDiscovery = discoveryGames.filter {
             (!favoritesOnly || it.favorite) && matchesStoreMetadataFilters(
@@ -1305,6 +1355,8 @@ private fun BlueprintCatalogScreen(
     discoverySyncProgress: Float,
     discoverySyncMessage: String?,
     providerHealth: ProviderHealth,
+    configuredSources: List<GameSourceConfig>,
+    onOpenConfiguredSource: (GameSourceConfig) -> Unit,
     onRefresh: () -> Unit,
     onSync: () -> Unit,
     openAuthorized: (Game) -> Unit,
@@ -1447,6 +1499,30 @@ private fun BlueprintCatalogScreen(
                     shape = RoundedCornerShape(8.dp),
                 )
                 Text("Metadata includes artwork and details. Open a title to import a copy or view its sources.", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 10.sp, lineHeight = 14.sp)
+                if (configuredSources.isNotEmpty()) {
+                    Text("CONFIGURED SOURCES", color = MaterialTheme.colorScheme.primary, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                    configuredSources.take(4).forEach { source ->
+                        OutlinedButton(
+                            onClick = { onOpenConfiguredSource(source) },
+                            modifier = Modifier.fillMaxWidth().heightIn(min = 34.dp).semantics {
+                                contentDescription = "Open ${source.name} configured game source"
+                            },
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+                        ) {
+                            Icon(Icons.Rounded.OpenInNew, null, Modifier.size(13.dp))
+                            Text(
+                                source.name,
+                                Modifier.padding(start = 5.dp).weight(1f),
+                                fontSize = 9.sp,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        }
+                    }
+                    if (configuredSources.size > 4) {
+                        Text("+${configuredSources.size - 4} more in Settings", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 9.sp)
+                    }
+                }
             }
             }
             if (!installedOnly) {
