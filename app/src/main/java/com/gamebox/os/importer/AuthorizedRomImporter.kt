@@ -43,9 +43,20 @@ class AuthorizedRomImporter(
     private val maxBytes: Long = 64L * 1024 * 1024 * 1024,
 ) {
     private val applicationContext = context.applicationContext
+    private val transactionRecovery = ImportTransactionRecovery(applicationContext.filesDir)
+    @Volatile private var startupRecoveryFailed = false
 
     init {
         require(maxBytes > 0)
+        startupRecoveryFailed = transactionRecovery.recover().failures > 0
+    }
+
+    private fun recoverBeforeMutation(): String? {
+        val report = transactionRecovery.recover()
+        startupRecoveryFailed = report.failures > 0
+        return if (startupRecoveryFailed) {
+            "Interrupted import recovery could not complete; check app storage before retrying"
+        } else null
     }
 
     suspend fun import(
@@ -54,6 +65,7 @@ class AuthorizedRomImporter(
         displayName: String,
         platform: String? = null,
     ): RomImportResult = withContext(Dispatchers.IO) {
+        recoverBeforeMutation()?.let { return@withContext RomImportResult.Failed(it) }
         val relativePath = runCatching {
             RomImportPolicy.relativePath(gameId, displayName, platform)
         }.getOrElse { return@withContext RomImportResult.Rejected(it.message ?: "Invalid game file") }
@@ -107,6 +119,7 @@ class AuthorizedRomImporter(
         platform: String? = null,
         expectedFiles: List<com.gamebox.os.domain.LocalContentFile>? = null,
     ): RomImportSetResult = withContext(Dispatchers.IO) {
+        recoverBeforeMutation()?.let { return@withContext RomImportSetResult.Failed(it) }
         if (sources.isEmpty()) return@withContext RomImportSetResult.Rejected("Select at least one game file")
         if (sources.size > 64) return@withContext RomImportSetResult.Rejected("A disc set may contain at most 64 files")
         val safeNames = runCatching {
