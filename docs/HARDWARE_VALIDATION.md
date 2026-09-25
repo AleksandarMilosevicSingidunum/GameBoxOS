@@ -18,3 +18,17 @@ Preliminary evidence only: wired desktop output through a non-final dock was obs
 - [ ] Airplane-mode/offline catalog and library operation
 - [ ] Recovery after app process death, external-display mode changes, and device restart
 - [ ] Exact hub/phone/cable measurements recorded before final CAD release
+
+
+## On-device runtime evidence
+
+During Honor Magic5 Pro acceptance, keep **GameBox Settings** open while connecting and
+disconnecting the final hub. The runtime status cards expose the controller identity,
+active audio route, detected secondary displays with their reported resolution, active
+network transport (including Ethernet versus Wi-Fi), battery percentage, and Android's
+reported charging source.
+
+These values are diagnostic evidence, not a substitute for the physical checks above.
+Record the displayed status before and after HDMI reconnect, controller reconnect, PD
+load, and Ethernet tests so a failure can be correlated with what Android actually
+reported to GameBox.

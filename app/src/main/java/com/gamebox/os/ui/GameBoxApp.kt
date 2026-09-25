@@ -4413,7 +4413,7 @@ private fun SettingsScreen(
         SettingsStatusCard(
             Icons.Rounded.SportsEsports,
             if (connectedControllers == 1) "1 game controller connected" else "$connectedControllers game controllers connected",
-            "Pair controllers in Android, then return to GameBox. D-pad, A/B and shoulder navigation work throughout the shell.",
+            runtimeStatus.controllerLabel + ". Pair controllers in Android, then return to GameBox.",
         )
         SettingsActionRow("Open Bluetooth controller settings", Icons.Rounded.Bluetooth) {
             launchSystemSettings(Settings.ACTION_BLUETOOTH_SETTINGS)
@@ -4474,7 +4474,22 @@ private fun SettingsScreen(
         }
         Spacer(Modifier.height(18.dp))
         SettingsSectionHeader("Display", sectionAnchor(SettingsSection.DISPLAY))
-        SettingsStatusCard(Icons.Rounded.Monitor, "Responsive display mode", if (compact) "Phone layout active" else "Wide / DeX layout active")
+        SettingsStatusCard(
+            Icons.Rounded.Monitor,
+            "Responsive display mode",
+            if (compact) "Phone layout active" else "Wide / DeX layout active",
+        )
+        SettingsStatusCard(
+            Icons.Rounded.Cable,
+            if (runtimeStatus.externalDisplayNames.isEmpty()) "External display not detected"
+            else "External display detected",
+            runtimeStatus.externalDisplayLabel,
+        )
+        SettingsStatusCard(
+            Icons.Rounded.BatteryChargingFull,
+            "Phone power",
+            runtimeStatus.powerLabel,
+        )
         Text("TV safe area", fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 10.dp))
         Text(
             "Keeps the complete GameBox viewport inside a television's visible area. This setting applies only to wide TV / DeX layouts.",
@@ -4509,7 +4524,11 @@ private fun SettingsScreen(
         }
         Spacer(Modifier.height(18.dp))
         SettingsSectionHeader("Audio", sectionAnchor(SettingsSection.AUDIO))
-        SettingsStatusCard(Icons.AutoMirrored.Rounded.VolumeUp, "System audio", "GameBox respects Android media volume and the active output route.")
+        SettingsStatusCard(
+            Icons.AutoMirrored.Rounded.VolumeUp,
+            "System audio · " + runtimeStatus.audioOutputLabel,
+            "GameBox respects Android media volume and the active output route.",
+        )
         SettingsActionRow("Open Android sound settings", Icons.AutoMirrored.Rounded.VolumeUp) {
             launchSystemSettings(Settings.ACTION_SOUND_SETTINGS)
         }
@@ -4517,8 +4536,9 @@ private fun SettingsScreen(
         SettingsSectionHeader("Network", sectionAnchor(SettingsSection.NETWORK))
         SettingsStatusCard(
             Icons.Rounded.Wifi,
-            if (networkReady) "Internet connection available" else "Offline mode active",
-            if (networkReady) "Catalog refresh, metadata, downloads and cloud saves can use the current network." else "Bundled catalog and installed games remain available.",
+            runtimeStatus.networkTransportLabel + " · " + runtimeStatus.networkLabel,
+            if (networkReady) "Catalog refresh, metadata, downloads and cloud saves can use the current network."
+            else "Bundled catalog and installed games remain available.",
         )
         SettingsActionRow("Open Android network settings", Icons.Rounded.Wifi) {
             launchSystemSettings(Settings.ACTION_WIRELESS_SETTINGS)
