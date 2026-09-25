@@ -37,6 +37,7 @@ class ImportTransactionRecovery(filesDirectory: File) {
         val entries = importsRoot.listFiles().orEmpty().toList()
         val transactions = mutableMapOf<TransactionKey, TransactionFiles>()
         val pendingRegistrationKeys = entries.mapNotNull { entry ->
+            if (!entry.isFile || Files.isSymbolicLink(entry.toPath())) return@mapNotNull null
             PENDING_REGISTRATION_NAME.matchEntire(entry.name)?.let { match ->
                 TransactionKey(match.groupValues[1], match.groupValues[2])
             }
@@ -172,7 +173,7 @@ class ImportTransactionRecovery(filesDirectory: File) {
     private companion object {
         // Game IDs may contain dashes; UUID is captured from the fixed 36-char suffix.
         val TRANSACTION_NAME = Regex(
-            """.(staging|backup)-([a-z0-9][a-z0-9-]{0,95})-([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})"""
+            """\.(staging|backup)-([a-z0-9][a-z0-9-]{0,95})-([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})"""
         )
     }
 }
