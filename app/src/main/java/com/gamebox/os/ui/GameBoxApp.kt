@@ -1188,6 +1188,22 @@ val allDiscoveryGames by discoveryRepository.observeGames(null, "", 250).collect
         }
     }
 
+    fun openConfiguredResult(result: DiscoverySourceGame) {
+        val source = gameSources.firstOrNull { it.id.equals(result.sourceId, ignoreCase = true) }
+        val target = result.detailsUrl ?: source?.let {
+            runCatching { it.resolveBrowseUrl(result.title, result.platform) }.getOrNull()
+        }
+        if (target == null) {
+            discoverySyncMessage = "No external page is available for " + result.title
+            return
+        }
+        try {
+            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(target)))
+        } catch (_: ActivityNotFoundException) {
+            discoverySyncMessage = "No browser is available to open " + result.title
+        }
+    }
+
     fun syncDiscovery() {
         discoverySyncing = true
         discoverySyncProgress = 0f
@@ -1237,7 +1253,9 @@ val allDiscoveryGames by discoveryRepository.observeGames(null, "", 250).collect
             discoverySyncMessage = discoverySyncMessage,
             providerHealth = providerHealth,
             configuredSources = configuredSources,
+            configuredSourceResults = configuredSourceResults,
             onOpenConfiguredSource = ::openConfiguredSource,
+            onOpenConfiguredResult = ::openConfiguredResult,
             onRefresh = repository::refreshCatalog,
             onSync = ::syncDiscovery,
             openAuthorized = open,
@@ -1460,6 +1478,32 @@ val allDiscoveryGames by discoveryRepository.observeGames(null, "", 250).collect
                 }
             }
         }
+        if (configuredSourceResults.isNotEmpty()) {
+            Spacer(Modifier.height(10.dp))
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text("Configured source results", fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                Text(
+                    configuredSourceResults.size.toString() + " titles",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontSize = 10.sp,
+                )
+            }
+            LazyRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.padding(top = 6.dp),
+            ) {
+                items(
+                    configuredSourceResults,
+                    key = { it.sourceId + ":" + it.externalId },
+                ) { result ->
+                    ConfiguredSourceResultCard(
+                        game = result,
+                        modifier = Modifier.width(180.dp).height(130.dp),
+                        onClick = { openConfiguredResult(result) },
+                    )
+                }
+            }
+        }
         Spacer(Modifier.height(10.dp))
         val visibleDiscovery = discoveryGames.filter {
             (!favoritesOnly || it.favorite) && matchesStoreMetadataFilters(
@@ -1504,7 +1548,9 @@ private fun BlueprintCatalogScreen(
     discoverySyncMessage: String?,
     providerHealth: ProviderHealth,
     configuredSources: List<GameSourceConfig>,
+    configuredSourceResults: List<DiscoverySourceGame>,
     onOpenConfiguredSource: (GameSourceConfig) -> Unit,
+    onOpenConfiguredResult: (DiscoverySourceGame) -> Unit,
     onRefresh: () -> Unit,
     onSync: () -> Unit,
     openAuthorized: (Game) -> Unit,
@@ -1680,6 +1726,28 @@ private fun BlueprintCatalogScreen(
                     }
                 }
             }
+            }
+            if (configuredSourceResults.isNotEmpty() && !installedOnly) {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text("Configured source results", fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                    Text(
+                        configuredSourceResults.size.toString() + " titles",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontSize = 10.sp,
+                    )
+                }
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    items(
+                        configuredSourceResults,
+                        key = { it.sourceId + ":" + it.externalId },
+                    ) { result ->
+                        ConfiguredSourceResultCard(
+                            game = result,
+                            modifier = Modifier.width(156.dp).height(132.dp),
+                            onClick = { onOpenConfiguredResult(result) },
+                        )
+                    }
+                }
             }
             if (!installedOnly) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
@@ -2585,6 +2653,58 @@ private fun DiscoveryDetailsScreen(
                     Text(it, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun ConfiguredSourceResultCard(
+    game: DiscoverySourceGame,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit,
+) {
+    var focused by remember { mutableStateOf(false) }
+    val source = remember { MutableInteractionSource() }
+    val hovered by source.collectIsHoveredAsState()
+    Surface(
+        modifier = modifier
+            .hoverable(source)
+            .focusDebugTarget()
+            .onFocusChanged { focused = it.isFocused }
+            .clickable(interactionSource = source, indication = null, onClick = onClick)
+            .semantics {
+                contentDescription = game.title + ", " + game.platform +
+                    ", external discovery result"
+                role = Role.Button
+            },
+        shape = RoundedCornerShape(8.dp),
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(
+            if (focused || hovered) 2.dp else 1.dp,
+            if (focused || hovered) MaterialTheme.colorScheme.primary
+            else MaterialTheme.colorScheme.outlineVariant,
+        ),
+    ) {
+        Column(Modifier.fillMaxSize().padding(12.dp)) {
+            Text(
+                game.platform.uppercase(),
+                color = MaterialTheme.colorScheme.primary,
+                fontSize = 9.sp,
+                fontWeight = FontWeight.Bold,
+            )
+            Text(
+                game.title,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 3,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Spacer(Modifier.weight(1f))
+            Text(
+                "Open source page",
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                fontSize = 9.sp,
+            )
         }
     }
 }
