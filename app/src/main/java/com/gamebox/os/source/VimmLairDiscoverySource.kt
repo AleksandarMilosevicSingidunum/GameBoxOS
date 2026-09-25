@@ -359,6 +359,44 @@ internal fun vimmLairBrowseUrl(
     }
 }
 
+data class VimmLairSearchSummary(
+    val games: List<DiscoverySourceGame>,
+    val attemptedPlatforms: List<String>,
+    val failedPlatforms: List<String>,
+)
+
+suspend fun searchVimmLairAcrossPlatforms(
+    config: GameSourceConfig,
+    query: String,
+    selectedPlatform: String? = null,
+    transport: VimmLairTransport = HttpsVimmLairTransport(),
+): VimmLairSearchSummary {
+    val platforms = vimmLairSearchPlatforms(config, selectedPlatform)
+    require(platforms.isNotEmpty()) {
+        if (selectedPlatform.isNullOrBlank()) "No supported Vimm console is configured"
+        else "Vimm is not available for " + selectedPlatform
+    }
+    val source = VimmLairDiscoverySource(config, transport)
+    val games = mutableListOf<DiscoverySourceGame>()
+    val failed = mutableListOf<String>()
+    platforms.forEach { platform ->
+        runCatching {
+            source.search(platform = platform, query = query).games
+        }.onSuccess(games::addAll)
+            .onFailure { failed += platform }
+    }
+    return VimmLairSearchSummary(
+        games = games
+            .distinctBy { it.sourceId.lowercase() + ":" + it.externalId }
+            .sortedWith(
+                compareBy<DiscoverySourceGame> { it.platform.lowercase() }
+                    .thenBy { it.title.lowercase() }
+            ),
+        attemptedPlatforms = platforms,
+        failedPlatforms = failed,
+    )
+}
+
 internal fun vimmLairSearchPlatforms(
     config: GameSourceConfig,
     selectedPlatform: String?,
