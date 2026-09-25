@@ -127,6 +127,7 @@ import com.gamebox.os.navigation.GameBoxNavigationRequest
 import com.gamebox.os.source.GameSourceConfig
 import com.gamebox.os.source.GameSourceProviderType
 import com.gamebox.os.source.nextGameSourceId
+import com.gamebox.os.source.resolveBrowseUrl
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
@@ -343,6 +344,7 @@ fun GameBoxApp(
                             repository, catalogDiscoveryRepository, authorizedRomImporter, games, restorableGameId, rememberGameFocus, compact,
                             catalogFailureSimulation = appSettings.catalogFailureSimulation,
                             providerHealth = appSettings.theGamesDbHealth,
+                            gameSources = appSettings.gameSources,
                             uiState = uiState,
                             focusSearchOnEnter = focusStoreSearchOnEnter,
                             onSearchFocusHandled = { focusStoreSearchOnEnter = false },
@@ -933,6 +935,7 @@ private fun CatalogScreen(
     compact: Boolean,
     catalogFailureSimulation: CatalogFailureSimulation = CatalogFailureSimulation.LIVE,
     providerHealth: ProviderHealth = ProviderHealth(),
+    gameSources: List<GameSourceConfig> = emptyList(),
     uiState: GameBoxUiState,
     focusSearchOnEnter: Boolean = false,
     onSearchFocusHandled: () -> Unit = {},
@@ -1031,6 +1034,7 @@ val allDiscoveryGames by discoveryRepository.observeGames(null, "", 250).collect
             },
             importer = authorizedRomImporter,
             repository = repository,
+            gameSources = gameSources,
         )
         return
     }
@@ -2068,12 +2072,25 @@ private fun DiscoveryDetailsScreen(
     onFavorite: () -> Unit,
     importer: AuthorizedRomImporter,
     repository: GameRepository,
+    gameSources: List<GameSourceConfig> = emptyList(),
 ) {
     val detail = remember(game, platformName) { GameDetailPresentation.from(game, platformName) }
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val legalSources = remember(game.title, game.platformId) {
         legalSourceLinks(game.title, game.platformId)
+    }
+    val configuredSources = remember(game.title, platformName, gameSources) {
+        gameSources.filter { source ->
+            source.enabled && (
+                source.platforms.isEmpty() ||
+                    source.platforms.any { normalizeCatalogTitle(it) == normalizeCatalogTitle(platformName) }
+            )
+        }.mapNotNull { source ->
+            runCatching {
+                source.name to source.resolveBrowseUrl(game.title, platformName)
+            }.getOrNull()
+        }
     }
     val importPlatformLabel = remember(platformName) {
         RomImportPolicy.profileLabel(platformName)
@@ -2267,6 +2284,25 @@ private fun DiscoveryDetailsScreen(
                         }) {
                             Icon(Icons.Rounded.OpenInNew, null, Modifier.size(15.dp))
                             Text(source.label, Modifier.padding(start = 7.dp), fontSize = 11.sp)
+                        }
+                    }
+                }
+            }
+            if (configuredSources.isNotEmpty()) {
+                Text("Configured sources", fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                Text(
+                    "These are discovery links only. Installing content still requires an imported copy or a verified trusted catalog source.",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontSize = 11.sp,
+                )
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(9.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    configuredSources.forEach { (label, url) ->
+                        OutlinedButton(onClick = {
+                            try { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) }
+                            catch (_: ActivityNotFoundException) { importMessage = "No browser is available to open " + label }
+                        }) {
+                            Icon(Icons.Rounded.OpenInNew, null, Modifier.size(15.dp))
+                            Text(label, Modifier.padding(start = 7.dp), fontSize = 11.sp)
                         }
                     }
                 }
