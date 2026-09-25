@@ -5364,7 +5364,7 @@ private fun SettingsScreen(
             }
             GameSourceProviderType.VIMM_LAIR -> {
                 Text(
-                    "Searches Vimm vault listing pages and opens matching title pages externally. GameBox does not extract media IDs or download game binaries from this source.",
+                    "Searches Vimm vault listings, hydrates selected title metadata inside GameBox, and keeps the exact vault page available as an external link. GameBox does not extract media IDs or download game binaries from this source.",
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontSize = 11.sp,
                     modifier = Modifier.padding(top = 6.dp),
