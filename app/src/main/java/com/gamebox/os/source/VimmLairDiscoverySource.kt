@@ -330,6 +330,73 @@ internal fun vimmLairBrowseUrl(
     }
 }
 
+data class VimmLairSearchSummary(
+    val games: List<DiscoverySourceGame>,
+    val attemptedPlatforms: List<String>,
+    val failedPlatforms: List<String>,
+)
+
+suspend fun searchVimmLairAcrossPlatforms(
+    config: GameSourceConfig,
+    query: String,
+    selectedPlatform: String? = null,
+    transport: VimmLairTransport = HttpsVimmLairTransport(),
+): VimmLairSearchSummary {
+    val platforms = vimmLairSearchPlatforms(config, selectedPlatform)
+    require(platforms.isNotEmpty()) {
+        if (selectedPlatform.isNullOrBlank()) "No supported Vimm console is configured"
+        else "Vimm is not available for " + selectedPlatform
+    }
+    val source = VimmLairDiscoverySource(config, transport)
+    val games = mutableListOf<DiscoverySourceGame>()
+    val failed = mutableListOf<String>()
+    platforms.forEach { platform ->
+        runCatching {
+            source.search(platform = platform, query = query).games
+        }.onSuccess(games::addAll)
+            .onFailure { failed += platform }
+    }
+    return VimmLairSearchSummary(
+        games = games
+            .distinctBy { it.sourceId.lowercase() + ":" + it.externalId }
+            .sortedWith(
+                compareBy<DiscoverySourceGame> { it.platform.lowercase() }
+                    .thenBy { it.title.lowercase() }
+            ),
+        attemptedPlatforms = platforms,
+        failedPlatforms = failed,
+    )
+}
+
+internal fun vimmLairSearchPlatforms(
+    config: GameSourceConfig,
+    selectedPlatform: String?,
+    maxPlatforms: Int = 8,
+): List<String> {
+    require(maxPlatforms in 1..16) { "Vimm search platform limit must be between 1 and 16" }
+    selectedPlatform?.trim()?.takeIf(String::isNotEmpty)?.let { selected ->
+        return if (config.supportsPlatform(selected) && vimmLairPlatformSlug(selected) != null) {
+            listOf(selected)
+        } else {
+            emptyList()
+        }
+    }
+
+    val candidates = if (config.platforms.isNotEmpty()) {
+        config.platforms.toList()
+    } else {
+        listOf("PS2", "GameCube", "Wii", "PSP", "Dreamcast")
+    }
+    return candidates.asSequence()
+        .map(String::trim)
+        .filter(String::isNotEmpty)
+        .filter { vimmLairPlatformSlug(it) != null }
+        .distinctBy { normalizeCatalogTitle(it) }
+        .sortedBy { normalizeCatalogTitle(it) }
+        .take(maxPlatforms)
+        .toList()
+}
+
 internal fun vimmLairPlatformSlug(platform: String): String? {
     return when (normalizeCatalogTitle(platform)) {
         "ps2", "playstation2", "sonyplaystation2" -> "PS2"
