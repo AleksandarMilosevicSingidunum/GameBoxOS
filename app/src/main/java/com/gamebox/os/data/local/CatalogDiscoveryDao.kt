@@ -46,6 +46,9 @@ interface CatalogDiscoveryDao {
     @Query("UPDATE catalog_games SET favorite = :favorite WHERE id = :gameId")
     suspend fun setFavorite(gameId: String, favorite: Boolean)
 
+    @Query("SELECT id FROM catalog_games WHERE favorite = 1 AND id IN (:gameIds)")
+    suspend fun favoriteGameIds(gameIds: List<String>): List<String>
+
     @Transaction
     suspend fun upsertPage(
         platform: CatalogPlatformEntity,
