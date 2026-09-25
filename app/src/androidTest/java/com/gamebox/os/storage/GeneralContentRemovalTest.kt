@@ -99,7 +99,8 @@ class GeneralContentRemovalTest {
                 writeText("FILE \"track.bin\" BINARY\n  TRACK 01 MODE2/2352\n    INDEX 01 00:00:00\n")
             }
             val sourceTrack = fixture("sources/track.bin")
-            val result = AuthorizedRomImporter(context).importSet(game.id,
+            val importer = AuthorizedRomImporter(context)
+            val result = importer.importSet(game.id,
                 listOf(RomImportSource(Uri.fromFile(sourceCue), "game.cue"),
                     RomImportSource(Uri.fromFile(sourceTrack), "track.bin")), "PS1")
             assertTrue(result.toString(), result is RomImportSetResult.Imported)
@@ -113,6 +114,7 @@ class GeneralContentRemovalTest {
                     LocalContentFile(RomImportPolicy.importRootRelativePath(game.id, it.relativePath),
                         it.hashes.sha256, it.mimeType)
                 }))
+            importer.confirmRegistration(game.id, imported.transactionId)
             withTimeout(5_000) { repository.observeGames().first { rows -> rows.any { it.id == game.id && it.state == InstallState.INSTALLED } } }
             assertEquals("content", save.readText())
             assertEquals(42, repository.game(game.id)?.minutesPlayed)
