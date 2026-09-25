@@ -60,6 +60,34 @@ class VimmLairDiscoverySourceTest {
     }
 
     @Test
+    fun multiConsoleSearchKeepsSuccessfulResultsWhenOnePlatformFails() = runBlocking {
+        val config = GameSourceConfig(
+            id = "vimm",
+            name = "Vimm",
+            type = GameSourceProviderType.VIMM_LAIR,
+            baseUrl = "https://vimm.net/vault",
+            platforms = setOf("PS2", "GameCube"),
+        )
+        val summary = searchVimmLairAcrossPlatforms(
+            config = config,
+            query = "God",
+            transport = VimmLairTransport { uri ->
+                when {
+                    uri.path.contains("/GameCube/") -> throw java.io.IOException("temporary")
+                    uri.path.contains("/PS2/") -> """<a href="/vault/100">God Hand</a>"""
+                    else -> ""
+                }
+            },
+        )
+
+        assertEquals(listOf("GameCube", "PS2"), summary.attemptedPlatforms)
+        assertEquals(listOf("GameCube"), summary.failedPlatforms)
+        assertEquals(1, summary.games.size)
+        assertEquals("PS2", summary.games.single().platform)
+        assertEquals("God Hand", summary.games.single().title)
+    }
+
+    @Test
     fun browseUrlUsesPlatformAndAlphabetBucket() {
         assertEquals(
             "https://vimm.net/vault/PS2/G",
