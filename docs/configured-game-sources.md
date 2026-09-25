@@ -49,6 +49,11 @@ Choose **Vimm's Lair** in Settings and use the preset to populate:
 All fields remain editable before saving, so Vimm integration is an optional configured
 source rather than a mandatory built-in Store backend.
 
+Saved Vimm sources also expose a **Test** action in Settings. The probe performs one
+bounded request to a supported alphabetical vault listing page and verifies that the
+response still contains numeric `/vault/<id>` game links. This distinguishes basic
+reachability/HTML-structure failures from a Store query that simply has no matching title.
+
 In Store, enter a game title and choose **Search Vimm's Lair**. If a console is selected,
 GameBox requests only that console's corresponding alphabetical vault listing page. If no
 console is selected, GameBox searches the configured supported consoles sequentially (up
