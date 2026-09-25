@@ -78,6 +78,7 @@ interface AppContainer {
 
 class DefaultAppContainer(context: Context) : AppContainer {
     private val applicationContext = context.applicationContext
+    private val processStartedAtMillis = System.currentTimeMillis()
     private val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val databaseName = "gamebox.db"
     private val preMigrationBackup = DatabaseMigrationBackupManager(
@@ -164,7 +165,7 @@ class DefaultAppContainer(context: Context) : AppContainer {
     )
 
     private val importRegistrationRecovery = applicationScope.launch {
-        authorizedRomImporter.reconcilePendingRegistrations { gameId ->
+        authorizedRomImporter.reconcilePendingRegistrations(processStartedAtMillis) { gameId ->
             database.gameDao().getById(gameId.value)?.toDomain()
         }
     }
