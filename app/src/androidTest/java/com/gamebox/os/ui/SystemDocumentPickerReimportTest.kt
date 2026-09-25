@@ -103,7 +103,7 @@ class SystemDocumentPickerReimportTest {
                 put(MediaStore.MediaColumns.MIME_TYPE, "application/octet-stream")
                 put(
                     MediaStore.MediaColumns.RELATIVE_PATH,
-                    Environment.DIRECTORY_DOWNLOADS + "/GameBoxPickerTest",
+                    Environment.DIRECTORY_DOWNLOADS,
                 )
                 put(MediaStore.MediaColumns.IS_PENDING, 1)
             }
@@ -179,8 +179,8 @@ class SystemDocumentPickerReimportTest {
             ?: error("Android DocumentsUI did not expose Downloads")
         downloads.click()
 
-        return device.wait(Until.findObject(By.text(fileName)), 10_000)
-            ?: error("Android DocumentsUI did not expose the test document")
+        return device.wait(Until.findObject(By.text(fileName)), 15_000)
+            ?: error("Android DocumentsUI did not expose the test document in Downloads")
     }
 
     private fun sha256(bytes: ByteArray): String =
