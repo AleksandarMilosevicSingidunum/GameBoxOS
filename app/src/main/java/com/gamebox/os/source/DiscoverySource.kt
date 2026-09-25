@@ -37,6 +37,9 @@ data class GameSourceConfig(
             "Credential key must not be blank"
         }
         validateGameSourceUrl(baseUrl, "Source URL")
+        if (type == GameSourceProviderType.VIMM_LAIR) {
+            validateVimmLairUrl(baseUrl)
+        }
         searchUrlTemplate?.trim()?.takeIf { it.isNotEmpty() }?.let { template ->
             validateGameSourceUrl(
                 template
