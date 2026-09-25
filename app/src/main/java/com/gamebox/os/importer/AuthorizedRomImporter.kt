@@ -216,7 +216,7 @@ class AuthorizedRomImporter(
         gameLookup: suspend (GameId) -> com.gamebox.os.domain.Game?,
     ): ImportRegistrationRecoveryReport =
         importTransactionMutex.withLock {
-            registrationJournal.reconcile(gameLookup, createdBeforeMillis)
+            registrationJournal.reconcile(createdBeforeMillis, gameLookup)
         }
 
     private fun replaceDirectoryAtomically(target: File, staging: File, backup: File) {
