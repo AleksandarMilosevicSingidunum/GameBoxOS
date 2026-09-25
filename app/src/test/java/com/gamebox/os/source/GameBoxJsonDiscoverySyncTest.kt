@@ -213,14 +213,11 @@ class GameBoxJsonDiscoverySyncTest {
         override fun observeGame(gameId: String): Flow<CatalogGameEntity?> =
             flowOf(games.firstOrNull { it.id == gameId })
 
-        override fun observePlatforms(): Flow<List<CatalogPlatformEntity>> = flowOf(platforms)
+        override fun observePlatforms(): Flow<List<CatalogPlatformEntity>> =
+            flowOf(listOfNotNull(existingPlatform) + platforms)
 
         override suspend fun countGames(platformId: String): Int =
             games.count { it.platformId == platformId }
-
-        override suspend fun platform(platformId: String): CatalogPlatformEntity? =
-            existingPlatform?.takeIf { it.id == platformId }
-                ?: platforms.lastOrNull { it.id == platformId }
 
         override suspend fun setFavorite(gameId: String, favorite: Boolean) = Unit
 
