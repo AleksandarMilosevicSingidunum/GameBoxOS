@@ -2336,11 +2336,26 @@ private fun DiscoveryDetailsScreen(
                                 region = game.region,
                             )
                         )
-                        "$importPlatformLabel copy verified and added to Library. SHA-256 " +
-                            result.hashes.sha256.take(12) + "…"
+                        val cleanupDeferred = runCatching {
+                            importer.confirmRegistration(game.id, result.transactionId)
+                        }.isFailure
+                        if (cleanupDeferred) {
+                            "$importPlatformLabel copy verified and added to Library. Transaction cleanup will finish after restart."
+                        } else {
+                            "$importPlatformLabel copy verified and added to Library. SHA-256 " +
+                                result.hashes.sha256.take(12) + "…"
+                        }
                     }.getOrElse { error ->
-                        "The copy was stored, but Library registration failed: " +
-                            (error.message?.take(160) ?: "unknown error")
+                        val rolledBack = runCatching {
+                            importer.rollbackRegistration(game.id, result.transactionId)
+                        }.isSuccess
+                        if (rolledBack) {
+                            "Library registration failed; imported files were rolled back safely: " +
+                                (error.message?.take(140) ?: "unknown error")
+                        } else {
+                            "Library registration failed and recovery is pending; restart GameBox: " +
+                                (error.message?.take(140) ?: "unknown error")
+                        }
                     }
                     RomImportResult.SourceUnavailable ->
                         "The selected file could not be opened"
@@ -2401,10 +2416,25 @@ private fun DiscoveryDetailsScreen(
                                 additionalFiles = importedFiles.filterNot { it.relativePath == launchPath },
                             )
                         )
-                        "${result.files.size}-file disc set verified and added to Library"
+                        val cleanupDeferred = runCatching {
+                            importer.confirmRegistration(game.id, result.transactionId)
+                        }.isFailure
+                        if (cleanupDeferred) {
+                            "${result.files.size}-file disc set verified and added to Library. Transaction cleanup will finish after restart."
+                        } else {
+                            "${result.files.size}-file disc set verified and added to Library"
+                        }
                     }.getOrElse { error ->
-                        "The disc set was stored, but Library registration failed: " +
-                            (error.message?.take(160) ?: "unknown error")
+                        val rolledBack = runCatching {
+                            importer.rollbackRegistration(game.id, result.transactionId)
+                        }.isSuccess
+                        if (rolledBack) {
+                            "Library registration failed; disc-set files were rolled back safely: " +
+                                (error.message?.take(140) ?: "unknown error")
+                        } else {
+                            "Library registration failed and recovery is pending; restart GameBox: " +
+                                (error.message?.take(140) ?: "unknown error")
+                        }
                     }
                     RomImportSetResult.SourceUnavailable -> "One of the selected files could not be opened"
                     is RomImportSetResult.Rejected -> "Import rejected: " + result.reason

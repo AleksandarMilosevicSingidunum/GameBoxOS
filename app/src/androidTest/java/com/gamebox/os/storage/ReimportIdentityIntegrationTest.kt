@@ -31,6 +31,7 @@ class ReimportIdentityIntegrationTest {
             val importer = AuthorizedRomImporter(context)
             val sources = listOf(RomImportSource(Uri.fromFile(source), "game.iso"))
             val initial = importer.importSet(id, sources, "PSP") as RomImportSetResult.Imported
+            importer.confirmRegistration(id, initial.transactionId)
             val expected = initial.files.map {
                 LocalContentFile(RomImportPolicy.importRootRelativePath(id, it.relativePath),
                     it.hashes.sha256, it.mimeType)
@@ -52,6 +53,7 @@ class ReimportIdentityIntegrationTest {
             source.writeBytes(originalBytes)
             val restored = importer.importSet(id, sources, "PSP", expected)
             assertTrue(restored.toString(), restored is RomImportSetResult.Imported)
+            importer.confirmRegistration(id, (restored as RomImportSetResult.Imported).transactionId)
             assertArrayEquals(originalBytes, installed.readBytes())
             assertEquals("synthetic saved progress", save.readText())
         } finally {
