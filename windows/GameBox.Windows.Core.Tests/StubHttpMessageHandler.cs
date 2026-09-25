@@ -1,6 +1,6 @@
 using System.Net.Http;
 
-namespace GameBox.Windows.Core.Tests;
+namespace GameBox.Windows.Core;
 
 internal sealed class StubHttpMessageHandler : HttpMessageHandler
 {
