@@ -211,12 +211,21 @@ class ImportRegistrationJournal(
             val pending = transactions.single()
             runCatching {
                 val game = gameLookup(GameId(gameId))
-                if (matchesRegisteredGame(pending, game) && targetMatchesPending(pending)) {
-                    confirm(pending)
-                    confirmed += 1
-                } else {
-                    rollback(pending)
-                    rolledBack += 1
+                val roomMatches = matchesRegisteredGame(pending, game)
+                when {
+                    roomMatches && targetMatchesPending(pending) -> {
+                        confirm(pending)
+                        confirmed += 1
+                    }
+                    roomMatches -> {
+                        throw IllegalStateException(
+                            "Registered import bytes do not match the durable journal; keep recovery state for repair"
+                        )
+                    }
+                    else -> {
+                        rollback(pending)
+                        rolledBack += 1
+                    }
                 }
             }.onFailure {
                 failures += 1
