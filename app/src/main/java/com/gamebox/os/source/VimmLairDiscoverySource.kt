@@ -323,6 +323,35 @@ internal fun vimmLairBrowseUrl(
     }
 }
 
+internal fun vimmLairSearchPlatforms(
+    config: GameSourceConfig,
+    selectedPlatform: String?,
+    maxPlatforms: Int = 8,
+): List<String> {
+    require(maxPlatforms in 1..16) { "Vimm search platform limit must be between 1 and 16" }
+    selectedPlatform?.trim()?.takeIf(String::isNotEmpty)?.let { selected ->
+        return if (config.supportsPlatform(selected) && vimmLairPlatformSlug(selected) != null) {
+            listOf(selected)
+        } else {
+            emptyList()
+        }
+    }
+
+    val candidates = if (config.platforms.isNotEmpty()) {
+        config.platforms.toList()
+    } else {
+        listOf("PS2", "GameCube", "Wii", "PSP", "Dreamcast")
+    }
+    return candidates.asSequence()
+        .map(String::trim)
+        .filter(String::isNotEmpty)
+        .filter { vimmLairPlatformSlug(it) != null }
+        .distinctBy { normalizeCatalogTitle(it) }
+        .sortedBy { normalizeCatalogTitle(it) }
+        .take(maxPlatforms)
+        .toList()
+}
+
 internal fun vimmLairPlatformSlug(platform: String): String? {
     return when (normalizeCatalogTitle(platform)) {
         "ps2", "playstation2", "sonyplaystation2" -> "PS2"
