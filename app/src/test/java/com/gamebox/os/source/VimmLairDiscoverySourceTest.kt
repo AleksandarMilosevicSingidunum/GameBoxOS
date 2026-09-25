@@ -20,6 +20,77 @@ class VimmLairDiscoverySourceTest {
     }
 
     @Test
+    fun globalSearchUsesConfiguredSupportedPlatformsWithBound() {
+        val config = GameSourceConfig(
+            id = "vimm",
+            name = "Vimm",
+            type = GameSourceProviderType.VIMM_LAIR,
+            baseUrl = "https://vimm.net/vault",
+            platforms = setOf("Wii", "PS2", "Switch", "PSP", "GameCube"),
+        )
+
+        assertEquals(
+            listOf("GameCube", "PS2", "PSP", "Wii"),
+            vimmLairSearchPlatforms(config, selectedPlatform = null),
+        )
+        assertEquals(
+            listOf("PS2"),
+            vimmLairSearchPlatforms(config, selectedPlatform = "PS2"),
+        )
+        assertTrue(vimmLairSearchPlatforms(config, selectedPlatform = "Switch").isEmpty())
+        assertEquals(
+            listOf("GameCube", "PS2"),
+            vimmLairSearchPlatforms(config, selectedPlatform = null, maxPlatforms = 2),
+        )
+    }
+
+
+    @Test
+    fun unrestrictedGlobalSearchUsesGameBoxTargetDefaults() {
+        val config = GameSourceConfig(
+            id = "vimm",
+            name = "Vimm",
+            type = GameSourceProviderType.VIMM_LAIR,
+            baseUrl = "https://vimm.net/vault",
+        )
+
+        assertEquals(
+            listOf("Dreamcast", "GameCube", "PS2", "PSP", "Wii"),
+            vimmLairSearchPlatforms(config, selectedPlatform = null),
+        )
+    }
+
+
+    @Test
+    fun multiConsoleSearchKeepsSuccessfulResultsWhenOnePlatformFails() = runBlocking {
+        val config = GameSourceConfig(
+            id = "vimm",
+            name = "Vimm",
+            type = GameSourceProviderType.VIMM_LAIR,
+            baseUrl = "https://vimm.net/vault",
+            platforms = setOf("PS2", "GameCube"),
+        )
+        val summary = searchVimmLairAcrossPlatforms(
+            config = config,
+            query = "God",
+            transport = VimmLairTransport { uri ->
+                when {
+                    uri.path.contains("/GameCube/") -> throw java.io.IOException("temporary")
+                    uri.path.contains("/PS2/") -> """<a href="/vault/100">God Hand</a>"""
+                    else -> ""
+                }
+            },
+        )
+
+        assertEquals(listOf("GameCube", "PS2"), summary.attemptedPlatforms)
+        assertEquals(listOf("GameCube"), summary.failedPlatforms)
+        assertEquals(1, summary.games.size)
+        assertEquals("PS2", summary.games.single().platform)
+        assertEquals("God Hand", summary.games.single().title)
+    }
+
+
+    @Test
     fun browseUrlUsesPlatformAndAlphabetBucket() {
         assertEquals(
             "https://vimm.net/vault/PS2/G",
