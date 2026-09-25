@@ -1042,7 +1042,12 @@ val allDiscoveryGames by discoveryRepository.observeGames(null, "", 250).collect
         return
     }
     val configuredSources = remember(gameSources, selectedConsole) {
-        gameSources.filter { it.supportsPlatform(selectedConsole?.label) }
+        gameSources.filter { source ->
+            source.type in setOf(
+                GameSourceProviderType.EXTERNAL_WEB,
+                GameSourceProviderType.GAMEBOX_JSON,
+            ) && source.supportsPlatform(selectedConsole?.label)
+        }
     }
 
     fun openConfiguredSource(source: GameSourceConfig) {
