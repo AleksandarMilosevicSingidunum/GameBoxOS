@@ -102,6 +102,40 @@ class ImportTransactionRecoveryTest {
     }
 
     @Test
+    fun journaledTransactionIsLeftForRoomReconciliation() {
+        val files = temporary.newFolder("files")
+        val imports = File(files, "imports").apply { mkdirs() }
+        val gameId = com.gamebox.os.domain.GameId("journal-game")
+        val tx = UUID.randomUUID().toString()
+        ImportRegistrationJournal(files).prepare(
+            gameId,
+            tx,
+            hadExistingTarget = true,
+            files = listOf(PendingImportFile("journal-game/game.iso", "f".repeat(64))),
+        )
+        val target = File(imports, gameId.value).apply {
+            mkdirs()
+            resolve("game.iso").writeText("new")
+        }
+        val backup = File(imports, ".backup-" + gameId.value + "-" + tx).apply {
+            mkdirs()
+            resolve("game.iso").writeText("old")
+        }
+        val staging = File(imports, ".staging-" + gameId.value + "-" + tx).apply {
+            mkdirs()
+            resolve("game.iso").writeText("staged")
+        }
+
+        val report = ImportTransactionRecovery(files).recover()
+
+        assertEquals(0, report.rolledBackTransactions)
+        assertEquals(0, report.cleanedStagingEntries)
+        assertEquals("new", target.resolve("game.iso").readText())
+        assertEquals("old", backup.resolve("game.iso").readText())
+        assertTrue(staging.exists())
+    }
+
+    @Test
     fun malformedTransactionNamesAreIgnored() {
         val files = temporary.newFolder("files")
         val imports = File(files, "imports").apply { mkdirs() }
