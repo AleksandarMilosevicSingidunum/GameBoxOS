@@ -1,6 +1,5 @@
 package com.gamebox.os.source
 
-import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertThrows
@@ -29,7 +28,7 @@ class DiscoverySourceTest {
     }
 
     @Test
-    fun registryResolvesSourcesCaseInsensitively() = runTest {
+    fun registryResolvesSourcesCaseInsensitively() {
         val source = FakeSource("example", "Example")
         val registry = DiscoverySourceRegistry(listOf(source))
 
