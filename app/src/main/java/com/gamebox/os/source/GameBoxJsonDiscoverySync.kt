@@ -98,7 +98,7 @@ internal class GameBoxJsonDiscoveryParser(
             require(item.rating == null || (item.rating.isFinite() && item.rating in 0.0..10.0)) {
                 "Discovery game rating must be between 0 and 10"
             }
-            val platformId = normalizeCatalogTitle(platform)
+            val platformId = canonicalDiscoveryPlatformId(platform)
             require(platformId.isNotEmpty()) { "Discovery game platform is invalid" }
 
             ParsedGameBoxDiscoveryItem(
@@ -127,6 +127,20 @@ internal class GameBoxJsonDiscoveryParser(
 
     private fun String?.safeOptionalUrl(label: String): String? =
         this?.trim()?.takeIf(String::isNotEmpty)?.let { validateGameSourceUrl(it, label) }
+}
+
+internal fun canonicalDiscoveryPlatformId(value: String): String {
+    val normalized = normalizeCatalogTitle(value)
+    return when (normalized) {
+        "ps2", "playstation2", "sonyplaystation2" -> "playstation2"
+        "psp", "playstationportable", "sonyplaystationportable" -> "playstationportable"
+        "gamecube", "nintendogamecube" -> "nintendogamecube"
+        "wii", "nintendowii" -> "nintendowii"
+        "3ds", "nintendo3ds" -> "nintendo3ds"
+        "switch", "nintendoswitch" -> "nintendoswitch"
+        "dreamcast", "segadreamcast" -> "segadreamcast"
+        else -> normalized
+    }
 }
 
 internal fun gameBoxJsonDiscoveryGameId(sourceId: String, externalId: String): String {
@@ -215,7 +229,7 @@ class GameBoxJsonDiscoverySync(
             val parsedGames = parser.parse(payload)
             val games = if (source.platforms.isEmpty()) parsedGames else {
                 val allowedPlatforms = source.platforms
-                    .mapTo(mutableSetOf()) { normalizeCatalogTitle(it) }
+                    .mapTo(mutableSetOf(), ::canonicalDiscoveryPlatformId)
                     .filter(String::isNotEmpty)
                     .toSet()
                 parsedGames.filter { it.platformId in allowedPlatforms }
