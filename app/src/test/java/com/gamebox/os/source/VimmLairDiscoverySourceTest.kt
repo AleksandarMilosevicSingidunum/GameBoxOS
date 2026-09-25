@@ -20,6 +20,46 @@ class VimmLairDiscoverySourceTest {
     }
 
     @Test
+    fun globalSearchUsesConfiguredSupportedPlatformsWithBound() {
+        val config = GameSourceConfig(
+            id = "vimm",
+            name = "Vimm",
+            type = GameSourceProviderType.VIMM_LAIR,
+            baseUrl = "https://vimm.net/vault",
+            platforms = setOf("Wii", "PS2", "Switch", "PSP", "GameCube"),
+        )
+
+        assertEquals(
+            listOf("GameCube", "PS2", "PSP", "Wii"),
+            vimmLairSearchPlatforms(config, selectedPlatform = null),
+        )
+        assertEquals(
+            listOf("PS2"),
+            vimmLairSearchPlatforms(config, selectedPlatform = "PS2"),
+        )
+        assertTrue(vimmLairSearchPlatforms(config, selectedPlatform = "Switch").isEmpty())
+        assertEquals(
+            listOf("GameCube", "PS2"),
+            vimmLairSearchPlatforms(config, selectedPlatform = null, maxPlatforms = 2),
+        )
+    }
+
+    @Test
+    fun unrestrictedGlobalSearchUsesGameBoxTargetDefaults() {
+        val config = GameSourceConfig(
+            id = "vimm",
+            name = "Vimm",
+            type = GameSourceProviderType.VIMM_LAIR,
+            baseUrl = "https://vimm.net/vault",
+        )
+
+        assertEquals(
+            listOf("Dreamcast", "GameCube", "PS2", "PSP", "Wii"),
+            vimmLairSearchPlatforms(config, selectedPlatform = null),
+        )
+    }
+
+    @Test
     fun browseUrlUsesPlatformAndAlphabetBucket() {
         assertEquals(
             "https://vimm.net/vault/PS2/G",
