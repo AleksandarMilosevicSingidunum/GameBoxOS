@@ -124,6 +124,9 @@ import com.gamebox.os.diagnostics.DiagnosticEventCollector
 import com.gamebox.os.diagnostics.buildDiagnosticsReport
 import com.gamebox.os.diagnostics.buildDiagnosticsRecoveryBundle
 import com.gamebox.os.navigation.GameBoxNavigationRequest
+import com.gamebox.os.source.GameSourceConfig
+import com.gamebox.os.source.GameSourceProviderType
+import com.gamebox.os.source.nextGameSourceId
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
@@ -3850,6 +3853,10 @@ private fun SettingsScreen(
     var catalogCredentialsConfigured by remember { mutableStateOf(false) }
     var theGamesDbApiKey by remember { mutableStateOf("") }
     var theGamesDbConfigured by remember { mutableStateOf(false) }
+    var sourceName by remember { mutableStateOf("") }
+    var sourceBaseUrl by remember { mutableStateOf("") }
+    var sourceSearchTemplate by remember { mutableStateOf("") }
+    var sourceMessage by remember { mutableStateOf<String?>(null) }
     var cloudProvider by remember(currentSettings.cloudSaveProvider) {
         mutableStateOf(currentSettings.cloudSaveProvider.uppercase())
     }
@@ -4645,6 +4652,109 @@ private fun SettingsScreen(
                 it,
                 color = if (it.startsWith("Connected") || it.contains("available") || it.contains("saved"))
                     MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
+            )
+        }
+        Spacer(Modifier.height(18.dp))
+        Text("Game discovery sources", fontWeight = FontWeight.Bold)
+        Text(
+            "Add optional HTTPS catalog or website sources used for discovery. These entries do not become installable content unless a trusted catalog separately provides a verified source and checksum.",
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.62f),
+            fontSize = 12.sp,
+        )
+        currentSettings.gameSources.forEach { source ->
+            Surface(
+                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.72f),
+                shape = RoundedCornerShape(8.dp),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.55f)),
+            ) {
+                Row(
+                    Modifier.padding(12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    Column(Modifier.weight(1f)) {
+                        Text(source.name, fontWeight = FontWeight.SemiBold)
+                        Text(
+                            source.baseUrl,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontSize = 11.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                    Switch(
+                        checked = source.enabled,
+                        onCheckedChange = { enabled ->
+                            scope.launch {
+                                settingsRepository.upsertGameSource(source.copy(enabled = enabled))
+                            }
+                        },
+                    )
+                    TextButton(onClick = {
+                        scope.launch {
+                            settingsRepository.removeGameSource(source.id)
+                            sourceMessage = "Removed " + source.name
+                        }
+                    }) { Text("Remove") }
+                }
+            }
+        }
+        OutlinedTextField(
+            value = sourceName,
+            onValueChange = { sourceName = it },
+            label = { Text("Source name") },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+        )
+        OutlinedTextField(
+            value = sourceBaseUrl,
+            onValueChange = { sourceBaseUrl = it },
+            label = { Text("HTTPS base URL") },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
+        )
+        OutlinedTextField(
+            value = sourceSearchTemplate,
+            onValueChange = { sourceSearchTemplate = it },
+            label = { Text("Optional search URL template") },
+            supportingText = { Text("Supported placeholders: {query}, {title}, {platform}") },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
+        )
+        Button(
+            onClick = {
+                val existingIds = currentSettings.gameSources.map { it.id }.toSet()
+                val result = runCatching {
+                    val trimmedName = sourceName.trim()
+                    val source = GameSourceConfig(
+                        id = nextGameSourceId(trimmedName, existingIds),
+                        name = trimmedName,
+                        type = GameSourceProviderType.EXTERNAL_WEB,
+                        baseUrl = sourceBaseUrl.trim(),
+                        searchUrlTemplate = sourceSearchTemplate.trim().takeIf(String::isNotEmpty),
+                    )
+                    scope.launch { settingsRepository.upsertGameSource(source) }
+                    source
+                }
+                result.onSuccess { source ->
+                    sourceName = ""
+                    sourceBaseUrl = ""
+                    sourceSearchTemplate = ""
+                    sourceMessage = "Added " + source.name
+                }.onFailure { error ->
+                    sourceMessage = error.message ?: "Invalid game source"
+                }
+            },
+            modifier = Modifier.padding(top = 8.dp),
+        ) { Text("Add source") }
+        sourceMessage?.let { message ->
+            Text(
+                message,
+                color = if (message.startsWith("Added") || message.startsWith("Removed"))
+                    MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
+                fontSize = 12.sp,
+                modifier = Modifier.padding(top = 6.dp),
             )
         }
         Spacer(Modifier.height(18.dp))
