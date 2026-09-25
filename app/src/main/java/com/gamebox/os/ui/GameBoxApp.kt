@@ -4409,6 +4409,7 @@ private fun SettingsScreen(
     var sourceSearchTemplate by remember { mutableStateOf("") }
     var sourcePlatforms by remember { mutableStateOf("") }
     var sourceMessage by remember { mutableStateOf<String?>(null) }
+    var sourceTestingId by remember { mutableStateOf<String?>(null) }
     var cloudProvider by remember(currentSettings.cloudSaveProvider) {
         mutableStateOf(currentSettings.cloudSaveProvider.uppercase())
     }
@@ -5304,6 +5305,33 @@ private fun SettingsScreen(
                             overflow = TextOverflow.Ellipsis,
                         )
                     }
+                    if (source.type == GameSourceProviderType.VIMM_LAIR) {
+                        TextButton(
+                            enabled = source.enabled && sourceTestingId == null,
+                            onClick = {
+                                sourceTestingId = source.id
+                                sourceMessage = "Testing " + source.name + "…"
+                                scope.launch {
+                                    val result = runCatching {
+                                        VimmLairDiscoverySource(source).probe()
+                                    }
+                                    sourceMessage = result.fold(
+                                        onSuccess = { probe ->
+                                            source.name + " reachable · " + probe.platform +
+                                                " · " + probe.vaultLinks + " vault links detected"
+                                        },
+                                        onFailure = { error ->
+                                            source.name + " test failed: " +
+                                                (error.message?.take(180) ?: "unknown error")
+                                        },
+                                    )
+                                    sourceTestingId = null
+                                }
+                            },
+                        ) {
+                            Text(if (sourceTestingId == source.id) "Testing…" else "Test")
+                        }
+                    }
                     Switch(
                         checked = source.enabled,
                         onCheckedChange = { enabled ->
@@ -5426,8 +5454,11 @@ private fun SettingsScreen(
         sourceMessage?.let { message ->
             Text(
                 message,
-                color = if (message.startsWith("Added") || message.startsWith("Removed"))
-                    MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
+                color = if (
+                    message.startsWith("Added") ||
+                    message.startsWith("Removed") ||
+                    message.contains(" reachable")
+                ) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
                 fontSize = 12.sp,
                 modifier = Modifier.padding(top = 6.dp),
             )
