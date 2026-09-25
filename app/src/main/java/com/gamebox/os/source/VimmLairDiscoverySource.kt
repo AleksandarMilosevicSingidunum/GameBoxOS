@@ -223,9 +223,9 @@ internal fun parseVimmLairDetails(
 
     val title = vimmMetaContent(html, "og:title")
         ?.let(::cleanVimmPageTitle)
-        ?.takeIf(String::isNotBlank)
+        ?.takeIf(::isMeaningfulVimmTitle)
         ?: vimmHtmlTitle(html)?.let(::cleanVimmPageTitle)
-        ?.takeIf(String::isNotBlank)
+        ?.takeIf(::isMeaningfulVimmTitle)
         ?: "Vimm vault " + externalId
 
     val platform = vimmLabeledValue(html, setOf("System", "Platform", "Console"))
@@ -278,22 +278,24 @@ internal fun mergeVimmLairDetails(
 }
 
 private fun vimmMetaContent(html: String, property: String): String? {
-    val escaped = Regex.escape(property)
-    val patterns = listOf(
-        Regex(
-            """<meta\b[^>]*property\s*=\s*["']$escaped["'][^>]*content\s*=\s*["']([^"']+)["'][^>]*>""",
-            RegexOption.IGNORE_CASE,
-        ),
-        Regex(
-            """<meta\b[^>]*content\s*=\s*["']([^"']+)["'][^>]*property\s*=\s*["']$escaped["'][^>]*>""",
-            RegexOption.IGNORE_CASE,
-        ),
+    val metaTags = Regex(
+        """<meta\b[^>]*>""",
+        setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL),
     )
-    return patterns.asSequence()
-        .mapNotNull { it.find(html)?.groupValues?.getOrNull(1) }
-        .map(::decodeVimmHtmlText)
-        .map(String::trim)
-        .firstOrNull(String::isNotEmpty)
+    val attribute = Regex(
+        """([A-Za-z_:][-A-Za-z0-9_:.]*)\s*=\s*(?:"([^"]*)"|'([^']*)')""",
+        RegexOption.IGNORE_CASE,
+    )
+    return metaTags.findAll(html).mapNotNull { tag ->
+        val attributes = attribute.findAll(tag.value).associate { match ->
+            val name = match.groupValues[1].lowercase()
+            val value = match.groupValues[2].ifEmpty { match.groupValues[3] }
+            name to decodeVimmHtmlText(value).trim()
+        }
+        if (attributes["property"]?.equals(property, ignoreCase = true) == true) {
+            attributes["content"]?.takeIf(String::isNotEmpty)
+        } else null
+    }.firstOrNull()
 }
 
 private fun vimmHtmlTitle(html: String): String? =
@@ -310,6 +312,11 @@ private fun cleanVimmPageTitle(value: String): String =
         .replace(Regex("""\s*[-|:]\s*Vimm['’]s Lair.*$""", RegexOption.IGNORE_CASE), "")
         .replace(Regex("\\s+"), " ")
         .trim()
+
+private fun isMeaningfulVimmTitle(value: String): Boolean {
+    val normalized = normalizeCatalogTitle(value)
+    return normalized.isNotBlank() && normalized !in setOf("vimmslair", "vimm")
+}
 
 private fun vimmLabeledValue(html: String, labels: Set<String>): String? {
     val row = Regex(
