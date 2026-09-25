@@ -10,6 +10,63 @@ fun interface VimmLairTransport {
     suspend fun get(uri: URI): String
 }
 
+internal class VimmLairPageCache(
+    private val maxEntries: Int = 24,
+    private val ttlMillis: Long = 5 * 60_000L,
+    private val nowMillis: () -> Long = System::currentTimeMillis,
+) {
+    private data class Entry(val body: String, val expiresAtMillis: Long)
+    private val entries = LinkedHashMap<String, Entry>(16, 0.75f, true)
+
+    init {
+        require(maxEntries in 1..128) { "Vimm cache size must be between 1 and 128" }
+        require(ttlMillis in 1_000L..60 * 60_000L) {
+            "Vimm cache TTL must be between 1 second and 1 hour"
+        }
+    }
+
+    @Synchronized
+    fun get(uri: URI): String? {
+        val key = uri.toASCIIString()
+        val entry = entries[key] ?: return null
+        if (entry.expiresAtMillis <= nowMillis()) {
+            entries.remove(key)
+            return null
+        }
+        return entry.body
+    }
+
+    @Synchronized
+    fun put(uri: URI, body: String) {
+        val key = uri.toASCIIString()
+        entries[key] = Entry(
+            body = body,
+            expiresAtMillis = nowMillis() + ttlMillis,
+        )
+        while (entries.size > maxEntries) {
+            val eldest = entries.entries.iterator()
+            if (!eldest.hasNext()) break
+            eldest.next()
+            eldest.remove()
+        }
+    }
+}
+
+private val sharedVimmLairPageCache = VimmLairPageCache()
+
+internal class CachedVimmLairTransport(
+    private val delegate: VimmLairTransport,
+    private val cache: VimmLairPageCache = sharedVimmLairPageCache,
+) : VimmLairTransport {
+    override suspend fun get(uri: URI): String {
+        cache.get(uri)?.let { return it }
+        return delegate.get(uri).also { cache.put(uri, it) }
+    }
+}
+
+private fun defaultVimmLairTransport(): VimmLairTransport =
+    CachedVimmLairTransport(HttpsVimmLairTransport())
+
 class HttpsVimmLairTransport(
     private val maxResponseBytes: Int = 2 * 1024 * 1024,
 ) : VimmLairTransport {
@@ -57,7 +114,7 @@ class HttpsVimmLairTransport(
 
 class VimmLairDiscoverySource(
     private val config: GameSourceConfig,
-    private val transport: VimmLairTransport = HttpsVimmLairTransport(),
+    private val transport: VimmLairTransport = defaultVimmLairTransport(),
 ) : DiscoverySource {
     override val id: String = config.id
     override val displayName: String = config.name
@@ -208,6 +265,10 @@ internal fun parseVimmLairListing(
             )
         }
         .distinctBy { it.externalId }
+        .sortedWith(
+            compareBy<DiscoverySourceGame> { vimmLairMatchRank(it.title, query) }
+                .thenBy { it.title.lowercase() }
+        )
         .take(limit)
         .toList()
 }
@@ -369,7 +430,7 @@ suspend fun searchVimmLairAcrossPlatforms(
     config: GameSourceConfig,
     query: String,
     selectedPlatform: String? = null,
-    transport: VimmLairTransport = HttpsVimmLairTransport(),
+    transport: VimmLairTransport = defaultVimmLairTransport(),
 ): VimmLairSearchSummary {
     val platforms = vimmLairSearchPlatforms(config, selectedPlatform)
     require(platforms.isNotEmpty()) {
@@ -389,7 +450,8 @@ suspend fun searchVimmLairAcrossPlatforms(
         games = games
             .distinctBy { it.sourceId.lowercase() + ":" + it.externalId }
             .sortedWith(
-                compareBy<DiscoverySourceGame> { it.platform.lowercase() }
+                compareBy<DiscoverySourceGame> { vimmLairMatchRank(it.title, query) }
+                    .thenBy { it.platform.lowercase() }
                     .thenBy { it.title.lowercase() }
             ),
         attemptedPlatforms = platforms,
@@ -445,6 +507,19 @@ internal fun vimmLairPlatformSlug(platform: String): String? {
         "genesis", "megadrive", "segagenesis" -> "Genesis"
         "saturn", "segasaturn" -> "Saturn"
         else -> null
+    }
+}
+
+internal fun vimmLairMatchRank(title: String, query: String): Int {
+    val normalizedTitle = normalizeCatalogTitle(title)
+    val normalizedQuery = normalizeCatalogTitle(query)
+    if (normalizedQuery.isBlank()) return 3
+    return when {
+        normalizedTitle == normalizedQuery -> 0
+        normalizedTitle.startsWith(normalizedQuery) -> 1
+        normalizedTitle.split(Regex("[^a-z0-9]+"))
+            .any { it.startsWith(normalizedQuery) } -> 2
+        else -> 3
     }
 }
 

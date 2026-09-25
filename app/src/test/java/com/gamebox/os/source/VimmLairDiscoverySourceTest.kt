@@ -306,6 +306,78 @@ class VimmLairDiscoverySourceTest {
     }
 
     @Test
+    fun cachedTransportReusesFreshResponse() = runBlocking {
+        var requests = 0
+        var now = 1_000L
+        val cache = VimmLairPageCache(maxEntries = 4, ttlMillis = 5_000L) { now }
+        val uri = URI("https://vimm.net/vault/PS2/A")
+        val transport = CachedVimmLairTransport(
+            delegate = VimmLairTransport {
+                requests += 1
+                "body-" + requests
+            },
+            cache = cache,
+        )
+
+        assertEquals("body-1", transport.get(uri))
+        assertEquals("body-1", transport.get(uri))
+        assertEquals(1, requests)
+
+        now = 7_000L
+        assertEquals("body-2", transport.get(uri))
+        assertEquals(2, requests)
+    }
+
+    @Test
+    fun pageCacheEvictsLeastRecentlyUsedEntry() {
+        var now = 1_000L
+        val cache = VimmLairPageCache(maxEntries = 2, ttlMillis = 10_000L) { now }
+        val first = URI("https://vimm.net/vault/PS2/A")
+        val second = URI("https://vimm.net/vault/PS2/B")
+        val third = URI("https://vimm.net/vault/PS2/C")
+
+        cache.put(first, "A")
+        cache.put(second, "B")
+        assertEquals("A", cache.get(first))
+        cache.put(third, "C")
+
+        assertEquals("A", cache.get(first))
+        assertEquals(null, cache.get(second))
+        assertEquals("C", cache.get(third))
+    }
+
+    @Test
+    fun closerTitleMatchesSortBeforeLooseSubstringMatches() {
+        val html = """
+            <a href="/vault/1">God Hand</a>
+            <a href="/vault/2">Hand of God</a>
+            <a href="/vault/3">God</a>
+            <a href="/vault/4">The Godfather</a>
+        """.trimIndent()
+
+        val games = parseVimmLairListing(
+            html = html,
+            sourceId = "vimm",
+            platform = "PS2",
+            baseUrl = "https://vimm.net/vault",
+            query = "God",
+        )
+
+        assertEquals(
+            listOf("God", "God Hand", "Hand of God", "The Godfather"),
+            games.map { it.title },
+        )
+    }
+
+    @Test
+    fun matchRankPrefersExactThenPrefixThenWordPrefix() {
+        assertEquals(0, vimmLairMatchRank("God", "God"))
+        assertEquals(1, vimmLairMatchRank("God Hand", "God"))
+        assertEquals(2, vimmLairMatchRank("Hand of God", "God"))
+        assertEquals(3, vimmLairMatchRank("The Godfather", "God"))
+    }
+
+    @Test
     fun sourceRejectsUnsupportedConsoleAndNonVimmHost() {
         assertThrows(IllegalArgumentException::class.java) {
             VimmLairDiscoverySource(
