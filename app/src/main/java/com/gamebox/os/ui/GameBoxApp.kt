@@ -134,6 +134,8 @@ import com.gamebox.os.source.nextGameSourceId
 import com.gamebox.os.source.resolveBrowseUrl
 import com.gamebox.os.source.supportsPlatform
 import com.gamebox.os.source.VimmLairDiscoverySource
+import com.gamebox.os.source.searchVimmLairAcrossPlatforms
+import com.gamebox.os.source.vimmLairSearchPlatforms
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
@@ -1140,39 +1142,57 @@ val allDiscoveryGames by discoveryRepository.observeGames(null, "", 250).collect
 
     fun openConfiguredSource(source: GameSourceConfig) {
         if (source.type == GameSourceProviderType.VIMM_LAIR) {
-            val platformLabel = selectedConsole?.label
             if (query.isBlank()) {
                 discoverySyncMessage = "Enter a game title before searching " + source.name
                 configuredSourceResults = emptyList()
                 return
             }
-            if (platformLabel.isNullOrBlank()) {
-                discoverySyncMessage = "Choose a console before searching " + source.name
+            val platforms = vimmLairSearchPlatforms(source, selectedConsole?.label)
+            if (platforms.isEmpty()) {
+                discoverySyncMessage = if (selectedConsole == null) {
+                    source.name + " has no supported consoles configured"
+                } else {
+                    source.name + " is not available for " + selectedConsole.label
+                }
                 configuredSourceResults = emptyList()
                 return
             }
             discoverySyncing = true
             discoverySyncProgress = 0f
             scope.launch {
-                val result = runCatching {
-                    VimmLairDiscoverySource(source).search(
-                        platform = platformLabel,
-                        query = query,
-                    ).games
+                discoverySyncMessage = if (platforms.size == 1) {
+                    "Searching " + source.name + "…"
+                } else {
+                    "Searching " + source.name + " across " + platforms.size + " consoles…"
                 }
-                result.onSuccess { games ->
-                    configuredSourceResults = games
-                    discoverySyncMessage = if (games.isEmpty()) {
-                        "No " + source.name + " results matched “" + query + "”"
-                    } else {
-                        "Found " + games.size + " result(s) from " + source.name
+                val result = runCatching {
+                    searchVimmLairAcrossPlatforms(
+                        config = source,
+                        query = query,
+                        selectedPlatform = selectedConsole?.label,
+                    )
+                }
+                result.onSuccess { summary ->
+                    configuredSourceResults = summary.games
+                    discoverySyncProgress = 1f
+                    discoverySyncMessage = when {
+                        summary.games.isNotEmpty() && summary.failedPlatforms.isEmpty() ->
+                            "Found " + summary.games.size + " result(s) from " + source.name
+                        summary.games.isNotEmpty() ->
+                            "Found " + summary.games.size + " result(s); failed: " +
+                                summary.failedPlatforms.joinToString()
+                        summary.failedPlatforms.isNotEmpty() ->
+                            source.name + " search failed for " +
+                                summary.failedPlatforms.joinToString()
+                        else ->
+                            "No " + source.name + " results matched “" + query + "”"
                     }
                 }.onFailure { error ->
                     configuredSourceResults = emptyList()
+                    discoverySyncProgress = 1f
                     discoverySyncMessage = source.name + " search failed: " +
                         (error.message?.take(180) ?: "unknown error")
                 }
-                discoverySyncProgress = 1f
                 discoverySyncing = false
             }
             return
