@@ -100,7 +100,9 @@ form fields and accepts artwork only from HTTPS `vimm.net` URLs. GameBox sends a
 does not follow redirects, and bounds each HTML response to 2 MiB. Successful listing
 and detail HTML is cached in memory for five minutes with a small bounded LRU cache so
 repeated title searches in the same alphabetical bucket do not repeatedly request the
-same Vimm page. Failed responses are not cached.
+same Vimm page. Failed responses are not cached. Search results are ranked with exact
+normalized-title matches first, then title-prefix matches, word-prefix matches, and
+finally looser substring matches.
 
 Current GameBox mappings include PS2, GameCube, Wii, PSP and Dreamcast, plus several
 retro platform aliases in the adapter. 3DS and Switch are intentionally unmapped because
