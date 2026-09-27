@@ -69,7 +69,7 @@ Latest verified increments: the primary shell now includes an original scalable 
 
 The active implementation goal covers all remaining software work below. Physical hardware, enclosure, thermal, cabling, and fabrication validation are tracked separately and are excluded from that software goal.
 
-- Validate the bundled Galaxy Patrol handoff in RetroArch and at least one real emulator adapter for every officially supported platform group
+- Extend the verified Galaxy Patrol RetroArch lifecycle to at least one real emulator adapter for every officially supported platform group; complete managed-save and cloud-save acceptance separately
 - Validate PPSSPP/Dolphin intent behavior and additional production emulator adapters on physical target devices
 - Complete end-to-end authenticated WebDAV/S3 integration testing and physical recovery validation
 - Validate authenticated cloud-save byte transfer against real WebDAV/S3 endpoints and real save adapters against production emulators
@@ -108,9 +108,11 @@ assembleDebug
 For a local instrumentation run, the validated emulator profile is `GameBox_API35`
 using the Google APIs x86_64 API-35 image. Boot it with the Android Emulator, then
 run `connectedDebugAndroidTest` with `ANDROID_SERIAL=emulator-5554`; the current
-60-test suite passes with zero skips and failures. This validates Android UI and
-lifecycle behavior, not real emulator gameplay, emulator-private saves, or controller
-hardware.
+60-test suite passes with zero skips and failures. The suite validates Android UI and
+lifecycle behavior. A separate live API-35 run also verifies the bundled Galaxy Patrol
+install → RetroArch/FCEUmm gameplay → controller-key dispatch → emulator save-state
+restore → return → uninstall/reinstall → relaunch path; this does not cover physical
+controller hardware or every production adapter.
 
 The optional Windows Companion discovers Windows shortcuts plus Steam, Epic Games, and GOG installations, runs its core test harness, and publishes a self-contained `win-x64` ZIP from `.github/workflows/windows-ci.yml`.
 

@@ -38,14 +38,26 @@ controller input, save ownership, or uninstall/reinstall recovery.
 
 The API-35 emulator now also has RetroArch 1.22.2's official universal Android package
 installed and initialized, with the `Nintendo - NES / Famicom (FCEUmm)` core installed
-through RetroArch's own Online Updater. This closes the missing-frontend/core setup gate
-for the emulator, but the real GameBox launch and lifecycle evidence remains pending.
+through RetroArch's own Online Updater. This closes the missing-frontend/core setup gate.
+
+Live API-35 gameplay/lifecycle checkpoint (27 September 2026): GameBox installed the
+bundled hash-verified Galaxy Patrol fixture, reported a successful verified-asset worker,
+and opened the real `com.retroarch/.browser.retroactivity.RetroActivityFuture`. The
+visible game screen was rendered by FCEUmm (`1.22.2 - FCEUmm ((SVN) 7a542da)`), and
+hardware-key events were dispatched during the running session. RetroArch created
+`/sdcard/RetroArch/states/FCEUmm/galaxy-patrol.state` plus its preview. Close Content and
+Quit returned to GameBox; content-only uninstall removed the installed game file while
+the emulator state remained; reinstall restored the app-private Galaxy Patrol file and
+relaunch opened the real RetroArch activity again. Loading slot 0 after reinstall showed
+`Loaded state from slot: 0`, and logcat recorded execution of the installed FCEUmm core.
+This is real emulator gameplay and emulator-save continuity evidence, separate from the
+managed GameBox save/cloud contract and from physical-device adapter validation.
 
 The current debug APK was also installed on `GameBox_API35` and launched through the
 real `com.gamebox.os/.MainActivity` entry point. The process remained alive, the
-activity stayed resumed, and the crash buffer was empty after startup. This is genuine
-emulator application-start evidence, not proof of RetroArch execution or emulator-save
-ownership.
+activity stayed resumed, and the crash buffer was empty after startup. The later live
+RetroArch run above extends this from application-start evidence to one complete
+Galaxy Patrol emulator lifecycle.
 
 Companion JSON responses now share control-character escaping for device names and
 transferred filenames, with JVM coverage for status serialization. This keeps the LAN
@@ -218,7 +230,8 @@ and stopping hashing without reading the entire game. Full Android/controller te
 passed in PR #277 along with Android instrumentation, Windows build and phone/DeX
 screenshot jobs, and that PR is merged. Local Android SDK and device execution are now available. This is not yet a complete
 launch lifecycle: persistent sessions, large-file frame measurements
-and live emulator gameplay remain pending. Intent dispatch is not proof of gameplay.
+and live emulator gameplay remain pending for adapters other than the validated API-35
+Galaxy Patrol/RetroArch path. Intent dispatch alone is not proof of gameplay.
 
 Emulator readiness now automatically selects the first installed approved adapter when
 no per-game emulator choice has been saved, while preserving an explicit approved
@@ -226,8 +239,8 @@ selection and its missing-selection guidance. JVM coverage exercises the install
 alternative path; this improves software detection/configuration behavior but does not
 prove a real emulator launch or gameplay.
 
-1. One real emulator game/save/return/uninstall/reinstall proof, without synthetic-save claims.
-2. Actual emulator-save ownership and production-emulator validation across the supported adapter patterns.
+1. Extend real game/save/return/uninstall/reinstall proof across the supported adapter patterns.
+2. Validate managed GameBox save import/backup/cloud behavior against production emulators and real endpoints.
 3. Live provider/download/volume validation against real configured endpoints and storage.
 4. Physical controller and Honor Magic5 Pro external-display recovery/soak acceptance.
 5. Signed production build, clean upgrade, update-channel and rollback rehearsal.
