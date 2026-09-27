@@ -34,7 +34,7 @@ internal data class CompanionHttpRequest(
 )
 
 private class CompanionUnauthorizedRequest : IllegalArgumentException()
-private class CompanionPayloadTooLarge : IllegalArgumentException()
+internal class CompanionPayloadTooLarge : IllegalArgumentException()
 internal class CompanionStorageUnavailable : IllegalStateException()
 
 /** Bounded HTTP/1 request reader with checksum-verified disk staging for large content uploads. */

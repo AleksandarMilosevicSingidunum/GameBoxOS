@@ -100,6 +100,34 @@ class CompanionHttpConnectionTest {
         }
     }
 
+    @Test fun rejectsContentAboveMaximumBeforeReadingBody() {
+        val oversizedLength = 64L * 1024 * 1024 * 1024 + 1
+        val header = (
+            "PUT /v1/content/game-one HTTP/1.1\r\n" +
+                "Content-Type: application/octet-stream\r\n" +
+                CompanionHttpRequestReader.BODY_SHA256_HEADER + ": " + "0".repeat(64) + "\r\n" +
+                "Content-Length: " + oversizedLength + "\r\n\r\n"
+        ).toByteArray()
+        var bodyRead = false
+        val input = object : ByteArrayInputStream(header) {
+            override fun read(b: ByteArray, off: Int, len: Int): Int {
+                bodyRead = true
+                return super.read(b, off, len)
+            }
+        }
+
+        val directory = Files.createTempDirectory("companion-limit-").toFile()
+        try {
+            val failure = runCatching {
+                CompanionHttpRequestReader.read(input, bodyDirectory = directory)
+            }.exceptionOrNull()
+            assertTrue(failure is CompanionPayloadTooLarge)
+            assertFalse(bodyRead)
+        } finally {
+            directory.deleteRecursively()
+        }
+    }
+
     @Test fun reservesSpaceForStagingAndManagedImportCopies() {
         val directory = Files.createTempDirectory("companion-space-double-").toFile()
         try {
