@@ -220,6 +220,16 @@ privilege-based skip. The rebuilt APK also passed the complete physical Honor su
 `OK (62 tests)`. Live provider transfer and process-kill/WorkManager acceptance remain
 separate evidence.
 
+Per-game mutation serialization (27 September 2026): remote download workers and
+authenticated companion content imports now join the same process-wide per-game mutex
+already used by content removal and the UI reimport path. A download or companion
+replacement therefore cannot interleave its staging/promotion and library publication
+with uninstall or another same-game replacement. The complete local Android JVM suite
+passes with 522 tests, zero failures, zero errors, and one explicit privilege-based
+skip; the rebuilt APK passed the complete physical Honor suite with `OK (62 tests)`.
+This closes the software lock boundary, while cross-worker stress and process-death/
+power-loss acceptance remain separate evidence.
+
 Managed multi-artifact save snapshots now publish each complete backup set under a
 unique generation directory and atomically switch the manifest only after every artifact
 has succeeded. Restore follows the active generation, while legacy version-1 manifests

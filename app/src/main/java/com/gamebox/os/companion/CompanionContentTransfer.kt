@@ -2,6 +2,7 @@ package com.gamebox.os.companion
 
 import com.gamebox.os.data.GameRepository
 import com.gamebox.os.data.ImportedGameRegistration
+import com.gamebox.os.content.GameMutationGate
 import com.gamebox.os.domain.GameId
 import com.gamebox.os.importer.RomHasher
 import com.gamebox.os.importer.RomImportPolicy
@@ -22,6 +23,16 @@ internal class CompanionContentTransferStore(
     private val games: GameRepository,
 ) {
     suspend fun import(
+        gameIdValue: String,
+        encodedFileName: String?,
+        stagedBody: File?,
+        expectedLength: Long,
+        expectedSha256: String?,
+    ): CompanionContentImportResult = GameMutationGate.withGameLock(gameIdValue) {
+        importUnlocked(gameIdValue, encodedFileName, stagedBody, expectedLength, expectedSha256)
+    }
+
+    private suspend fun importUnlocked(
         gameIdValue: String,
         encodedFileName: String?,
         stagedBody: File?,

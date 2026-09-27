@@ -16,6 +16,7 @@ import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import androidx.work.workDataOf
 import com.gamebox.os.content.GameContentPolicy
+import com.gamebox.os.content.GameMutationGate
 import com.gamebox.os.domain.Game
 import com.gamebox.os.navigation.GameBoxDeepLink
 import kotlinx.coroutines.Dispatchers
@@ -40,8 +41,9 @@ class RemoteDownloadWorker(
     parameters: WorkerParameters
 ) : CoroutineWorker(appContext, parameters) {
     override suspend fun doWork(): Result = remoteDownloadGate.run {
-        withContext(Dispatchers.IO) {
-        val gameId = inputData.getString(KEY_GAME_ID) ?: return@withContext failure("missing game")
+        val gameId = inputData.getString(KEY_GAME_ID) ?: return@run failure("missing game")
+        GameMutationGate.withGameLock(gameId) {
+            withContext(Dispatchers.IO) {
         setForeground(createForegroundInfo(gameId, 0L, -1L))
         val sourceUrl = inputData.getString(KEY_SOURCE_URL) ?: return@withContext failure("missing source")
         val checksum = inputData.getString(KEY_SHA256) ?: return@withContext failure("missing checksum")
@@ -114,6 +116,7 @@ class RemoteDownloadWorker(
             is ResumableTransferResult.SizeLimitExceeded -> failure("size limit exceeded")
             is ResumableTransferResult.Failed ->
                 if (shouldRetryTransfer(result, runAttemptCount)) Result.retry() else failure(result.reason)
+        }
         }
         }
     }
