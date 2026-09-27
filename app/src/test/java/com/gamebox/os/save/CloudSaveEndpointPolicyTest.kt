@@ -1,5 +1,6 @@
 package com.gamebox.os.save
 
+import java.net.URI
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertThrows
 import org.junit.Test
@@ -46,5 +47,32 @@ class CloudSaveEndpointPolicyTest {
         assertThrows(IllegalArgumentException::class.java) {
             CloudSaveEndpointPolicy.requireRegion(CloudSaveProvider.S3, "invalid")
         }
+    }
+
+    @Test fun syncContractRejectsInvalidGameIdsAndTraversalEndpoints() {
+        val valid = CloudSaveSyncRequest(
+            gameId = "galaxy-patrol",
+            endpoint = CloudSaveEndpointPolicy.objectUri("https://cloud.example/saves", "galaxy-patrol"),
+            payloadBytes = 0,
+            credentialKey = "cloud",
+        )
+        assertEquals(
+            CloudSaveSyncState.READY,
+            CloudSaveSyncContract.validate(valid, networkAvailable = true, credentialsAvailable = true).state,
+        )
+        listOf("../escape", "Galaxy-Patrol", "game_id").forEach { gameId ->
+            assertEquals(
+                CloudSaveSyncState.INVALID_ENDPOINT,
+                CloudSaveSyncContract.validate(valid.copy(gameId = gameId), true, true).state,
+            )
+        }
+        assertEquals(
+            CloudSaveSyncState.INVALID_ENDPOINT,
+            CloudSaveSyncContract.validate(
+                valid.copy(endpoint = URI("https://cloud.example/saves/../other.gamebox-save")),
+                true,
+                true,
+            ).state,
+        )
     }
 }

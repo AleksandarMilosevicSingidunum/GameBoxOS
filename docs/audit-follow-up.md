@@ -34,6 +34,12 @@ WebDAV accept only complete Basic credentials. Focused transport/provider tests 
 complete Android JVM suite pass. This is deterministic transport-boundary evidence; it
 does not claim acceptance against a live WebDAV or S3 service.
 
+Cloud-save contract checkpoint: `CloudSaveSyncContract` now independently validates the
+lowercase game-ID grammar and rejects literal or percent-encoded path traversal in the
+resolved object endpoint. This closes the invariant at the request boundary instead of
+depending only on the normal endpoint builder. Focused cloud transport tests and the
+complete Android JVM suite pass; real WebDAV/S3 round-trip evidence remains separate.
+
 Windows companion protocol alignment checkpoint: commit `2349131` constrains the
 Windows content-upload client to the Android route's lowercase ASCII game-ID grammar.
 The Windows core harness passes the rejection regression for an uppercase ID, so the
