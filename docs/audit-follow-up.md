@@ -101,7 +101,7 @@ boundary. Companion content replacement now also recovers an orphaned previous c
 before retrying, preserving the old installed content when a staged replacement fails.
 The catalog transport failure double is now test-only; the Android production source no
 longer contains a `NoopCatalogTransportClient` placeholder. The complete Android JVM
-suite was rerun after this cleanup: 516 tests, zero failures, and one explicit
+suite was rerun after this cleanup: 517 tests, zero failures, and one explicit
 privilege-based skip.
 Windows companion status, library, save, and content clients now normalize incomplete
 or malformed JSON confirmations into bounded invalid-data failures, with console-test
@@ -183,9 +183,15 @@ Cloud transport cancellation hardening (27 September 2026): blocking
 coroutine boundary. Cancelling an upload or download disconnects the active connection
 and terminates the worker instead of waiting for the socket timeout. A deterministic
 blocking-stream regression covers the disconnect path; the complete Android JVM suite
-passes with 516 tests, zero failures, zero errors, and one explicit skip. This remains
+passes with 517 tests, zero failures, zero errors, and one explicit skip. This remains
 transport-boundary evidence, not proof of a live WebDAV/S3 account or production
 emulator save compatibility.
+
+Catalog transport cancellation hardening (27 September 2026): authenticated HTTPS,
+WebDAV, and S3 catalog fetches now disconnect their active blocking connection when
+the caller cancels. A deterministic blocking-connection regression covers this path,
+and the physical Honor instrumentation rerun completed with `OK (61 tests)`, zero
+failures, and zero skips. Live provider acceptance remains separate evidence.
 
 Managed multi-artifact save snapshots now publish each complete backup set under a
 unique generation directory and atomically switch the manifest only after every artifact
@@ -284,7 +290,7 @@ The local Android JVM suite then exposed a host-capability failure in
 `DirectorySaveAdapterTest`: Windows symbolic-link creation is denied without the
 required privilege. The test now classifies that specific capability absence as a
 skip while retaining full symlink coverage on capable CI hosts. The complete local
-suite passes with 516 tests, zero failures, and one explicit privilege-based skip;
+suite passes with 517 tests, zero failures, and one explicit privilege-based skip;
 the Windows .NET core suite also passes.
 
 ## Companion HTTP connection recovery (EXT-14)

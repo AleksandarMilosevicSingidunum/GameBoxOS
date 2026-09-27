@@ -8,6 +8,13 @@ import java.net.URI
 import java.net.URL
 import java.security.MessageDigest
 import java.util.Base64
+import java.util.concurrent.atomic.AtomicReference
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
 
 class CatalogTransportException(
     val recovery: ProviderRecoveryDecision,
@@ -53,55 +60,72 @@ class HttpsCatalogTransportClient(
     }
 
 
-    private fun fetchOnce(
+    private suspend fun fetchOnce(
         uri: URI,
         transport: CatalogTransport,
         credentials: CatalogCredentials?,
-    ): String {
-        val connection = try { connectionFactory(uri) } catch (error: IOException) {
-            throw catalogTransportFailure(error = error)
-        }
-        connection.instanceFollowRedirects = false
-        connection.connectTimeout = 10_000
-        connection.readTimeout = 15_000
-        connection.setRequestProperty("Accept", "application/json")
-        credentials?.takeIf { it.hasBasicAuth() }?.let { auth ->
-            val token = Base64.getEncoder().encodeToString(
-                (auth.username!! + ":" + auth.password!!).toByteArray()
-            )
-            connection.setRequestProperty("Authorization", "Basic " + token)
-        }
-        if (transport is CatalogTransport.S3 && credentials?.hasS3Auth() == true) {
-            val signer = s3SignerFactory(transport.region)
-            val emptyHash = MessageDigest.getInstance("SHA-256").digest(ByteArray(0))
-                .joinToString("") { "%02x".format(it) }
-            val signed = signer.sign("GET", uri.toString(), emptyHash, credentials)
-            connection.setRequestProperty("x-amz-date", signed.date)
-            connection.setRequestProperty("x-amz-content-sha256", emptyHash)
-            connection.setRequestProperty("Authorization", signed.authorization)
-        }
-        return try {
-            val status = connection.responseCode
-            if (status !in 200..299) throw catalogTransportFailure(status)
-            val declaredLength = connection.contentLengthLong
-            if (declaredLength >= 0 && declaredLength > maxResponseBytes) {
-                throw catalogTransportFailure(
-                    error = IllegalArgumentException("catalog response is too large"),
-                )
+    ): String = suspendCancellableCoroutine { continuation ->
+        val connectionReference = AtomicReference<HttpURLConnection?>(null)
+        val worker = CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val connection = try { connectionFactory(uri) } catch (error: IOException) {
+                    throw catalogTransportFailure(error = error)
+                }
+                connectionReference.set(connection)
+                if (!continuation.isActive) {
+                    connection.disconnect()
+                    return@launch
+                }
+                connection.instanceFollowRedirects = false
+                connection.connectTimeout = 10_000
+                connection.readTimeout = 15_000
+                connection.setRequestProperty("Accept", "application/json")
+                credentials?.takeIf { it.hasBasicAuth() }?.let { auth ->
+                    val token = Base64.getEncoder().encodeToString(
+                        (auth.username!! + ":" + auth.password!!).toByteArray()
+                    )
+                    connection.setRequestProperty("Authorization", "Basic " + token)
+                }
+                if (transport is CatalogTransport.S3 && credentials?.hasS3Auth() == true) {
+                    val signer = s3SignerFactory(transport.region)
+                    val emptyHash = MessageDigest.getInstance("SHA-256").digest(ByteArray(0))
+                        .joinToString("") { "%02x".format(it) }
+                    val signed = signer.sign("GET", uri.toString(), emptyHash, credentials)
+                    connection.setRequestProperty("x-amz-date", signed.date)
+                    connection.setRequestProperty("x-amz-content-sha256", emptyHash)
+                    connection.setRequestProperty("Authorization", signed.authorization)
+                }
+                val result = try {
+                    val status = connection.responseCode
+                    if (status !in 200..299) throw catalogTransportFailure(status)
+                    val declaredLength = connection.contentLengthLong
+                    if (declaredLength >= 0 && declaredLength > maxResponseBytes) {
+                        throw catalogTransportFailure(
+                            error = IllegalArgumentException("catalog response is too large"),
+                        )
+                    }
+                    val bytes = connection.inputStream.use { it.readNBytes(maxResponseBytes + 1) }
+                    if (bytes.size > maxResponseBytes) {
+                        throw catalogTransportFailure(
+                            error = IllegalArgumentException("catalog response is too large"),
+                        )
+                    }
+                    bytes.toString(Charsets.UTF_8)
+                } catch (error: CatalogTransportException) {
+                    throw error
+                } catch (error: IOException) {
+                    throw catalogTransportFailure(error = error)
+                }
+                continuation.resume(result)
+            } catch (error: Throwable) {
+                continuation.resumeWithException(error)
+            } finally {
+                connectionReference.getAndSet(null)?.disconnect()
             }
-            val bytes = connection.inputStream.use { it.readNBytes(maxResponseBytes + 1) }
-            if (bytes.size > maxResponseBytes) {
-                throw catalogTransportFailure(
-                    error = IllegalArgumentException("catalog response is too large"),
-                )
-            }
-            bytes.toString(Charsets.UTF_8)
-        } catch (error: CatalogTransportException) {
-            throw error
-        } catch (error: IOException) {
-            throw catalogTransportFailure(error = error)
-        } finally {
-            connection.disconnect()
+        }
+        continuation.invokeOnCancellation {
+            connectionReference.get()?.disconnect()
+            worker.cancel()
         }
     }
 }

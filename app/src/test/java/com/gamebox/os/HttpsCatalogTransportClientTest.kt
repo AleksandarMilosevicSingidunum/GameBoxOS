@@ -7,6 +7,13 @@ import com.gamebox.os.catalog.S3RequestSigner
 import com.gamebox.os.catalog.SignedRequest
 import com.gamebox.os.catalog.CatalogTransportException
 import com.gamebox.os.provider.ProviderFailureKind
+import java.io.IOException
+import java.io.InputStream
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -87,6 +94,24 @@ class HttpsCatalogTransportClientTest {
         assertTrue(!error.recovery.retryable)
     }
 
+    @Test
+    fun cancellationDisconnectsAnActiveBlockingCatalogConnection() = runBlocking {
+        val connection = BlockingConnection()
+        val created = CountDownLatch(1)
+        val client = HttpsCatalogTransportClient(connectionFactory = {
+            created.countDown()
+            connection
+        })
+        val operation = async(Dispatchers.IO) {
+            client.fetch(CatalogTransport.Https("https://example.test/catalog.json"), null)
+        }
+
+        assertTrue(created.await(2, TimeUnit.SECONDS))
+        operation.cancel()
+        assertTrue(connection.disconnectedLatch.await(2, TimeUnit.SECONDS))
+        operation.cancelAndJoin()
+    }
+
     private class RecordingConnection(
         private val content: ByteArray = "{}".toByteArray(),
         private val declaredLength: Long = -1,
@@ -101,6 +126,27 @@ class HttpsCatalogTransportClientTest {
         override fun getResponseCode() = HTTP_OK
         override fun getContentLengthLong() = declaredLength
         override fun getInputStream() = ByteArrayInputStream(content)
+    }
+
+    private class BlockingConnection : HttpURLConnection(URL("https://example.test")) {
+        val disconnectedLatch = CountDownLatch(1)
+        @Volatile var disconnected = false
+
+        override fun getResponseCode() = HTTP_OK
+        override fun getInputStream(): InputStream = object : InputStream() {
+            override fun read(): Int {
+                while (!disconnected) Thread.sleep(5)
+                throw IOException("connection disconnected")
+            }
+
+            override fun read(buffer: ByteArray, offset: Int, length: Int): Int = read()
+        }
+        override fun disconnect() {
+            disconnected = true
+            disconnectedLatch.countDown()
+        }
+        override fun usingProxy() = false
+        override fun connect() = Unit
     }
 }
 
