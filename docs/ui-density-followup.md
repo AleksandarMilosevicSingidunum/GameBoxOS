@@ -27,3 +27,10 @@ hero action placement, compact Settings panels and motion validation remain open
 PR #282 head 841b325 produced successful phone/DeX captures in workflow 34448327921. Visual inspection confirmed the populated Home bottom row is now visible; it did not establish complete Blueprint parity. Artwork, branding, navigation shape, Details action placement, Settings density and phone Store adaptation remain open. Populated Library flags are layout fixtures, not gameplay evidence.
 
 The follow-up replaces the quick tiles' fixed height with a minimum height and lets their content determine extra vertical space. HomeQuickLaunchLayoutTest exercises 200% text, checks title/subtitle containment and growth, and clicks all four actions. The production screenshot flow now passes on the API-35 emulator in both the wide header-utility and compact controller-Quick-Actions routes; it captures Home, Details, Library, Store, Media, PC, Settings, the Downloads utility destination, and populated Home/Library states. The wide emulator render was also visually checked at 2400 × 1080 / 160 dpi, and the emulator was restored to its original phone profile afterward. These captures replace the earlier revision's evidence, but they do not claim physical DeX, external-controller, hover, or motion acceptance. Final UI acceptance still requires those separate interaction/hardware checks plus explicit loading/error/offline/downloading/recovery-state review.
+
+The compact Store revision now uses a Store heading and exposes a directly reachable
+horizontal console rail before the generic search/metadata filters. The focused
+production activity test passes on API-35, including accessible labels for All and PSP
+console filters. This closes the phone console-selection discoverability gap; artwork,
+branding, Details action placement, and physical TV/controller acceptance remain
+separate visual or hardware follow-ups.

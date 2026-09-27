@@ -107,6 +107,20 @@ class BlueprintScreenshotsTest {
         }
     }
 
+    @Test
+    fun compactStoreExposesDirectConsoleFilters() {
+        rule.waitUntil(15_000) {
+            rule.onAllNodesWithContentDescription("Home tab").fetchSemanticsNodes().isNotEmpty()
+        }
+        rule.onNodeWithContentDescription("Store tab").performClick()
+        rule.waitForIdle()
+        rule.onNodeWithText("Browse authorized games, metadata, and configured sources").assertIsDisplayed()
+        rule.onNodeWithContentDescription("Store console filters").assertIsDisplayed()
+        rule.onNodeWithContentDescription("Store console filter: All").assertIsDisplayed()
+        rule.onNodeWithContentDescription("Store console filter: PSP").assertIsDisplayed()
+        rule.onNodeWithText("Search games").assertIsDisplayed()
+    }
+
     private fun sendButton(keyCode: Int) {
         rule.runOnUiThread {
             rule.activity.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, keyCode))

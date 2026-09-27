@@ -256,6 +256,13 @@ configured remote source it enters the remote download/install workflow; when no
 is available it opens Downloads for recovery instead of launching stale installed content.
 The JVM action-plan coverage now protects this distinction from regressing.
 
+Compact Store adaptation checkpoint (28 September 2026): phone layouts now label the
+screen as **Store**, describe the authorized/local-first boundary in the subtitle, and
+expose a horizontally scrollable console rail directly above the search and metadata
+filters. This keeps the Blueprint's console-first browsing model reachable without
+opening a secondary filter flow. The new production activity test passed on API-35 as
+`OK (1 test)`; wide-layout and physical TV evidence remain covered separately.
+
 Live API-35 gameplay/lifecycle checkpoint (27 September 2026): GameBox installed the
 bundled hash-verified Galaxy Patrol fixture, reported a successful verified-asset worker,
 and opened the real `com.retroarch/.browser.retroactivity.RetroActivityFuture`. The

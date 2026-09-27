@@ -1347,9 +1347,9 @@ val allDiscoveryGames by discoveryRepository.observeGames(null, "", 250).collect
         if (compact) {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Column {
-                    Text("Authorized Catalog", fontSize = 28.sp, fontWeight = FontWeight.Bold)
+                    Text("Store", fontSize = 28.sp, fontWeight = FontWeight.Bold)
                     Text(
-                        "Local-first cache from configured personal sources",
+                        "Browse authorized games, metadata, and configured sources",
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.68f)
                     )
                 }
@@ -1362,6 +1362,40 @@ val allDiscoveryGames by discoveryRepository.observeGames(null, "", 250).collect
                     }
                 ) {
                     Text(if (refreshState == CatalogRefreshState.REFRESHING) "Refreshing..." else "Refresh")
+                }
+            }
+            Text(
+                "Consoles",
+                fontSize = 15.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.semantics { contentDescription = "Store console filters" },
+            )
+            Row(
+                Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                FilterChip(
+                    selected = selectedConsole == null,
+                    onClick = { selectedConsoleKey = null },
+                    label = { Text("All") },
+                    modifier = Modifier.semantics { contentDescription = "Store console filter: All" },
+                )
+                storeConsoles.forEach { console ->
+                    FilterChip(
+                        selected = selectedConsoleKey == console.key,
+                        onClick = { selectedConsoleKey = console.key },
+                        leadingIcon = {
+                            ConsoleBrandMark(
+                                key = console.key,
+                                selected = selectedConsoleKey == console.key,
+                                modifier = Modifier.size(17.dp),
+                            )
+                        },
+                        label = { Text(console.label) },
+                        modifier = Modifier.semantics {
+                            contentDescription = "Store console filter: " + console.label
+                        },
+                    )
                 }
             }
         } else {
