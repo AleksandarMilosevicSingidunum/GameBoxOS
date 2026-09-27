@@ -27,6 +27,11 @@ and rejects a Windows companion content confirmation whose game ID does not matc
 requested upload. Android JVM tests and the Windows core harness pass; this strengthens
 metadata and transfer integrity without treating Vimm as a binary source.
 
+Windows companion protocol alignment checkpoint: commit `2349131` constrains the
+Windows content-upload client to the Android route's lowercase ASCII game-ID grammar.
+The Windows core harness passes the rejection regression for an uppercase ID, so the
+client now fails closed before sending an incompatible request.
+
 PSP emulator readiness now recognizes the official PPSSPP Android package variants:
 the free `org.ppsspp.ppsspp` build, PPSSPP Gold `org.ppsspp.ppssppgold`, and PPSSPP
 Legacy `org.ppsspp.ppsspplegacy`. They use the same documented scoped-content launch
