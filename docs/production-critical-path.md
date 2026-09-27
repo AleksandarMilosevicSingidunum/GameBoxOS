@@ -60,6 +60,12 @@ removed the temporary import and retained the managed save. This closes a bounde
 body streaming check, while maximum-size, long-running cancellation, disk-full and routed-
 network acceptance remain open.
 
+Local Windows release checkpoint: the self-contained companion published and packaged as
+MSIX, and a temporary development certificate successfully signed the package. Windows
+refused `Add-AppxPackage` because the development root was intentionally not trusted; no
+root-store change was made. Production PFX signing, trusted installation, upgrade and
+rollback therefore remain release gates.
+
 The live cancellation probe also started a 25,174,016-byte upload and cancelled it after
 100 ms. Android retained no imported or `.companion-partial` file, and the managed save
 remained intact. Long-running cancellation and staging cleanup are now live evidence;

@@ -152,6 +152,13 @@ signs and verifies the MSIX, and uploads its signed checksum/provenance alongsid
 ZIP. Local unsigned packaging and validation pass; executing the protected workflow,
 installation acceptance, and physical Windows validation remain separate release gates.
 
+Local MSIX trust checkpoint (27 September 2026): a self-contained `win-x64` publish was
+packaged and successfully signed with a temporary development certificate. Windows
+`Add-AppxPackage` correctly refused installation because that self-signed root was not
+trusted. The temporary certificate and private key were removed rather than changing the
+machine or current-user root trust stores. This validates the local package/signing
+boundary without claiming production signing or installation acceptance.
+
 The protected Android production workflow now runs the release-manifest unit tests,
 creates a schema-compatible APK provenance manifest from the signed artifact, requires
 the distinct rollback tag in that manifest, and uploads the manifest alongside the APK
