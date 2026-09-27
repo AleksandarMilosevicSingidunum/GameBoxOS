@@ -24,4 +24,27 @@ class CatalogTransportUrisTest {
     fun rejectsTraversalNames() {
         assertThrows(IllegalArgumentException::class.java) { CatalogTransport.WebDav("https://example.test").catalogUri("../catalog.json") }
     }
+
+    @Test
+    fun rejectsUriDelimitersAndBackslashes() {
+        assertThrows(IllegalArgumentException::class.java) {
+            CatalogTransport.WebDav("https://example.test").catalogUri("catalog.json?tenant=one")
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+            CatalogTransport.WebDav("https://example.test").catalogUri("catalog\\json")
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+            CatalogTransport.S3("https://s3.example.test", "games").objectUri("catalog.json#fragment")
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+            CatalogTransport.S3("https://s3.example.test", "games").objectUri("prefix/../catalog.json")
+        }
+    }
+
+    @Test
+    fun permitsNestedS3ObjectNamesAndEncodesEachSegment() {
+        val uri = CatalogTransport.S3("https://s3.example.test", "games", "authorized")
+            .objectUri("season one/catalog.json")
+        assertEquals("https://s3.example.test/games/authorized/season%20one/catalog.json", uri.toString())
+    }
 }
