@@ -53,6 +53,16 @@ class CreateApkManifestTest(unittest.TestCase):
         self.assertEqual("0123456789abcdef", manifest["sourceCommit"])
         self.assertEqual("Android debug key", manifest["signing"])
 
+    def test_rejects_malformed_provenance_metadata(self):
+        with tempfile.TemporaryDirectory() as directory:
+            artifact = pathlib.Path(directory) / "app.apk"
+            artifact.write_bytes(b"fixture")
+
+            with self.assertRaises(ValueError):
+                create_manifest(artifact, "v1.0.0-alpha.1", "PREVIEW", source_commit="not-a-sha")
+            with self.assertRaises(ValueError):
+                create_manifest(artifact, "v1.0.0-alpha.1", "PREVIEW", signing=" ")
+
     def test_production_requires_stable_tag_and_distinct_rollback(self):
         with tempfile.TemporaryDirectory() as directory:
             artifact = pathlib.Path(directory) / "app.apk"
