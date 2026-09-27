@@ -4,8 +4,8 @@ import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
 val MIGRATION_1_2 = object : Migration(1, 2) {
-    override fun migrate(database: SupportSQLiteDatabase) {
-        database.execSQL(
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
             """
             CREATE TABLE IF NOT EXISTS download_jobs (
                 id TEXT NOT NULL PRIMARY KEY,
@@ -22,8 +22,8 @@ val MIGRATION_1_2 = object : Migration(1, 2) {
 }
 
 val MIGRATION_2_3 = object : Migration(2, 3) {
-    override fun migrate(database: SupportSQLiteDatabase) {
-        database.execSQL(
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
             """
             CREATE TABLE IF NOT EXISTS save_records (
                 gameId TEXT NOT NULL PRIMARY KEY,
@@ -38,8 +38,8 @@ val MIGRATION_2_3 = object : Migration(2, 3) {
 
 
 val MIGRATION_3_4 = object : Migration(3, 4) {
-    override fun migrate(database: SupportSQLiteDatabase) {
-        database.execSQL(
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
             "ALTER TABLE games ADD COLUMN favorite INTEGER NOT NULL DEFAULT 0"
         )
     }
@@ -47,17 +47,17 @@ val MIGRATION_3_4 = object : Migration(3, 4) {
 
 
 val MIGRATION_4_5 = object : Migration(4, 5) {
-    override fun migrate(database: SupportSQLiteDatabase) {
-        database.execSQL("ALTER TABLE games ADD COLUMN sourceUrl TEXT")
-        database.execSQL("ALTER TABLE games ADD COLUMN expectedSha256 TEXT")
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE games ADD COLUMN sourceUrl TEXT")
+        db.execSQL("ALTER TABLE games ADD COLUMN expectedSha256 TEXT")
     }
 }
 
 
 val MIGRATION_5_6 = object : Migration(5, 6) {
-    override fun migrate(database: SupportSQLiteDatabase) {
-        database.execSQL("ALTER TABLE games ADD COLUMN emulatorPackage TEXT")
-        database.execSQL(
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE games ADD COLUMN emulatorPackage TEXT")
+        db.execSQL(
             "ALTER TABLE games ADD COLUMN graphicsProfile TEXT NOT NULL DEFAULT 'Balanced'"
         )
     }
@@ -65,19 +65,19 @@ val MIGRATION_5_6 = object : Migration(5, 6) {
 
 
 val MIGRATION_6_7 = object : Migration(6, 7) {
-    override fun migrate(database: SupportSQLiteDatabase) {
-        database.execSQL("ALTER TABLE games ADD COLUMN artworkUrl TEXT")
-        database.execSQL("ALTER TABLE games ADD COLUMN description TEXT")
-        database.execSQL("ALTER TABLE games ADD COLUMN players TEXT")
-        database.execSQL("ALTER TABLE games ADD COLUMN language TEXT")
-        database.execSQL("ALTER TABLE games ADD COLUMN region TEXT")
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE games ADD COLUMN artworkUrl TEXT")
+        db.execSQL("ALTER TABLE games ADD COLUMN description TEXT")
+        db.execSQL("ALTER TABLE games ADD COLUMN players TEXT")
+        db.execSQL("ALTER TABLE games ADD COLUMN language TEXT")
+        db.execSQL("ALTER TABLE games ADD COLUMN region TEXT")
     }
 }
 
 
 val MIGRATION_7_8 = object : Migration(7, 8) {
-    override fun migrate(database: SupportSQLiteDatabase) {
-        database.execSQL(
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
             """
             CREATE TABLE IF NOT EXISTS catalog_platforms (
                 id TEXT NOT NULL PRIMARY KEY,
@@ -87,8 +87,8 @@ val MIGRATION_7_8 = object : Migration(7, 8) {
             )
             """.trimIndent()
         )
-        database.execSQL("CREATE INDEX IF NOT EXISTS index_catalog_platforms_name ON catalog_platforms(name)")
-        database.execSQL(
+        db.execSQL("CREATE INDEX IF NOT EXISTS index_catalog_platforms_name ON catalog_platforms(name)")
+        db.execSQL(
             """
             CREATE TABLE IF NOT EXISTS catalog_games (
                 id TEXT NOT NULL PRIMARY KEY,
@@ -110,10 +110,10 @@ val MIGRATION_7_8 = object : Migration(7, 8) {
             )
             """.trimIndent()
         )
-        database.execSQL("CREATE INDEX IF NOT EXISTS index_catalog_games_platformId ON catalog_games(platformId)")
-        database.execSQL("CREATE INDEX IF NOT EXISTS index_catalog_games_normalizedTitle ON catalog_games(normalizedTitle)")
-        database.execSQL("CREATE INDEX IF NOT EXISTS index_catalog_games_platformId_normalizedTitle ON catalog_games(platformId, normalizedTitle)")
-        database.execSQL(
+        db.execSQL("CREATE INDEX IF NOT EXISTS index_catalog_games_platformId ON catalog_games(platformId)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS index_catalog_games_normalizedTitle ON catalog_games(normalizedTitle)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS index_catalog_games_platformId_normalizedTitle ON catalog_games(platformId, normalizedTitle)")
+        db.execSQL(
             """
             CREATE TABLE IF NOT EXISTS catalog_external_ids (
                 gameId TEXT NOT NULL,
@@ -123,7 +123,7 @@ val MIGRATION_7_8 = object : Migration(7, 8) {
             )
             """.trimIndent()
         )
-        database.execSQL(
+        db.execSQL(
             "CREATE UNIQUE INDEX IF NOT EXISTS index_catalog_external_ids_provider_externalId " +
                 "ON catalog_external_ids(provider, externalId)"
         )
@@ -131,28 +131,28 @@ val MIGRATION_7_8 = object : Migration(7, 8) {
 }
 
 val MIGRATION_8_9 = object : Migration(8, 9) {
-    override fun migrate(database: SupportSQLiteDatabase) {
-        database.execSQL("ALTER TABLE catalog_games ADD COLUMN screenshotsJson TEXT")
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE catalog_games ADD COLUMN screenshotsJson TEXT")
     }
 }
 
 val MIGRATION_9_10 = object : Migration(9, 10) {
-    override fun migrate(database: SupportSQLiteDatabase) {
-        database.execSQL("ALTER TABLE games ADD COLUMN localContentRelativePath TEXT")
-        database.execSQL("ALTER TABLE games ADD COLUMN localContentSha256 TEXT")
-        database.execSQL("ALTER TABLE games ADD COLUMN localContentMimeType TEXT")
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE games ADD COLUMN localContentRelativePath TEXT")
+        db.execSQL("ALTER TABLE games ADD COLUMN localContentSha256 TEXT")
+        db.execSQL("ALTER TABLE games ADD COLUMN localContentMimeType TEXT")
     }
 }
 
 val MIGRATION_10_11 = object : Migration(10, 11) {
-    override fun migrate(database: SupportSQLiteDatabase) {
-        database.execSQL("ALTER TABLE games ADD COLUMN localContentFilesJson TEXT")
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE games ADD COLUMN localContentFilesJson TEXT")
     }
 }
 
 val MIGRATION_11_12 = object : Migration(11, 12) {
-    override fun migrate(database: SupportSQLiteDatabase) {
-        database.execSQL("""
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("""
             CREATE TABLE IF NOT EXISTS pending_launch_session (
                 slot INTEGER NOT NULL PRIMARY KEY,
                 ticket TEXT NOT NULL,
@@ -166,19 +166,19 @@ val MIGRATION_11_12 = object : Migration(11, 12) {
 
 
 val MIGRATION_12_13 = object : Migration(12, 13) {
-    override fun migrate(database: SupportSQLiteDatabase) {
-        database.execSQL("ALTER TABLE games ADD COLUMN userTitle TEXT")
-        database.execSQL("ALTER TABLE games ADD COLUMN userYear INTEGER")
-        database.execSQL("ALTER TABLE games ADD COLUMN userGenre TEXT")
-        database.execSQL("ALTER TABLE games ADD COLUMN userArtworkUrl TEXT")
-        database.execSQL("ALTER TABLE games ADD COLUMN userDescription TEXT")
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE games ADD COLUMN userTitle TEXT")
+        db.execSQL("ALTER TABLE games ADD COLUMN userYear INTEGER")
+        db.execSQL("ALTER TABLE games ADD COLUMN userGenre TEXT")
+        db.execSQL("ALTER TABLE games ADD COLUMN userArtworkUrl TEXT")
+        db.execSQL("ALTER TABLE games ADD COLUMN userDescription TEXT")
     }
 }
 
 val MIGRATION_13_14 = object : Migration(13, 14) {
-    override fun migrate(database: SupportSQLiteDatabase) {
-        database.execSQL("ALTER TABLE games ADD COLUMN metadataProvider TEXT")
-        database.execSQL("ALTER TABLE games ADD COLUMN metadataExternalId TEXT")
-        database.execSQL("ALTER TABLE games ADD COLUMN metadataMatchedAtMillis INTEGER")
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE games ADD COLUMN metadataProvider TEXT")
+        db.execSQL("ALTER TABLE games ADD COLUMN metadataExternalId TEXT")
+        db.execSQL("ALTER TABLE games ADD COLUMN metadataMatchedAtMillis INTEGER")
     }
 }
