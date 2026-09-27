@@ -49,7 +49,7 @@ object EmulatorIntentPolicy {
             packageName == PPSSPP_PACKAGE ||
                 packageName == PPSSPP_GOLD_PACKAGE ||
                 packageName == PPSSPP_LEGACY_PACKAGE ->
-                ppssppPlan(contentUri, graphicsProfile)
+                ppssppPlan(contentUri)
             packageName == RETROARCH_PACKAGE ||
                 packageName.startsWith(RETROARCH_PACKAGE + ".") -> EmulatorIntentPlan(
                     style = EmulatorIntentStyle.LAUNCHER_EXTRAS,
@@ -69,23 +69,14 @@ object EmulatorIntentPolicy {
         }
     }
 
-    private fun ppssppPlan(contentUri: String, graphicsProfile: String): EmulatorIntentPlan {
-        val graphicsArgument = when (graphicsProfile) {
-            "Performance" -> "--graphics=vulkan"
-            "Compatibility" -> "--graphics=gles"
-            else -> null
-        }
-        val quotedUri = quote(contentUri)
-        val args = listOfNotNull(graphicsArgument, quotedUri).joinToString(" ")
+    private fun ppssppPlan(contentUri: String): EmulatorIntentPlan {
+        // PPSSPP's documented Android front-end contract is ACTION_VIEW with the
+        // game URI. Launcher Args are intended for PPSSPP command-line controls
+        // (for example --pause-menu-exit), not for handing off a game path.
         return EmulatorIntentPlan(
-            style = EmulatorIntentStyle.LAUNCHER_EXTRAS,
-            stringExtras = mapOf(PPSSPP_ARGS to args),
-            graphicsProfileApplied = graphicsArgument != null,
+            style = EmulatorIntentStyle.ACTION_VIEW,
         )
     }
-
-    private fun quote(value: String): String =
-        "\"" + value.replace("\\", "\\\\").replace("\"", "\\\"") + "\""
 
     /**
      * RetroActivityFuture reads these paths before it processes the ROM/core extras.

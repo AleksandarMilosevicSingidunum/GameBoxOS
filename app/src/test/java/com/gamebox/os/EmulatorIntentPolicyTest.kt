@@ -25,22 +25,16 @@ class EmulatorIntentPolicyTest {
     }
 
     @Test
-    fun ppssppAppliesSupportedGraphicsProfilesToOfficialArgsExtra() {
+    fun ppssppUsesTheDocumentedActionViewContentContract() {
         val performance = EmulatorIntentPolicy.plan(EmulatorIntentPolicy.PPSSPP_PACKAGE, uri, "Performance")
         val compatibility = EmulatorIntentPolicy.plan(EmulatorIntentPolicy.PPSSPP_PACKAGE, uri, "Compatibility")
 
-        assertEquals(EmulatorIntentStyle.LAUNCHER_EXTRAS, performance.style)
-        assertEquals("--graphics=vulkan \"$uri\"", performance.stringExtras[EmulatorIntentPolicy.PPSSPP_ARGS])
-        assertEquals("--graphics=gles \"$uri\"", compatibility.stringExtras[EmulatorIntentPolicy.PPSSPP_ARGS])
-        assertTrue(performance.graphicsProfileApplied)
-    }
-
-    @Test
-    fun balancedPpssppLaunchPreservesEmulatorDefaultBackend() {
-        val plan = EmulatorIntentPolicy.plan(EmulatorIntentPolicy.PPSSPP_PACKAGE, uri, "Balanced")
-
-        assertEquals("\"$uri\"", plan.stringExtras[EmulatorIntentPolicy.PPSSPP_ARGS])
-        assertFalse(plan.graphicsProfileApplied)
+        assertEquals(EmulatorIntentStyle.ACTION_VIEW, performance.style)
+        assertEquals(EmulatorIntentStyle.ACTION_VIEW, compatibility.style)
+        assertTrue(performance.stringExtras.isEmpty())
+        assertTrue(compatibility.stringExtras.isEmpty())
+        assertFalse(performance.graphicsProfileApplied)
+        assertFalse(compatibility.graphicsProfileApplied)
     }
 
     @Test
@@ -51,12 +45,9 @@ class EmulatorIntentPolicyTest {
             "Performance",
         )
 
-        assertEquals(EmulatorIntentStyle.LAUNCHER_EXTRAS, plan.style)
-        assertEquals(
-            "--graphics=vulkan \"$uri\"",
-            plan.stringExtras[EmulatorIntentPolicy.PPSSPP_ARGS],
-        )
-        assertTrue(plan.graphicsProfileApplied)
+        assertEquals(EmulatorIntentStyle.ACTION_VIEW, plan.style)
+        assertTrue(plan.stringExtras.isEmpty())
+        assertFalse(plan.graphicsProfileApplied)
     }
 
     @Test
@@ -67,8 +58,8 @@ class EmulatorIntentPolicyTest {
             "Balanced",
         )
 
-        assertEquals(EmulatorIntentStyle.LAUNCHER_EXTRAS, plan.style)
-        assertEquals("\"$uri\"", plan.stringExtras[EmulatorIntentPolicy.PPSSPP_ARGS])
+        assertEquals(EmulatorIntentStyle.ACTION_VIEW, plan.style)
+        assertTrue(plan.stringExtras.isEmpty())
         assertFalse(plan.graphicsProfileApplied)
     }
 

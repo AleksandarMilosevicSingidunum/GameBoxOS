@@ -40,6 +40,19 @@ Android APK from `ppsspp.org` was installed on the connected Honor as
 `dd702a31270ecd68db37afee311d6efe08b1d4da9601d2750ce1a73bbd316c3f`).
 `org.ppsspp.ppsspp/.PpssppActivity` reached the resumed foreground state and no fatal
 exception appeared in the captured logcat window. No commercial game or ROM was loaded;
+
+PPSSPP handoff correction checkpoint (27 September 2026): the launch policy now uses
+the documented Android `ACTION_VIEW` contract with the scoped content URI instead of
+placing the game path in PPSSPP's launcher `Args` extra. The Android JVM suite and the
+Honor instrumentation suite both pass after this change. A legal PSP demo from the
+PPSSPP-linked PlayDreamCreate archive was transferred to the Honor (ZIP SHA-256
+`825f9d840be7ba279e36aadc1875a1fae51ac7215c886ba326ee4f6896ca2b29`; extracted
+`EBOOT.PBP` size 6,407,365 bytes) and launched through both direct PPSSPP and
+`ACTION_VIEW` probes. PPSSPP reached its foreground activity but displayed `Failed to
+read identification bytes` for that fixture. This is recorded as a real-device
+content-compatibility failure, not PSP gameplay evidence; the GameBox scoped-content
+handoff correction remains covered by policy tests and requires another legal PSP
+fixture for successful gameplay validation.
 this is emulator installation/startup evidence, not PSP gameplay or save compatibility.
 
 Windows validation checkpoint (27 September 2026): the installed .NET SDK/runtime
