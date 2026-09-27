@@ -187,6 +187,7 @@ public sealed class CompanionSaveClient
     {
         if (response.StatusCode == HttpStatusCode.Unauthorized)
             throw new UnauthorizedAccessException("GameBox rejected the pairing secret.");
+        CompanionRetryPolicy.ThrowIfTransient(response.StatusCode, "GameBox save transfer failed transiently.");
         if (!response.IsSuccessStatusCode)
         {
             var status = response.StatusCode;

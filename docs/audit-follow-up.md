@@ -35,10 +35,11 @@ boundary. Companion content replacement now also recovers an orphaned previous c
 before retrying, preserving the old installed content when a staged replacement fails.
 Windows companion status, library, save, and content clients now normalize incomplete
 or malformed JSON confirmations into bounded invalid-data failures, with console-test
-coverage for missing response fields. Managed-save downloads now use the shared bounded
-retry policy for transient LAN failures; save uploads and content replacement remain
-non-automatically-retried mutations so an uncertain response cannot create duplicate
-conflict backups or replacement side effects. Android save uploads with an identical
+coverage for missing response fields. The shared bounded retry policy now also classifies
+HTTP 408, 429, and 5xx responses as transient while authentication and malformed payload
+failures remain non-retryable. Managed-save downloads now use that policy; save uploads
+and identical content replacements are safe to replay because Android treats repeated
+checksummed uploads as no-ops. Android save uploads with an identical
 SHA-256 are now true no-ops that repair the managed-save metadata row without advancing
 the timestamp or creating another conflict artifact, allowing the Windows client to
 retry save uploads safely after transient LAN failures. Owned-content replacement now

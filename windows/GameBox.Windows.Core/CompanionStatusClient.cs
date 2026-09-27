@@ -64,6 +64,7 @@ public sealed class CompanionStatusClient
             .ConfigureAwait(false);
         if (response.StatusCode == HttpStatusCode.Unauthorized)
             throw new UnauthorizedAccessException("GameBox rejected the pairing secret.");
+        CompanionRetryPolicy.ThrowIfTransient(response.StatusCode, "GameBox status request failed transiently.");
         response.EnsureSuccessStatusCode();
 
         await using var stream = await response.Content.ReadAsStreamAsync(timeoutSource.Token).ConfigureAwait(false);
@@ -108,6 +109,7 @@ public sealed class CompanionStatusClient
         using var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, timeoutSource.Token).ConfigureAwait(false);
         if (response.StatusCode == HttpStatusCode.Unauthorized)
             throw new UnauthorizedAccessException("GameBox rejected the pairing secret.");
+        CompanionRetryPolicy.ThrowIfTransient(response.StatusCode, "GameBox library request failed transiently.");
         response.EnsureSuccessStatusCode();
 
         await using var stream = await response.Content.ReadAsStreamAsync(timeoutSource.Token).ConfigureAwait(false);
@@ -173,6 +175,7 @@ public sealed class CompanionStatusClient
             throw new UnauthorizedAccessException("GameBox rejected the pairing secret.");
         if (response.StatusCode == HttpStatusCode.NotFound)
             throw new InvalidDataException("The selected GameBox title is no longer available.");
+        CompanionRetryPolicy.ThrowIfTransient(response.StatusCode, "GameBox library update failed transiently.");
         if (!response.IsSuccessStatusCode)
             throw new InvalidDataException("GameBox rejected the library update (" + (int)response.StatusCode + ").");
         await using var stream = await response.Content.ReadAsStreamAsync(timeoutSource.Token).ConfigureAwait(false);

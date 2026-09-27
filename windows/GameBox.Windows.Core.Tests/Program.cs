@@ -621,6 +621,23 @@ try
         reconnectAttempts == 3 && reconnectDelays == 2,
         "Reconnect policy must recover after bounded transient failures.");
 
+    var transientStatusAttempts = 0;
+    using var transientStatusHttp = new HttpClient(new StubHttpMessageHandler(_ =>
+    {
+        transientStatusAttempts++;
+        if (transientStatusAttempts == 1)
+            return new HttpResponseMessage(HttpStatusCode.ServiceUnavailable);
+        return new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent(
+                "{\"protocolVersion\":1,\"deviceName\":\"Recovered HTTP GameBox\",\"status\":\"ready\"}")
+        };
+    }));
+    var retriedHttpStatus = await new CompanionStatusClient(transientStatusHttp).ReconnectAsync(
+        "192.168.1.22", 49_500, companionSecret);
+    Require(retriedHttpStatus.DeviceName == "Recovered HTTP GameBox" && transientStatusAttempts == 2,
+        "Reconnect policy must retry transient HTTP 5xx responses.");
+
     var authenticationAttempts = 0;
     var authenticationFailure = false;
     try

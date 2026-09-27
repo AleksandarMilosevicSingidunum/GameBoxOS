@@ -1,4 +1,14 @@
+using System.Net;
+
 namespace GameBox.Windows.Core;
+
+public sealed class CompanionTransientHttpException : IOException
+{
+    public HttpStatusCode StatusCode { get; }
+
+    public CompanionTransientHttpException(HttpStatusCode statusCode, string message)
+        : base(message) => StatusCode = statusCode;
+}
 
 /// <summary>Bounded recovery for transient LAN failures; authentication and payload errors never retry.</summary>
 public static class CompanionRetryPolicy
@@ -38,4 +48,12 @@ public static class CompanionRetryPolicy
     public static bool IsTransient(Exception exception, CancellationToken callerToken) =>
         exception is HttpRequestException or IOException ||
         (exception is TaskCanceledException && !callerToken.IsCancellationRequested);
+
+    public static void ThrowIfTransient(HttpStatusCode statusCode, string message)
+    {
+        if (statusCode == HttpStatusCode.RequestTimeout ||
+            statusCode == HttpStatusCode.TooManyRequests ||
+            (int)statusCode is >= 500 and <= 599)
+            throw new CompanionTransientHttpException(statusCode, message);
+    }
 }

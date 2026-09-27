@@ -78,6 +78,7 @@ public sealed class CompanionContentClient
             throw new UnauthorizedAccessException("GameBox rejected the pairing secret.");
         if (response.StatusCode == HttpStatusCode.RequestEntityTooLarge)
             throw new InvalidDataException("GameBox rejected content larger than 64 GiB.");
+        CompanionRetryPolicy.ThrowIfTransient(response.StatusCode, "GameBox content upload failed transiently.");
         if (!response.IsSuccessStatusCode)
             throw new InvalidDataException("GameBox rejected the game content (" + (int)response.StatusCode + ").");
 

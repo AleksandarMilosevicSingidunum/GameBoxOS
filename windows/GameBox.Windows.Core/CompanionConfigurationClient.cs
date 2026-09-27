@@ -86,6 +86,7 @@ public sealed class CompanionConfigurationClient
             request, HttpCompletionOption.ResponseHeadersRead, timeoutSource.Token).ConfigureAwait(false);
         if (response.StatusCode == HttpStatusCode.Unauthorized)
             throw new UnauthorizedAccessException("GameBox rejected the pairing secret.");
+        CompanionRetryPolicy.ThrowIfTransient(response.StatusCode, "GameBox configuration request failed transiently.");
         if (!response.IsSuccessStatusCode)
             throw new InvalidDataException("GameBox rejected the device configuration request (" +
                 (int)response.StatusCode + ").");
