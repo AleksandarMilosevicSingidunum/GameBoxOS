@@ -10,8 +10,9 @@ Seven local JUnit tests passed on rerun, covering existing backup/restore/import
 behavior and invalid paths. The first broader Windows run had an AccessDeniedException
 at atomic file replacement; an unchanged rerun passed. The cause is not established.
 An Android regression test covers linked backup, checksum, import-staging and
-restore-staging paths; the connected Honor instrumentation suite executes it with
-the expected permission-gated symlink capability skip on this Windows host.
+restore-staging paths; the latest connected Honor instrumentation suite executes it
+without skips. The separate local JVM symlink-capability limitation remains explicit
+in the test report.
 
 Completed-session recovery now automatically discovers managed save artifacts,
 creates checksum-verified atomic backups, and publishes a per-game snapshot manifest.

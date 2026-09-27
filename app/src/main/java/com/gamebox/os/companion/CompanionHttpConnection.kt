@@ -35,6 +35,7 @@ internal data class CompanionHttpRequest(
 
 private class CompanionUnauthorizedRequest : IllegalArgumentException()
 private class CompanionPayloadTooLarge : IllegalArgumentException()
+internal class CompanionStorageUnavailable : IllegalStateException()
 
 /** Bounded HTTP/1 request reader with checksum-verified disk staging for large content uploads. */
 internal object CompanionHttpRequestReader {
@@ -55,6 +56,7 @@ internal object CompanionHttpRequestReader {
         beforeRead: () -> Unit = {},
         bodyDirectory: File? = null,
         authorizeHead: (CompanionHttpRequestHead) -> Boolean = { true },
+        availableSpace: (File) -> Long = File::getUsableSpace,
     ): CompanionHttpRequest {
         var headBytes = 0
         fun nextHeadByte(): Int {
@@ -131,6 +133,7 @@ internal object CompanionHttpRequestReader {
         if (isContentUpload) {
             val directory = requireNotNull(bodyDirectory) { "Content staging directory is unavailable" }
             require(directory.exists() || directory.mkdirs()) { "Content staging directory is unavailable" }
+            if (availableSpace(directory) < contentLength) throw CompanionStorageUnavailable()
             val staged = File.createTempFile("companion-", ".partial", directory)
             try {
                 staged.outputStream().buffered().use { output ->
@@ -183,6 +186,7 @@ internal object CompanionHttpRequestReader {
 internal class CompanionHttpConnection(
     private val requestTimeoutMillis: Int = 5_000,
     private val bodyDirectory: File? = null,
+    private val availableSpace: (File) -> Long = File::getUsableSpace,
 ) {
     init { require(requestTimeoutMillis > 0) }
 
@@ -198,13 +202,15 @@ internal class CompanionHttpConnection(
                 val request = CompanionHttpRequestReader.read(input, {
                     // Bound inactivity, not total duration: large owned-copy transfers may take hours.
                     socket.soTimeout = requestTimeoutMillis
-                }, bodyDirectory, authorizeHead)
+                }, bodyDirectory, authorizeHead, availableSpace)
                 stagedBody = request.bodyFile
                 route(request)
             } catch (_: CompanionUnauthorizedRequest) {
                 CompanionHttpResponse(401, """{"error":"unauthorized"}""")
             } catch (_: CompanionPayloadTooLarge) {
                 CompanionHttpResponse(413, """{"error":"payload_too_large"}""")
+            } catch (_: CompanionStorageUnavailable) {
+                CompanionHttpResponse(507, """{"error":"storage_unavailable"}""")
             } catch (_: SocketTimeoutException) {
                 CompanionHttpResponse(408, """{"error":"request_timeout"}""")
             } catch (_: EOFException) {
@@ -218,6 +224,7 @@ internal class CompanionHttpConnection(
                 401 -> "Unauthorized"
                 408 -> "Request Timeout"
                 413 -> "Payload Too Large"
+                507 -> "Insufficient Storage"
                 else -> "Not Found"
             }
             val body = response.body.toByteArray(Charsets.UTF_8)

@@ -5,6 +5,7 @@ import java.io.InputStream
 import java.net.InetAddress
 import java.net.ServerSocket
 import java.net.Socket
+import java.nio.file.Files
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import org.junit.Assert.*
@@ -73,13 +74,40 @@ class CompanionHttpConnectionTest {
         )
     }
 
+    @Test fun rejectsContentBeforeReadingWhenStagingSpaceIsInsufficient() {
+        val directory = Files.createTempDirectory("companion-space-").toFile()
+        try {
+            val body = "NES-CONTENT".toByteArray()
+            val hash = CompanionSaveTransferStore.sha256(body)
+            val request = (
+                "PUT /v1/content/galaxy-patrol HTTP/1.1\r\n" +
+                    "Content-Type: application/octet-stream\r\n" +
+                    CompanionHttpRequestReader.BODY_SHA256_HEADER + ": " + hash + "\r\n" +
+                    "Content-Length: " + body.size + "\r\n\r\n"
+                ).toByteArray() + body
+
+            val failure = runCatching {
+                CompanionHttpRequestReader.read(
+                    request.inputStream(),
+                    bodyDirectory = directory,
+                    availableSpace = { 0L },
+                )
+            }.exceptionOrNull()
+            assertTrue(failure is CompanionStorageUnavailable)
+            assertEquals(0, directory.listFiles()?.size ?: 0)
+        } finally {
+            directory.deleteRecursively()
+        }
+    }
+
     @Test fun actualSocketRespondsBeforeClientClosesAndSurvivesBadClients() {
         val executor = Executors.newSingleThreadExecutor()
-        ServerSocket(0, 4, InetAddress.getLoopbackAddress()).use { listener ->
+        val staging = Files.createTempDirectory("companion-http-space-").toFile()
+        ServerSocket(0, 5, InetAddress.getLoopbackAddress()).use { listener ->
             listener.soTimeout = 5000
             val server = executor.submit {
-                val connection = CompanionHttpConnection(200)
-                repeat(4) {
+                val connection = CompanionHttpConnection(200, staging) { 0L }
+                repeat(5) {
                     listener.accept().use { socket ->
                         connection.handle(socket) { request ->
                             CompanionStatusRoute.handle(request.method, request.path, request.authorization,
@@ -103,8 +131,18 @@ class CompanionHttpConnectionTest {
                 val success = exchange(request(authorization))
                 assertTrue(success.startsWith("HTTP/1.1 200"))
                 assertTrue(success.contains("\"status\":\"ready\""))
+                val content = "CONTENT".toByteArray()
+                val contentRequest = (
+                    "PUT /v1/content/game-one HTTP/1.1\r\n" +
+                        "Content-Type: application/octet-stream\r\n" +
+                        CompanionHttpRequestReader.BODY_SHA256_HEADER + ": " +
+                            CompanionSaveTransferStore.sha256(content) + "\r\n" +
+                        "Content-Length: " + content.size + "\r\n\r\n"
+                    ).toByteArray() + content
+                assertTrue(exchange(String(contentRequest, Charsets.ISO_8859_1)).startsWith("HTTP/1.1 507"))
                 server.get(5, TimeUnit.SECONDS)
             } finally { executor.shutdownNow() }
         }
+        staging.deleteRecursively()
     }
 }
