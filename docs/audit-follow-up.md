@@ -36,6 +36,11 @@ failures were all the Espresso `InputManager.getInstance` incompatibility, so th
 is not treated as app-failure evidence. Neither emulator run proves real game execution,
 controller input, save ownership, or uninstall/reinstall recovery.
 
+The API-35 emulator now also has RetroArch 1.22.2's official universal Android package
+installed and initialized, with the `Nintendo - NES / Famicom (FCEUmm)` core installed
+through RetroArch's own Online Updater. This closes the missing-frontend/core setup gate
+for the emulator, but the real GameBox launch and lifecycle evidence remains pending.
+
 The current debug APK was also installed on `GameBox_API35` and launched through the
 real `com.gamebox.os/.MainActivity` entry point. The process remained alive, the
 activity stayed resumed, and the crash buffer was empty after startup. This is genuine

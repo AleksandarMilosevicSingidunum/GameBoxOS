@@ -6,7 +6,7 @@ not prove working emulators, providers, saves or release signing.
 | Priority | Work | Current evidence / next gate |
 | --- | --- | --- |
 | P0 | Honest first-run library and installation state | Merged in PR #267 after Android unit/instrumentation, phone/DeX screenshot and Windows build checks passed. Catalog claims no longer create installed or queued games. |
-| P0 | One complete authorized game journey | Galaxy Patrol is bundled and hash-pinned. API-35 app startup and intent/lifecycle tests pass, but neither the API-35 emulator nor the connected Honor currently has a supported RetroArch/console adapter installed; real execution/input → save → return → uninstall/reinstall preservation is not yet proven end-to-end. |
+| P0 | One complete authorized game journey | Galaxy Patrol is bundled and hash-pinned. The API-35 emulator now has the official RetroArch universal package and FCEUmm core installed, while the connected Honor remains adapter-pending. Real GameBox content launch, input, emulator save ownership, return, uninstall and reinstall preservation are still not proven end-to-end. |
 | P0 | Reproducible signed release and upgrade | Debug APK, API-35 UI tests, and a real API-35 `MainActivity` startup pass locally. Production signing, clean install/upgrade and rollback validation remain separate gates. |
 | P1 | Remove simulated installation controls | Merged and automated checks passed in PR #267. Manual completion APIs removed; fake repository moved to unit-test sources. Details pause/resume uses the real download controller; in-progress actions open Downloads. Unavailable-source jobs report recovery guidance rather than simulate progress. |
 | P1 | Durable download updates | PRs #269–#271 merged after their checks passed. Ordered Room writes read persisted rows, startup waits for database records, work identity distinguishes fast reinstalls, and remote recovery verifies current content while preserving uninstall state. Live provider transfer/recovery still needs separate evidence. |
@@ -24,6 +24,13 @@ real remote downloads, Galaxy Patrol and unrelated user records are excluded.
 Catalog manifests retain the legacy initialState field for schema compatibility,
 but it cannot install or enqueue games. New entries always start NOT_INSTALLED;
 verified local operations remain authoritative for subsequent state.
+
+Official adapter checkpoint (27 September 2026): RetroArch 1.22.2's universal Android
+APK was installed on `GameBox_API35`, initialized successfully, and its own Online
+Updater installed the `Nintendo - NES / Famicom (FCEUmm)` core. This proves the emulator
+frontend and required core are available through a reproducible legal distribution path;
+it does not yet prove that GameBox's bundled Galaxy Patrol content was launched by that
+core or that emulator-produced saves round-trip through the full lifecycle.
 
 PR #268's real WorkManager/Room/files lifecycle test passed without skipping and
 was merged. It covers hash-verified installation, synthetic save backup,
