@@ -63,7 +63,7 @@ jobs:
       - name: Calculate and test Android version code
         shell: bash
         run: |
-          python -m unittest scripts/test_android_version_code.py
+          python -m unittest scripts/test_android_version_code.py scripts/test_create_apk_manifest.py
           version_code="$(python scripts/android-version-code.py "$RELEASE_TAG")"
           echo "GAMEBOX_VERSION_CODE=$version_code" >> "$GITHUB_ENV"
           echo "Android versionCode: $version_code"
@@ -102,10 +102,13 @@ jobs:
           jarsigner -verify -strict "$asset"
           sha256sum "$asset" > "$asset.sha256"
           test -s "$asset.sha256"
+          python scripts/create-apk-manifest.py "$asset" "$RELEASE_TAG" PRODUCTION "GameBoxOS-$RELEASE_TAG-manifest.json" "$ROLLBACK_TAG"
+          test -s "GameBoxOS-$RELEASE_TAG-manifest.json"
 
       - name: Upload signed release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release upload "$RELEASE_TAG"             "GameBoxOS-$RELEASE_TAG.apk"             "GameBoxOS-$RELEASE_TAG.apk.sha256"             --clobber --verify-tag
+          gh release upload "$RELEASE_TAG"             "GameBoxOS-$RELEASE_TAG-manifest.json"             --clobber --verify-tag
 

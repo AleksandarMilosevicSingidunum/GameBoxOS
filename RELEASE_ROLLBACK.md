@@ -5,7 +5,9 @@
 1. Create and review a stable tag (`vMAJOR.MINOR.PATCH`) on the intended commit.
 2. Ensure the protected GitHub Actions secrets are present: `GAMEBOX_KEYSTORE_BASE64`, `GAMEBOX_KEYSTORE_PASSWORD`, `GAMEBOX_KEY_ALIAS`, and `GAMEBOX_KEY_PASSWORD`.
 3. Run **Publish signed production APK** with the new tag and a distinct previous known-good rollback tag.
-4. Verify the uploaded APK checksum and signature before distribution.
+4. Verify the uploaded APK checksum, signature, and `GameBoxOS-<tag>-manifest.json`
+   before distribution. The manifest must identify the production tag, APK hash and
+   size, and the distinct rollback tag used for the run.
 
 The workflow refuses prerelease tags, missing signing inputs, missing tags, or a rollback tag equal to the release tag.
 
