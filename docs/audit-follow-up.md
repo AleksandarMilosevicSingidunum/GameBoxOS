@@ -27,6 +27,14 @@ After rebuilding with the PSP adapter change, the selected physical Honor Magic6
 instrumentation run completed `62/62`, zero failures, zero skips. `ANDROID_SERIAL` was
 used so this result is explicitly the Honor hardware result rather than an emulator run.
 
+Physical PPSSPP startup checkpoint (27 September 2026): the official PPSSPP v1.20.4
+Android APK from `ppsspp.org` was installed on the connected Honor as
+`org.ppsspp.ppsspp` (APK SHA-256
+`dd702a31270ecd68db37afee311d6efe08b1d4da9601d2750ce1a73bbd316c3f`).
+`org.ppsspp.ppsspp/.PpssppActivity` reached the resumed foreground state and no fatal
+exception appeared in the captured logcat window. No commercial game or ROM was loaded;
+this is emulator installation/startup evidence, not PSP gameplay or save compatibility.
+
 Windows validation checkpoint (27 September 2026): the installed .NET SDK/runtime
 `8.0.314`/`8.0.17` ran the complete `GameBox.Windows.Core.Tests` harness successfully.
 The companion then published self-contained for `win-x64`; the generated ZIP and unsigned
