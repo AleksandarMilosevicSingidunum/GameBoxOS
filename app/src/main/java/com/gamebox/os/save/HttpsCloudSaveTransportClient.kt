@@ -72,6 +72,12 @@ class HttpsCloudSaveTransportClient(
             if (bytes.size > maxResponseBytes) {
                 throw IllegalArgumentException("Cloud save response exceeds the 16 MiB limit")
             }
+            if (declaredLength >= 0L && bytes.size.toLong() != declaredLength) {
+                throw IOException(
+                    "Cloud save response ended before its declared length " +
+                        "(" + bytes.size + "/" + declaredLength + ")"
+                )
+            }
             verifyIntegrity(request, bytes)
             bytes
         }

@@ -305,6 +305,11 @@ retry save uploads safely after transient LAN failures. Owned-content replacemen
 also treats an identical streamed SHA-256 as a no-op, preserving replacement backups
 only when the incoming content differs; the Windows client now retries those identical
 content uploads after transient LAN failures as well.
+Cloud-save downloads now reject a response that ends before its declared HTTP length,
+classifying the incomplete body through the shared retryable transport policy rather
+than accepting a truncated payload when no checksum is available. JVM coverage verifies
+the disconnect and recovery classification; live WebDAV/S3 endpoint evidence remains
+separate.
 
 The PC now has the official .NET 8.0.314 SDK installed, including the .NET 8 runtime.
 The Windows core executable test harness and self-contained `win-x64` publish both pass

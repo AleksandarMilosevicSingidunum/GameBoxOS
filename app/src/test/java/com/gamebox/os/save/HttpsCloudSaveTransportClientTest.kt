@@ -191,6 +191,26 @@ class HttpsCloudSaveTransportClientTest {
     }
 
     @Test
+    fun classifiesTruncatedDeclaredResponseAsRetryableTransportFailure() {
+        val connection = FakeConnection(
+            status = 200,
+            response = byteArrayOf(1, 2, 3),
+            declaredLength = 5,
+        )
+        val error = assertThrows(CloudSaveTransportException::class.java) {
+            runBlocking {
+                HttpsCloudSaveTransportClient(
+                    maxRetries = 0,
+                    connectionFactory = { connection },
+                ).download(request.copy(payloadBytes = 0), CatalogCredentials("player", "secret"))
+            }
+        }
+
+        assertTrue(error.recovery.retryable)
+        assertTrue(connection.disconnected)
+    }
+
+    @Test
     fun mapsHttpFailuresToSharedRecoveryPolicy() {
         val error = assertThrows(CloudSaveTransportException::class.java) {
             runBlocking {
