@@ -84,9 +84,17 @@ class HttpsCatalogTransportClient(
             val status = connection.responseCode
             if (status !in 200..299) throw catalogTransportFailure(status)
             val declaredLength = connection.contentLengthLong
-            require(declaredLength < 0 || declaredLength <= maxResponseBytes) { "catalog response is too large" }
+            if (declaredLength >= 0 && declaredLength > maxResponseBytes) {
+                throw catalogTransportFailure(
+                    error = IllegalArgumentException("catalog response is too large"),
+                )
+            }
             val bytes = connection.inputStream.use { it.readNBytes(maxResponseBytes + 1) }
-            require(bytes.size <= maxResponseBytes) { "catalog response is too large" }
+            if (bytes.size > maxResponseBytes) {
+                throw catalogTransportFailure(
+                    error = IllegalArgumentException("catalog response is too large"),
+                )
+            }
             bytes.toString(Charsets.UTF_8)
         } catch (error: CatalogTransportException) {
             throw error
