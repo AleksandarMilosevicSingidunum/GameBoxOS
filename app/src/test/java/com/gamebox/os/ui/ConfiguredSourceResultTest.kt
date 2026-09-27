@@ -10,6 +10,15 @@ import org.junit.Test
 
 class ConfiguredSourceResultTest {
     @Test
+    fun staleSourceDetailsProduceActionableMetadataOnlyNotice() {
+        assertEquals(
+            "Vimm's Lair details are unavailable; the listing may be stale. " +
+                "You can still open the source page or import your own copy. (HTTP 404)",
+            configuredSourceDetailFailureMessage("Vimm's Lair", "HTTP 404"),
+        )
+    }
+
+    @Test
     fun configuredResultBecomesStableImportableDiscoveryIdentity() {
         val source = DiscoverySourceGame(
             sourceId = "vimm-source",

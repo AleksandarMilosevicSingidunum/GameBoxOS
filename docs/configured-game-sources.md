@@ -69,7 +69,10 @@ Selecting a Vimm search result now stays inside GameBox first. Before opening th
 discovery Details flow, GameBox performs one bounded request to the exact numeric vault
 page and hydrates non-binary metadata when present: page title, system/platform, region,
 release year, and Vimm-hosted Open Graph artwork. If the detail request fails or the page
-is sparse, the original listing result remains usable.
+is sparse, the original listing result remains usable. Details now surfaces an accessible
+stale-link/provider notice when hydration fails, while retaining only the navigation link
+and legal local-import action; it never turns a failed detail request into an install
+source.
 
 For example, a user-provided vault link such as
 `https://vimm.net/vault/23719` is treated as a metadata/details page. GameBox may display

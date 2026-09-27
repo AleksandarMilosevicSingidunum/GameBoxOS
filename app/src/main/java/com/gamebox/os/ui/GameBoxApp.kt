@@ -1070,6 +1070,7 @@ val allDiscoveryGames by discoveryRepository.observeGames(null, "", 250).collect
     var discoverySyncProgress by remember { mutableStateOf(0f) }
     var configuredSourceResults by remember { mutableStateOf<List<DiscoverySourceGame>>(emptyList()) }
     var selectedConfiguredResult by remember { mutableStateOf<DiscoverySourceGame?>(null) }
+    var configuredResultNotice by remember { mutableStateOf<String?>(null) }
     var platform by remember(uiState) { mutableStateOf(uiState.screenValue("store.platform")) }
     var genre by remember(uiState) { mutableStateOf(uiState.screenValue("store.genre")) }
     var region by remember(uiState) { mutableStateOf(uiState.screenValue("store.region")) }
@@ -1120,10 +1121,14 @@ val allDiscoveryGames by discoveryRepository.observeGames(null, "", 250).collect
         DiscoveryDetailsScreen(
             game = configuredSourceResultToDiscoveryGame(result, allDiscoveryGames),
             platformName = result.platform,
-            onBack = { selectedConfiguredResult = null },
+            onBack = {
+                selectedConfiguredResult = null
+                configuredResultNotice = null
+            },
             onFavorite = {},
             favoriteEnabled = false,
             directSource = directSource,
+            sourceNotice = configuredResultNotice,
             importer = authorizedRomImporter,
             repository = repository,
             gameSources = gameSources,
@@ -1263,17 +1268,23 @@ val allDiscoveryGames by discoveryRepository.observeGames(null, "", 250).collect
             return
         }
         discoverySyncing = true
+        configuredResultNotice = null
         discoverySyncMessage = "Loading " + source.name + " details…"
         scope.launch {
             val hydrated = runCatching {
                 VimmLairDiscoverySource(source).hydrate(result)
             }
             selectedConfiguredResult = hydrated.getOrElse { error ->
+                configuredResultNotice = configuredSourceDetailFailureMessage(
+                    source.name,
+                    error.message,
+                )
                 discoverySyncMessage = source.name + " details unavailable: " +
                     (error.message?.take(180) ?: "unknown error")
                 result
             }
             if (hydrated.isSuccess) {
+                configuredResultNotice = null
                 discoverySyncMessage = "Loaded details from " + source.name
             }
             discoverySyncing = false
@@ -2484,6 +2495,11 @@ private fun GameFilterBar(
     }
 }
 
+internal fun configuredSourceDetailFailureMessage(sourceName: String, reason: String?): String =
+    sourceName + " details are unavailable; the listing may be stale. " +
+        "You can still open the source page or import your own copy." +
+        (reason?.takeIf { it.isNotBlank() }?.let { " ($it)" } ?: "")
+
 internal fun matchesStoreMetadataFilters(
     genre: String?,
     region: String?,
@@ -2531,6 +2547,7 @@ private fun DiscoveryDetailsScreen(
     gameSources: List<GameSourceConfig> = emptyList(),
     favoriteEnabled: Boolean = true,
     directSource: ConfiguredSourceLink? = null,
+    sourceNotice: String? = null,
 ) {
     val detail = remember(game, platformName) { GameDetailPresentation.from(game, platformName) }
     val context = LocalContext.current
@@ -2771,6 +2788,16 @@ private fun DiscoveryDetailsScreen(
             importMessage?.let { message ->
                 Text(message, color = if (message.startsWith("Import failed") || message.startsWith("Import rejected")) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
                     modifier = Modifier.semantics { contentDescription = message; liveRegion = LiveRegionMode.Polite })
+            }
+            sourceNotice?.let { notice ->
+                Text(
+                    notice,
+                    color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.semantics {
+                        contentDescription = notice
+                        liveRegion = LiveRegionMode.Assertive
+                    },
+                )
             }
             GameScreenshotGallery(detail, narrow)
             BlueprintPanel(Modifier.fillMaxWidth()) {

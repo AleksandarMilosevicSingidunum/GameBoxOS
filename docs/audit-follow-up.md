@@ -263,6 +263,12 @@ filters. This keeps the Blueprint's console-first browsing model reachable witho
 opening a secondary filter flow. The new production activity test passed on API-35 as
 `OK (1 test)`; wide-layout and physical TV evidence remain covered separately.
 
+Stale discovery-detail recovery checkpoint (28 September 2026): configured-source detail
+hydration failures now remain visible after the fallback result opens Details. The
+accessible notice identifies a possible stale provider listing and preserves only the
+source navigation and legal local-import actions. Android JVM coverage and the focused
+API-35 production activity test pass after this change.
+
 Live API-35 gameplay/lifecycle checkpoint (27 September 2026): GameBox installed the
 bundled hash-verified Galaxy Patrol fixture, reported a successful verified-asset worker,
 and opened the real `com.retroarch/.browser.retroactivity.RetroActivityFuture`. The
