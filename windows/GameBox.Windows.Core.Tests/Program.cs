@@ -363,6 +363,28 @@ try
     Require(saveDownloadRequest?.RequestUri?.AbsolutePath == "/v1/saves/nes-1", "Save download must bind the selected game ID.");
     Require(saveDownloadRequest?.Headers.Contains(CompanionProtocol.AuthorizationHeader) == true, "Save download must authenticate.");
 
+    var retrySaveAttempts = 0;
+    using var retrySaveHttp = new HttpClient(new StubHttpMessageHandler(_ =>
+    {
+        retrySaveAttempts++;
+        if (retrySaveAttempts == 1) throw new HttpRequestException("transient save read failure");
+        return new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent(JsonSerializer.Serialize(new
+            {
+                protocolVersion = 1,
+                gameId = "nes-1",
+                updatedAtMillis = 1234,
+                sha256 = saveHash,
+                payloadBase64 = Convert.ToBase64String(saveBytes)
+            }))
+        };
+    }));
+    var retriedSave = await new CompanionSaveClient(retrySaveHttp).DownloadWithRetryAsync(
+        "192.168.1.22", 49_500, companionSecret, "nes-1");
+    Require(retrySaveAttempts == 2 && retriedSave.Bytes.SequenceEqual(saveBytes),
+        "Managed-save downloads must retry transient LAN failures without changing payload bytes.");
+
     HttpRequestMessage? saveUploadRequest = null;
     using var saveUploadHttp = new HttpClient(new StubHttpMessageHandler(request =>
     {

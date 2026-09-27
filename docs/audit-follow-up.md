@@ -35,7 +35,10 @@ boundary. Companion content replacement now also recovers an orphaned previous c
 before retrying, preserving the old installed content when a staged replacement fails.
 Windows companion status, library, save, and content clients now normalize incomplete
 or malformed JSON confirmations into bounded invalid-data failures, with console-test
-coverage for missing response fields.
+coverage for missing response fields. Managed-save downloads now use the shared bounded
+retry policy for transient LAN failures; save uploads and content replacement remain
+non-automatically-retried mutations so an uncertain response cannot create duplicate
+conflict backups or replacement side effects.
 
 The PC now has the official .NET 8.0.314 SDK installed, including the .NET 8 runtime.
 The Windows core executable test harness passes locally, and now includes the documented

@@ -31,6 +31,17 @@ public sealed class CompanionSaveClient
         if (this.timeout <= TimeSpan.Zero) throw new ArgumentOutOfRangeException(nameof(timeout));
     }
 
+    /// <summary>Retries only the idempotent read operation after transient LAN failures.</summary>
+    public Task<CompanionSaveDownload> DownloadWithRetryAsync(
+        string host,
+        int port,
+        string pairingSecret,
+        string gameId,
+        CancellationToken cancellationToken = default) =>
+        CompanionRetryPolicy.ExecuteAsync(
+            token => DownloadAsync(host, port, pairingSecret, gameId, token),
+            cancellationToken);
+
     public async Task<CompanionSaveDownload> DownloadAsync(
         string host,
         int port,
