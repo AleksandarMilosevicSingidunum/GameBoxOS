@@ -9,11 +9,12 @@ using the caller's coroutine lifetime rather than retaining every visited game.
 Two pure identity tests pass locally. A new Android test exercises two controllers
 with separate imports, backup/restore, corrupt cross-game records and synthetic
 save bytes. The Android unit/build check and Windows build passed at c683dbf;
-Android instrumentation and screenshot checks were still running when checked.
+subsequent local API-35 emulator instrumentation and Honor Magic6 Pro
+instrumentation both passed their complete 60-test suites.
 Game details now receive the per-game factory and show a
-managed-copy panel with import, backup, export and confirmed restore. Added Compose
-tests cover confirmation, cancellation and disabled controls; execution is pending.
-The integration is being published as a draft for validation, not marked complete.
+managed-copy panel with import, backup, export and confirmed restore. Compose tests
+cover confirmation, cancellation and disabled controls; they pass on the API-35
+emulator. The integration remains separate from emulator-private save validation.
 
 Follow-up: a process-local game/root guard rejects overlapping save operations,
 including operations from newly created controllers. The panel disables actions
@@ -28,8 +29,8 @@ import, cancels the original panel scope, verifies a reopened controller cannot
 overlap it, then releases the write and verifies the record, bytes and subsequent
 backup. Existing tests now await operation completion before starting another
 action. The guard is released before clearing the busy indicator, so an enabled
-button cannot race a still-held guard. These follow-up Android tests require CI
-execution; no local Android SDK is available. This is not process-kill evidence.
+button cannot race a still-held guard. These follow-up Android tests now have local
+API-35 emulator evidence. This is not process-kill evidence.
 
 This is managed single-file save handling, not emulator-private save access.
 The panel now also exposes importing a newer backup, with a pre-picker warning
