@@ -345,6 +345,22 @@ try
     Require(companionRequest?.RequestUri?.ToString() == "http://192.168.1.22:49500/v1/status", "Companion status must use the configured LAN endpoint.");
     Require(companionRequest?.Headers.Contains(CompanionProtocol.AuthorizationHeader) == true, "Companion status must authenticate its request.");
 
+    var truncatedStatusContent = new StringContent(
+        "{\"protocolVersion\":1,\"deviceName\":\"Living Room\",\"status\":\"ready\"}");
+    truncatedStatusContent.Headers.ContentLength = truncatedStatusContent.Headers.ContentLength!.Value + 10;
+    using var truncatedStatusClient = new HttpClient(new StubHttpMessageHandler(_ => new HttpResponseMessage(HttpStatusCode.OK)
+    {
+        Content = truncatedStatusContent,
+    }));
+    var truncatedStatusRejected = false;
+    try
+    {
+        await new CompanionStatusClient(truncatedStatusClient).GetStatusAsync(
+            "192.168.1.22", 49_500, companionSecret);
+    }
+    catch (InvalidDataException) { truncatedStatusRejected = true; }
+    Require(truncatedStatusRejected, "Companion status responses shorter than Content-Length must be rejected.");
+
     using var incompleteStatusClient = new HttpClient(new StubHttpMessageHandler(_ =>
         new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent("{}") }));
     var incompleteStatusRejected = false;
@@ -927,6 +943,23 @@ try
         configurationGetRequest.RequestUri?.AbsolutePath == "/v1/config" &&
         configurationGetRequest.Headers.Contains(CompanionProtocol.AuthorizationHeader),
         "Device configuration GET must authenticate the exact endpoint.");
+
+    var truncatedConfigurationContent = new StringContent(
+        "{\"protocolVersion\":1,\"reducedMotion\":true,\"showUnavailableGames\":false,\"showUnavailableShortcuts\":true,\"downloadsUnmeteredOnly\":false}");
+    truncatedConfigurationContent.Headers.ContentLength = truncatedConfigurationContent.Headers.ContentLength!.Value + 10;
+    using var truncatedConfigurationHttp = new HttpClient(new StubHttpMessageHandler(_ => new HttpResponseMessage(HttpStatusCode.OK)
+    {
+        Content = truncatedConfigurationContent,
+    }));
+    var truncatedConfigurationRejected = false;
+    try
+    {
+        await new CompanionConfigurationClient(truncatedConfigurationHttp).GetAsync(
+            "192.168.1.22", 49_500, companionSecret);
+    }
+    catch (InvalidDataException) { truncatedConfigurationRejected = true; }
+    Require(truncatedConfigurationRejected,
+        "Companion configuration responses shorter than Content-Length must be rejected.");
 
     HttpRequestMessage? configurationPutRequest = null;
     using var configurationPutHttp = new HttpClient(new StubHttpMessageHandler(request =>

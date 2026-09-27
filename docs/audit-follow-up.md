@@ -173,7 +173,9 @@ parsing, matching the Android cloud/catalog transport integrity boundary. The co
 Windows core harness passed after this change; it remains automated Windows evidence,
 separate from live provider and physical Windows validation. The same bounded-response
 guard now covers managed-save and owned-content confirmations, with harness coverage for
-short save/content bodies before their JSON confirmations are trusted.
+short save/content bodies before their JSON confirmations are trusted. Status, library,
+and configuration response readers now enforce the same declared-length invariant, with
+the complete harness covering short status and configuration bodies as well.
 
 Release provenance hardening (27 September 2026): alpha, beta, combined preview, and
 protected production APK workflows now use the same tested manifest generator. It accepts

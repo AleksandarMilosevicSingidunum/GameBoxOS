@@ -96,8 +96,7 @@ public sealed class CompanionConfigurationClient
         if (!response.IsSuccessStatusCode)
             throw new InvalidDataException("GameBox rejected the device configuration request (" +
                 (int)response.StatusCode + ").");
-        await using var stream = await response.Content.ReadAsStreamAsync(timeoutSource.Token).ConfigureAwait(false);
-        var bytes = await ReadBoundedAsync(stream, timeoutSource.Token).ConfigureAwait(false);
+        var bytes = await ReadBoundedAsync(response.Content, timeoutSource.Token).ConfigureAwait(false);
         try
         {
             using var document = JsonDocument.Parse(bytes);
@@ -122,14 +121,24 @@ public sealed class CompanionConfigurationClient
         (value.ShowUnavailableShortcuts ? "1" : "0") +
         (value.DownloadsUnmeteredOnly ? "1" : "0");
 
-    private static async Task<byte[]> ReadBoundedAsync(Stream stream, CancellationToken cancellationToken)
+    private static async Task<byte[]> ReadBoundedAsync(HttpContent content, CancellationToken cancellationToken)
     {
+        var declaredLength = content.Headers.ContentLength;
+        if (declaredLength is < 0 or > MaxResponseBytes)
+            throw new InvalidDataException("GameBox configuration response exceeds 32 KiB.");
+        await using var stream = await content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
         using var output = new MemoryStream();
         var buffer = new byte[4096];
         while (true)
         {
             var read = await stream.ReadAsync(buffer, cancellationToken).ConfigureAwait(false);
-            if (read == 0) return output.ToArray();
+            if (read == 0)
+            {
+                if (declaredLength.HasValue && output.Length != declaredLength.Value)
+                    throw new InvalidDataException(
+                        $"GameBox configuration response ended before its declared length ({output.Length}/{declaredLength.Value}).");
+                return output.ToArray();
+            }
             if (output.Length + read > MaxResponseBytes)
                 throw new InvalidDataException("GameBox configuration response exceeds 32 KiB.");
             await output.WriteAsync(buffer.AsMemory(0, read), cancellationToken).ConfigureAwait(false);
