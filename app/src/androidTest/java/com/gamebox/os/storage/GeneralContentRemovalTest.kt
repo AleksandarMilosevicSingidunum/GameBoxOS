@@ -77,6 +77,10 @@ class GeneralContentRemovalTest {
             val controller = DefaultSaveSafetyController(context, database.saveRecordDao(), repository,
                 scope, SettingsRepository(app), game.id)
             assertEquals(ContentRemovalPreview(14, 2), controller.contentRemovalPreview(game))
+            val cloudPreflight = controller.cloudBackupPreflight(game)
+            assertEquals(CloudBackupPreflightStatus.ACKNOWLEDGEMENT_REQUIRED, cloudPreflight.status)
+            assertTrue(cloudPreflight.message.startsWith("Cloud backup is unavailable:"))
+            assertFalse(cloudPreflight.message.contains("\${"))
             // This isolated instrumentation environment intentionally has no configured
             // cloud provider. Exercise the explicit, user-acknowledged local-backup path.
             controller.uninstallContent(game, allowWithoutCloudBackup = true)

@@ -54,6 +54,13 @@ mutation responses and returned hashes matched the Windows client checks. The ph
 now contains that intentionally created test save/content state; this is real debug
 LAN mutation evidence, not signed-build or gameplay/save-recovery proof.
 
+The live test content was then removed through the product's supported uninstall flow on
+the Honor device. GameBox created the verified local backup and retained the managed save,
+as designed; no test content file remains. The same physical flow exposed and fixed a
+cloud-preflight message interpolation defect that had rendered `${safeCloudError(it)}`
+literally. `GeneralContentRemovalTest` now asserts the real failure message shape, and
+three focused instrumentation tests passed on the Honor device.
+
 ## Companion HTTP connection recovery (EXT-14)
 
 - Fixed the request-header terminator: the previous `return@repeat` continued reading
@@ -149,7 +156,7 @@ accepted cancellation cannot subsequently open the emulator. Three local JVM tes
 passed for cancellation before dispatch, cancellation/repeat rejection after commit,
 and stopping hashing without reading the entire game. Full Android/controller tests
 passed in PR #277 along with Android instrumentation, Windows build and phone/DeX
-screenshot jobs, and that PR is merged. No local Android SDK is available. This is not yet a complete
+screenshot jobs, and that PR is merged. Local Android SDK and device execution are now available. This is not yet a complete
 launch lifecycle: persistent sessions, large-file frame measurements
 and live emulator gameplay remain pending. Intent dispatch is not proof of gameplay.
 

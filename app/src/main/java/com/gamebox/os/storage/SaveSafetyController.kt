@@ -198,7 +198,7 @@ class DefaultSaveSafetyController(
             onFailure = {
                 CloudBackupPreflight(
                     CloudBackupPreflightStatus.ACKNOWLEDGEMENT_REQUIRED,
-                    "Cloud backup is unavailable: \${safeCloudError(it)}. A verified local backup is still required.",
+                    "Cloud backup is unavailable: ${safeCloudError(it)}. A verified local backup is still required.",
                 )
             },
         )
