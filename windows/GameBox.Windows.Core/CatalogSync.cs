@@ -49,6 +49,9 @@ public sealed class WindowsCatalogSyncClient
         await stream.CopyToAsync(buffer, requestToken);
         if (buffer.Length > MaxResponseBytes)
             throw new InvalidDataException("Catalog response is too large.");
+        if (declaredLength is >= 0 && buffer.Length != declaredLength)
+            throw new IOException(
+                $"Catalog response ended before its declared length ({buffer.Length}/{declaredLength}).");
         var envelope = JsonSerializer.Deserialize<RemoteEnvelope>(buffer.ToArray(), JsonOptions)
             ?? throw new InvalidDataException("Catalog response is empty.");
         var remote = envelope.Games ?? throw new InvalidDataException("Catalog games are missing.");

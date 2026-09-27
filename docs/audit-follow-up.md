@@ -167,6 +167,12 @@ The companion then published self-contained for `win-x64`; the generated ZIP and
 MSIX both passed the repository checksum and provenance validators. This is local Windows
 software/package evidence, not signed-install or physical Windows acceptance.
 
+Windows catalog transport hardening (28 September 2026): the companion's HTTPS catalog
+sync now rejects response bodies shorter than their declared `Content-Length` before JSON
+parsing, matching the Android cloud/catalog transport integrity boundary. The complete
+Windows core harness passed after this change; it remains automated Windows evidence,
+separate from live provider and physical Windows validation.
+
 Release provenance hardening (27 September 2026): alpha, beta, combined preview, and
 protected production APK workflows now use the same tested manifest generator. It accepts
 the PREVIEW channel and records the checked-out source commit plus signing status alongside

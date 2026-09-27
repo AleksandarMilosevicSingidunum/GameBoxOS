@@ -166,6 +166,18 @@ try
     catch (InvalidDataException) { oversizedRejected = true; }
     Require(oversizedRejected, "Catalog responses above the limit must be rejected before parsing.");
 
+    var truncatedRejected = false;
+    var truncatedPayload = new ByteArrayContent(System.Text.Encoding.UTF8.GetBytes(
+        "{\"games\":[]}"));
+    truncatedPayload.Headers.ContentLength = truncatedPayload.Headers.ContentLength!.Value + 10;
+    using var truncatedClient = new HttpClient(new StubHttpMessageHandler(_ => new HttpResponseMessage(HttpStatusCode.OK) {
+        RequestMessage = new HttpRequestMessage(HttpMethod.Get, "https://catalog.example/games"),
+        Content = truncatedPayload,
+    }));
+    try { await new WindowsCatalogSyncClient(truncatedClient).EnrichExistingAsync(new[] { syncExisting }, "https://catalog.example/games"); }
+    catch (IOException) { truncatedRejected = true; }
+    Require(truncatedRejected, "Catalog responses shorter than Content-Length must be rejected.");
+
     var invalidTimeoutRejected = false;
     try { _ = new WindowsCatalogSyncClient(new HttpClient(), TimeSpan.Zero); }
     catch (ArgumentOutOfRangeException) { invalidTimeoutRejected = true; }
