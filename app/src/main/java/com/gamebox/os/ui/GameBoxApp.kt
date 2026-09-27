@@ -4725,17 +4725,39 @@ private fun SettingsScreen(
                 else -> MaterialTheme.colorScheme.error
             }
         )
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Button(onClick = { externalTreeLauncher.launch(null) }) {
-                Text(if (currentSettings.externalLibraryUri.isBlank()) "Choose folder" else "Change folder")
+        if (compact) {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(
+                    onClick = { externalTreeLauncher.launch(null) },
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(if (currentSettings.externalLibraryUri.isBlank()) "Choose folder" else "Change folder")
+                }
+                if (currentSettings.externalLibraryUri.isNotBlank()) {
+                    OutlinedButton(
+                        onClick = {
+                            scope.launch {
+                                externalStorageController.forgetTree(currentSettings.externalLibraryUri)
+                                catalogMessage = "External library permission removed"
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) { Text("Forget") }
+                }
             }
-            if (currentSettings.externalLibraryUri.isNotBlank()) {
-                OutlinedButton(onClick = {
-                    scope.launch {
-                        externalStorageController.forgetTree(currentSettings.externalLibraryUri)
-                        catalogMessage = "External library permission removed"
-                    }
-                }) { Text("Forget") }
+        } else {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(onClick = { externalTreeLauncher.launch(null) }) {
+                    Text(if (currentSettings.externalLibraryUri.isBlank()) "Choose folder" else "Change folder")
+                }
+                if (currentSettings.externalLibraryUri.isNotBlank()) {
+                    OutlinedButton(onClick = {
+                        scope.launch {
+                            externalStorageController.forgetTree(currentSettings.externalLibraryUri)
+                            catalogMessage = "External library permission removed"
+                        }
+                    }) { Text("Forget") }
+                }
             }
         }
         Button(
