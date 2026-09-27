@@ -101,7 +101,7 @@ boundary. Companion content replacement now also recovers an orphaned previous c
 before retrying, preserving the old installed content when a staged replacement fails.
 The catalog transport failure double is now test-only; the Android production source no
 longer contains a `NoopCatalogTransportClient` placeholder. The complete Android JVM
-suite was rerun after this cleanup: 515 tests, zero failures, and one explicit
+suite was rerun after this cleanup: 516 tests, zero failures, and one explicit
 privilege-based skip.
 Windows companion status, library, save, and content clients now normalize incomplete
 or malformed JSON confirmations into bounded invalid-data failures, with console-test
@@ -275,11 +275,16 @@ and the managed save retained SHA-256
 long-running LAN cancellation and staging-cleanup evidence; maximum-size, disk-full and
 routed-network conditions remain separate.
 
+The local Windows core harness now also streams a real 64 MiB temporary fixture through
+the production content client, consumes the complete request body, and verifies the
+returned SHA-256 confirmation. The harness passes this local boundary check; it does
+not replace the 64 GiB maximum-size transfer against a real Honor endpoint.
+
 The local Android JVM suite then exposed a host-capability failure in
 `DirectorySaveAdapterTest`: Windows symbolic-link creation is denied without the
 required privilege. The test now classifies that specific capability absence as a
 skip while retaining full symlink coverage on capable CI hosts. The complete local
-suite passes with 515 tests, zero failures, and one explicit privilege-based skip;
+suite passes with 516 tests, zero failures, and one explicit privilege-based skip;
 the Windows .NET core suite also passes.
 
 ## Companion HTTP connection recovery (EXT-14)

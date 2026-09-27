@@ -518,6 +518,26 @@ try
             companionSecret, "PUT", "/v1/content/galaxy-patrol", contentAuthorization,
             DateTimeOffset.UtcNow.ToUnixTimeSeconds(), bodySha256: contentHash),
         "Content upload authorization must bind the exact file checksum.");
+
+    var largeContentPath = Path.Combine(root, "Large Galaxy Patrol.nes");
+    const int largeContentBytes = 64 * 1024 * 1024;
+    await using (var largeContent = new FileStream(
+        largeContentPath, FileMode.CreateNew, FileAccess.Write, FileShare.Read,
+        1024 * 1024, FileOptions.Asynchronous | FileOptions.SequentialScan))
+    {
+        var block = new byte[1024 * 1024];
+        for (var offset = 0; offset < largeContentBytes; offset += block.Length)
+            await largeContent.WriteAsync(block);
+    }
+    var largeContentHandler = new StreamingContentConfirmationHandler();
+    using var largeContentHttp = new HttpClient(largeContentHandler);
+    var largeContentUpload = await new CompanionContentClient(largeContentHttp).UploadAsync(
+        "192.168.1.22", 49_500, companionSecret, "galaxy-patrol", largeContentPath);
+    Require(largeContentHandler.BytesRead == largeContentBytes &&
+        largeContentUpload.SizeBytes == largeContentBytes &&
+        string.Equals(largeContentHandler.Sha256, largeContentUpload.Sha256, StringComparison.OrdinalIgnoreCase),
+        "Content upload must stream and checksum-verify a 64 MiB local boundary fixture.");
+
     var retryContentUploadAttempts = 0;
     using var retryContentUploadHttp = new HttpClient(new StubHttpMessageHandler(_ =>
     {
@@ -1119,6 +1139,44 @@ sealed class InFlightUploadCancellationHandler(Action<long> bytesRead) : HttpMes
         bytesRead(read);
         await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
         throw new InvalidOperationException("unreachable");
+    }
+}
+
+sealed class StreamingContentConfirmationHandler : HttpMessageHandler
+{
+    public long BytesRead { get; private set; }
+    public string Sha256 { get; private set; } = "";
+
+    protected override async Task<HttpResponseMessage> SendAsync(
+        HttpRequestMessage request,
+        CancellationToken cancellationToken)
+    {
+        if (request.Content is null) throw new InvalidOperationException("Upload content is missing.");
+        await using var stream = await request.Content.ReadAsStreamAsync(cancellationToken);
+        using var sha = System.Security.Cryptography.SHA256.Create();
+        var buffer = new byte[1024 * 1024];
+        int read;
+        while ((read = await stream.ReadAsync(buffer, cancellationToken)) > 0)
+        {
+            sha.TransformBlock(buffer, 0, read, buffer, 0);
+            BytesRead += read;
+        }
+        sha.TransformFinalBlock(Array.Empty<byte>(), 0, 0);
+        Sha256 = Convert.ToHexString(sha.Hash!).ToLowerInvariant();
+        var fileName = System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(
+            request.Headers.GetValues("X-GameBox-File-Name").Single()));
+        var gameId = request.RequestUri?.Segments.Last().TrimEnd('/') ?? "";
+        return new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent(JsonSerializer.Serialize(new
+            {
+                protocolVersion = CompanionProtocol.Version,
+                gameId,
+                fileName,
+                sizeBytes = BytesRead,
+                sha256 = Sha256,
+            }))
+        };
     }
 }
 

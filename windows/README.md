@@ -49,6 +49,10 @@ The local core harness verifies both cancellation before an owned-content upload
 (before hashing/network dispatch) and cancellation after a streaming request has
 started; neither path enters retry logic. This is deterministic client evidence.
 Cancellation during a real long-running LAN transfer still requires live acceptance.
+The same harness also streams a real 64 MiB temporary file through the production
+content client and consumes the complete request body before returning a matching
+SHA-256 confirmation. This is local boundary evidence; the 64 GiB protocol ceiling
+and maximum-size transfer against a real Honor endpoint remain separate gates.
 
 For a bounded live streaming check, the harness also exposes
 `--live-companion-content-repeat <host> <port> <pairing-secret> <game-id> <source-path> <repeat-count>`.
