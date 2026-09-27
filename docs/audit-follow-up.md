@@ -41,7 +41,9 @@ The PC now has the official .NET 8.0.314 SDK installed, including the .NET 8 run
 The Windows core executable test harness passes locally, and now includes the documented
 read-only `--live-companion <host> <port> <pairing-secret>` probe for repeatable LAN
 status/library validation, plus a separate `--live-companion-discovery <host> <port>`
-probe for nonce-correlated UDP discovery. Its unknown-length HTTP test
+probe for nonce-correlated UDP discovery and an idempotent
+`--live-companion-configuration <host> <port> <pairing-secret>` configuration
+round-trip probe. Its unknown-length HTTP test
 content was made compatible with the .NET 8 `Task` override contract by converting the
 stream write `ValueTask` to a `Task`.
 
@@ -60,7 +62,9 @@ protocol 1`, and read all 8 library entries. This is real Android-to-Windows LAN
 evidence, reproduced through the repository probe rather than a temporary script. The
 same repository harness also completed nonce-correlated UDP discovery and resolved
 `GameBox` at `192.168.1.2:49500`; discovery and authenticated status remain separate
-evidence. The same session then toggled and restored a real library favorite, uploaded
+evidence. The idempotent configuration round-trip also returned the exact existing
+flags, with no device setting change. The same session then toggled and restored a real
+library favorite, uploaded
 and downloaded two managed save payloads (the second upload preserved the first as a
 conflict), and uploaded a checksummed content file for `galaxy-patrol`. The live
 mutation responses and returned hashes matched the Windows client checks. The phone

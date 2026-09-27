@@ -65,6 +65,16 @@ dotnet run --project windows/GameBox.Windows.Core.Tests/GameBox.Windows.Core.Tes
 The discovery probe requires the Android device and Windows PC to permit the bounded
 UDP broadcast on port 49499; it does not expose or require the pairing secret.
 
+To validate authenticated configuration read/write without changing settings, use the
+idempotent round-trip probe:
+
+```powershell
+dotnet run --project windows/GameBox.Windows.Core.Tests/GameBox.Windows.Core.Tests.csproj -c Release -- --live-companion-configuration 192.168.1.2 49500 $pairingSecret
+```
+
+It reads the current flags and writes those exact values back, verifying the returned
+confirmation while keeping the device configuration unchanged.
+
 
 ## Signed Windows release
 

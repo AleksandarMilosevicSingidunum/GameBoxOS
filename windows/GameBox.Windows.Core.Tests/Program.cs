@@ -13,6 +13,11 @@ if (args.Length > 0 && string.Equals(args[0], "--live-companion-discovery", Stri
     await RunLiveCompanionDiscoveryProbeAsync(args.Skip(1).ToArray());
     return;
 }
+if (args.Length > 0 && string.Equals(args[0], "--live-companion-configuration", StringComparison.OrdinalIgnoreCase))
+{
+    await RunLiveCompanionConfigurationProbeAsync(args.Skip(1).ToArray());
+    return;
+}
 
 var root = Path.Combine(Path.GetTempPath(), "gamebox-windows-tests-" + Guid.NewGuid().ToString("N"));
 Directory.CreateDirectory(root);
@@ -727,6 +732,24 @@ static async Task RunLiveCompanionDiscoveryProbeAsync(string[] args)
     if (device is null)
         throw new InvalidOperationException($"Companion discovery did not find {args[0]}:{expectedPort}.");
     Console.WriteLine($"Live Companion discovery: {device.DeviceName} at {device.Host}:{device.Port}");
+}
+
+static async Task RunLiveCompanionConfigurationProbeAsync(string[] args)
+{
+    if (args.Length != 3 || !int.TryParse(args[1], out var port))
+        throw new ArgumentException("Usage: --live-companion-configuration <host> <port> <pairing-secret>");
+
+    using var http = new HttpClient();
+    var client = new CompanionConfigurationClient(http);
+    var before = await client.GetAsync(args[0], port, args[2]);
+    var confirmed = await client.PutAsync(args[0], port, args[2], before);
+    if (confirmed != before)
+        throw new InvalidDataException("Live Companion configuration round-trip changed device settings.");
+    Console.WriteLine(
+        $"Live Companion configuration round-trip: reducedMotion={confirmed.ReducedMotion}, " +
+        $"showUnavailableGames={confirmed.ShowUnavailableGames}, " +
+        $"showUnavailableShortcuts={confirmed.ShowUnavailableShortcuts}, " +
+        $"downloadsUnmeteredOnly={confirmed.DownloadsUnmeteredOnly}");
 }
 
 sealed class BlockingHandler : HttpMessageHandler
