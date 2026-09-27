@@ -275,6 +275,12 @@ accessible notice identifies a possible stale provider listing and preserves onl
 source navigation and legal local-import actions. Android JVM coverage and the focused
 API-35 production activity test pass after this change.
 
+Compact Details action checkpoint (28 September 2026): discovery imports and the main
+installed/authorized primary action now occupy a full-width row on compact layouts,
+while wide layouts retain the Blueprint side-panel/action composition. The production
+API-35 screenshot flow passed `OK (1 test)` after the change; this is emulator visual
+evidence and does not replace physical TV/controller acceptance.
+
 Live API-35 gameplay/lifecycle checkpoint (27 September 2026): GameBox installed the
 bundled hash-verified Galaxy Patrol fixture, reported a successful verified-asset worker,
 and opened the real `com.retroarch/.browser.retroactivity.RetroActivityFuture`. The

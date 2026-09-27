@@ -32,5 +32,6 @@ The compact Store revision now uses a Store heading and exposes a directly reach
 horizontal console rail before the generic search/metadata filters. The focused
 production activity test passes on API-35, including accessible labels for All and PSP
 console filters. This closes the phone console-selection discoverability gap; artwork,
-branding, Details action placement, and physical TV/controller acceptance remain
-separate visual or hardware follow-ups.
+branding, and physical TV/controller acceptance remain separate visual or hardware
+follow-ups. Compact Details now gives the primary import/install action a full-width
+phone row; the API-35 production screenshot flow passed after this adjustment.

@@ -2770,7 +2770,11 @@ private fun DiscoveryDetailsScreen(
                             modifier = Modifier.widthIn(max = 540.dp).padding(top = 9.dp))
                         Spacer(Modifier.height(12.dp))
                         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                            Button(enabled = !importing, onClick = { importLauncher.launch(arrayOf("*/*")) }) {
+                            Button(
+                                enabled = !importing,
+                                onClick = { importLauncher.launch(arrayOf("*/*")) },
+                                modifier = if (narrow) Modifier.fillMaxWidth() else Modifier,
+                            ) {
                                 Icon(Icons.Rounded.FileOpen, null, Modifier.size(16.dp))
                                 Text(if (importing) "Importing…" else "Import your copy", Modifier.padding(start = 6.dp), fontSize = 12.sp)
                             }
@@ -3412,6 +3416,7 @@ private fun DetailsScreen(
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Button(
                         onClick = ::performPrimaryAction,
+                        modifier = if (compact) Modifier.fillMaxWidth() else Modifier,
                         enabled = when {
                             isAuthorizedFixture -> !workerActive
                             game.state in setOf(
