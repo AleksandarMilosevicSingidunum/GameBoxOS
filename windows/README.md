@@ -32,7 +32,15 @@ The companion never searches for or downloads game content from third-party sour
 
 ## Remaining Windows work
 
-Live Windows↔Android discovery across real routed/VLAN/firewall environments, large-file transfer, cancellation, DPAPI reconnect, disk-full, and replacement acceptance testing remains pending, along with additional PC-runtime integrations, installer packaging, and physical Windows acceptance testing. Authenticode signing and signed release upload are prepared through the protected `release-windows-production.yml` workflow.
+The connected Honor debug session has validated Windows↔Android UDP discovery,
+authenticated status/library access, idempotent configuration round-trip, favorite
+mutation, managed-save upload/download/conflict preservation, and a checksummed content
+upload through the repository probe. Remaining acceptance includes routed/VLAN/firewall
+coverage, large-file and cancellation behavior, disk-full and replacement testing,
+DPAPI reconnect on a real paired profile, additional PC-runtime integrations, installer
+packaging, and physical Windows acceptance testing. Authenticode signing and signed
+release upload are prepared through the protected `release-windows-production.yml`
+workflow.
 
 CI publishes the self-contained ZIP with a SHA-256 file and a validated JSON provenance manifest containing the exact artifact name, hash, byte size, runtime, self-contained flag, and source commit. Validation also requires exactly one non-empty `GameBox.Windows.exe` in the archive and verifies the published executable before upload.
 

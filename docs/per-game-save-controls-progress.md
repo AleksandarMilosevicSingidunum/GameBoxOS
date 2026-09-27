@@ -21,8 +21,9 @@ including operations from newly created controllers. The panel disables actions
 while its controller is busy. Once started, file work and record updates continue
 on IO despite panel disposal; completion releases the guard even if the parent
 was cancelled before work began. This is not a durable file/database transaction
-and does not survive process death. One gate unit test passes locally; UI busy-state
-and controller lifecycle integration evidence are still pending.
+and does not survive process death. One gate unit test passes locally; the physical
+Honor and API-35 instrumentation runs now cover the busy-state and controller-
+lifecycle integration paths. This is not durable process-kill evidence.
 
 Added a deterministic lifecycle test that pauses the real Room record write after
 import, cancels the original panel scope, verifies a reopened controller cannot
@@ -37,8 +38,8 @@ The panel now also exposes importing a newer backup, with a pre-picker warning
 that the stored backup is replaced and a separate confirmed restore to apply it.
 Picker callbacks retain their original controller identity and reject delivery
 to a different game's controller or while actions are unavailable. Added UI
-warning/cancel coverage and an Android import-then-restore isolation assertion;
-these new tests await execution. File ownership/format cannot be inferred from
+warning/cancel coverage and an Android import-then-restore isolation assertion; the
+latest connected-device instrumentation run executes these tests. File ownership/format cannot be inferred from
 arbitrary save bytes, and the UI explicitly states that limitation.
 Backup import now rejects empty documents before publication and cleans staging
 after failed reads or size-limit rejection. Eight local JVM backup/path tests
@@ -48,7 +49,8 @@ writes; this does not establish crash-atomic backup replacement.
 Cloud-save reads now use the game-scoped resolver, rejecting symbolic links in
 both game directories and artifact paths before reading bytes. Three identity/
 resolution JVM tests pass locally. Android linked-file and linked-directory tests
-were added and await execution. This closes a static path-isolation gap, not
+were executed in the connected-device instrumentation suite. This closes a static
+path-isolation gap, not
 concurrent filesystem-mutation or live cloud-provider validation.
 Emulator integration, multi-file snapshots, durable recovery and
 provider round-trip validation remain required before

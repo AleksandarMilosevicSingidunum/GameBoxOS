@@ -79,7 +79,7 @@ The active implementation goal covers all remaining software work below. Physica
 - Complete Honor Magic5 Pro HDMI/Honor Desktop Mode/Ethernet/charging/thermal/reconnect soak testing with the purchased UGREEN 7-in-1 hub
 - Configure signed production builds and execute real update-channel/rollback validation using generated release manifests
 - Execute the prepared physical enclosure handoff: measure the final Honor Magic5 Pro/UGREEN hub/cable layout, select and validate the BOM, release CAD, fabricate, and complete prototype acceptance
-- Validate the implemented authenticated Windows managed-save synchronization on a real LAN; complete richer streaming integrations, installer signing, and physical Windows validation
+- Extend the authenticated Windows managed-save/content synchronization beyond the completed debug LAN session with large-file, cancellation, disk-full, replacement, routed-network, installer-signing, and physical Windows validation
 - Validate physical LAN/controller streaming and host-probe behavior on target devices
 
 ## Blueprint implementation backlog

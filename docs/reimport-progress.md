@@ -8,8 +8,9 @@ states disable the picker. File copying and registration run off the UI thread.
 
 Evidence: two Library membership unit tests pass locally. The preceding PR 279
 revision passed all five checks, including its Room/importer content-removal and
-reimport integration tests and confirmation-dialog tests. This UI follow-up needs
-its own Android build and regression run. No real-emulator save recovery is claimed.
+reimport integration tests and confirmation-dialog tests. The latest connected Honor
+instrumentation run includes this production UI path. No real-emulator save recovery
+is claimed.
 
 Shared per-game mutation locking is now implemented for production import/reimport,
 missing-file Forget, and content-only uninstall flows. The lock spans file mutation plus
@@ -42,7 +43,8 @@ Revision 583c472 passed all five GitHub checks, including Android instrumentatio
 unit/build checks, Windows build, and phone/DeX screenshots. The added
 ReimportIdentityIntegrationTest exercises the production importer against actual
 temporary files: mismatches leave existing content and synthetic save bytes intact;
-matching content restores a removed file. Its execution remains pending on the
-follow-up revision. This does not validate a real emulator or its save format.
+matching content restores a removed file. Its execution is now covered by the
+connected-device instrumentation run. This does not validate a real emulator or its
+save format.
 No game files are supplied or downloaded by this flow.
 

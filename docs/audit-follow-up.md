@@ -23,7 +23,7 @@ HTML responses and preserves the metadata-only legal-source boundary.
 
 Physical Android validation checkpoint (27 September 2026): the authorized Honor Magic6 Pro
 Wi-Fi transport now passes the complete 60-test debug instrumentation suite with zero
-failures and zero skips. The earlier failure exposed a production focus defect: the root
+failures and one explicit permission-gated skip in the symlink-capability test. The earlier failure exposed a production focus defect: the root
 Compose container handled controller key events but did not request focus on a physical
 phone. The root now owns an initial focus target. This is physical UI/controller evidence,
 and the same device now also has a verified real emulator gameplay/lifecycle run below;
@@ -98,7 +98,8 @@ only when the incoming content differs; the Windows client now retries those ide
 content uploads after transient LAN failures as well.
 
 The PC now has the official .NET 8.0.314 SDK installed, including the .NET 8 runtime.
-The Windows core executable test harness passes locally, and now includes the documented
+The Windows core executable test harness and self-contained `win-x64` publish both pass
+locally, and the harness now includes the documented
 read-only `--live-companion <host> <port> <pairing-secret>` probe for repeatable LAN
 status/library validation, plus a separate `--live-companion-discovery <host> <port>`
 probe for nonce-correlated UDP discovery and an idempotent
