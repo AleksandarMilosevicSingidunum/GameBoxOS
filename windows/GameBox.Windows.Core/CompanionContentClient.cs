@@ -146,7 +146,13 @@ public sealed class CompanionContentClient
         while (true)
         {
             var read = await stream.ReadAsync(buffer, cancellationToken).ConfigureAwait(false);
-            if (read == 0) return output.ToArray();
+            if (read == 0)
+            {
+                if (declaredLength.HasValue && output.Length != declaredLength.Value)
+                    throw new InvalidDataException(
+                        $"GameBox content response ended before its declared length ({output.Length}/{declaredLength.Value}).");
+                return output.ToArray();
+            }
             if (output.Length + read > MaxResponseBytes)
                 throw new InvalidDataException("GameBox returned an oversized content response.");
             await output.WriteAsync(buffer.AsMemory(0, read), cancellationToken).ConfigureAwait(false);

@@ -209,7 +209,13 @@ public sealed class CompanionSaveClient
         while (true)
         {
             var read = await stream.ReadAsync(buffer, cancellationToken).ConfigureAwait(false);
-            if (read == 0) return output.ToArray();
+            if (read == 0)
+            {
+                if (declared.HasValue && output.Length != declared.Value)
+                    throw new InvalidDataException(
+                        $"GameBox save response ended before its declared length ({output.Length}/{declared.Value}).");
+                return output.ToArray();
+            }
             if (output.Length + read > MaxEnvelopeBytes)
                 throw new InvalidDataException("GameBox save response exceeds the transfer limit.");
             await output.WriteAsync(buffer.AsMemory(0, read), cancellationToken).ConfigureAwait(false);

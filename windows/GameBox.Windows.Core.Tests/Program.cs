@@ -395,6 +395,28 @@ try
     Require(saveDownloadRequest?.RequestUri?.AbsolutePath == "/v1/saves/nes-1", "Save download must bind the selected game ID.");
     Require(saveDownloadRequest?.Headers.Contains(CompanionProtocol.AuthorizationHeader) == true, "Save download must authenticate.");
 
+    var truncatedSaveConfirmation = new StringContent(JsonSerializer.Serialize(new
+    {
+        protocolVersion = 1,
+        gameId = "nes-1",
+        updatedAtMillis = 1234,
+        sha256 = saveHash,
+        payloadBase64 = Convert.ToBase64String(saveBytes)
+    }));
+    truncatedSaveConfirmation.Headers.ContentLength = truncatedSaveConfirmation.Headers.ContentLength!.Value + 10;
+    using var truncatedSaveHttp = new HttpClient(new StubHttpMessageHandler(_ => new HttpResponseMessage(HttpStatusCode.OK)
+    {
+        Content = truncatedSaveConfirmation,
+    }));
+    var truncatedSaveRejected = false;
+    try
+    {
+        await new CompanionSaveClient(truncatedSaveHttp).DownloadAsync(
+            "192.168.1.22", 49_500, companionSecret, "nes-1");
+    }
+    catch (InvalidDataException) { truncatedSaveRejected = true; }
+    Require(truncatedSaveRejected, "Companion save responses shorter than Content-Length must be rejected.");
+
     var retrySaveAttempts = 0;
     using var retrySaveHttp = new HttpClient(new StubHttpMessageHandler(_ =>
     {
@@ -524,6 +546,29 @@ try
         System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(
             contentUploadRequest.Headers.GetValues("X-GameBox-File-Name").Single())) == "Galaxy Patrol.nes",
         "Content upload must carry the selected filename without path data.");
+
+    var truncatedContentConfirmation = new StringContent(JsonSerializer.Serialize(new
+    {
+        protocolVersion = 1,
+        gameId = "galaxy-patrol",
+        fileName = "Galaxy Patrol.nes",
+        sizeBytes = contentBytes.LongLength,
+        sha256 = contentHash,
+    }));
+    truncatedContentConfirmation.Headers.ContentLength = truncatedContentConfirmation.Headers.ContentLength!.Value + 10;
+    using var truncatedContentResponse = new HttpClient(new StubHttpMessageHandler(_ => new HttpResponseMessage(HttpStatusCode.OK)
+    {
+        Content = truncatedContentConfirmation,
+    }));
+    var truncatedContentRejected = false;
+    try
+    {
+        await new CompanionContentClient(truncatedContentResponse).UploadAsync(
+            "192.168.1.22", 49_500, companionSecret, "galaxy-patrol", contentPath);
+    }
+    catch (InvalidDataException) { truncatedContentRejected = true; }
+    Require(truncatedContentRejected, "Companion content responses shorter than Content-Length must be rejected.");
+
     var contentAuthorization = contentUploadRequest.Headers
         .GetValues(CompanionProtocol.AuthorizationHeader).Single();
     Require(CompanionProtocol.VerifyAuthorization(

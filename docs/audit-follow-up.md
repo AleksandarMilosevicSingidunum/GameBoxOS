@@ -171,7 +171,9 @@ Windows catalog transport hardening (28 September 2026): the companion's HTTPS c
 sync now rejects response bodies shorter than their declared `Content-Length` before JSON
 parsing, matching the Android cloud/catalog transport integrity boundary. The complete
 Windows core harness passed after this change; it remains automated Windows evidence,
-separate from live provider and physical Windows validation.
+separate from live provider and physical Windows validation. The same bounded-response
+guard now covers managed-save and owned-content confirmations, with harness coverage for
+short save/content bodies before their JSON confirmations are trusted.
 
 Release provenance hardening (27 September 2026): alpha, beta, combined preview, and
 protected production APK workflows now use the same tested manifest generator. It accepts
