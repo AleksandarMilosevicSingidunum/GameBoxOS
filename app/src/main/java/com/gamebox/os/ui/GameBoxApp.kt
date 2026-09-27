@@ -126,6 +126,7 @@ import com.gamebox.os.diagnostics.DiagnosticsRuntime
 import com.gamebox.os.diagnostics.DiagnosticEventCollector
 import com.gamebox.os.diagnostics.buildDiagnosticsReport
 import com.gamebox.os.diagnostics.buildDiagnosticsRecoveryBundle
+import com.gamebox.os.display.launchGameBoxOnExternalDisplay
 import com.gamebox.os.navigation.GameBoxNavigationRequest
 import com.gamebox.os.source.ConfiguredDiscoverySyncResult
 import com.gamebox.os.source.DiscoverySourceGame
@@ -3808,6 +3809,7 @@ private fun AppHubScreen(
     settingsRepository: SettingsRepository
 ) {
     val context = LocalContext.current
+    val activity = context as? android.app.Activity
     val currentSettings by settingsRepository.settings.collectAsState(
         initial = com.gamebox.os.settings.GameBoxSettings()
     )
@@ -3899,6 +3901,7 @@ private fun AppHubScreen(
             recentLaunches = recentLaunches,
             message = message,
             onLaunch = ::launchShortcut,
+            onExternalDisplay = { message = activity?.let(::launchGameBoxOnExternalDisplay) ?: "External display launch is unavailable" },
         )
         return
     }
@@ -3915,6 +3918,13 @@ private fun AppHubScreen(
             ) {
                 Icon(Icons.Rounded.DesktopWindows, null, Modifier.size(16.dp))
                 Text("Desktop mode", Modifier.padding(start = 6.dp))
+            }
+            OutlinedButton(
+                onClick = { message = activity?.let(::launchGameBoxOnExternalDisplay) ?: "External display launch is unavailable" },
+                modifier = Modifier.semantics { contentDescription = "Show GameBox on external display" },
+            ) {
+                Icon(Icons.Rounded.Cast, null, Modifier.size(16.dp))
+                Text("Show on TV", Modifier.padding(start = 6.dp))
             }
             Spacer(Modifier.height(18.dp))
         } else {
@@ -3974,7 +3984,7 @@ private fun BlueprintAppHubScreen(
     title: String, subtitle: String, shortcuts: List<AppShortcut>, installedPackages: Set<String>,
     moonlightStatus: MoonlightStatus, settingsRepository: SettingsRepository,
     recentLaunches: List<ShortcutLaunchRecord>,
-    message: String?, onLaunch: (AppShortcut) -> Unit,
+    message: String?, onLaunch: (AppShortcut) -> Unit, onExternalDisplay: () -> Unit,
 ) {
     val isPc = title == "PC Hub"
     val context = LocalContext.current
@@ -4074,6 +4084,13 @@ private fun BlueprintAppHubScreen(
                     ) {
                         Icon(Icons.Rounded.DesktopWindows, null, Modifier.size(16.dp))
                         Text("Desktop mode", Modifier.padding(start = 6.dp), fontSize = 11.sp)
+                    }
+                    OutlinedButton(
+                        onClick = onExternalDisplay,
+                        modifier = Modifier.semantics { contentDescription = "Show GameBox on external display" },
+                    ) {
+                        Icon(Icons.Rounded.Cast, null, Modifier.size(16.dp))
+                        Text("Show on TV", Modifier.padding(start = 6.dp), fontSize = 11.sp)
                     }
                 }
             }

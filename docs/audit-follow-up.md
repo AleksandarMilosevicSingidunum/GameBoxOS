@@ -40,6 +40,14 @@ and Refresh authorized catalog action. This is now verified external-display UI 
 navigation evidence; physical controller, long-duration DeX/TV soak, and gameplay
 acceptance remain separate gates.
 
+The PC Hub now exposes an in-product **Show on TV** action. It enumerates Android
+presentation displays, launches a separate GameBox task with `ActivityOptions` on the
+selected display, and reports a guarded no-display or launch failure message. On the
+connected Honor, the action reached the firmware's Relaunch confirmation and then opened
+the wide GameBox Home surface on the SMART TV. Honor Desktop Mode presented that task in
+a movable window; automatic firmware maximization and physical display/controller soak
+remain hardware-specific acceptance items.
+
 Per-game managed-save controls are now used by every Details screen, not only the
 bundled Galaxy Patrol fixture. The selected game's save controller is also used for
 content-removal preflight, so imported PSP/other-console titles no longer risk reading
