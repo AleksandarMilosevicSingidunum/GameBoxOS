@@ -2,7 +2,8 @@
 param(
     [Parameter(Mandatory = $true)] [string] $PackagePath,
     [Parameter(Mandatory = $true)] [string] $ChecksumPath,
-    [Parameter(Mandatory = $true)] [string] $ManifestPath
+    [Parameter(Mandatory = $true)] [string] $ManifestPath,
+    [switch] $RequireSigned
 )
 
 $ErrorActionPreference = 'Stop'
@@ -16,5 +17,8 @@ $manifest = Get-Content -LiteralPath $ManifestPath -Raw | ConvertFrom-Json
 if ($manifest.artifact -ne $package.Name -or $manifest.sha256 -ne $actualHash -or
     [int64]$manifest.sizeBytes -ne $package.Length -or $manifest.packageFormat -ne 'MSIX') {
     throw 'MSIX provenance manifest does not match the package.'
+}
+if ($RequireSigned -and $manifest.authenticodeSigned -ne $true) {
+    throw 'MSIX provenance does not declare a signed package.'
 }
 Write-Output "Validated MSIX package $($package.Name) ($($package.Length) bytes)."

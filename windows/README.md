@@ -104,5 +104,5 @@ confirmation while keeping the device configuration unchanged.
 
 ## Signed Windows release
 
-Configure the protected repository secrets `GAMEBOX_WINDOWS_PFX_BASE64` and `GAMEBOX_WINDOWS_PFX_PASSWORD`, create a stable `vMAJOR.MINOR.PATCH` tag, and run **Publish signed Windows companion**. The workflow checks out the exact tag, runs tests, signs and verifies `GameBox.Windows.exe`, packages it, validates signed provenance, and uploads the ZIP, SHA-256, and manifest to that release. Development CI artifacts explicitly declare `authenticodeSigned: false`.
+Configure the protected repository secrets `GAMEBOX_WINDOWS_PFX_BASE64` and `GAMEBOX_WINDOWS_PFX_PASSWORD`, create a stable `vMAJOR.MINOR.PATCH` tag, and run **Publish signed Windows companion**. The workflow checks out the exact tag, runs tests, signs and verifies `GameBox.Windows.exe`, derives the MSIX publisher from the same certificate, builds and signs the MSIX, verifies both signed formats, and uploads the ZIP/MSIX packages with SHA-256 files and manifests to that release. Development CI artifacts explicitly declare `authenticodeSigned: false`.
 

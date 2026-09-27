@@ -116,9 +116,11 @@ remains separate acceptance evidence.
 
 Windows CI now also packages the self-contained companion as an unsigned MSIX beside
 the portable ZIP. The package is built with the Windows SDK `makeappx.exe`, carries
-generated visual assets, and is checked with a SHA-256/provenance validator. Local
-packaging and validation pass; package signing, installation acceptance, and physical
-Windows validation remain separate release gates.
+generated visual assets, and is checked with a SHA-256/provenance validator. The
+protected production workflow now derives the MSIX publisher from the configured PFX,
+signs and verifies the MSIX, and uploads its signed checksum/provenance alongside the
+ZIP. Local unsigned packaging and validation pass; executing the protected workflow,
+installation acceptance, and physical Windows validation remain separate release gates.
 
 The protected Android production workflow now runs the release-manifest unit tests,
 creates a schema-compatible APK provenance manifest from the signed artifact, requires
