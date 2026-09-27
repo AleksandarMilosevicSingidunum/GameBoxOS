@@ -31,6 +31,15 @@ Resume, or Retry affordance, with terminal completed jobs exposing no action. Th
 passes on both API-35 and the connected Honor device; transfer-engine and live-provider
 behavior remain separate evidence.
 
+Honor external-display checkpoint (28 September 2026): the connected Honor Magic6 Pro
+reported the SMART TV as Android display 23 at 1920x1080/160 dpi. Launching
+`MainActivity` explicitly on that display produced a real GameBox task on the TV, and
+the captured frame matched the wide Blueprint composition. A display-aware tap on Store
+then produced the wide Store screen with the console rail, catalog cards, source status,
+and Refresh authorized catalog action. This is now verified external-display UI and
+navigation evidence; physical controller, long-duration DeX/TV soak, and gameplay
+acceptance remain separate gates.
+
 Per-game managed-save controls are now used by every Details screen, not only the
 bundled Galaxy Patrol fixture. The selected game's save controller is also used for
 content-removal preflight, so imported PSP/other-console titles no longer risk reading

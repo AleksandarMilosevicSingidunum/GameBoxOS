@@ -1001,6 +1001,9 @@ private fun HomeStatusItem(icon: ImageVector, label: String, value: String, prog
     }
 }
 
+internal fun catalogRefreshButtonDescription(state: CatalogRefreshState): String =
+    if (state == CatalogRefreshState.REFRESHING) "Refreshing catalog" else "Refresh authorized catalog"
+
 @Composable
 private fun CatalogScreen(
     repository: GameRepository,
@@ -1345,7 +1348,11 @@ val allDiscoveryGames by discoveryRepository.observeGames(null, "", 250).collect
                 }
                 Button(
                     onClick = repository::refreshCatalog,
-                    enabled = refreshState != CatalogRefreshState.REFRESHING
+                    enabled = refreshState != CatalogRefreshState.REFRESHING,
+                    modifier = Modifier.semantics {
+                        contentDescription = catalogRefreshButtonDescription(refreshState)
+                        if (refreshState == CatalogRefreshState.REFRESHING) liveRegion = LiveRegionMode.Polite
+                    }
                 ) {
                     Text(if (refreshState == CatalogRefreshState.REFRESHING) "Refreshing..." else "Refresh")
                 }
@@ -1365,7 +1372,11 @@ val allDiscoveryGames by discoveryRepository.observeGames(null, "", 250).collect
                 }
                 Button(
                     onClick = repository::refreshCatalog,
-                    enabled = refreshState != CatalogRefreshState.REFRESHING
+                    enabled = refreshState != CatalogRefreshState.REFRESHING,
+                    modifier = Modifier.semantics {
+                        contentDescription = catalogRefreshButtonDescription(refreshState)
+                        if (refreshState == CatalogRefreshState.REFRESHING) liveRegion = LiveRegionMode.Polite
+                    }
                 ) {
                     Text(if (refreshState == CatalogRefreshState.REFRESHING) "Refreshing..." else "Refresh")
                 }
@@ -1904,7 +1915,10 @@ private fun BlueprintCatalogScreen(
             OutlinedButton(
                 onClick = onRefresh,
                 enabled = refreshState != CatalogRefreshState.REFRESHING,
-                modifier = Modifier.weight(1f),
+                modifier = Modifier.weight(1f).semantics {
+                    contentDescription = catalogRefreshButtonDescription(refreshState)
+                    if (refreshState == CatalogRefreshState.REFRESHING) liveRegion = LiveRegionMode.Polite
+                },
             ) { Text(if (refreshState == CatalogRefreshState.REFRESHING) "Refreshing…" else "Refresh authorized catalog", fontSize = 10.sp) }
             }
             if (discoverySyncing) {
