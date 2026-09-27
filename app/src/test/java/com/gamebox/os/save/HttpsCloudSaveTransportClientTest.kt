@@ -9,6 +9,13 @@ import java.net.HttpURLConnection
 import java.net.URI
 import java.net.URL
 import java.security.MessageDigest
+import java.io.IOException
+import java.io.InputStream
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
@@ -194,6 +201,24 @@ class HttpsCloudSaveTransportClientTest {
         assertFalse(error.recovery.retryable)
     }
 
+    @Test
+    fun cancellationDisconnectsAnActiveBlockingConnection() = runBlocking {
+        val connection = BlockingConnection()
+        val created = CountDownLatch(1)
+        val client = HttpsCloudSaveTransportClient(connectionFactory = {
+            created.countDown()
+            connection
+        })
+        val operation = async(Dispatchers.IO) {
+            client.download(request.copy(payloadBytes = 0), CatalogCredentials("player", "secret"))
+        }
+
+        assertTrue(created.await(2, TimeUnit.SECONDS))
+        operation.cancel()
+        assertTrue(connection.disconnectedLatch.await(2, TimeUnit.SECONDS))
+        operation.cancelAndJoin()
+    }
+
     private fun sha256(payload: ByteArray): String =
         MessageDigest.getInstance("SHA-256").digest(payload).joinToString("") { "%02x".format(it) }
 
@@ -230,6 +255,28 @@ class HttpsCloudSaveTransportClientTest {
         }
         override fun getOutputStream() = written
         override fun disconnect() { disconnected = true }
+        override fun usingProxy(): Boolean = false
+        override fun connect() = Unit
+    }
+
+    private class BlockingConnection : HttpURLConnection(URL("https://cloud.example")) {
+        val disconnectedLatch = CountDownLatch(1)
+        @Volatile var disconnected = false
+
+        override fun getResponseCode(): Int = 200
+        override fun getInputStream(): InputStream = object : InputStream() {
+            override fun read(): Int {
+                while (!disconnected) Thread.sleep(5)
+                throw IOException("connection disconnected")
+            }
+
+            override fun read(buffer: ByteArray, offset: Int, length: Int): Int = read()
+        }
+        override fun getOutputStream() = ByteArrayOutputStream()
+        override fun disconnect() {
+            disconnected = true
+            disconnectedLatch.countDown()
+        }
         override fun usingProxy(): Boolean = false
         override fun connect() = Unit
     }

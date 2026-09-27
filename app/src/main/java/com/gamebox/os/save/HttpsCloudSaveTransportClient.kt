@@ -10,6 +10,13 @@ import java.net.URI
 import java.net.URL
 import java.security.MessageDigest
 import java.util.Base64
+import java.util.concurrent.atomic.AtomicReference
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
 
 class CloudSaveTransportException(
     val recovery: ProviderRecoveryDecision,
@@ -114,40 +121,57 @@ class HttpsCloudSaveTransportClient(
         }
     }
 
-    private fun <T> executeOnce(
+    private suspend fun <T> executeOnce(
         method: String,
         endpoint: URI,
         credentials: CatalogCredentials,
         payload: ByteArray,
         block: (HttpURLConnection) -> T,
-    ): T {
-        val connection = try {
-            connectionFactory(endpoint)
-        } catch (error: IOException) {
-            throw transportFailure(error = error)
+    ): T = suspendCancellableCoroutine { continuation ->
+        val connectionReference = AtomicReference<HttpURLConnection?>(null)
+        val worker = CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val connection = try {
+                    connectionFactory(endpoint)
+                } catch (error: IOException) {
+                    throw transportFailure(error = error)
+                }
+                connectionReference.set(connection)
+                if (!continuation.isActive) {
+                    connection.disconnect()
+                    return@launch
+                }
+                connection.instanceFollowRedirects = false
+                connection.connectTimeout = 10_000
+                connection.readTimeout = 15_000
+                connection.requestMethod = method
+                connection.setRequestProperty("Accept", "application/octet-stream")
+                connection.setRequestProperty("Content-Type", "application/octet-stream")
+                applyAuthentication(connection, method, endpoint, payload, credentials)
+                if (method == "PUT") {
+                    connection.doOutput = true
+                    connection.setFixedLengthStreamingMode(payload.size)
+                }
+                val result = try {
+                    if (method == "PUT") connection.outputStream.use { it.write(payload) }
+                    block(connection)
+                } catch (error: CloudSaveTransportException) {
+                    throw error
+                } catch (error: CloudSaveIntegrityException) {
+                    throw error
+                } catch (error: IOException) {
+                    throw transportFailure(error = error)
+                }
+                continuation.resume(result)
+            } catch (error: Throwable) {
+                continuation.resumeWithException(error)
+            } finally {
+                connectionReference.getAndSet(null)?.disconnect()
+            }
         }
-        connection.instanceFollowRedirects = false
-        connection.connectTimeout = 10_000
-        connection.readTimeout = 15_000
-        connection.requestMethod = method
-        connection.setRequestProperty("Accept", "application/octet-stream")
-        connection.setRequestProperty("Content-Type", "application/octet-stream")
-        applyAuthentication(connection, method, endpoint, payload, credentials)
-        if (method == "PUT") {
-            connection.doOutput = true
-            connection.setFixedLengthStreamingMode(payload.size)
-        }
-        return try {
-            if (method == "PUT") connection.outputStream.use { it.write(payload) }
-            block(connection)
-        } catch (error: CloudSaveTransportException) {
-            throw error
-        } catch (error: CloudSaveIntegrityException) {
-            throw error
-        } catch (error: IOException) {
-            throw transportFailure(error = error)
-        } finally {
-            connection.disconnect()
+        continuation.invokeOnCancellation {
+            connectionReference.get()?.disconnect()
+            worker.cancel()
         }
     }
 

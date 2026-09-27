@@ -178,6 +178,15 @@ double-encoding them, encodes literal plus and Unicode key bytes, and sorts enco
 query keys and values according to the URI signing rules. JVM coverage exercises these
 cases; authenticated S3 endpoint acceptance remains separate live-service evidence.
 
+Cloud transport cancellation hardening (27 September 2026): blocking
+`HttpURLConnection` work now runs on an independent IO worker behind a cancellable
+coroutine boundary. Cancelling an upload or download disconnects the active connection
+and terminates the worker instead of waiting for the socket timeout. A deterministic
+blocking-stream regression covers the disconnect path; the complete Android JVM suite
+passes with 516 tests, zero failures, zero errors, and one explicit skip. This remains
+transport-boundary evidence, not proof of a live WebDAV/S3 account or production
+emulator save compatibility.
+
 Managed multi-artifact save snapshots now publish each complete backup set under a
 unique generation directory and atomically switch the manifest only after every artifact
 has succeeded. Restore follows the active generation, while legacy version-1 manifests
