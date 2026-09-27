@@ -33,6 +33,12 @@ public sealed class CompanionConfigurationClient
         CompanionRetryPolicy.ExecuteAsync(
             token => GetAsync(host, port, pairingSecret, token), cancellationToken);
 
+    public Task<CompanionDeviceConfiguration> PutWithRetryAsync(
+        string host, int port, string pairingSecret, CompanionDeviceConfiguration configuration,
+        CancellationToken cancellationToken = default) =>
+        CompanionRetryPolicy.ExecuteAsync(
+            token => PutAsync(host, port, pairingSecret, configuration, token), cancellationToken);
+
     public async Task<CompanionDeviceConfiguration> GetAsync(
         string host, int port, string pairingSecret, CancellationToken cancellationToken = default)
     {

@@ -578,6 +578,23 @@ try
             favoriteAuthorization, DateTimeOffset.UtcNow.ToUnixTimeSeconds()),
         "Paired favorite management authorization must bind the desired state.");
 
+    var favoriteRetryAttempts = 0;
+    using var favoriteRetryHttp = new HttpClient(new StubHttpMessageHandler(_ =>
+    {
+        favoriteRetryAttempts++;
+        if (favoriteRetryAttempts == 1)
+            return new HttpResponseMessage(HttpStatusCode.TooManyRequests);
+        return new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent(
+                "{\"protocolVersion\":1,\"gameId\":\"nes-1\",\"favorite\":true}")
+        };
+    }));
+    var retriedFavorite = await new CompanionStatusClient(favoriteRetryHttp).SetFavoriteWithRetryAsync(
+        "192.168.1.22", 49_500, companionSecret, pairedLibrary[0], true);
+    Require(retriedFavorite.Favorite && favoriteRetryAttempts == 2,
+        "Favorite updates must retry transient HTTP responses because the PUT is idempotent.");
+
     var pairingPath = Path.Combine(root, "pairing", "paired-device.json");
     var pairingStore = new PairingProfileStore(pairingPath);
     var pairingProfile = new PairingProfile("192.168.1.22", 49_500, companionSecret);
@@ -750,6 +767,23 @@ try
             companionSecret, "PUT", "/v1/config", configurationAuthorization,
             configurationNow, bodySha256: new string('0', 64)),
         "Device configuration authorization must reject altered preference flags.");
+
+    var configurationRetryAttempts = 0;
+    using var configurationRetryHttp = new HttpClient(new StubHttpMessageHandler(_ =>
+    {
+        configurationRetryAttempts++;
+        if (configurationRetryAttempts == 1)
+            return new HttpResponseMessage(HttpStatusCode.RequestTimeout);
+        return new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent(
+                "{\"protocolVersion\":1,\"reducedMotion\":true,\"showUnavailableGames\":false,\"showUnavailableShortcuts\":true,\"downloadsUnmeteredOnly\":false}")
+        };
+    }));
+    var retriedConfiguration = await new CompanionConfigurationClient(configurationRetryHttp)
+        .PutWithRetryAsync("192.168.1.22", 49_500, companionSecret, desiredConfiguration);
+    Require(retriedConfiguration == desiredConfiguration && configurationRetryAttempts == 2,
+        "Configuration updates must retry transient HTTP responses because the PUT is idempotent.");
 
     using var badConfigurationHttp = new HttpClient(new StubHttpMessageHandler(_ =>
         new HttpResponseMessage(HttpStatusCode.OK)

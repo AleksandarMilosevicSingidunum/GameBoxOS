@@ -41,6 +41,17 @@ public sealed class CompanionStatusClient
             token => GetLibraryAsync(host, port, pairingSecret, token),
             cancellationToken);
 
+    public Task<CompanionLibraryGame> SetFavoriteWithRetryAsync(
+        string host,
+        int port,
+        string pairingSecret,
+        CompanionLibraryGame game,
+        bool favorite,
+        CancellationToken cancellationToken = default) =>
+        CompanionRetryPolicy.ExecuteAsync(
+            token => SetFavoriteAsync(host, port, pairingSecret, game, favorite, token),
+            cancellationToken);
+
     public async Task<CompanionDeviceStatus> GetStatusAsync(
         string host,
         int port,
