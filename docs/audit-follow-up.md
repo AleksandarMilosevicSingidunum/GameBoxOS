@@ -35,6 +35,12 @@ on API-35 after this change, including `compactSettingsKeepsExternalLibraryActio
 This is emulator UI evidence; physical TV overscan and controller-only acceptance remain
 separate.
 
+The same focused Settings test passed on API-35 but the connected Honor run did not
+produce a valid test result: the instrumentation process crashed and the device then
+reported `com.gamebox.os` missing from package-manager queries. This is recorded as a
+physical-device/firmware execution failure, not an application pass or a substitute for
+the emulator result; the existing Honor Desktop Mode limitation remains open.
+
 Catalog state-matrix checkpoint: `CatalogRefreshStateTest` now drives the production
 Store screen through offline fallback, provider-unavailable fallback, and terminal
 error states, asserting their accessible live-region descriptions and actionable
