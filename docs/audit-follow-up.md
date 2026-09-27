@@ -107,6 +107,11 @@ probe for nonce-correlated UDP discovery and an idempotent
 round-trip probe. Its unknown-length HTTP test
 content was made compatible with the .NET 8 `Task` override contract by converting the
 stream write `ValueTask` to a `Task`.
+The same repository harness now exposes an explicitly mutating
+`--live-companion-save <host> <port> <pairing-secret> <game-id> <payload>` probe. It
+uploads a small managed-save payload through the real authenticated Android route,
+downloads it again, and verifies the exact bytes and checksum; the command documents
+that its test save remains on the paired device until removed through the product flow.
 The same harness now verifies that caller cancellation before an owned-content upload
 prevents network dispatch and retry; cancellation during a real long-running LAN
 transfer now also has deterministic client coverage: a streaming HTTP boundary reads
@@ -177,6 +182,14 @@ correlated UDP discovery, authenticated status (`GameBox / ready / protocol 1`),
 installed app has no retained Galaxy Patrol installation, so the live library correctly
 reports the eight catalog entries as `NOT_INSTALLED`; this is a clean-install state and
 does not replace the earlier physical gameplay or live mutation evidence above.
+
+Live managed-save checkpoint from the same session: the new repository
+`--live-companion-save` probe uploaded and downloaded a 23-byte `galaxy-patrol` payload,
+verified the exact returned bytes and SHA-256
+(`17c75cabe91d5339d4237d4ccfca3a20d4eb78ff357355a274df8162cdac3c24`), and the
+follow-up authenticated library read reported `savePresent=true` for Galaxy Patrol.
+This validates the real Windows client ↔ Android managed-save route, while content
+installation and emulator-owned saves remain separate lifecycle evidence.
 
 The local Android JVM suite then exposed a host-capability failure in
 `DirectorySaveAdapterTest`: Windows symbolic-link creation is denied without the

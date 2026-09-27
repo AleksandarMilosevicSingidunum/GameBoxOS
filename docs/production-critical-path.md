@@ -24,6 +24,12 @@ round-trip. The clean reinstall intentionally reports all catalog entries as
 `NOT_INSTALLED`; this evidence is separate from the earlier physical Galaxy Patrol
 gameplay and managed-save mutation rehearsals.
 
+The same session then used the repository's explicit live-save probe to upload and
+download a 23-byte `galaxy-patrol` managed-save payload with matching SHA-256; the
+authenticated library response reported `savePresent=true`. This is real managed-save
+transport evidence, separate from content installation and emulator-owned save-state
+continuity.
+
 The catalog repair changes database state only for six known legacy demo IDs
 without local content references or a real download source. It does not delete
 files, save records, favorites, history or emulator preferences. Imported copies,

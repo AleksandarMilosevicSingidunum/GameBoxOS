@@ -18,6 +18,11 @@ if (args.Length > 0 && string.Equals(args[0], "--live-companion-configuration", 
     await RunLiveCompanionConfigurationProbeAsync(args.Skip(1).ToArray());
     return;
 }
+if (args.Length > 0 && string.Equals(args[0], "--live-companion-save", StringComparison.OrdinalIgnoreCase))
+{
+    await RunLiveCompanionSaveProbeAsync(args.Skip(1).ToArray());
+    return;
+}
 
 var root = Path.Combine(Path.GetTempPath(), "gamebox-windows-tests-" + Guid.NewGuid().ToString("N"));
 Directory.CreateDirectory(root);
@@ -886,7 +891,7 @@ static async Task RunLiveCompanionProbeAsync(string[] args)
     Console.WriteLine($"Live Companion status: {status.DeviceName} / {status.Status} / protocol {status.ProtocolVersion}");
     Console.WriteLine($"Live Companion library entries: {library.Count}");
     foreach (var game in library)
-        Console.WriteLine($"- {game.Id}: {game.Title} [{game.Platform}] {game.InstallState}");
+        Console.WriteLine($"- {game.Id}: {game.Title} [{game.Platform}] {game.InstallState} favorite={game.Favorite} savePresent={game.SavePresent}");
 }
 
 static async Task RunLiveCompanionDiscoveryProbeAsync(string[] args)
@@ -919,6 +924,27 @@ static async Task RunLiveCompanionConfigurationProbeAsync(string[] args)
         $"showUnavailableGames={confirmed.ShowUnavailableGames}, " +
         $"showUnavailableShortcuts={confirmed.ShowUnavailableShortcuts}, " +
         $"downloadsUnmeteredOnly={confirmed.DownloadsUnmeteredOnly}");
+}
+
+static async Task RunLiveCompanionSaveProbeAsync(string[] args)
+{
+    if (args.Length != 5 || !int.TryParse(args[1], out var port))
+        throw new ArgumentException("Usage: --live-companion-save <host> <port> <pairing-secret> <game-id> <payload>");
+    if (string.IsNullOrWhiteSpace(args[4]))
+        throw new ArgumentException("Live save probe payload must not be empty.", nameof(args));
+
+    var bytes = System.Text.Encoding.UTF8.GetBytes(args[4]);
+    using var http = new HttpClient();
+    var client = new CompanionSaveClient(http);
+    var uploaded = await client.UploadWithRetryAsync(args[0], port, args[2], args[3], bytes);
+    var downloaded = await client.DownloadWithRetryAsync(args[0], port, args[2], args[3]);
+    if (!downloaded.Bytes.SequenceEqual(bytes) ||
+        !string.Equals(downloaded.Sha256, uploaded.Sha256, StringComparison.OrdinalIgnoreCase))
+        throw new InvalidDataException("Live Companion save round-trip did not preserve the exact payload.");
+
+    Console.WriteLine(
+        $"Live Companion save round-trip: game={uploaded.GameId}, bytes={downloaded.Bytes.Length}, " +
+        $"sha256={downloaded.Sha256}, conflictPreserved={uploaded.ConflictPreserved}");
 }
 
 sealed class BlockingHandler : HttpMessageHandler

@@ -101,6 +101,20 @@ dotnet run --project windows/GameBox.Windows.Core.Tests/GameBox.Windows.Core.Tes
 It reads the current flags and writes those exact values back, verifying the returned
 confirmation while keeping the device configuration unchanged.
 
+For an explicit live managed-save transfer check, supply an existing GameBox game ID
+and a small probe payload. The command uploads through the authenticated Android route,
+downloads the resulting envelope, and verifies the returned bytes and SHA-256. It may
+create or replace that game's managed save, so use it only when you intend to leave test
+state on the paired device:
+
+```powershell
+dotnet run --project windows/GameBox.Windows.Core.Tests/GameBox.Windows.Core.Tests.csproj -c Release -- --live-companion-save 192.168.1.2 49500 $pairingSecret galaxy-patrol "GameBox live save probe"
+```
+
+The pairing secret is supplied only at runtime and is not printed by the probe. Remove
+the resulting test save through the product's supported save/content cleanup flow after
+validation.
+
 
 ## Signed Windows release
 
