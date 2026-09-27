@@ -634,6 +634,17 @@ try
     catch (InvalidDataException) { mismatchedContentRejected = true; }
     Require(mismatchedContentRejected,
         "Content upload must reject a confirmation for a different game.");
+    using var storageUnavailableResponse = new HttpClient(new StubHttpMessageHandler(_ =>
+        new HttpResponseMessage(HttpStatusCode.InsufficientStorage)));
+    var storageUnavailableRejected = false;
+    try
+    {
+        await new CompanionContentClient(storageUnavailableResponse).UploadAsync(
+            "192.168.1.22", 49_500, companionSecret, "galaxy-patrol", contentPath);
+    }
+    catch (CompanionStorageUnavailableException) { storageUnavailableRejected = true; }
+    Require(storageUnavailableRejected,
+        "Content upload must preserve the retryable storage-unavailable classification.");
     using var malformedContentResponse = new HttpClient(new StubHttpMessageHandler(_ =>
         new HttpResponseMessage(HttpStatusCode.OK)
         {

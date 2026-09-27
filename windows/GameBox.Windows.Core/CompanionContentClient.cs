@@ -12,6 +12,14 @@ public sealed record CompanionContentUploadResult(
     long SizeBytes,
     string Sha256);
 
+public sealed class CompanionStorageUnavailableException : IOException
+{
+    public CompanionStorageUnavailableException()
+        : base("GameBox does not have enough storage to accept the content upload.")
+    {
+    }
+}
+
 public sealed class CompanionContentClient
 {
     public const long MaxContentBytes = 64L * 1024 * 1024 * 1024;
@@ -76,6 +84,8 @@ public sealed class CompanionContentClient
             request, HttpCompletionOption.ResponseHeadersRead, timeoutSource.Token).ConfigureAwait(false);
         if (response.StatusCode == HttpStatusCode.Unauthorized)
             throw new UnauthorizedAccessException("GameBox rejected the pairing secret.");
+        if (response.StatusCode == HttpStatusCode.InsufficientStorage)
+            throw new CompanionStorageUnavailableException();
         if (response.StatusCode == HttpStatusCode.RequestEntityTooLarge)
             throw new InvalidDataException("GameBox rejected content larger than 64 GiB.");
         CompanionRetryPolicy.ThrowIfTransient(response.StatusCode, "GameBox content upload failed transiently.");
