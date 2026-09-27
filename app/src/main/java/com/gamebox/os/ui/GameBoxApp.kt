@@ -3507,7 +3507,7 @@ internal fun downloadControllerActionPlan(statuses: Collection<DownloadStatus>):
 }
 
 @Composable
-private fun DownloadsScreen(
+internal fun DownloadsScreen(
     repository: GameRepository,
     downloadRepository: DownloadRepository,
     remoteDownloadController: RemoteDownloadController,

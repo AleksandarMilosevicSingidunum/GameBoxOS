@@ -24,6 +24,13 @@ Refresh control. The test passes on both API-35 and the connected Honor device a
 resetting the device's stale PPSSPP foreground session. This is deterministic UI
 state evidence; it does not validate a live provider or airplane-mode transport.
 
+Download UI state checkpoint: `DownloadsScreenStateTest` exercises the production
+Download Manager composable through queued, downloading, paused, failed, and completed
+jobs. It asserts each card's accessible status description and the appropriate Pause,
+Resume, or Retry affordance, with terminal completed jobs exposing no action. The test
+passes on both API-35 and the connected Honor device; transfer-engine and live-provider
+behavior remain separate evidence.
+
 Per-game managed-save controls are now used by every Details screen, not only the
 bundled Galaxy Patrol fixture. The selected game's save controller is also used for
 content-removal preflight, so imported PSP/other-console titles no longer risk reading
