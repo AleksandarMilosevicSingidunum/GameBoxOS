@@ -7,6 +7,17 @@ not a claim that subsequent branch work is already on main.
 
 ## Current implementation checkpoint (28 September 2026)
 
+Windows release packaging checkpoint: the self-contained `win-x64` publish completed
+from commit `540b3dc33883e323790b0e2cda71c5ba579d471b`. The ZIP artifact
+`GameBoxWindows-win-x64.zip` is 67,880,382 bytes with SHA-256
+`9fded6e9c0edcd2e43793a229d6e703c0a5bcf2eee98b4ef95b641ae76a8b970`; the repository
+archive validator passed against its manifest, checksum, and packaged executable. The
+unsigned MSIX artifact `GameBoxWindows-win-x64.msix` is 67,204,124 bytes with SHA-256
+`66c99ab948c63e4e4aa553679e77e96cfa760bc9b530408978aeea1b1edef0f8`; the MSIX
+provenance validator also passed. These are packaging and integrity gates only: signing,
+clean installation/upgrade/rollback, update-channel behavior, and physical Windows
+acceptance remain separate.
+
 Blueprint UI revision checkpoint: primary navigation now matches the mockup hierarchy
 (Home, Library, Store, Media, PC and Settings), while Downloads remains a utility
 destination. Automatic layout selection now keeps 16:9 high-density displays on the
