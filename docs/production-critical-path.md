@@ -45,6 +45,14 @@ remained with SHA-256 `17c75cabe91d5339d4237d4ccfca3a20d4eb78ff357355a274df8162c
 This closes the physical companion-import → gameplay → save-safe cleanup slice; cloud,
 other adapters and external hardware remain separate gates.
 
+The Windows probe then repeated the same authenticated content upload on the Honor with
+the identical checksum. Both confirmations were 49,168 bytes with SHA-256
+`97c1757ffd6a5bc1a591809b2b0f8988741f61f6abd82889c148ecae8a2f471f`, and the library
+continued to report `INSTALLED` plus `savePresent=true`. The test ROM was removed through
+the supported uninstall flow afterward, leaving the managed save intact. This closes the
+live identical-replacement/no-op slice while leaving large-file, cancellation, disk-full,
+and routed-network acceptance open.
+
 The catalog repair changes database state only for six known legacy demo IDs
 without local content references or a real download source. It does not delete
 files, save records, favorites, history or emulator preferences. Imported copies,

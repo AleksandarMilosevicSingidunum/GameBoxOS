@@ -218,6 +218,16 @@ authenticated library read reported `INSTALLED` and `savePresent=true`. A direct
 app-sandbox check confirmed the same byte length and digest. This is live content
 transfer evidence, not proof of gameplay or content cleanup/recovery.
 
+Live owned-content replacement checkpoint (27 September 2026): the same repository
+probe uploaded that exact fixture a second time through the authenticated Honor route.
+The second confirmation returned the same 49,168-byte length and SHA-256, while the
+authenticated library remained `INSTALLED` with `savePresent=true`. GameBox's supported
+uninstall flow then removed the replacement-test ROM; a direct app-sandbox check found no
+content file and retained the managed save with SHA-256
+`17c75cabe91d5339d4237d4ccfca3a20d4eb78ff357355a274df8162cdac3c24`. This is live
+idempotent replacement and cleanup evidence; it does not cover large-file, cancellation,
+disk-full or routed-network conditions.
+
 The local Android JVM suite then exposed a host-capability failure in
 `DirectorySaveAdapterTest`: Windows symbolic-link creation is denied without the
 required privilege. The test now classifies that specific capability absence as a

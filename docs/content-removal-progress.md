@@ -38,6 +38,11 @@ The API-35 and Honor instrumentation suites also cover the production controller
 dialog paths. This is complete software uninstall lifecycle evidence for the exercised
 single-game path, not proof of process-kill durability or every emulator adapter.
 
+The same physical session also repeated an authenticated companion content upload with
+an identical SHA-256. Android kept the installed content state and managed-save presence
+stable, after which the replacement-test file was removed through the same confirmation
+and verified local-backup path.
+
 Still pending: operation concurrency with import/download workers under stress,
 process-death/power-loss recovery, physical picker behavior for reimport, and real
 emulator save compatibility across adapters. Those are separate acceptance gates.
