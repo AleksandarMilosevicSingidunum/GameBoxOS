@@ -14,8 +14,9 @@ class InitialSaveImporter(private val root: File, private val limit: Long = 16L 
         require(relativePath.isNotBlank() && !File(relativePath).isAbsolute)
         require(destination.path.startsWith(directory.path + File.separator))
         check(!destination.exists()) { "A save already exists; use backup and restore instead" }
-        check(destination.parentFile.mkdirs() || destination.parentFile.isDirectory)
-        val staged = File.createTempFile("save-import-", ".part", destination.parentFile)
+        val destinationDirectory = requireNotNull(destination.parentFile)
+        check(destinationDirectory.mkdirs() || destinationDirectory.isDirectory)
+        val staged = File.createTempFile("save-import-", ".part", destinationDirectory)
         try {
             var bytes = 0L
             staged.outputStream().use { output ->
