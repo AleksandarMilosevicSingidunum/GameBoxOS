@@ -33,6 +33,11 @@ if (args.Length > 0 && string.Equals(args[0], "--live-companion-content-repeat",
     await RunLiveCompanionRepeatedContentProbeAsync(args.Skip(1).ToArray());
     return;
 }
+if (args.Length > 0 && string.Equals(args[0], "--live-companion-content-cancel", StringComparison.OrdinalIgnoreCase))
+{
+    await RunLiveCompanionCancelledContentProbeAsync(args.Skip(1).ToArray());
+    return;
+}
 
 var root = Path.Combine(Path.GetTempPath(), "gamebox-windows-tests-" + Guid.NewGuid().ToString("N"));
 Directory.CreateDirectory(root);
@@ -1020,6 +1025,63 @@ static async Task RunLiveCompanionRepeatedContentProbeAsync(string[] args)
         Console.WriteLine(
             $"Live Companion repeated content upload: game={uploaded.GameId}, " +
             $"bytes={uploaded.SizeBytes}, sha256={uploaded.Sha256}, repeats={repeatCount}");
+    }
+    finally
+    {
+        File.Delete(temporaryPath);
+    }
+}
+
+static async Task RunLiveCompanionCancelledContentProbeAsync(string[] args)
+{
+    if (args.Length != 7 || !int.TryParse(args[1], out var port) ||
+        !int.TryParse(args[5], out var repeatCount) || repeatCount is < 1 or > 2048 ||
+        !int.TryParse(args[6], out var cancelAfterMilliseconds) || cancelAfterMilliseconds is < 1 or > 60_000)
+        throw new ArgumentException(
+            "Usage: --live-companion-content-cancel <host> <port> <pairing-secret> <game-id> <source-path> <repeat-count> <cancel-after-ms>");
+
+    var source = new FileInfo(args[4]);
+    if (!source.Exists || source.Length <= 0)
+        throw new FileNotFoundException("Cancelled content probe source does not exist or is empty.", source.FullName);
+    if (source.Length > CompanionContentClient.MaxContentBytes / repeatCount)
+        throw new InvalidDataException("Cancelled content probe would exceed the companion content limit.");
+
+    var temporaryPath = Path.Combine(
+        Path.GetTempPath(),
+        "gamebox-live-cancel-content-" + Guid.NewGuid().ToString("N") + ".nes");
+    try
+    {
+        await using (var input = new FileStream(
+            source.FullName, FileMode.Open, FileAccess.Read, FileShare.Read,
+            1024 * 1024, FileOptions.Asynchronous | FileOptions.SequentialScan))
+        await using (var output = new FileStream(
+            temporaryPath, FileMode.CreateNew, FileAccess.Write, FileShare.None,
+            1024 * 1024, FileOptions.Asynchronous | FileOptions.SequentialScan))
+        {
+            var buffer = new byte[1024 * 1024];
+            for (var copy = 0; copy < repeatCount; copy++)
+            {
+                input.Position = 0;
+                int read;
+                while ((read = await input.ReadAsync(buffer)) > 0)
+                    await output.WriteAsync(buffer.AsMemory(0, read));
+            }
+        }
+
+        using var cancellation = new CancellationTokenSource(cancelAfterMilliseconds);
+        using var http = new HttpClient();
+        try
+        {
+            await new CompanionContentClient(http).UploadWithRetryAsync(
+                args[0], port, args[2], args[3], temporaryPath, cancellation.Token);
+            throw new InvalidOperationException("Live content cancellation completed before the request was cancelled.");
+        }
+        catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
+        {
+            Console.WriteLine(
+                $"Live Companion content cancellation: game={args[3]}, " +
+                $"bytes={new FileInfo(temporaryPath).Length}, cancelAfterMs={cancelAfterMilliseconds}");
+        }
     }
     finally
     {

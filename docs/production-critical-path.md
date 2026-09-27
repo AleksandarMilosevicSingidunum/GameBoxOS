@@ -60,6 +60,11 @@ removed the temporary import and retained the managed save. This closes a bounde
 body streaming check, while maximum-size, long-running cancellation, disk-full and routed-
 network acceptance remain open.
 
+The live cancellation probe also started a 25,174,016-byte upload and cancelled it after
+100 ms. Android retained no imported or `.companion-partial` file, and the managed save
+remained intact. Long-running cancellation and staging cleanup are now live evidence;
+maximum-size, disk-full and routed-network acceptance remain open.
+
 The catalog repair changes database state only for six known legacy demo IDs
 without local content references or a real download source. It does not delete
 files, save records, favorites, history or emulator preferences. Imported copies,

@@ -243,6 +243,15 @@ app import directory was empty and the managed save retained its expected SHA-25
 is larger-body streaming evidence, not maximum-size, cancellation, disk-full or routed-
 network acceptance.
 
+Live cancellation checkpoint (27 September 2026): the Windows harness's
+`--live-companion-content-cancel` probe started a 25,174,016-byte authenticated upload to
+the Honor and cancelled it after 100 ms. The client surfaced cancellation; Android's
+app-sandbox listing contained no imported content or `.companion-partial` staging file,
+and the managed save retained SHA-256
+`17c75cabe91d5339d4237d4ccfca3a20d4eb78ff357355a274df8162cdac3c24`. This is real
+long-running LAN cancellation and staging-cleanup evidence; maximum-size, disk-full and
+routed-network conditions remain separate.
+
 The local Android JVM suite then exposed a host-capability failure in
 `DirectorySaveAdapterTest`: Windows symbolic-link creation is denied without the
 required privilege. The test now classifies that specific capability absence as a
@@ -369,7 +378,7 @@ prove a real emulator launch or gameplay.
 5. Signed production build, clean upgrade, update-channel and rollback rehearsal.
 6. Windows Companion production-signed LAN session; the live debug LAN pairing,
    configuration, managed-save, content-import, gameplay handoff and save-safe cleanup
-   journey is now documented above. Large-file, cancellation, disk-full, replacement,
+   journey is now documented above. Maximum-size, disk-full, replacement,
    routed-network, MSIX signing/install and physical Windows acceptance remain separate
    gates.
 

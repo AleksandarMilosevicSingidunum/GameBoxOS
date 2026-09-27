@@ -38,7 +38,7 @@ authenticated status/library access, idempotent configuration round-trip, favori
 mutation, managed-save upload/download/conflict preservation, and a checksummed content
 upload through the repository probe. A repeatable bounded 6.3 MiB live stream and
 identical replacement also pass. Remaining acceptance includes routed/VLAN/firewall
-coverage, maximum-size/long-running cancellation behavior, disk-full testing,
+coverage, maximum-size transfer, disk-full testing,
 DPAPI reconnect on a real paired profile, additional PC-runtime integrations, MSIX
 signing/install acceptance,
 packaging, and physical Windows acceptance testing. Authenticode signing and signed
@@ -57,6 +57,12 @@ uploads it through the authenticated companion route, reports the verified byte 
 SHA-256, and deletes the temporary source afterward. This exercises a larger request
 body without adding generated content to the repository; the product uninstall flow must
 still be used to remove the imported test content from Android.
+
+It also exposes `--live-companion-content-cancel <host> <port> <pairing-secret> <game-id>
+<source-path> <repeat-count> <cancel-after-ms>`. This creates the same temporary bounded
+stream, cancels the authenticated upload after the requested delay, and requires the
+client to surface cancellation instead of reporting success or retrying indefinitely.
+Android staging cleanup must be verified after a live cancellation run.
 
 Android content-upload preflight now reserves space for both the request staging file
 and the managed-import copy, preventing a transfer that cannot complete promotion.
