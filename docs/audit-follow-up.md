@@ -177,6 +177,13 @@ short save/content bodies before their JSON confirmations are trusted. Status, l
 and configuration response readers now enforce the same declared-length invariant, with
 the complete harness covering short status and configuration bodies as well.
 
+Android release packaging checkpoint (28 September 2026): `:app:assembleRelease` passed
+locally and produced the unsigned preview APK
+`app-release-unsigned.apk` (14,526,677 bytes,
+SHA-256 `e5d0409be9278cbef5fc092f0700d9efd95f7b80cc9c187e987ad70a23d3fad1`). This is
+release-variant compilation/package evidence only; protected signing, installation,
+upgrade, rollback, and update-channel execution remain separate gates.
+
 Release provenance hardening (27 September 2026): alpha, beta, combined preview, and
 protected production APK workflows now use the same tested manifest generator. It accepts
 the PREVIEW channel and records the checked-out source commit plus signing status alongside
