@@ -133,7 +133,11 @@ internal object CompanionHttpRequestReader {
         if (isContentUpload) {
             val directory = requireNotNull(bodyDirectory) { "Content staging directory is unavailable" }
             require(directory.exists() || directory.mkdirs()) { "Content staging directory is unavailable" }
-            if (availableSpace(directory) < contentLength) throw CompanionStorageUnavailable()
+            // The request remains staged while the import store verifies and copies it
+            // into the managed library. Reserve both live payload copies before reading
+            // the socket so a full device cannot receive a transfer it cannot promote.
+            val requiredSpace = contentLength.coerceAtMost(Long.MAX_VALUE / 2L) * 2L
+            if (availableSpace(directory) < requiredSpace) throw CompanionStorageUnavailable()
             val staged = File.createTempFile("companion-", ".partial", directory)
             try {
                 staged.outputStream().buffered().use { output ->

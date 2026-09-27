@@ -47,6 +47,11 @@ The local core harness verifies both cancellation before an owned-content upload
 started; neither path enters retry logic. This is deterministic client evidence.
 Cancellation during a real long-running LAN transfer still requires live acceptance.
 
+Android content-upload preflight now reserves space for both the request staging file
+and the managed-import copy, preventing a transfer that cannot complete promotion.
+The Android JVM regression suite covers rejection before any request-body bytes are
+read; this remains deterministic storage evidence rather than a physical disk-full run.
+
 CI publishes the self-contained ZIP with a SHA-256 file and a validated JSON provenance manifest containing the exact artifact name, hash, byte size, runtime, self-contained flag, and source commit. Validation also requires exactly one non-empty `GameBox.Windows.exe` in the archive and verifies the published executable before upload.
 
 ## Build and test

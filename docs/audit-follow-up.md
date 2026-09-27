@@ -79,7 +79,7 @@ boundary. Companion content replacement now also recovers an orphaned previous c
 before retrying, preserving the old installed content when a staged replacement fails.
 The catalog transport failure double is now test-only; the Android production source no
 longer contains a `NoopCatalogTransportClient` placeholder. The complete Android JVM
-suite was rerun after this cleanup: 514 tests, zero failures, and one explicit
+suite was rerun after this cleanup: 515 tests, zero failures, and one explicit
 privilege-based skip.
 Windows companion status, library, save, and content clients now normalize incomplete
 or malformed JSON confirmations into bounded invalid-data failures, with console-test
@@ -164,7 +164,7 @@ The local Android JVM suite then exposed a host-capability failure in
 `DirectorySaveAdapterTest`: Windows symbolic-link creation is denied without the
 required privilege. The test now classifies that specific capability absence as a
 skip while retaining full symlink coverage on capable CI hosts. The complete local
-suite passes with 514 tests, zero failures, and one explicit privilege-based skip;
+suite passes with 515 tests, zero failures, and one explicit privilege-based skip;
 the Windows .NET core suite also passes.
 
 ## Companion HTTP connection recovery (EXT-14)
@@ -181,8 +181,8 @@ the Windows .NET core suite also passes.
   echo request headers or pairing secrets.
 - Large content uploads preflight the staging directory's usable space before reading
   the body and return structured HTTP 507 storage guidance when the device cannot
-  stage the declared payload. This is deterministic failure handling, not a real
-  disk-full device acceptance result.
+  retain both the staged request and the managed-import copy required for promotion.
+  This is deterministic failure handling, not a real disk-full device acceptance result.
 - Preserves the existing `X-GameBox-Authorization` protocol used by Windows.
 
 Local validation: the focused connection, protocol and status tests pass in the complete

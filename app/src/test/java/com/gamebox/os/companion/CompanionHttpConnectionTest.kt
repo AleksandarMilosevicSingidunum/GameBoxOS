@@ -100,6 +100,33 @@ class CompanionHttpConnectionTest {
         }
     }
 
+    @Test fun reservesSpaceForStagingAndManagedImportCopies() {
+        val directory = Files.createTempDirectory("companion-space-double-").toFile()
+        try {
+            val body = "NES-CONTENT".toByteArray()
+            val hash = CompanionSaveTransferStore.sha256(body)
+            val request = (
+                "PUT /v1/content/galaxy-patrol HTTP/1.1\r\n" +
+                    "Content-Type: application/octet-stream\r\n" +
+                    CompanionHttpRequestReader.BODY_SHA256_HEADER + ": " + hash + "\r\n" +
+                    "Content-Length: " + body.size + "\r\n\r\n"
+                ).toByteArray() + body
+
+            val failure = runCatching {
+                CompanionHttpRequestReader.read(
+                    request.inputStream(),
+                    bodyDirectory = directory,
+                    availableSpace = { body.size.toLong() },
+                )
+            }.exceptionOrNull()
+
+            assertTrue(failure is CompanionStorageUnavailable)
+            assertEquals(0, directory.listFiles()?.size ?: 0)
+        } finally {
+            directory.deleteRecursively()
+        }
+    }
+
     @Test fun actualSocketRespondsBeforeClientClosesAndSurvivesBadClients() {
         val executor = Executors.newSingleThreadExecutor()
         val staging = Files.createTempDirectory("companion-http-space-").toFile()
