@@ -3089,7 +3089,8 @@ private fun DetailsScreen(
     val gameSaveController = remember(game.id, saveControllerFactory) {
         if (game.id.value == "galaxy-patrol") null else saveControllerFactory?.invoke(game.id, saveScope)
     }
-    val contentSafetyController = gameSaveController ?: saveSafetyController
+    val activeSaveController = gameSaveController ?: saveSafetyController
+    val contentSafetyController = activeSaveController
     val discoveredSaves by managedSaveDiscovery.state.collectAsState()
     val saveSummary = discoveredSaves[game.id.value]
     val saveDescription = when (saveSummary?.presence) {
@@ -3101,7 +3102,6 @@ private fun DetailsScreen(
     }
     val authorizedState by authorizedDownloadController.observeState().collectAsState()
     val launchState by gameLaunchController.observeState().collectAsState()
-    val saveSafetyState by saveSafetyController.observeState().collectAsState()
     var showUninstallConfirmation by remember(game.id) { mutableStateOf(false) }
     var showGameSettings by remember(game.id) { mutableStateOf(false) }
     var showMetadataEditor by remember(game.id) { mutableStateOf(false) }
@@ -3148,15 +3148,6 @@ private fun DetailsScreen(
         )
         onDispose { controllerActions?.clear() }
     }
-    val exportBackupLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.CreateDocument("application/octet-stream")
-    ) { uri -> uri?.let(saveSafetyController::exportBackup) }
-    val initialSaveLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.OpenDocument()
-    ) { uri -> uri?.let(saveSafetyController::importInitialSave) }
-    val importBackupLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.OpenDocument()
-    ) { uri -> uri?.let(saveSafetyController::importBackup) }
     if (showUninstallConfirmation) {
         ContentRemovalDialog(game, contentSafetyController) { showUninstallConfirmation = false }
     }
@@ -3167,10 +3158,8 @@ private fun DetailsScreen(
         ImportedGameReimportCard(game, importer, repository,
             enabled = launchState.status !in setOf(LaunchUiState.Status.PREPARING,
                 LaunchUiState.Status.LAUNCHED, LaunchUiState.Status.SESSION_ERROR))
-        gameSaveController?.let { controller ->
-            PerGameSaveCard(game, controller, enabled = launchState.status !in setOf(
-                LaunchUiState.Status.PREPARING, LaunchUiState.Status.LAUNCHED, LaunchUiState.Status.SESSION_ERROR))
-        }
+        PerGameSaveCard(game, activeSaveController, enabled = launchState.status !in setOf(
+            LaunchUiState.Status.PREPARING, LaunchUiState.Status.LAUNCHED, LaunchUiState.Status.SESSION_ERROR))
         Surface(
             modifier = Modifier.fillMaxWidth().height(if (compact) 252.dp else 292.dp),
             shape = RoundedCornerShape(9.dp),
@@ -3366,11 +3355,6 @@ private fun DetailsScreen(
                             Text("Uninstall content")
                         }
                     }
-                    if (isAuthorizedFixture && !saveSafetyState.saveRecordPresent) {
-                        OutlinedButton(onClick = { initialSaveLauncher.launch(arrayOf("*/*")) }) {
-                            Text("Import save file")
-                        }
-                    }
                     if (!isAuthorizedFixture && game.state in setOf(InstallState.INSTALLED,
                         InstallState.UPDATE_AVAILABLE, InstallState.MISSING_FILES)) {
                         OutlinedButton(onClick = { showUninstallConfirmation = true },
@@ -3409,67 +3393,6 @@ private fun DetailsScreen(
                         Text("Emulator-owned saves require a configured connection; they are not included in this scan.",
                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.68f))
                         OutlinedButton(onClick = managedSaveDiscovery::refresh) { Text("Refresh saves") }
-                    }
-                }
-                if (isAuthorizedFixture && saveSafetyState.saveRecordPresent) {
-                    Spacer(Modifier.height(12.dp))
-                    Text(
-                        "Managed save path: " + saveSafetyState.relativePath,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.68f)
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        OutlinedButton(onClick = saveSafetyController::backupSave) {
-                            Text(if (saveSafetyState.backupPresent) "Update backup" else "Back up save")
-                        }
-                        if (saveSafetyState.backupPresent) {
-                            OutlinedButton(onClick = saveSafetyController::restoreSave) {
-                                Text("Restore backup")
-                            }
-                            OutlinedButton(onClick = {
-                                exportBackupLauncher.launch("gamebox-galaxy-patrol-save.dat")
-                            }) {
-                                Text("Export")
-                            }
-                        }
-                        OutlinedButton(onClick = {
-                            importBackupLauncher.launch(arrayOf("application/octet-stream"))
-                        }) {
-                            Text("Import")
-                        }
-                    }
-                }
-                if (isAuthorizedFixture) {
-                    Spacer(Modifier.height(10.dp))
-                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Button(
-                            enabled = saveSafetyState.saveRecordPresent,
-                            onClick = saveSafetyController::uploadCloudSave,
-                        ) {
-                            Icon(Icons.Rounded.CloudUpload, contentDescription = null, modifier = Modifier.size(16.dp))
-                            Text("Upload cloud copy", modifier = Modifier.padding(start = 6.dp))
-                        }
-                        OutlinedButton(onClick = saveSafetyController::downloadCloudSave) {
-                            Icon(Icons.Rounded.CloudDownload, contentDescription = null, modifier = Modifier.size(16.dp))
-                            Text("Restore cloud copy", modifier = Modifier.padding(start = 6.dp))
-                        }
-                    }
-                    Text(
-                        "Cloud credentials and endpoint are configured in Settings. A conflicting local copy is preserved before restore.",
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.62f),
-                        fontSize = 11.sp,
-                        modifier = Modifier.padding(top = 6.dp),
-                    )
-                }
-                if (isAuthorizedFixture) {
-                    saveSafetyState.operationMessage?.let { message ->
-                        Spacer(Modifier.height(10.dp))
-                        Text(
-                            message,
-                            color = if (saveSafetyState.operationSuccessful)
-                                MaterialTheme.colorScheme.primary
-                            else MaterialTheme.colorScheme.error
-                        )
                     }
                 }
                 if (launchState.gameId == game.id &&

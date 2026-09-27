@@ -7,6 +7,13 @@ not a claim that subsequent branch work is already on main.
 
 ## Current implementation checkpoint (27 September 2026)
 
+Per-game managed-save controls are now used by every Details screen, not only the
+bundled Galaxy Patrol fixture. The selected game's save controller is also used for
+content-removal preflight, so imported PSP/other-console titles no longer risk reading
+or mutating Galaxy Patrol's save record. The existing per-game Compose coverage and the
+physical Honor instrumentation suite both pass after this integration; emulator-private
+save synchronization remains explicitly separate.
+
 The Vimm PSP flow is now regression-covered with a concrete `God of War: Chains of
 Olympus` metadata fixture: bounded PSP listing search resolves the numeric vault link,
 details hydration preserves title/platform/region/year/artwork, and the result remains
