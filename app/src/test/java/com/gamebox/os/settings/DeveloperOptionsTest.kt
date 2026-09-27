@@ -42,4 +42,16 @@ class DeveloperOptionsTest {
             ),
         )
     }
+
+    @Test
+    fun layoutOverrideIsIgnoredOutsideDebugMode() {
+        assertEquals(
+            DeveloperLayoutMode.AUTO,
+            effectiveDeveloperLayoutMode(DeveloperLayoutMode.WIDE, allowDeveloperOptions = false),
+        )
+        assertEquals(
+            DeveloperLayoutMode.WIDE,
+            effectiveDeveloperLayoutMode(DeveloperLayoutMode.WIDE, allowDeveloperOptions = true),
+        )
+    }
 }

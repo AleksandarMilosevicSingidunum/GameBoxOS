@@ -277,7 +277,9 @@ before retrying, preserving the old installed content when a staged replacement 
 Catalog failure simulation is now debug-only: release builds always consume the real
 catalog refresh state, while debug instrumentation retains the explicit offline,
 provider-fallback, and error-state controls used by the UI matrix. The boundary is
-covered by JVM and API-35 instrumentation tests.
+covered by JVM and API-35 instrumentation tests. The same release boundary now ignores
+persisted layout-forcing and focus-diagnostics overrides, preventing developer settings
+from changing production responsiveness or exposing debug overlays.
 The catalog transport failure double is now test-only; the Android production source no
 longer contains a `NoopCatalogTransportClient` placeholder. The complete Android JVM
 suite was rerun after this cleanup: 517 tests, zero failures, and one explicit

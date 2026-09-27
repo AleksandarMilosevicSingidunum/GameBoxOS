@@ -23,6 +23,11 @@ enum class CatalogFailureSimulation {
     }
 }
 
+internal fun effectiveDeveloperLayoutMode(
+    stored: DeveloperLayoutMode,
+    allowDeveloperOptions: Boolean,
+): DeveloperLayoutMode = if (allowDeveloperOptions) stored else DeveloperLayoutMode.AUTO
+
 internal fun effectiveCatalogRefreshState(
     liveState: com.gamebox.os.domain.CatalogRefreshState,
     simulation: CatalogFailureSimulation,

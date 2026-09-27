@@ -193,6 +193,8 @@ fun GameBoxApp(
     val appSettings by settingsRepository.settings.collectAsState(
         initial = com.gamebox.os.settings.GameBoxSettings()
     )
+    val allowDeveloperOptions = LocalContext.current.applicationInfo.flags and
+        android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE != 0
     val runtimeDeviceStatus = rememberRuntimeDeviceStatus()
     val controllerActions = remember { ControllerActionRegistry() }
     val appScope = rememberCoroutineScope()
@@ -232,7 +234,7 @@ fun GameBoxApp(
     BlueprintViewport(
         safeAreaPercent = appSettings.safeAreaPercent,
         reducedMotion = appSettings.reducedMotion,
-        focusDebugOverlayEnabled = appSettings.focusDebugOverlayEnabled,
+        focusDebugOverlayEnabled = appSettings.focusDebugOverlayEnabled && allowDeveloperOptions,
         controllerActions = controllerActions,
         uiState = uiState,
         runtimeDeviceStatus = runtimeDeviceStatus,
@@ -283,7 +285,10 @@ fun GameBoxApp(
             )
     ) {
         val compact = shouldUseCompactLayout(
-            mode = appSettings.developerLayoutMode,
+            mode = com.gamebox.os.settings.effectiveDeveloperLayoutMode(
+                appSettings.developerLayoutMode,
+                allowDeveloperOptions,
+            ),
             widthDp = maxWidth.value,
             heightDp = maxHeight.value,
         )
@@ -4954,26 +4959,26 @@ private fun SettingsScreen(
         Spacer(Modifier.height(12.dp))
         Spacer(Modifier.height(18.dp))
         SettingsSectionHeader("Developer and diagnostics")
-        Text("Layout simulation", fontWeight = FontWeight.Bold)
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(top = 6.dp, bottom = 12.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            DeveloperLayoutMode.entries.forEach { mode ->
-                FilterChip(
-                    selected = currentSettings.developerLayoutMode == mode,
-                    onClick = { scope.launch { settingsRepository.setDeveloperLayoutMode(mode) } },
-                    label = { Text(when (mode) {
-                        DeveloperLayoutMode.AUTO -> "Automatic"
-                        DeveloperLayoutMode.WIDE -> "TV / DeX"
-                        DeveloperLayoutMode.COMPACT -> "Phone"
-                    }) },
-                )
-            }
-        }
-        val allowCatalogSimulation = context.applicationInfo.flags and
+        val allowDeveloperOptions = context.applicationInfo.flags and
             android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE != 0
-        if (allowCatalogSimulation) {
+        if (allowDeveloperOptions) {
+            Text("Layout simulation", fontWeight = FontWeight.Bold)
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(top = 6.dp, bottom = 12.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                DeveloperLayoutMode.entries.forEach { mode ->
+                    FilterChip(
+                        selected = currentSettings.developerLayoutMode == mode,
+                        onClick = { scope.launch { settingsRepository.setDeveloperLayoutMode(mode) } },
+                        label = { Text(when (mode) {
+                            DeveloperLayoutMode.AUTO -> "Automatic"
+                            DeveloperLayoutMode.WIDE -> "TV / DeX"
+                            DeveloperLayoutMode.COMPACT -> "Phone"
+                        }) },
+                    )
+                }
+            }
             Text("Catalog state simulation", fontWeight = FontWeight.Bold)
             Row(
                 modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())
@@ -4999,8 +5004,7 @@ private fun SettingsScreen(
                 fontSize = 12.sp,
                 modifier = Modifier.padding(bottom = 12.dp),
             )
-        }
-        Row(
+            Row(
             modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
@@ -5022,6 +5026,7 @@ private fun SettingsScreen(
                     contentDescription = "Focus diagnostics overlay"
                 },
             )
+            }
         }
         Text(
             "Export a sanitized recovery bundle when troubleshooting. Credentials, remote URLs, checksums, paths, and save contents are excluded.",
