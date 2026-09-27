@@ -68,6 +68,19 @@ class CompanionContentTransferTest {
             assertEquals("galaxy-patrol/Galaxy Patrol.nes", registered.relativePath)
             assertEquals(hash, registered.sha256)
             assertTrue(registered.favorite)
+
+            val repeated = root.resolve("request-repeated.partial").apply {
+                writeBytes("NES-CONTENT".toByteArray())
+            }
+            val repeatedResult = CompanionContentTransferStore(root, games).import(
+                "galaxy-patrol",
+                fileName,
+                repeated,
+                repeated.length(),
+                hash,
+            )
+            assertEquals(hash, repeatedResult.sha256)
+            assertFalse(root.resolve("imports/galaxy-patrol/Galaxy Patrol.nes.companion-backup").exists())
         } finally {
             root.deleteRecursively()
         }

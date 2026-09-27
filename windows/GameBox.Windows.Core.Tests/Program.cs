@@ -498,6 +498,27 @@ try
             companionSecret, "PUT", "/v1/content/galaxy-patrol", contentAuthorization,
             DateTimeOffset.UtcNow.ToUnixTimeSeconds(), bodySha256: contentHash),
         "Content upload authorization must bind the exact file checksum.");
+    var retryContentUploadAttempts = 0;
+    using var retryContentUploadHttp = new HttpClient(new StubHttpMessageHandler(_ =>
+    {
+        retryContentUploadAttempts++;
+        if (retryContentUploadAttempts == 1) throw new HttpRequestException("transient content write failure");
+        return new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent(JsonSerializer.Serialize(new
+            {
+                protocolVersion = 1,
+                gameId = "galaxy-patrol",
+                fileName = "Galaxy Patrol.nes",
+                sizeBytes = contentBytes.LongLength,
+                sha256 = contentHash
+            }))
+        };
+    }));
+    var retriedContentUpload = await new CompanionContentClient(retryContentUploadHttp).UploadWithRetryAsync(
+        "192.168.1.22", 49_500, companionSecret, "galaxy-patrol", contentPath);
+    Require(retryContentUploadAttempts == 2 && retriedContentUpload.Sha256 == contentHash,
+        "Owned-content uploads must retry transient LAN failures after idempotent replay support.");
     using var oversizedContentResponse = new HttpClient(new StubHttpMessageHandler(_ =>
         new HttpResponseMessage(HttpStatusCode.OK)
         {

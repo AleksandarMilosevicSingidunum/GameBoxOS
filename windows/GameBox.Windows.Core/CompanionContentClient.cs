@@ -106,6 +106,21 @@ public sealed class CompanionContentClient
         return new CompanionContentUploadResult(gameId, file.Name, file.Length, hash);
     }
 
+    /// <summary>
+    /// Retries an owned-content upload after transient LAN failures. Android treats
+    /// an identical streamed checksum as a no-op, so a lost response is safe to replay.
+    /// </summary>
+    public Task<CompanionContentUploadResult> UploadWithRetryAsync(
+        string host,
+        int port,
+        string pairingSecret,
+        string gameId,
+        string filePath,
+        CancellationToken cancellationToken = default) =>
+        CompanionRetryPolicy.ExecuteAsync(
+            token => UploadAsync(host, port, pairingSecret, gameId, filePath, token),
+            cancellationToken);
+
     private static async Task<byte[]> ReadBoundedAsync(
         HttpContent content,
         CancellationToken cancellationToken)

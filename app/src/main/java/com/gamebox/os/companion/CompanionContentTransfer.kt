@@ -61,6 +61,14 @@ internal class CompanionContentTransferStore(
             require(hashes.sizeBytes == expectedLength && hashes.sha256 == declared) {
                 "Transferred content checksum does not match"
             }
+            if (destination.isFile && destination.length() == hashes.sizeBytes) {
+                val existingHash = destination.inputStream().buffered().use { input ->
+                    RomHasher.hash(input, onChunk = { _, _ -> })
+                }
+                if (existingHash.sha256 == hashes.sha256) {
+                    return CompanionContentImportResult(id.value, safeName, hashes.sizeBytes, hashes.sha256)
+                }
+            }
             if (destination.exists()) move(destination, backup)
             move(partial, destination)
             try {
