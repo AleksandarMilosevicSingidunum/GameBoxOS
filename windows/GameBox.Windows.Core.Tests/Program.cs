@@ -420,6 +420,27 @@ try
             companionSecret, "PUT", "/v1/saves/nes-1", saveUploadAuthorization,
             authorizationNow, bodySha256: new string('0', 64)),
         "Save upload authorization must reject altered payload bytes.");
+    var retrySaveUploadAttempts = 0;
+    using var retrySaveUploadHttp = new HttpClient(new StubHttpMessageHandler(_ =>
+    {
+        retrySaveUploadAttempts++;
+        if (retrySaveUploadAttempts == 1) throw new HttpRequestException("transient save write failure");
+        return new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent(JsonSerializer.Serialize(new
+            {
+                protocolVersion = 1,
+                gameId = "nes-1",
+                updatedAtMillis = 2345,
+                sha256 = saveHash,
+                conflictPreserved = false
+            }))
+        };
+    }));
+    var retriedSaveUpload = await new CompanionSaveClient(retrySaveUploadHttp).UploadWithRetryAsync(
+        "192.168.1.22", 49_500, companionSecret, "nes-1", saveBytes);
+    Require(retrySaveUploadAttempts == 2 && !retriedSaveUpload.ConflictPreserved,
+        "Managed-save uploads must retry transient LAN failures after idempotent replay support.");
     using var incompleteSaveClient = new HttpClient(new StubHttpMessageHandler(_ =>
         new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent("{}") }));
     var incompleteSaveRejected = false;

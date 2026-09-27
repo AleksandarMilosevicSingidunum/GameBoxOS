@@ -140,6 +140,22 @@ public sealed class CompanionSaveClient
         }
     }
 
+    /// <summary>
+    /// Retries save replacement after transient LAN failures. Android treats an
+    /// identical-hash replay as a no-op, so a lost response cannot create another
+    /// conflict artifact.
+    /// </summary>
+    public Task<CompanionSaveUploadResult> UploadWithRetryAsync(
+        string host,
+        int port,
+        string pairingSecret,
+        string gameId,
+        byte[] bytes,
+        CancellationToken cancellationToken = default) =>
+        CompanionRetryPolicy.ExecuteAsync(
+            token => UploadAsync(host, port, pairingSecret, gameId, bytes, token),
+            cancellationToken);
+
     private HttpRequestMessage CreateRequest(
         HttpMethod method,
         string host,

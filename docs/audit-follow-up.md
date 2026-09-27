@@ -40,7 +40,10 @@ retry policy for transient LAN failures; save uploads and content replacement re
 non-automatically-retried mutations so an uncertain response cannot create duplicate
 conflict backups or replacement side effects. Android save uploads with an identical
 SHA-256 are now true no-ops that repair the managed-save metadata row without advancing
-the timestamp or creating another conflict artifact.
+the timestamp or creating another conflict artifact, allowing the Windows client to
+retry save uploads safely after transient LAN failures. Content replacement remains
+non-automatically-retried until its replacement operation has the same idempotency
+guarantee.
 
 The PC now has the official .NET 8.0.314 SDK installed, including the .NET 8 runtime.
 The Windows core executable test harness passes locally, and now includes the documented
