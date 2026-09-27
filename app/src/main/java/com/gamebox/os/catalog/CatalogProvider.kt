@@ -6,8 +6,14 @@ import com.gamebox.os.domain.GameId
 import java.net.URI
 import java.net.URL
 import javax.net.ssl.HttpsURLConnection
+import java.util.concurrent.atomic.AtomicReference
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
 
 data class CatalogProviderCapabilities(
     val refresh: Boolean = true,
@@ -176,6 +182,9 @@ class HttpsCatalogProvider(
     private val parser: CatalogParser = CatalogParser(),
     private val maxResponseBytes: Int = 1_048_576,
     private val fetchOverride: ((String, CatalogCredentials?) -> String)? = null,
+    private val connectionFactory: (String) -> HttpsURLConnection = {
+        URL(it).openConnection() as HttpsURLConnection
+    },
 ) : CatalogProvider {
     private val cacheFile = context.filesDir.resolve("catalog/remote-catalog.json")
     private val cacheUrlFile = context.filesDir.resolve("catalog/remote-catalog.url")
@@ -209,45 +218,67 @@ class HttpsCatalogProvider(
         }
     }
 
-    private fun fetch(url: String, credentials: CatalogCredentials?): String {
-        val connection = URL(url).openConnection() as HttpsURLConnection
-        connection.connectTimeout = 10_000
-        connection.readTimeout = 15_000
-        connection.instanceFollowRedirects = false
-        connection.setRequestProperty("Accept", "application/json")
-        connection.setRequestProperty("User-Agent", "GameBoxOS/0.1")
-        if (credentials?.username != null && credentials.password != null) {
-            val token = java.util.Base64.getEncoder().encodeToString(
-                (credentials.username + ":" + credentials.password).toByteArray()
-            )
-            connection.setRequestProperty("Authorization", "Basic " + token)
-        }
-        try {
-            val status = connection.responseCode
-            require(status in 200..299) {
-                if (status in 300..399) "Catalog redirects are not accepted"
-                else "Catalog request failed with HTTP " + status
-            }
-            val declaredLength = connection.contentLengthLong
-            require(declaredLength < 0 || declaredLength <= maxResponseBytes) { "Catalog response is too large" }
-            val bytes = connection.inputStream.use { input ->
-                val output = java.io.ByteArrayOutputStream()
-                val buffer = ByteArray(8_192)
-                var total = 0
-                while (true) {
-                    val count = input.read(buffer)
-                    if (count < 0) break
-                    total += count
-                    require(total <= maxResponseBytes) { "Catalog response is too large" }
-                    output.write(buffer, 0, count)
+    private suspend fun fetch(url: String, credentials: CatalogCredentials?): String =
+        suspendCancellableCoroutine { continuation ->
+            val connectionReference = AtomicReference<HttpsURLConnection?>(null)
+            val worker = CoroutineScope(Dispatchers.IO).launch {
+                try {
+                    val connection = connectionFactory(url)
+                    connectionReference.set(connection)
+                    if (!continuation.isActive) {
+                        connection.disconnect()
+                        return@launch
+                    }
+                    connection.connectTimeout = 10_000
+                    connection.readTimeout = 15_000
+                    connection.instanceFollowRedirects = false
+                    connection.setRequestProperty("Accept", "application/json")
+                    connection.setRequestProperty("User-Agent", "GameBoxOS/0.1")
+                    if (credentials?.username != null && credentials.password != null) {
+                        val token = java.util.Base64.getEncoder().encodeToString(
+                            (credentials.username + ":" + credentials.password).toByteArray()
+                        )
+                        connection.setRequestProperty("Authorization", "Basic " + token)
+                    }
+                    val result = try {
+                        val status = connection.responseCode
+                        require(status in 200..299) {
+                            if (status in 300..399) "Catalog redirects are not accepted"
+                            else "Catalog request failed with HTTP " + status
+                        }
+                        val declaredLength = connection.contentLengthLong
+                        require(declaredLength < 0 || declaredLength <= maxResponseBytes) {
+                            "Catalog response is too large"
+                        }
+                        val bytes = connection.inputStream.use { input ->
+                            val output = java.io.ByteArrayOutputStream()
+                            val buffer = ByteArray(8_192)
+                            var total = 0
+                            while (true) {
+                                val count = input.read(buffer)
+                                if (count < 0) break
+                                total += count
+                                require(total <= maxResponseBytes) { "Catalog response is too large" }
+                                output.write(buffer, 0, count)
+                            }
+                            output.toByteArray()
+                        }
+                        bytes.toString(Charsets.UTF_8)
+                    } finally {
+                        connection.disconnect()
+                    }
+                    continuation.resume(result)
+                } catch (error: Throwable) {
+                    continuation.resumeWithException(error)
+                } finally {
+                    connectionReference.getAndSet(null)?.disconnect()
                 }
-                output.toByteArray()
             }
-            return bytes.toString(Charsets.UTF_8)
-        } finally {
-            connection.disconnect()
+            continuation.invokeOnCancellation {
+                connectionReference.get()?.disconnect()
+                worker.cancel()
+            }
         }
-    }
 }
 
 
