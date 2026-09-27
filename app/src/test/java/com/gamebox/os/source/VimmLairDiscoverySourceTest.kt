@@ -489,6 +489,22 @@ class VimmLairDiscoverySourceTest {
     }
 
     @Test
+    fun exactPspTitleResolvesToMetadataOnlyVaultLink() {
+        val games = parseVimmLairListing(
+            html = "<a href=\"/vault/23719\">God of War: Chains of Olympus</a>",
+            sourceId = "vimm",
+            platform = "PSP",
+            baseUrl = "https://vimm.net/vault",
+            query = "God of War Chains of Olympus",
+        )
+
+        assertEquals(1, games.size)
+        assertEquals("23719", games.single().externalId)
+        assertEquals("God of War: Chains of Olympus", games.single().title)
+        assertEquals("https://vimm.net/vault/23719", games.single().detailsUrl)
+    }
+
+    @Test
     fun matchRankPrefersExactThenPrefixThenWordPrefix() {
         assertEquals(0, vimmLairMatchRank("God", "God"))
         assertEquals(1, vimmLairMatchRank("God Hand", "God"))

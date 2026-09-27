@@ -613,6 +613,27 @@ try
     catch (InvalidDataException) { oversizedContentRejected = true; }
     Require(oversizedContentRejected,
         "Content upload must reject oversized confirmations before buffering them.");
+    using var mismatchedContentResponse = new HttpClient(new StubHttpMessageHandler(_ =>
+        new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent(JsonSerializer.Serialize(new
+            {
+                protocolVersion = 1,
+                gameId = "different-game",
+                fileName = "Galaxy Patrol.nes",
+                sizeBytes = contentBytes.LongLength,
+                sha256 = contentHash
+            }))
+        }));
+    var mismatchedContentRejected = false;
+    try
+    {
+        await new CompanionContentClient(mismatchedContentResponse).UploadAsync(
+            "192.168.1.22", 49_500, companionSecret, "galaxy-patrol", contentPath);
+    }
+    catch (InvalidDataException) { mismatchedContentRejected = true; }
+    Require(mismatchedContentRejected,
+        "Content upload must reject a confirmation for a different game.");
     using var malformedContentResponse = new HttpClient(new StubHttpMessageHandler(_ =>
         new HttpResponseMessage(HttpStatusCode.OK)
         {
