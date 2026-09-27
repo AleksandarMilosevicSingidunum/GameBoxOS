@@ -23,11 +23,16 @@ class SaveRestoreCoordinator(
             ?: return GameSaveRestoreResult(gameId, emptyList(), "Snapshot manifest store is not configured")
         val manifest = store.load(gameId)
             ?: return GameSaveRestoreResult(gameId, emptyList(), "No save snapshot is available")
-        return restore(gameId, manifest.relativePaths)
+        return restore(gameId, manifest.relativePaths, manifest.generation)
     }
 
     fun restore(gameId: String, relativePaths: List<String>): GameSaveRestoreResult {
+        return restore(gameId, relativePaths, generation = null)
+    }
+
+    private fun restore(gameId: String, relativePaths: List<String>, generation: String?): GameSaveRestoreResult {
         require(gameId.matches(Regex("[A-Za-z0-9._-]+"))) { "gameId contains unsupported characters" }
+        require(generation == null || generation.matches(Regex("[A-Za-z0-9._-]+"))) { "Snapshot generation is invalid" }
         val uniquePaths = relativePaths.distinct()
         val prefix = gameId + "/"
         return GameSaveRestoreResult(
@@ -38,7 +43,10 @@ class SaveRestoreCoordinator(
                     !normalized.split('/').any { it == ".." || it.isBlank() }
                 SaveArtifactRestoreResult(
                     path,
-                    if (safeForGame) backupService.restore(normalized) else BackupResult.CROSS_GAME_PATH
+                    if (safeForGame) {
+                        val backupPath = generation?.let { ".snapshots/$it/$normalized" } ?: normalized
+                        backupService.restore(backupPath, normalized)
+                    } else BackupResult.CROSS_GAME_PATH
                 )
             },
         )

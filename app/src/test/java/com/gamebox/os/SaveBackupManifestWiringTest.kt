@@ -36,6 +36,16 @@ class SaveBackupManifestWiringTest {
             assertEquals(1, result.successfulCount)
             assertEquals(456L, manifest?.createdAtMillis)
             assertEquals(listOf("game-a/slot.sav"), manifest?.relativePaths)
+            assertTrue(!manifest?.generation.isNullOrBlank())
+            assertTrue(File(backups, ".snapshots/${manifest!!.generation}/game-a/slot.sav").isFile)
+
+            File(saves, "game-a/slot.sav").writeText("changed")
+            val restored = com.gamebox.os.storage.SaveRestoreCoordinator(
+                SaveBackupService(saves, backups),
+                SaveSnapshotManifestStore(manifests),
+            ).restoreLatest("game-a")
+            assertEquals(1, restored.successfulCount)
+            assertEquals("progress", File(saves, "game-a/slot.sav").readText())
         } finally {
             root.deleteRecursively()
         }

@@ -43,4 +43,26 @@ class SaveSnapshotManifestStoreTest {
             root.deleteRecursively()
         }
     }
+
+    @Test
+    fun roundTripsGenerationAndReadsLegacyManifest() {
+        val root = createTempDirectory("gamebox-save-generation-").toFile()
+        try {
+            val store = SaveSnapshotManifestStore(root)
+            store.save(SaveSnapshotManifest("game-a", 9L, listOf("game-a/slot.sav"), "generation-1"))
+            assertEquals(
+                SaveSnapshotManifest("game-a", 9L, listOf("game-a/slot.sav"), "generation-1"),
+                store.load("game-a"),
+            )
+            root.resolve("game-a.manifest").writeText(
+                "GAMEBOX_SAVE_MANIFEST_1\n9\nZ2FtZS1hL3Nsb3Quc2F2\n",
+            )
+            assertEquals(
+                SaveSnapshotManifest("game-a", 9L, listOf("game-a/slot.sav")),
+                store.load("game-a"),
+            )
+        } finally {
+            root.deleteRecursively()
+        }
+    }
 }

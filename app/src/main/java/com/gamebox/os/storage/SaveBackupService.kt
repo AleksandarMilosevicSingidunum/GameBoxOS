@@ -35,14 +35,16 @@ class SaveBackupService(
         return legacyBackupIsValid(backup)
     }
 
-    fun createBackup(relativePath: String): BackupResult {
+    fun createBackup(relativePath: String): BackupResult = createBackup(relativePath, relativePath)
+
+    internal fun createBackup(relativePath: String, destinationRelativePath: String): BackupResult {
         val source = resolveContained(savesRoot, relativePath)
         when (val inspection = inspectSource(relativePath)) {
             BackupResult.SUCCESS -> Unit
             BackupResult.CHECKSUM_MISMATCH -> require(false) { "Save is empty; existing backup retained" }
             else -> return inspection
         }
-        val backup = resolveContained(backupsRoot, relativePath)
+        val backup = resolveContained(backupsRoot, destinationRelativePath)
         validateBackupDestination(backup)
         check(backup.parentFile?.mkdirs() != false || backup.parentFile?.isDirectory == true)
         source.inputStream().use { AtomicSaveSnapshot.write(backup, it, maxBackupBytes) }
@@ -57,8 +59,10 @@ class SaveBackupService(
         return BackupResult.SUCCESS
     }
 
-    fun restore(relativePath: String): BackupResult {
-        val backup = resolveContained(backupsRoot, relativePath)
+    fun restore(relativePath: String): BackupResult = restore(relativePath, relativePath)
+
+    internal fun restore(backupRelativePath: String, destinationRelativePath: String): BackupResult {
+        val backup = resolveContained(backupsRoot, backupRelativePath)
         if (!AtomicSaveSnapshot.hasHeader(backup) && backup.isFile && backup.length() > maxBackupBytes) {
             return BackupResult.SIZE_LIMIT_EXCEEDED
         }
@@ -66,8 +70,8 @@ class SaveBackupService(
             BackupResult.CHECKSUM_MISMATCH
         } else BackupResult.BACKUP_MISSING
 
-        val destination = resolveContained(savesRoot, relativePath)
-        val staged = resolveContained(savesRoot, relativePath + ".restore.part")
+        val destination = resolveContained(savesRoot, destinationRelativePath)
+        val staged = resolveContained(savesRoot, destinationRelativePath + ".restore.part")
         check(destination.parentFile?.mkdirs() != false || destination.parentFile?.isDirectory == true)
         try {
             val copied = payload.inputStream().use { input ->

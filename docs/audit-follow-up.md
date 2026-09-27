@@ -126,6 +126,13 @@ double-encoding them, encodes literal plus and Unicode key bytes, and sorts enco
 query keys and values according to the URI signing rules. JVM coverage exercises these
 cases; authenticated S3 endpoint acceptance remains separate live-service evidence.
 
+Managed multi-artifact save snapshots now publish each complete backup set under a
+unique generation directory and atomically switch the manifest only after every artifact
+has succeeded. Restore follows the active generation, while legacy version-1 manifests
+remain readable. JVM coverage exercises generation round-tripping, legacy decoding, and
+restore through the active generation; real emulator save compatibility and cloud
+endpoint acceptance remain separate evidence.
+
 The rebuilt debug APK was installed on the authorized Honor Magic6 Pro over Wi-Fi ADB.
 The physical Network settings flow enabled the Windows Companion on port 49500 and
 generated a runtime pairing secret. A local .NET 8 client then connected to the phone

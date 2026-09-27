@@ -1,5 +1,7 @@
 package com.gamebox.os.storage
 
+import java.util.UUID
+
 data class SaveArtifactBackupResult(
     val artifact: SaveArtifact,
     val result: BackupResult,
@@ -47,11 +49,15 @@ class SaveBackupCoordinator(
                         message = "Save snapshot preflight failed; no artifact backups were changed",
                     )
                 }
+                val generation = manifestStore?.let {
+                    "${gameId}-${nowMillis()}-${UUID.randomUUID().toString().replace("-", "")}"
+                }
                 val results = artifacts.map { artifact ->
                     SaveArtifactBackupResult(
                         artifact = artifact,
                         result = runCatching {
-                            backupService.createBackup(artifact.relativePath)
+                            val destination = generation?.let { ".snapshots/$it/${artifact.relativePath}" }
+                            backupService.createBackup(artifact.relativePath, destination ?: artifact.relativePath)
                         }.getOrDefault(BackupResult.CHECKSUM_MISMATCH),
                     )
                 }
@@ -64,6 +70,7 @@ class SaveBackupCoordinator(
                             gameId = gameId,
                             createdAtMillis = nowMillis(),
                             relativePaths = successfulPaths,
+                            generation = generation,
                         ),
                     )
                 }

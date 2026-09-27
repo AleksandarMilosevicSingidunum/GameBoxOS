@@ -1,7 +1,6 @@
 package com.gamebox.os.storage
 
 import java.io.File
-import java.nio.file.AtomicMoveNotSupportedException
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption
 import java.util.Base64
@@ -10,6 +9,7 @@ data class SaveSnapshotManifest(
     val gameId: String,
     val createdAtMillis: Long,
     val relativePaths: List<String>,
+    val generation: String? = null,
 )
 
 class SaveSnapshotManifestStore(directory: File, private val maxPaths: Int = 1_000) {
@@ -24,6 +24,7 @@ class SaveSnapshotManifestStore(directory: File, private val maxPaths: Int = 1_0
     fun save(manifest: SaveSnapshotManifest) {
         validateGameId(manifest.gameId)
         require(manifest.createdAtMillis >= 0) { "Snapshot timestamp cannot be negative" }
+        manifest.generation?.let(::validateGeneration)
         val paths = manifest.relativePaths.distinct()
         require(paths.size <= maxPaths) { "Snapshot contains too many paths" }
         paths.forEach(::validateRelativePath)
@@ -32,8 +33,14 @@ class SaveSnapshotManifestStore(directory: File, private val maxPaths: Int = 1_0
         val staged = File(root, destination.name + ".part")
         val encoder = Base64.getUrlEncoder().withoutPadding()
         staged.bufferedWriter().use { writer ->
-            writer.appendLine("GAMEBOX_SAVE_MANIFEST_1")
+            writer.appendLine("GAMEBOX_SAVE_MANIFEST_2")
             writer.appendLine(manifest.createdAtMillis.toString())
+            writer.appendLine(
+                manifest.generation
+                    ?.toByteArray(Charsets.UTF_8)
+                    ?.let(encoder::encodeToString)
+                    .orEmpty(),
+            )
             paths.forEach { path ->
                 writer.appendLine(encoder.encodeToString(path.toByteArray(Charsets.UTF_8)))
             }
@@ -46,14 +53,23 @@ class SaveSnapshotManifestStore(directory: File, private val maxPaths: Int = 1_0
         val source = fileFor(gameId)
         if (!source.isFile) return null
         val lines = source.readLines()
-        require(lines.size >= 2 && lines.first() == "GAMEBOX_SAVE_MANIFEST_1") { "Invalid snapshot manifest" }
+        require(lines.size >= 2 && lines.first() in setOf("GAMEBOX_SAVE_MANIFEST_1", "GAMEBOX_SAVE_MANIFEST_2")) {
+            "Invalid snapshot manifest"
+        }
         val createdAt = lines[1].toLongOrNull() ?: throw IllegalArgumentException("Invalid snapshot timestamp")
         val decoder = Base64.getUrlDecoder()
-        val paths = lines.drop(2).map { encoded ->
+        val isGenerationManifest = lines.first() == "GAMEBOX_SAVE_MANIFEST_2"
+        val generation = if (isGenerationManifest) {
+            lines.getOrNull(2)?.takeIf(String::isNotBlank)?.let { encoded ->
+                String(decoder.decode(encoded), Charsets.UTF_8).also(::validateGeneration)
+            }
+        } else null
+        val pathStart = if (isGenerationManifest) 3 else 2
+        val paths = lines.drop(pathStart).map { encoded ->
             String(decoder.decode(encoded), Charsets.UTF_8).also(::validateRelativePath)
         }
         require(paths.size <= maxPaths) { "Snapshot contains too many paths" }
-        return SaveSnapshotManifest(gameId, createdAt, paths.distinct())
+        return SaveSnapshotManifest(gameId, createdAt, paths.distinct(), generation)
     }
 
     private fun fileFor(gameId: String): File = File(root, gameId + ".manifest")
@@ -67,11 +83,11 @@ class SaveSnapshotManifestStore(directory: File, private val maxPaths: Int = 1_0
         require(path.split('/', '\\').none { it == ".." }) { "Snapshot path contains traversal" }
     }
 
+    private fun validateGeneration(generation: String) {
+        require(generation.matches(Regex("[A-Za-z0-9._-]+"))) { "Snapshot generation is invalid" }
+    }
+
     private fun promote(staged: File, destination: File) {
-        try {
-            Files.move(staged.toPath(), destination.toPath(), StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING)
-        } catch (_: AtomicMoveNotSupportedException) {
-            Files.move(staged.toPath(), destination.toPath(), StandardCopyOption.REPLACE_EXISTING)
-        }
+        Files.move(staged.toPath(), destination.toPath(), StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING)
     }
 }
