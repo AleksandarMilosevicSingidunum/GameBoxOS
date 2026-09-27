@@ -36,7 +36,7 @@ class BlueprintScreenshotsTest {
         capture("01-home")
         hero.onFirst().performClick()
         capture("02-game-details")
-        listOf("Library", "Store", "Downloads", "Media", "PC", "Settings").forEachIndexed { index, title ->
+        listOf("Library", "Store", "Media", "PC", "Settings").forEachIndexed { index, title ->
             val tab = rule.onNodeWithContentDescription("$title tab")
             // A scrolling tab row is used on phones; desktop tabs have no scroll parent.
             runCatching { tab.performScrollTo() }

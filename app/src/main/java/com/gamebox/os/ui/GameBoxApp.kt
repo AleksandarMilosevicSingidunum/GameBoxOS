@@ -145,6 +145,11 @@ internal enum class Destination(val title: String) {
     MEDIA("Media"), PC("PC"), SETTINGS("Settings")
 }
 
+/** Primary Blueprint navigation; Downloads remains reachable from the header action and quick actions. */
+internal val primaryDestinations: List<Destination> = Destination.entries.filterNot {
+    it == Destination.DOWNLOADS
+}
+
 private data class StoreConsole(
     val key: String,
     val label: String,
@@ -218,7 +223,7 @@ fun GameBoxApp(
     }
 
     fun moveTab(offset: Int) {
-        val tabs = Destination.entries
+        val tabs = primaryDestinations
         val target = tabs[(destination.ordinal + offset + tabs.size) % tabs.size]
         uiState.openDestination(target.name)
     }
@@ -276,11 +281,11 @@ fun GameBoxApp(
                 )
             )
     ) {
-        val compact = when (appSettings.developerLayoutMode) {
-            DeveloperLayoutMode.AUTO -> maxWidth < 900.dp || maxHeight < 440.dp
-            DeveloperLayoutMode.WIDE -> false
-            DeveloperLayoutMode.COMPACT -> true
-        }
+        val compact = shouldUseCompactLayout(
+            mode = appSettings.developerLayoutMode,
+            widthDp = maxWidth.value,
+            heightDp = maxHeight.value,
+        )
         if (!compact) {
             Box(
                 Modifier
@@ -477,6 +482,7 @@ private fun BlueprintScreenTransition(screenKey: String, content: @Composable ()
 
 @Composable
 private fun TopNav(selected: Destination, compact: Boolean, onSelect: (Destination) -> Unit) {
+    val tabs = primaryDestinations
     var now by remember { mutableStateOf(java.time.LocalDateTime.now()) }
     LaunchedEffect(Unit) {
         while (true) {
@@ -503,7 +509,7 @@ private fun TopNav(selected: Destination, compact: Boolean, onSelect: (Destinati
                 Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Destination.entries.forEach { item -> NavButton(item, selected, onSelect) }
+                tabs.forEach { item -> NavButton(item, selected, onSelect) }
             }
         }
     } else {
@@ -517,7 +523,7 @@ private fun TopNav(selected: Destination, compact: Boolean, onSelect: (Destinati
                 horizontalArrangement = Arrangement.Center,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Destination.entries.forEach { item -> NavButton(item, selected, onSelect) }
+                tabs.forEach { item -> NavButton(item, selected, onSelect) }
             }
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -527,7 +533,7 @@ private fun TopNav(selected: Destination, compact: Boolean, onSelect: (Destinati
                     Icon(Icons.Rounded.Search, contentDescription = "Browse and search games", modifier = Modifier.size(18.dp))
                 }
                 IconButton(onClick = { onSelect(Destination.DOWNLOADS) }, modifier = Modifier.size(36.dp)) {
-                    Icon(Icons.Rounded.Download, contentDescription = "Open download activity", modifier = Modifier.size(18.dp))
+                    Icon(Icons.Rounded.NotificationsNone, contentDescription = "Open download activity", modifier = Modifier.size(18.dp))
                 }
                 Column(horizontalAlignment = Alignment.End) {
                     Text(

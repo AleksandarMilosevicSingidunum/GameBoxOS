@@ -22,6 +22,12 @@ aspect ratios necessarily change the rendered result.
   player levels and points have been removed.
 - Phone safe-area padding, large-display scaling and scrollable console/settings rails.
 - Unified mouse hover, touch press and keyboard/controller click sources.
+- Blueprint primary navigation is now Home, Library, Store, Media, PC and Settings;
+  Downloads is intentionally a utility destination opened from the header action and
+  quick actions, matching the mockup hierarchy rather than competing for a primary tab.
+- Automatic layout selection uses the available aspect ratio and width instead of a
+  height-only threshold, keeping 16:9 high-density displays on the living-room
+  composition while retaining compact behavior for phones and narrow windows.
 - Contextual controller footer actions now match the Blueprint on Home
   (`X Search`, `Y Switch Profile`), Store and Library. Home search opens and
   focuses the Store query field; the profile chooser persists Local player or
@@ -41,6 +47,10 @@ large text 1920 × 1080 at 160 dpi with Android font scale set and verified at
 130%. The large-text profile is a repeatable layout regression gate, but
 visual capture is not equivalent to a pixel-difference test or physical DeX,
 controller, emulator-launch or streaming acceptance testing.
+
+The focused production screenshot test was also run on the API 35 emulator after
+the navigation change, and a 2400 × 1080 / 160 dpi wide render was visually checked
+against the Home mockup. The emulator display override is restored after capture.
 
 ## Playing games
 

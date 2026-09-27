@@ -22,6 +22,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
+import com.gamebox.os.settings.DeveloperLayoutMode
 
 @Stable
 internal class ControllerActionRegistry {
@@ -62,6 +63,26 @@ internal fun effectiveTvSafeAreaPercent(
     if (!widthDp.isFinite() || !heightDp.isFinite() || widthDp <= 0f || heightDp <= 0f) return 0f
     val wideLivingRoomViewport = widthDp >= 900f && widthDp / heightDp >= 1.5f
     return if (wideLivingRoomViewport) requestedPercent.coerceIn(0f, 0.1f) else 0f
+}
+
+/**
+ * Keep 16:9 living-room surfaces on the Blueprint wide composition even when a
+ * high-density external display reports a small height in dp.
+ */
+internal fun shouldUseCompactLayout(
+    mode: DeveloperLayoutMode,
+    widthDp: Float,
+    heightDp: Float,
+): Boolean = when (mode) {
+    DeveloperLayoutMode.WIDE -> false
+    DeveloperLayoutMode.COMPACT -> true
+    DeveloperLayoutMode.AUTO -> {
+        if (!widthDp.isFinite() || !heightDp.isFinite() || widthDp <= 0f || heightDp <= 0f) {
+            true
+        } else {
+            widthDp < 700f || (widthDp < 900f && widthDp / heightDp < 1.5f)
+        }
+    }
 }
 
 /** Keep the dashboard's proportions on large DeX displays without shrinking phone text. */
