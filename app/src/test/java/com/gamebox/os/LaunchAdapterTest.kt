@@ -174,6 +174,26 @@ class LaunchAdapterTest {
         assertEquals(listOf("portable/Portable.sidecar"), imported.companionFiles.map { it.relativePath })
     }
 
+    @Test fun importedPspContentPreservesAnExplicitApprovedPpssppVariant() {
+        val base = Game(
+            GameId("portable-variant"), "Portable Variant", "PSP", 2008, "Racing", 512,
+            InstallState.INSTALLED,
+            localContentRelativePath = "portable-variant/game.iso",
+            localContentSha256 = "d".repeat(64),
+            localContentMimeType = "application/octet-stream",
+        )
+        val registry = EmulatorCapabilityRegistry()
+
+        listOf(
+            "org.ppsspp.ppssppgold",
+            "org.ppsspp.ppsspplegacy",
+        ).forEach { packageName ->
+            val selected = requireNotNull(registry.forGame(base.copy(emulatorPackage = packageName)))
+            assertEquals(packageName, selected.packageName)
+            assertEquals(EmulatorContentRoot.IMPORTS, selected.contentRoot)
+        }
+    }
+
     @Test fun returnTracker_recordsOneSessionAndThenClearsIt() {
         var time = 1_000L
         val tracker = ReturnTracker { time }

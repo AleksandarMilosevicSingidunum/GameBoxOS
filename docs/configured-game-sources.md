@@ -87,6 +87,12 @@ plus Vimm's numeric vault id. From Details the user can:
 The external numeric id is hashed before it becomes a local GameBox game id. The Vimm
 result itself does not become a remote install source and does not enqueue a download.
 
+For a legally owned imported PSP file, Details resolves the PSP platform to PPSSPP and
+preserves an explicitly selected approved package variant: free PPSSPP
+(`org.ppsspp.ppsspp`), Gold (`org.ppsspp.ppssppgold`), or Legacy
+(`org.ppsspp.ppsspplegacy`). This package choice controls launch handoff only; emulator
+private save synchronization and gameplay acceptance remain separate evidence gates.
+
 Before presenting a Vimm result, GameBox also checks its existing discovery cache for one
 and only one exact normalized title match on the same canonical platform. When that match
 is unambiguous, the temporary Vimm result reuses the cached description, rating, release
