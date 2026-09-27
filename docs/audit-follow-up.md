@@ -205,6 +205,16 @@ The committed Vimm follow-up adds a five-minute bounded in-memory page cache and
 deterministic exact/prefix/word-prefix result ranking. It caches only successful bounded
 HTML responses and preserves the metadata-only legal-source boundary.
 
+Live Vimm metadata check (28 September 2026): a bounded read-only HTTPS request using
+the GameBox user agent returned HTTP 200 for `https://vimm.net/vault/PSP/G`, with 66
+numeric vault links. Parsing the public listing found the current title
+`God of War: Chains of Olympus` at vault `27934`; no media or download endpoint was
+requested. A follow-up bounded request to `https://vimm.net/vault/27934` returned HTTP
+404, so the listing/detail inconsistency is recorded as a provider-side stale-link
+condition. GameBox must keep the result navigational/metadata-only and surface detail
+failure rather than treating the stale link as an install source. This is live provider
+evidence, not binary-download, gameplay, or save-compatibility evidence.
+
 Physical Android validation checkpoint (27 September 2026): the authorized Honor Magic6 Pro
 Wi-Fi transport now passes the complete 61-test debug instrumentation suite with zero
 failures and zero skips. The earlier local capability-limited run exposed a production focus defect: the root
