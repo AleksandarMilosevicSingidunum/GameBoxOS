@@ -62,6 +62,40 @@ class HttpsCatalogTransportClientTest {
     }
 
     @Test
+    fun rejectsBasicCredentialsForS3BeforeOpeningConnection() {
+        var opened = false
+        assertThrows(IllegalArgumentException::class.java) {
+            runBlocking {
+                HttpsCatalogTransportClient(connectionFactory = {
+                    opened = true
+                    RecordingConnection()
+                }).fetch(
+                    CatalogTransport.S3("https://example.test", "games"),
+                    CatalogCredentials(username = "u", password = "p"),
+                )
+            }
+        }
+        assertTrue(!opened)
+    }
+
+    @Test
+    fun rejectsSigV4CredentialsForHttpsBeforeOpeningConnection() {
+        var opened = false
+        assertThrows(IllegalArgumentException::class.java) {
+            runBlocking {
+                HttpsCatalogTransportClient(connectionFactory = {
+                    opened = true
+                    RecordingConnection()
+                }).fetch(
+                    CatalogTransport.Https("https://example.test/catalog.json"),
+                    CatalogCredentials(accessKey = "key", secretKey = "secret"),
+                )
+            }
+        }
+        assertTrue(!opened)
+    }
+
+    @Test
     fun oversizedResponsesBecomePermanentProviderFailures() {
         val connection = RecordingConnection(
             content = "oversized".toByteArray(),

@@ -27,6 +27,13 @@ and rejects a Windows companion content confirmation whose game ID does not matc
 requested upload. Android JVM tests and the Windows core harness pass; this strengthens
 metadata and transfer integrity without treating Vimm as a binary source.
 
+Authenticated catalog transport checkpoint: the shared HTTPS/WebDAV/S3 client now
+rejects credential types that do not match the selected transport before opening a
+network connection. S3 requires access-key/secret-key credentials, while HTTPS and
+WebDAV accept only complete Basic credentials. Focused transport/provider tests and the
+complete Android JVM suite pass. This is deterministic transport-boundary evidence; it
+does not claim acceptance against a live WebDAV or S3 service.
+
 Windows companion protocol alignment checkpoint: commit `2349131` constrains the
 Windows content-upload client to the Android route's lowercase ASCII game-ID grammar.
 The Windows core harness passes the rejection regression for an uppercase ID, so the

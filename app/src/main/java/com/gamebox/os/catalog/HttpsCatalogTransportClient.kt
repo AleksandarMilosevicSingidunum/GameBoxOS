@@ -46,6 +46,21 @@ class HttpsCatalogTransportClient(
         require(uri.scheme.equals("https", true) && !uri.host.isNullOrBlank()) { "catalog transport requires absolute HTTPS" }
         require((credentials?.username == null) == (credentials?.password == null)) { "WebDAV credentials must include both username and password" }
         require(credentials == null || credentials.hasBasicAuth() xor credentials.hasS3Auth()) { "catalog credentials must contain exactly one supported authentication method" }
+        when (transport) {
+            is CatalogTransport.S3 -> require(credentials?.hasS3Auth() == true) {
+                "S3 catalog transport requires access-key credentials"
+            }
+            is CatalogTransport.Https -> require(
+                credentials == null || credentials.hasBasicAuth()
+            ) {
+                "HTTPS and WebDAV catalog transports require Basic credentials"
+            }
+            is CatalogTransport.WebDav -> require(
+                credentials == null || credentials.hasBasicAuth()
+            ) {
+                "HTTPS and WebDAV catalog transports require Basic credentials"
+            }
+        }
 
         var attempt = 0
         while (true) {
