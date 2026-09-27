@@ -35,3 +35,9 @@ console filters. This closes the phone console-selection discoverability gap; ar
 branding, and physical TV/controller acceptance remain separate visual or hardware
 follow-ups. Compact Details now gives the primary import/install action a full-width
 phone row; the API-35 production screenshot flow passed after this adjustment.
+
+The compact Settings Storage section now stacks Choose/Change folder and Forget actions
+full-width instead of forcing them into a narrow horizontal row. This protects the
+external-library controls at phone width and enlarged text while preserving the existing
+wide TV/Desktop row. The production screenshot flow passed on API-35 after the change;
+this is UI/instrumentation evidence, not physical TV overscan or controller acceptance.

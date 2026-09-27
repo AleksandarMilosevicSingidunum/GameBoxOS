@@ -28,6 +28,12 @@ the Blueprint Home composition. The screenshot flow also opens Downloads through
 the header utility action, proving the non-primary route remains reachable. This is Android UI/instrumentation evidence, not
 physical DeX, external-controller, hover/motion, or complete state-matrix acceptance.
 
+Compact Settings follow-up: external-library Choose/Change folder and Forget actions now
+stack full-width on compact layouts, preventing narrow-width and enlarged-text crowding
+while preserving the wide TV/Desktop row. The focused production screenshot flow passed
+on API-35 after this change. This is emulator UI evidence; physical TV overscan and
+controller-only acceptance remain separate.
+
 Catalog state-matrix checkpoint: `CatalogRefreshStateTest` now drives the production
 Store screen through offline fallback, provider-unavailable fallback, and terminal
 error states, asserting their accessible live-region descriptions and actionable
