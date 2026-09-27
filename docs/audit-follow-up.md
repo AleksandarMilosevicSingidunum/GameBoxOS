@@ -47,7 +47,12 @@ The physical Network settings flow enabled the Windows Companion on port 49500 a
 generated a runtime pairing secret. A local .NET 8 client then connected to the phone
 over `192.168.1.2:49500`, authenticated successfully, received `GameBox / ready /
 protocol 1`, and read all 8 library entries. This is real Android-to-Windows LAN
-evidence; save/content mutation and a production-signed companion session remain open.
+evidence. The same session then toggled and restored a real library favorite, uploaded
+and downloaded two managed save payloads (the second upload preserved the first as a
+conflict), and uploaded a checksummed content file for `galaxy-patrol`. The live
+mutation responses and returned hashes matched the Windows client checks. The phone
+now contains that intentionally created test save/content state; this is real debug
+LAN mutation evidence, not signed-build or gameplay/save-recovery proof.
 
 ## Companion HTTP connection recovery (EXT-14)
 
@@ -153,7 +158,8 @@ and live emulator gameplay remain pending. Intent dispatch is not proof of gamep
 3. Live provider/download/volume validation against real configured endpoints and storage.
 4. Physical controller and Honor Magic5 Pro external-display recovery/soak acceptance.
 5. Signed production build, clean upgrade, update-channel and rollback rehearsal.
-6. Windows Companion save/content mutation validation and a production-signed LAN session.
+6. Windows Companion production-signed LAN session and cleanup/rehearsal of the live
+   test mutation state.
 
 The released-schema migration matrix and monotonic Android version-code generation are now
 implemented and exercised by automated CI. They remain prerequisites for the signed
