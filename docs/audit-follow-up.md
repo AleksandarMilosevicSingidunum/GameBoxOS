@@ -494,6 +494,15 @@ follow-up authenticated library read reported `savePresent=true` for Galaxy Patr
 This validates the real Windows client ↔ Android managed-save route, while content
 installation and emulator-owned saves remain separate lifecycle evidence.
 
+Honor Desktop Mode routing check (28 September 2026): the authorized Honor Magic6 Pro
+remained connected over Wi-Fi ADB, reported the expected 1312x2848 phone display and
+the external logical display 23, and accepted an explicit `MainActivity` launch. The
+activity was alive in the task manager while the phone screenshot showed the Honor
+launcher because the foreground GameBox window was routed to the connected TV. This
+confirms platform display routing rather than an app crash; the TV-window screenshot
+remains the authoritative external-display UI evidence. A phone-only UI pass is not
+claimed from this capture.
+
 Live owned-content checkpoint from the same session: the new repository
 `--live-companion-content` probe streamed the repository's legal Galaxy Patrol fixture
 to the Honor device. Android confirmed `galaxy-patrol.nes`, 49,168 bytes, and SHA-256
