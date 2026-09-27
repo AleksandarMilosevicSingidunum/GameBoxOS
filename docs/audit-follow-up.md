@@ -36,6 +36,12 @@ failures were all the Espresso `InputManager.getInstance` incompatibility, so th
 is not treated as app-failure evidence. Neither emulator run proves real game execution,
 controller input, save ownership, or uninstall/reinstall recovery.
 
+The current debug APK was also installed on `GameBox_API35` and launched through the
+real `com.gamebox.os/.MainActivity` entry point. The process remained alive, the
+activity stayed resumed, and the crash buffer was empty after startup. This is genuine
+emulator application-start evidence, not proof of RetroArch execution or emulator-save
+ownership.
+
 Companion JSON responses now share control-character escaping for device names and
 transferred filenames, with JVM coverage for status serialization. This keeps the LAN
 protocol parseable for valid user metadata without expanding the content-transfer trust
