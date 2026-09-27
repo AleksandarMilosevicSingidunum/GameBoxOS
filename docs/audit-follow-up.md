@@ -187,8 +187,16 @@ Wi-Fi transport now passes the complete 61-test debug instrumentation suite with
 failures and zero skips. The earlier local capability-limited run exposed a production focus defect: the root
 Compose container handled controller key events but did not request focus on a physical
 phone. The root now owns an initial focus target. This is physical UI/controller evidence,
-and the same device now also has a verified real emulator gameplay/lifecycle run below;
-separately connected external-controller and external-display evidence remain pending.
+and the same device now also has a verified real emulator gameplay/lifecycle run below.
+
+Honor Desktop Mode smoke checkpoint (28 September 2026): the current debug APK was
+installed on the authorized Honor Magic6 Pro while its SMART TV presentation display was
+connected over Wi-Fi. A direct display-23 launch reached the expected Honor relaunch
+confirmation, and accepting it opened GameBox in a responsive wide window on the TV. The
+captured surface shows the Blueprint Home navigation, Galaxy Patrol hero card, storage/
+network/controller/device status cards, and PC quick-launch tiles. This validates the
+in-product external-display route at smoke-test level; long-duration Desktop Mode,
+external-controller, hub, and reconnect soak acceptance remain separate hardware gates.
 
 Direct physical rerun (27 September 2026): the rebuilt debug APK and instrumentation APK
 were installed over the authorized Honor Magic6 Pro Wi-Fi ADB serial
@@ -606,7 +614,7 @@ prove a real emulator launch or gameplay.
 1. Extend real game/save/return/uninstall/reinstall proof across the supported adapter patterns.
 2. Validate managed GameBox save import/backup/cloud behavior against production emulators and real endpoints.
 3. Live provider/download/volume validation against real configured endpoints and storage.
-4. Separately connected physical controller and Honor external-display recovery/soak acceptance.
+4. Separately connected physical controller and long-duration Honor external-display recovery/soak acceptance.
 5. Signed production build, clean upgrade, update-channel and rollback rehearsal.
 6. Windows Companion production-signed LAN session; the live debug LAN pairing,
    configuration, managed-save, content-import, gameplay handoff and save-safe cleanup

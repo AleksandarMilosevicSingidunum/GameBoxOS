@@ -75,7 +75,7 @@ The active implementation goal covers all remaining software work below. Physica
 - Validate authenticated cloud-save byte transfer against real WebDAV/S3 endpoints and real save adapters against production emulators
 - Complete physical disconnect/unplug safety tests for confirmed SAF migrations
 - Complete physical-device Compose accessibility/lifecycle validation and expand airplane-mode and failure-recovery scenarios (the hosted API-35 emulator instrumentation suite is now a required CI gate)
-- Complete separately connected physical controller testing and Honor external-display validation
+- Complete separately connected physical controller testing and long-duration Honor external-display/DeX soak validation (the connected-TV GameBox smoke route is verified)
 - Complete Honor Magic5 Pro HDMI/Honor Desktop Mode/Ethernet/charging/thermal/reconnect soak testing with the purchased UGREEN 7-in-1 hub
 - Configure signed production builds and execute real update-channel/rollback validation using generated release manifests
 - Execute the prepared physical enclosure handoff: measure the final Honor Magic5 Pro/UGREEN hub/cable layout, select and validate the BOM, release CAD, fabricate, and complete prototype acceptance
