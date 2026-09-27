@@ -7,26 +7,26 @@ not a claim that subsequent branch work is already on main.
 
 ## Current implementation checkpoint (27 September 2026)
 
-Main is now at `51c1601` after the Vimm's Lair discovery increment. Configured sources
+The repository baseline is now extended through local commits `0b12fb6`, `ea2bb9f`, and
+`a92bacc` after the Vimm's Lair discovery increment. Configured sources
 can probe the bounded HTTPS listing structure, search supported consoles, hydrate
 metadata, and route users to legal local import or the external vault page. This remains
 metadata/navigation only; it does not authorize binary downloads. The Windows companion
 also rejects oversized content-upload confirmations while streaming the response through
-a bounded buffer, closing a peer-controlled memory-growth path. The local checkout does
-not include the Android SDK or .NET runtime, so these changes require the existing CI
-Android/Windows jobs for executable verification.
+a bounded buffer, closing a peer-controlled memory-growth path. Android Studio, the
+Android SDK, the Honor device transport, and the .NET 8 SDK are now available locally
+for executable verification.
 
-The current unmerged Vimm follow-up adds a five-minute bounded in-memory page cache and
+The committed Vimm follow-up adds a five-minute bounded in-memory page cache and
 deterministic exact/prefix/word-prefix result ranking. It caches only successful bounded
 HTML responses and preserves the metadata-only legal-source boundary.
 
 Physical Android validation checkpoint (27 September 2026): the authorized Honor Magic6 Pro
-Wi-Fi transport ran the complete 60-test debug instrumentation suite with 59 tests passing.
-The one failure exposed a production focus defect: the root Compose container handled
-controller key events but did not request focus on a physical phone. The root now owns an
-initial focus target, and the previously failing `ControllerOverlayTest` passes in isolation
-on the Honor device. This is physical UI/controller evidence, not emulator gameplay or
-external-controller hardware evidence.
+Wi-Fi transport now passes the complete 60-test debug instrumentation suite with zero
+failures and zero skips. The earlier failure exposed a production focus defect: the root
+Compose container handled controller key events but did not request focus on a physical
+phone. The root now owns an initial focus target. This is physical UI/controller evidence,
+not emulator gameplay or external-controller hardware evidence.
 
 Companion JSON responses now share control-character escaping for device names and
 transferred filenames, with JVM coverage for status serialization. This keeps the LAN
