@@ -209,6 +209,17 @@ metadata cancellation propagation. The complete local Android JVM suite now pass
 with 521 tests, zero failures, zero errors, and one explicit privilege-based skip;
 the rebuilt APK also passed the complete physical Honor suite with `OK (62 tests)`.
 
+Authorized-download cancellation hardening (27 September 2026): the WorkManager-facing
+remote download path now runs the blocking resumable transfer behind a cancellable IO
+boundary and closes the active response stream when the worker is stopped. This preserves
+the existing range-resume, checksum, size-limit, and atomic-promotion behavior while
+preventing a stalled socket read from delaying cancellation until its read timeout. A
+blocking authorized-transfer regression verifies stream closure; the complete local
+Android JVM suite now passes with 522 tests, zero failures, zero errors, and one explicit
+privilege-based skip. The rebuilt APK also passed the complete physical Honor suite with
+`OK (62 tests)`. Live provider transfer and process-kill/WorkManager acceptance remain
+separate evidence.
+
 Managed multi-artifact save snapshots now publish each complete backup set under a
 unique generation directory and atomically switch the manifest only after every artifact
 has succeeded. Restore follows the active generation, while legacy version-1 manifests

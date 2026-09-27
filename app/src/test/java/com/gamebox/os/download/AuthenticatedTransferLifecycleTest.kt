@@ -8,9 +8,17 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import java.io.ByteArrayInputStream
+import java.io.IOException
+import java.io.InputStream
 import java.net.HttpURLConnection
 import java.net.URL
 import java.security.MessageDigest
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.runBlocking
 
 class AuthenticatedTransferLifecycleTest {
     @get:Rule val temporary = TemporaryFolder()
@@ -55,6 +63,34 @@ class AuthenticatedTransferLifecycleTest {
         assertFalse(target.stagingFile.exists())
     }
 
+    @Test fun cancellableTransferClosesActiveDownloadStream() = runBlocking {
+        val target = FileStagingTarget(temporary.newFolder(), "game/content.nes")
+        val connection = BlockingConnection()
+        val created = CountDownLatch(1)
+        val source = HttpsTransferSource(
+            url,
+            totalBytes = null,
+            expectedSha256 = "0".repeat(64),
+            connectionFactory = {
+                created.countDown()
+                connection
+            },
+        )
+        val operation = async(Dispatchers.IO) {
+            ResumableTransferEngine().transferCancellable(
+                source = source,
+                staging = target,
+                maxBytes = 1024,
+                isPausedOrCancelled = { false },
+                onProgress = {},
+            )
+        }
+        assertTrue(created.await(2, TimeUnit.SECONDS))
+        operation.cancel()
+        assertTrue(connection.disconnected.await(2, TimeUnit.SECONDS))
+        operation.cancelAndJoin()
+    }
+
     private inner class AuthorizedConnection : HttpURLConnection(URL(url)) {
         var disconnected = false
         private val offset get() = getRequestProperty("Range")?.removePrefix("bytes=")?.removeSuffix("-")?.toInt() ?: 0
@@ -68,5 +104,24 @@ class AuthenticatedTransferLifecycleTest {
         override fun getHeaderField(name: String): String? =
             if (name == "Content-Range") "bytes " + offset + "-" + (payload.size - 1) + "/" + payload.size else null
         override fun getInputStream() = ByteArrayInputStream(payload.copyOfRange(offset, payload.size))
+    }
+
+    private class BlockingConnection : HttpURLConnection(URL("https://games.test/library/demo.nes")) {
+        val disconnected = CountDownLatch(1)
+        @Volatile private var closed = false
+
+        override fun getResponseCode() = HTTP_OK
+        override fun getInputStream(): InputStream = object : InputStream() {
+            override fun read(): Int {
+                while (!closed) Thread.sleep(5)
+                throw IOException("connection disconnected")
+            }
+        }
+        override fun disconnect() {
+            closed = true
+            disconnected.countDown()
+        }
+        override fun usingProxy() = false
+        override fun connect() = Unit
     }
 }

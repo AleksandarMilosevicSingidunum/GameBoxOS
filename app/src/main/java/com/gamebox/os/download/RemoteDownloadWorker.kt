@@ -78,7 +78,7 @@ class RemoteDownloadWorker(
                 val config = settings.catalogProviderConfig()
                 CatalogDownloadAuthorization(config, config.credentialKey?.let(settings::catalogCredentials))
             } else null
-            ResumableTransferEngine().transfer(
+            ResumableTransferEngine().transferCancellable(
                 source = HttpsTransferSource(
                     sourceUrl, totalBytes = null, expectedSha256 = checksum,
                     requestHeaders = { url -> authorization?.headers(url).orEmpty() },
