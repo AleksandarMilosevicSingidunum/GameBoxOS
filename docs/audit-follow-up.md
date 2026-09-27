@@ -32,6 +32,13 @@ The companion then published self-contained for `win-x64`; the generated ZIP and
 MSIX both passed the repository checksum and provenance validators. This is local Windows
 software/package evidence, not signed-install or physical Windows acceptance.
 
+Release provenance hardening (27 September 2026): alpha, beta, combined preview, and
+protected production APK workflows now use the same tested manifest generator. It accepts
+the PREVIEW channel and records the checked-out source commit plus signing status alongside
+artifact name, size, SHA-256, and rollback metadata where required. This removes the
+previously duplicated inline preview/release manifest schemas; protected signing and
+trusted installation remain release gates.
+
 The repository baseline is now extended through local commits `0b12fb6`, `ea2bb9f`, and
 `a92bacc` after the Vimm's Lair discovery increment. Configured sources
 can probe the bounded HTTPS listing structure, search supported consoles, hydrate

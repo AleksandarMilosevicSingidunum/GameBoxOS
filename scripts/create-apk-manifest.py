@@ -7,11 +7,12 @@ import hashlib
 import json
 import re
 import sys
+import argparse
 from pathlib import Path
 
 TAG = re.compile(r"^v[0-9]+\.[0-9]+\.[0-9]+(?:-[A-Za-z0-9.-]+)?$")
 STABLE_TAG = re.compile(r"^v[0-9]+\.[0-9]+\.[0-9]+$")
-CHANNELS = {"ALPHA", "BETA", "PRODUCTION"}
+CHANNELS = {"ALPHA", "BETA", "PREVIEW", "PRODUCTION"}
 
 
 def create_manifest(
@@ -19,6 +20,8 @@ def create_manifest(
     release_tag: str,
     channel: str,
     rollback_tag: str | None = None,
+    source_commit: str | None = None,
+    signing: str | None = None,
 ) -> dict[str, object]:
     artifact = Path(artifact_path)
     if not artifact.is_file():
@@ -35,13 +38,17 @@ def create_manifest(
     if rollback_tag is not None:
         if not TAG.fullmatch(rollback_tag) or rollback_tag == release_tag:
             raise ValueError("rollback tag must be a distinct valid release tag")
+    if source_commit is not None and not re.fullmatch(r"[0-9a-fA-F]{7,64}", source_commit):
+        raise ValueError("source commit must be a hexadecimal Git commit id")
+    if signing is not None and not signing.strip():
+        raise ValueError("signing metadata must not be blank")
     digest = hashlib.sha256()
     size = 0
     with artifact.open("rb") as stream:
         for chunk in iter(lambda: stream.read(1024 * 1024), b""):
             digest.update(chunk)
             size += len(chunk)
-    return {
+    manifest = {
         "schemaVersion": 1,
         "artifactName": artifact.name,
         "releaseTag": release_tag,
@@ -50,6 +57,11 @@ def create_manifest(
         "sizeBytes": size,
         **({"rollbackReleaseTag": rollback_tag} if rollback_tag else {}),
     }
+    if source_commit:
+        manifest["sourceCommit"] = source_commit.lower()
+    if signing:
+        manifest["signing"] = signing.strip()
+    return manifest
 
 
 def write_manifest(
@@ -58,25 +70,34 @@ def write_manifest(
     channel: str,
     output_path: str | Path,
     rollback_tag: str | None = None,
+    source_commit: str | None = None,
+    signing: str | None = None,
 ) -> None:
-    manifest = create_manifest(artifact_path, release_tag, channel, rollback_tag)
+    manifest = create_manifest(
+        artifact_path, release_tag, channel, rollback_tag, source_commit, signing
+    )
     Path(output_path).write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
 
 
 def main(argv: list[str]) -> int:
-    if len(argv) not in (4, 5):
-        print(
-            "usage: create-apk-manifest.py ARTIFACT RELEASE_TAG CHANNEL OUTPUT [ROLLBACK_TAG]",
-            file=sys.stderr,
-        )
-        return 2
+    parser = argparse.ArgumentParser()
+    parser.add_argument("artifact_path")
+    parser.add_argument("release_tag")
+    parser.add_argument("channel")
+    parser.add_argument("output_path")
+    parser.add_argument("rollback_tag", nargs="?")
+    parser.add_argument("--source-commit")
+    parser.add_argument("--signing")
+    args = parser.parse_args(argv)
     try:
         write_manifest(
-            artifact_path=argv[0],
-            release_tag=argv[1],
-            channel=argv[2],
-            output_path=argv[3],
-            rollback_tag=argv[4] if len(argv) == 5 else None,
+            artifact_path=args.artifact_path,
+            release_tag=args.release_tag,
+            channel=args.channel,
+            output_path=args.output_path,
+            rollback_tag=args.rollback_tag or None,
+            source_commit=args.source_commit,
+            signing=args.signing,
         )
     except ValueError as error:
         print(str(error), file=sys.stderr)

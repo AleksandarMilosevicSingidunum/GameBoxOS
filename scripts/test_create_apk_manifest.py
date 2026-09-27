@@ -20,13 +20,38 @@ class CreateApkManifestTest(unittest.TestCase):
             payload = b"signed release fixture"
             artifact.write_bytes(payload)
 
-            manifest = create_manifest(artifact, "v1.0.0", "production", "v0.9.0")
+            manifest = create_manifest(
+                artifact,
+                "v1.0.0",
+                "production",
+                "v0.9.0",
+                "ABCDEF1234567",
+                "production-keystore",
+            )
 
         self.assertEqual("GameBoxOS-v1.0.0.apk", manifest["artifactName"])
         self.assertEqual("PRODUCTION", manifest["channel"])
         self.assertEqual(hashlib.sha256(payload).hexdigest(), manifest["sha256"])
         self.assertEqual(len(payload), manifest["sizeBytes"])
         self.assertEqual("v0.9.0", manifest["rollbackReleaseTag"])
+        self.assertEqual("abcdef1234567", manifest["sourceCommit"])
+        self.assertEqual("production-keystore", manifest["signing"])
+
+    def test_preview_manifest_accepts_source_and_signing_metadata(self):
+        with tempfile.TemporaryDirectory() as directory:
+            artifact = pathlib.Path(directory) / "app.apk"
+            artifact.write_bytes(b"preview")
+            manifest = create_manifest(
+                artifact,
+                "v1.0.0-alpha.1",
+                "preview",
+                source_commit="0123456789abcdef",
+                signing="Android debug key",
+            )
+
+        self.assertEqual("PREVIEW", manifest["channel"])
+        self.assertEqual("0123456789abcdef", manifest["sourceCommit"])
+        self.assertEqual("Android debug key", manifest["signing"])
 
     def test_production_requires_stable_tag_and_distinct_rollback(self):
         with tempfile.TemporaryDirectory() as directory:

@@ -102,7 +102,7 @@ jobs:
           jarsigner -verify -strict "$asset"
           sha256sum "$asset" > "$asset.sha256"
           sha256sum --check "$asset.sha256"
-          python scripts/create-apk-manifest.py "$asset" "$RELEASE_TAG" PRODUCTION "GameBoxOS-$RELEASE_TAG-manifest.json" "$ROLLBACK_TAG"
+          python scripts/create-apk-manifest.py "$asset" "$RELEASE_TAG" PRODUCTION "GameBoxOS-$RELEASE_TAG-manifest.json" "$ROLLBACK_TAG" --source-commit "$GITHUB_SHA" --signing "production-keystore"
           test -s "GameBoxOS-$RELEASE_TAG-manifest.json"
 
       - name: Upload signed release

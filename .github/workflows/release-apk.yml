@@ -93,29 +93,11 @@ jobs:
             echo "rollback tag must differ from release tag" >&2
             exit 1
           fi
-          python - "$asset_name" "$RELEASE_TAG" "$channel" "$sha256" "$size" "$ROLLBACK_TAG" <<'PY'
-          import json
-          import re
-          import sys
-          artifact, tag, channel, sha, size, rollback = sys.argv[1:]
-          if not re.fullmatch(r"v[0-9]+\.[0-9]+\.[0-9]+(?:-[A-Za-z0-9.-]+)?", tag):
-              raise SystemExit("invalid release tag")
-          manifest = {
-              "schemaVersion": 1,
-              "artifactName": artifact,
-              "releaseTag": tag,
-              "channel": channel,
-              "sha256": sha,
-              "sizeBytes": int(size),
-          }
-          if rollback:
-              if not re.fullmatch(r"v[0-9]+\.[0-9]+\.[0-9]+(?:-[A-Za-z0-9.-]+)?", rollback):
-                  raise SystemExit("invalid rollback tag")
-              manifest["rollbackReleaseTag"] = rollback
-          with open(f"GameBoxOS-{tag}-manifest.json", "w", encoding="utf-8") as stream:
-              json.dump(manifest, stream, indent=2)
-              stream.write("\n")
-          PY
+          manifest_args=()
+          if [[ -n "$ROLLBACK_TAG" ]]; then
+            manifest_args+=("$ROLLBACK_TAG")
+          fi
+          python scripts/create-apk-manifest.py "$asset_name" "$RELEASE_TAG" "$channel" "GameBoxOS-$RELEASE_TAG-manifest.json" "${manifest_args[@]}" --source-commit "$GITHUB_SHA" --signing "Android debug key"
 
       - name: Attach APK and provenance to release
         shell: bash
