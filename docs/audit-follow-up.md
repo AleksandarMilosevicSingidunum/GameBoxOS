@@ -228,6 +228,15 @@ content file and retained the managed save with SHA-256
 idempotent replacement and cleanup evidence; it does not cover large-file, cancellation,
 disk-full or routed-network conditions.
 
+Live larger-content checkpoint (27 September 2026): the Windows harness's bounded
+`--live-companion-content-repeat` probe created a temporary 128-repeat authorized fixture
+and streamed 6,293,504 bytes through the authenticated Honor route. The client and Android
+returned SHA-256 `41ff91ad3ec898d9b75c28410f9a5137fe8f462898c9d0960a38a972bcd437d2`.
+The temporary imported file was then removed through the supported uninstall flow; the
+app import directory was empty and the managed save retained its expected SHA-256. This
+is larger-body streaming evidence, not maximum-size, cancellation, disk-full or routed-
+network acceptance.
+
 The local Android JVM suite then exposed a host-capability failure in
 `DirectorySaveAdapterTest`: Windows symbolic-link creation is denied without the
 required privilege. The test now classifies that specific capability absence as a

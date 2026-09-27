@@ -28,6 +28,11 @@ if (args.Length > 0 && string.Equals(args[0], "--live-companion-content", String
     await RunLiveCompanionContentProbeAsync(args.Skip(1).ToArray());
     return;
 }
+if (args.Length > 0 && string.Equals(args[0], "--live-companion-content-repeat", StringComparison.OrdinalIgnoreCase))
+{
+    await RunLiveCompanionRepeatedContentProbeAsync(args.Skip(1).ToArray());
+    return;
+}
 
 var root = Path.Combine(Path.GetTempPath(), "gamebox-windows-tests-" + Guid.NewGuid().ToString("N"));
 Directory.CreateDirectory(root);
@@ -963,6 +968,54 @@ static async Task RunLiveCompanionContentProbeAsync(string[] args)
     Console.WriteLine(
         $"Live Companion content upload: game={uploaded.GameId}, file={uploaded.FileName}, " +
         $"bytes={uploaded.SizeBytes}, sha256={uploaded.Sha256}");
+}
+
+static async Task RunLiveCompanionRepeatedContentProbeAsync(string[] args)
+{
+    if (args.Length != 6 || !int.TryParse(args[1], out var port) ||
+        !int.TryParse(args[5], out var repeatCount) || repeatCount is < 1 or > 2048)
+        throw new ArgumentException(
+            "Usage: --live-companion-content-repeat <host> <port> <pairing-secret> <game-id> <source-path> <repeat-count>");
+
+    var source = new FileInfo(args[4]);
+    if (!source.Exists || source.Length <= 0)
+        throw new FileNotFoundException("Repeated content probe source does not exist or is empty.", source.FullName);
+    if (source.Length > CompanionContentClient.MaxContentBytes / repeatCount)
+        throw new InvalidDataException("Repeated content probe would exceed the companion content limit.");
+
+    var temporaryPath = Path.Combine(
+        Path.GetTempPath(),
+        "gamebox-live-content-" + Guid.NewGuid().ToString("N") + ".nes");
+    try
+    {
+        await using (var input = new FileStream(
+            source.FullName, FileMode.Open, FileAccess.Read, FileShare.Read,
+            1024 * 1024, FileOptions.Asynchronous | FileOptions.SequentialScan))
+        await using (var output = new FileStream(
+            temporaryPath, FileMode.CreateNew, FileAccess.Write, FileShare.None,
+            1024 * 1024, FileOptions.Asynchronous | FileOptions.SequentialScan))
+        {
+            var buffer = new byte[1024 * 1024];
+            for (var copy = 0; copy < repeatCount; copy++)
+            {
+                input.Position = 0;
+                int read;
+                while ((read = await input.ReadAsync(buffer)) > 0)
+                    await output.WriteAsync(buffer.AsMemory(0, read));
+            }
+        }
+
+        using var http = new HttpClient();
+        var uploaded = await new CompanionContentClient(http).UploadWithRetryAsync(
+            args[0], port, args[2], args[3], temporaryPath);
+        Console.WriteLine(
+            $"Live Companion repeated content upload: game={uploaded.GameId}, " +
+            $"bytes={uploaded.SizeBytes}, sha256={uploaded.Sha256}, repeats={repeatCount}");
+    }
+    finally
+    {
+        File.Delete(temporaryPath);
+    }
 }
 
 sealed class BlockingHandler : HttpMessageHandler

@@ -50,8 +50,15 @@ the identical checksum. Both confirmations were 49,168 bytes with SHA-256
 `97c1757ffd6a5bc1a591809b2b0f8988741f61f6abd82889c148ecae8a2f471f`, and the library
 continued to report `INSTALLED` plus `savePresent=true`. The test ROM was removed through
 the supported uninstall flow afterward, leaving the managed save intact. This closes the
-live identical-replacement/no-op slice while leaving large-file, cancellation, disk-full,
-and routed-network acceptance open.
+live identical-replacement/no-op slice while leaving maximum-size, long-running
+cancellation, disk-full, and routed-network acceptance open.
+
+The repeatable Windows harness also streamed a temporary 6,293,504-byte authorized fixture
+through the real Honor companion route. Client and Android agreed on SHA-256
+`41ff91ad3ec898d9b75c28410f9a5137fe8f462898c9d0960a38a972bcd437d2`; supported uninstall
+removed the temporary import and retained the managed save. This closes a bounded larger-
+body streaming check, while maximum-size, long-running cancellation, disk-full and routed-
+network acceptance remain open.
 
 The catalog repair changes database state only for six known legacy demo IDs
 without local content references or a real download source. It does not delete
