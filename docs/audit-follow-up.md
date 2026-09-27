@@ -200,6 +200,15 @@ socket instead of waiting for the read timeout; JVM regressions cover both produ
 transport entry points. The Honor rerun above also covers the resulting Android build,
 while real provider availability and live-service acceptance remain separate evidence.
 
+TheGamesDB cancellation hardening (27 September 2026): authenticated catalog transport
+and optional metadata enrichment now use the same cancellable HTTPS boundary. Metadata
+lookups rethrow coroutine cancellation instead of converting it into an empty result;
+catalog transport retains its existing auth, rate-limit, transient, and permanent
+failure classification. Two JVM regressions cover active-socket disconnect and
+metadata cancellation propagation. The complete local Android JVM suite now passes
+with 521 tests, zero failures, zero errors, and one explicit privilege-based skip;
+the rebuilt APK also passed the complete physical Honor suite with `OK (62 tests)`.
+
 Managed multi-artifact save snapshots now publish each complete backup set under a
 unique generation directory and atomically switch the manifest only after every artifact
 has succeeded. Restore follows the active generation, while legacy version-1 manifests

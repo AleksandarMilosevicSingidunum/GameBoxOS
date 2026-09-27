@@ -19,6 +19,13 @@ internal suspend fun fetchCancellableHttpsText(
     connectionFactory: (URL) -> HttpsURLConnection = {
         it.openConnection() as HttpsURLConnection
     },
+    validateResponse: (HttpsURLConnection) -> Unit = { connection ->
+        val status = connection.responseCode
+        require(status in 200..299) {
+            if (status in 300..399) "$requestName redirects are not accepted"
+            else "$requestName failed with HTTP $status"
+        }
+    },
 ): String = suspendCancellableCoroutine { continuation ->
     val connectionReference = AtomicReference<HttpsURLConnection?>(null)
     val worker = CoroutineScope(Dispatchers.IO).launch {
@@ -31,11 +38,7 @@ internal suspend fun fetchCancellableHttpsText(
             }
             configure(connection)
             val result = try {
-                val status = connection.responseCode
-                require(status in 200..299) {
-                    if (status in 300..399) "$requestName redirects are not accepted"
-                    else "$requestName failed with HTTP $status"
-                }
+                validateResponse(connection)
                 require(connection.contentLengthLong < 0 || connection.contentLengthLong <= maxResponseBytes) {
                     "$requestName response is too large"
                 }

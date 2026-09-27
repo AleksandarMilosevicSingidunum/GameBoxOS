@@ -2,6 +2,10 @@ package com.gamebox.os.catalog
 
 import com.gamebox.os.domain.Game
 import com.gamebox.os.domain.normalizeCatalogTitle
+import com.gamebox.os.source.fetchCancellableHttpsText
+import java.net.URL
+import javax.net.ssl.HttpsURLConnection
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
@@ -10,8 +14,6 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.contentOrNull
 import java.net.URI
-import java.net.URL
-import javax.net.ssl.HttpsURLConnection
 
 /**
  * Optional metadata enrichment from TheGamesDB. It never supplies game binaries.
@@ -38,7 +40,10 @@ data class MetadataMatchCandidate(
 class TheGamesDbMetadataClient(
     private val apiKey: suspend () -> String?,
     private val maxResponseBytes: Int = 2 * 1024 * 1024,
-    private val json: Json = Json { ignoreUnknownKeys = true }
+    private val json: Json = Json { ignoreUnknownKeys = true },
+    private val connectionFactory: (URL) -> HttpsURLConnection = {
+        it.openConnection() as HttpsURLConnection
+    },
 ) {
     suspend fun enrich(game: Game): Game = withContext(Dispatchers.IO) {
         val payload = fetchByName(game.title) ?: return@withContext game
@@ -57,37 +62,31 @@ class TheGamesDbMetadataClient(
             java.net.URLEncoder.encode(key, "UTF-8") +
             "&name=" + java.net.URLEncoder.encode(title, "UTF-8") +
             "&fields=overview,boxart,players,publishers,genres"
-        return runCatching { fetch(endpoint) }.getOrNull()
+        return try {
+            fetch(endpoint)
+        } catch (error: CancellationException) {
+            throw error
+        } catch (_: Throwable) {
+            null
+        }
     }
 
-    private fun fetch(value: String): String {
+    private suspend fun fetch(value: String): String {
         val uri = URI(value)
         require(uri.scheme.equals("https", true)) { "TheGamesDB endpoint must use HTTPS" }
-        val connection = URL(uri.toASCIIString()).openConnection() as HttpsURLConnection
-        connection.connectTimeout = 8_000
-        connection.readTimeout = 12_000
-        connection.instanceFollowRedirects = false
-        connection.setRequestProperty("Accept", "application/json")
-        connection.setRequestProperty("User-Agent", "GameBoxOS/0.1")
-        try {
-            require(connection.responseCode in 200..299) { "TheGamesDB request failed" }
-            require(connection.contentLengthLong < 0 || connection.contentLengthLong <= maxResponseBytes)
-            return connection.inputStream.use { input ->
-                val output = java.io.ByteArrayOutputStream()
-                val buffer = ByteArray(8_192)
-                var total = 0
-                while (true) {
-                    val count = input.read(buffer)
-                    if (count < 0) break
-                    total += count
-                    require(total <= maxResponseBytes) { "TheGamesDB response is too large" }
-                    output.write(buffer, 0, count)
-                }
-                output.toByteArray().toString(Charsets.UTF_8)
-            }
-        } finally {
-            connection.disconnect()
-        }
+        return fetchCancellableHttpsText(
+            URL(uri.toASCIIString()),
+            maxResponseBytes,
+            "TheGamesDB request",
+            configure = {
+                it.connectTimeout = 8_000
+                it.readTimeout = 12_000
+                it.instanceFollowRedirects = false
+                it.setRequestProperty("Accept", "application/json")
+                it.setRequestProperty("User-Agent", "GameBoxOS/0.1")
+            },
+            connectionFactory = connectionFactory,
+        )
     }
 }
 
