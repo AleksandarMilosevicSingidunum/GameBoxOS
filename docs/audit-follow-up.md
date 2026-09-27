@@ -41,6 +41,12 @@ to external display 23 force-stopped the instrumentation process at startup; log
 phone-only Honor instrumentation evidence and the separate manual TV UI evidence remain
 valid and are kept distinct from this firmware-specific runner limitation.
 
+Latest API-35 regression checkpoint (28 September 2026): after the release-boundary
+hardening for developer layout, focus diagnostics, and catalog-state simulation, the
+complete debug instrumentation suite passed `65/65` with zero skips and zero failures.
+This supersedes the earlier 64-test emulator count while preserving the separate Honor
+Desktop Mode runner limitation described above.
+
 Honor external-display checkpoint (28 September 2026): the connected Honor Magic6 Pro
 reported the SMART TV as Android display 23 at 1920x1080/160 dpi. Launching
 `MainActivity` explicitly on that display produced a real GameBox task on the TV, and
