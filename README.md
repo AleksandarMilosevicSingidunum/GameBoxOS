@@ -108,7 +108,7 @@ assembleDebug
 For a local instrumentation run, the validated emulator profile is `GameBox_API35`
 using the Google APIs x86_64 API-35 image. Boot it with the Android Emulator, then
 run `connectedDebugAndroidTest` with `ANDROID_SERIAL=emulator-5554`. The current
-61-test suite passes with zero failures: the Honor run has zero skips and
+62-test suite passes with zero failures: the Honor run has zero skips and
 the API-35 run has one explicit permission-gated skip. The suite validates Android UI
 and lifecycle behavior. Separate live Honor and API-35 runs verify the bundled Galaxy Patrol
 install → RetroArch/FCEUmm gameplay → controller-key dispatch → emulator save-state

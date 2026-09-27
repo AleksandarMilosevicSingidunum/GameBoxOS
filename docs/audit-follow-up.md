@@ -22,13 +22,18 @@ cancellation instead of converting cancellation into a reported platform failure
 complete Android JVM suite and the connected-device instrumentation suite pass after
 this change. No Vimm binary is downloaded or extracted.
 
+The follow-up commit `6f6b815` adds an exact PSP metadata regression for vault `23719`
+and rejects a Windows companion content confirmation whose game ID does not match the
+requested upload. Android JVM tests and the Windows core harness pass; this strengthens
+metadata and transfer integrity without treating Vimm as a binary source.
+
 PSP emulator readiness now recognizes the official PPSSPP Android package variants:
 the free `org.ppsspp.ppsspp` build, PPSSPP Gold `org.ppsspp.ppssppgold`, and PPSSPP
 Legacy `org.ppsspp.ppsspplegacy`. They use the same documented scoped-content launch
-contract and are covered by package-selection and intent-policy tests. The connected
-Honor currently has RetroArch installed but no PPSSPP package, so real PSP gameplay
-remains a separate device/emulator gate pending a PPSSPP installation and a legally
-owned PSP image.
+ contract and are covered by package-selection and intent-policy tests. The connected
+ Honor now has the free PPSSPP package installed; real PSP gameplay remains a separate
+ device/emulator gate because the legal PSP fixture tested so far was rejected by
+ PPSSPP's identification reader and no commercial game was loaded.
 
 After rebuilding with the PSP adapter change, the selected physical Honor Magic6 Pro
 instrumentation run completed `62/62`, zero failures, zero skips. `ANDROID_SERIAL` was
