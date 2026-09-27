@@ -57,9 +57,14 @@ public sealed class PairingProfileStore
             throw new InvalidDataException("Saved pairing profile is invalid.", exception);
         }
         if (payload is null) throw new InvalidDataException("Saved pairing profile is invalid.");
+        if (string.IsNullOrWhiteSpace(payload.ProtectedSecret))
+            throw new InvalidDataException("Saved pairing secret is invalid.");
         byte[] protectedSecret;
         try { protectedSecret = Convert.FromBase64String(payload.ProtectedSecret); }
-        catch (FormatException exception) { throw new InvalidDataException("Saved pairing secret is invalid.", exception); }
+        catch (Exception exception) when (exception is FormatException or ArgumentNullException)
+        {
+            throw new InvalidDataException("Saved pairing secret is invalid.", exception);
+        }
         string secret;
         try { secret = Encoding.UTF8.GetString(Unprotect(protectedSecret)); }
         catch (Exception exception) when (exception is System.ComponentModel.Win32Exception or InvalidDataException)
@@ -86,7 +91,7 @@ public sealed class PairingProfileStore
             throw new InvalidDataException("Paired device host is invalid.");
         if (profile.Port is < 10240 or > 65535)
             throw new InvalidDataException("Paired device port is invalid.");
-        if (profile.Secret.Length != 64 ||
+        if (string.IsNullOrWhiteSpace(profile.Secret) || profile.Secret.Length != 64 ||
             profile.Secret.Any(static c => !(char.IsAsciiHexDigit(c))))
             throw new InvalidDataException("Pairing secret is invalid.");
     }

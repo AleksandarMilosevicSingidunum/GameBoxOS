@@ -670,6 +670,15 @@ try
     catch (InvalidDataException) { invalidPairingRejected = true; }
     Require(invalidPairingRejected, "Malformed pairing profiles must fail closed.");
     pairingStore.Delete();
+    await File.WriteAllTextAsync(
+        pairingPath,
+        "{\"host\":\"192.168.1.22\",\"port\":49500}");
+    var incompletePairingRejected = false;
+    try { await pairingStore.LoadAsync(); }
+    catch (InvalidDataException) { incompletePairingRejected = true; }
+    Require(incompletePairingRejected,
+        "Pairing profiles missing protected secrets must fail closed as invalid data.");
+    pairingStore.Delete();
 
     var reconnectAttempts = 0;
     using var reconnectHttp = new HttpClient(new StubHttpMessageHandler(_ =>

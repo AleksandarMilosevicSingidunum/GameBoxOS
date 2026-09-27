@@ -138,6 +138,12 @@ part of the request body, blocks, and confirms cancellation propagates after net
 dispatch without entering retry. Cancellation during a real long-running LAN transfer
 remains separate acceptance evidence.
 
+The Windows pairing profile boundary now rejects missing or null protected-secret fields as
+bounded `InvalidDataException` failures instead of leaking Base64 argument errors. The
+Windows harness covers DPAPI round-tripping for the current user, plaintext exclusion,
+forget cleanup, malformed JSON, and incomplete persisted profiles; real cross-user DPAPI
+recovery remains a separate acceptance gate.
+
 Windows CI now also packages the self-contained companion as an unsigned MSIX beside
 the portable ZIP. The package is built with the Windows SDK `makeappx.exe`, carries
 generated visual assets, and is checked with a SHA-256/provenance validator. The
