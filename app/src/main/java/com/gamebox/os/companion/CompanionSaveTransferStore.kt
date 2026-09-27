@@ -44,17 +44,24 @@ class CompanionSaveTransferStore(
         requireNotNull(games.game(GameId(gameId))) { "Game is not in the library" }
         require(bytes.size in 1..MAX_SAVE_BYTES.toInt()) { "Save must contain 1 byte to 16 MiB" }
         val destination = saveFile(gameId)
-        check(destination.parentFile.mkdirs() || destination.parentFile.isDirectory)
+        val destinationDirectory = requireNotNull(destination.parentFile)
+        check(destinationDirectory.mkdirs() || destinationDirectory.isDirectory)
         val incomingHash = sha256(bytes)
-        val conflictPreserved = destination.takeIf(File::isFile)?.let { existing ->
+        val existing = destination.takeIf(File::isFile)
+        if (existing != null) {
             if (existing.length() > MAX_SAVE_BYTES) throw IllegalArgumentException("Existing save exceeds the companion limit")
             val previous = existing.readBytes()
-            if (sha256(previous) == incomingHash) false else {
-                preserveConflict(gameId, previous)
-                true
+            if (sha256(previous) == incomingHash) {
+                val updated = existing.lastModified().coerceAtLeast(0L)
+                games.registerManagedSave(GameId(gameId), gameId + "/save.dat", updated, existing.length())
+                return CompanionSaveImportResult(gameId, updated, incomingHash, conflictPreserved = false)
             }
+        }
+        val conflictPreserved = existing?.let { current ->
+            preserveConflict(gameId, current.readBytes())
+            true
         } ?: false
-        val partial = destination.parentFile.resolve(destination.name + ".companion-partial")
+        val partial = destinationDirectory.resolve(destination.name + ".companion-partial")
         try {
             partial.writeBytes(bytes)
             check(partial.length() == bytes.size.toLong() && sha256(partial.readBytes()) == incomingHash) {

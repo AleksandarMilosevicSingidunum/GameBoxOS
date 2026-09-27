@@ -58,6 +58,14 @@ class CompanionSaveTransferStoreTest {
                 "FIRST",
                 root.resolve("save-conflicts/test-game/windows-1234.save").readText(),
             )
+            val repeated = store.import("test-game", "SECOND".toByteArray())
+            assertFalse(repeated.conflictPreserved)
+            assertEquals(
+                listOf(root.resolve("save-conflicts/test-game").resolve("windows-1234.save")),
+                Files.list(root.resolve("save-conflicts/test-game").toPath()).use { stream ->
+                    stream.map { it.toFile() }.toList()
+                },
+            )
             assertFalse(root.resolve("saves/test-game/save.dat.companion-partial").exists())
         } finally {
             root.deleteRecursively()
