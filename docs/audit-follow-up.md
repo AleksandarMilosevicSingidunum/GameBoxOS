@@ -119,9 +119,9 @@ Python is not installed on this Windows host, so the new script's automated exec
 remains a CI-side validation rather than local evidence.
 
 The AWS Signature V4 signer now canonicalizes already-escaped S3 object paths without
-double-encoding them, while encoding literal plus and Unicode key bytes according to
-the URI path rules. JVM coverage exercises these cases; authenticated S3 endpoint
-acceptance remains separate live-service evidence.
+double-encoding them, encodes literal plus and Unicode key bytes, and sorts encoded
+query keys and values according to the URI signing rules. JVM coverage exercises these
+cases; authenticated S3 endpoint acceptance remains separate live-service evidence.
 
 The rebuilt debug APK was installed on the authorized Honor Magic6 Pro over Wi-Fi ADB.
 The physical Network settings flow enabled the Windows Companion on port 49500 and

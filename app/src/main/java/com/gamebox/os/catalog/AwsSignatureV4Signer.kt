@@ -22,7 +22,7 @@ class AwsSignatureV4Signer(
         val parsed = URI(uri)
         val host = parsed.host ?: throw IllegalArgumentException("S3 URI must include a host")
         val canonicalUri = canonicalUriForSigning(uri)
-        val canonicalQuery = parsed.rawQuery.orEmpty().split("&").filter { it.isNotBlank() }.sorted().joinToString("&")
+        val canonicalQuery = canonicalQueryForSigning(uri)
         val canonicalHeaders = "host:$host\nx-amz-content-sha256:$payloadSha256\nx-amz-date:$amzDate\n"
         val signedHeaders = "host;x-amz-content-sha256;x-amz-date"
         val canonicalRequest = listOf(method.uppercase(), canonicalUri, canonicalQuery, canonicalHeaders, signedHeaders, payloadSha256).joinToString("\n")
@@ -44,6 +44,21 @@ class AwsSignatureV4Signer(
 internal fun canonicalUriForSigning(uri: String): String {
     val rawPath = URI(uri).rawPath.ifEmpty { "/" }
     return rawPath.split('/').joinToString("/") { canonicalPathSegment(it) }
+}
+
+/** AWS query canonicalization: encode each key/value, then sort by encoded key and value. */
+internal fun canonicalQueryForSigning(uri: String): String {
+    val rawQuery = URI(uri).rawQuery.orEmpty()
+    if (rawQuery.isEmpty()) return ""
+    return rawQuery.split('&')
+        .map { component ->
+            val separator = component.indexOf('=')
+            val rawKey = if (separator >= 0) component.substring(0, separator) else component
+            val rawValue = if (separator >= 0) component.substring(separator + 1) else ""
+            canonicalPathSegment(rawKey) to canonicalPathSegment(rawValue)
+        }
+        .sortedWith(compareBy<Pair<String, String>> { it.first }.thenBy { it.second })
+        .joinToString("&") { (key, value) -> "$key=$value" }
 }
 
 private fun canonicalPathSegment(segment: String): String {
