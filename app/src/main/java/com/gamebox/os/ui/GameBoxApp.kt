@@ -1022,15 +1022,16 @@ private fun CatalogScreen(
     onSearchFocusHandled: () -> Unit = {},
     open: (Game) -> Unit
 ) {
-    val liveRefreshState by repository.observeCatalogRefreshState().collectAsState()
-    val refreshState = when (catalogFailureSimulation) {
-        CatalogFailureSimulation.LIVE -> liveRefreshState
-        CatalogFailureSimulation.OFFLINE_FALLBACK -> CatalogRefreshState.OFFLINE_FALLBACK
-        CatalogFailureSimulation.REMOTE_FALLBACK -> CatalogRefreshState.REMOTE_FALLBACK
-        CatalogFailureSimulation.ERROR -> CatalogRefreshState.ERROR
-    }
-    val scope = rememberCoroutineScope()
     val context = LocalContext.current
+    val allowCatalogSimulation = context.applicationInfo.flags and
+        android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE != 0
+    val liveRefreshState by repository.observeCatalogRefreshState().collectAsState()
+    val refreshState = com.gamebox.os.settings.effectiveCatalogRefreshState(
+        liveState = liveRefreshState,
+        simulation = catalogFailureSimulation,
+        allowSimulation = allowCatalogSimulation,
+    )
+    val scope = rememberCoroutineScope()
     val controllerActions = LocalControllerActions.current
     val searchFocusRequester = remember { FocusRequester() }
     LaunchedEffect(focusSearchOnEnter) {
@@ -4970,31 +4971,35 @@ private fun SettingsScreen(
                 )
             }
         }
-        Text("Catalog state simulation", fontWeight = FontWeight.Bold)
-        Row(
-            modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())
-                .padding(top = 6.dp, bottom = 12.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            CatalogFailureSimulation.entries.forEach { simulation ->
-                FilterChip(
-                    selected = currentSettings.catalogFailureSimulation == simulation,
-                    onClick = { scope.launch { settingsRepository.setCatalogFailureSimulation(simulation) } },
-                    label = { Text(when (simulation) {
-                        CatalogFailureSimulation.LIVE -> "Live"
-                        CatalogFailureSimulation.OFFLINE_FALLBACK -> "Offline"
-                        CatalogFailureSimulation.REMOTE_FALLBACK -> "Provider unavailable"
-                        CatalogFailureSimulation.ERROR -> "Error"
-                    }) },
-                )
+        val allowCatalogSimulation = context.applicationInfo.flags and
+            android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE != 0
+        if (allowCatalogSimulation) {
+            Text("Catalog state simulation", fontWeight = FontWeight.Bold)
+            Row(
+                modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())
+                    .padding(top = 6.dp, bottom = 12.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                CatalogFailureSimulation.entries.forEach { simulation ->
+                    FilterChip(
+                        selected = currentSettings.catalogFailureSimulation == simulation,
+                        onClick = { scope.launch { settingsRepository.setCatalogFailureSimulation(simulation) } },
+                        label = { Text(when (simulation) {
+                            CatalogFailureSimulation.LIVE -> "Live"
+                            CatalogFailureSimulation.OFFLINE_FALLBACK -> "Offline"
+                            CatalogFailureSimulation.REMOTE_FALLBACK -> "Provider unavailable"
+                            CatalogFailureSimulation.ERROR -> "Error"
+                        }) },
+                    )
+                }
             }
+            Text(
+                "Simulated catalog states affect presentation only; they never replace, delete, or corrupt cached provider data.",
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.62f),
+                fontSize = 12.sp,
+                modifier = Modifier.padding(bottom = 12.dp),
+            )
         }
-        Text(
-            "Simulated catalog states affect presentation only; they never replace, delete, or corrupt cached provider data.",
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.62f),
-            fontSize = 12.sp,
-            modifier = Modifier.padding(bottom = 12.dp),
-        )
         Row(
             modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
             horizontalArrangement = Arrangement.SpaceBetween,

@@ -274,6 +274,10 @@ transferred filenames, with JVM coverage for status serialization. This keeps th
 protocol parseable for valid user metadata without expanding the content-transfer trust
 boundary. Companion content replacement now also recovers an orphaned previous copy
 before retrying, preserving the old installed content when a staged replacement fails.
+Catalog failure simulation is now debug-only: release builds always consume the real
+catalog refresh state, while debug instrumentation retains the explicit offline,
+provider-fallback, and error-state controls used by the UI matrix. The boundary is
+covered by JVM and API-35 instrumentation tests.
 The catalog transport failure double is now test-only; the Android production source no
 longer contains a `NoopCatalogTransportClient` placeholder. The complete Android JVM
 suite was rerun after this cleanup: 517 tests, zero failures, and one explicit

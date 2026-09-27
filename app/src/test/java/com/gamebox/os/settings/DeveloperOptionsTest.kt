@@ -2,6 +2,7 @@ package com.gamebox.os.settings
 
 import org.junit.Assert.assertEquals
 import org.junit.Test
+import com.gamebox.os.domain.CatalogRefreshState
 
 class DeveloperOptionsTest {
     @Test
@@ -20,5 +21,25 @@ class DeveloperOptionsTest {
         CatalogFailureSimulation.entries.forEach {
             assertEquals(it, CatalogFailureSimulation.fromStored(it.name))
         }
+    }
+
+    @Test
+    fun catalogFailureSimulationIsIgnoredOutsideDebugMode() {
+        assertEquals(
+            CatalogRefreshState.SUCCESS,
+            effectiveCatalogRefreshState(
+                CatalogRefreshState.SUCCESS,
+                CatalogFailureSimulation.ERROR,
+                allowSimulation = false,
+            ),
+        )
+        assertEquals(
+            CatalogRefreshState.ERROR,
+            effectiveCatalogRefreshState(
+                CatalogRefreshState.SUCCESS,
+                CatalogFailureSimulation.ERROR,
+                allowSimulation = true,
+            ),
+        )
     }
 }
