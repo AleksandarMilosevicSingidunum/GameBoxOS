@@ -72,6 +72,21 @@ class HttpsCatalogTransportClientTest {
         assertTrue(!error.recovery.retryable)
     }
 
+    @Test
+    fun oversizedChunkedResponsesBecomePermanentProviderFailures() {
+        val connection = RecordingConnection(content = "oversized".toByteArray())
+        val error = assertThrows(CatalogTransportException::class.java) {
+            runBlocking {
+                HttpsCatalogTransportClient(
+                    maxResponseBytes = 8,
+                    connectionFactory = { connection },
+                ).fetch(CatalogTransport.Https("https://example.test/catalog.json"), null)
+            }
+        }
+        assertEquals(ProviderFailureKind.PERMANENT, error.recovery.kind)
+        assertTrue(!error.recovery.retryable)
+    }
+
     private class RecordingConnection(
         private val content: ByteArray = "{}".toByteArray(),
         private val declaredLength: Long = -1,
