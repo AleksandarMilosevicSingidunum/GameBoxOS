@@ -26,19 +26,19 @@ internal fun PerGameSaveCard(game: Game, controller: SaveSafetyController, enabl
         uri ->
         val target = pickerTarget
         pickerTarget = null
-        if (uri != null && target === controller && actionsEnabled) target?.importInitialSave(uri)
+        if (uri != null && target === controller && actionsEnabled) target.importInitialSave(uri)
     }
     val importBackup = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) {
         uri ->
         val target = pickerTarget
         pickerTarget = null
-        if (uri != null && target === controller && actionsEnabled) target?.importBackup(uri)
+        if (uri != null && target === controller && actionsEnabled) target.importBackup(uri)
     }
     val export = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/octet-stream")) {
         uri ->
         val target = pickerTarget
         pickerTarget = null
-        if (uri != null && target === controller && actionsEnabled) target?.exportBackup(uri)
+        if (uri != null && target === controller && actionsEnabled) target.exportBackup(uri)
     }
     Surface(Modifier.fillMaxWidth().padding(vertical = 12.dp), color = MaterialTheme.colorScheme.surfaceVariant) {
         Column(Modifier.padding(16.dp)) {
