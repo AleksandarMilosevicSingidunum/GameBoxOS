@@ -190,6 +190,14 @@ SHA-256 `e5d0409be9278cbef5fc092f0700d9efd95f7b80cc9c187e987ad70a23d3fad1`). Thi
 release-variant compilation/package evidence only; protected signing, installation,
 upgrade, rollback, and update-channel execution remain separate gates.
 
+Updated Android release packaging checkpoint (28 September 2026): after the compact
+Details action revision, `:app:assembleRelease` passed again and produced the unsigned
+APK `app-release-unsigned.apk` (14,526,677 bytes,
+SHA-256 `fe61daa5b49cfb33a752ddc4dd373ab6c1dd709238bdde26d868146eeb623831`) from
+source commit `fbee34f`. The Windows companion Release core harness also passed in the
+same milestone run. These are current cross-platform build/test results; signing,
+installation, upgrade, rollback, and update-channel execution remain separate gates.
+
 Release provenance hardening (27 September 2026): alpha, beta, combined preview, and
 protected production APK workflows now use the same tested manifest generator. It accepts
 the PREVIEW channel and records the checked-out source commit plus signing status alongside
