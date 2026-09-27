@@ -45,6 +45,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.OpenInNew
 import androidx.compose.material.icons.automirrored.rounded.VolumeUp
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
@@ -1536,7 +1537,7 @@ val allDiscoveryGames by discoveryRepository.observeGames(null, "", 250).collect
                             when {
                                 jsonSource -> Icons.Rounded.Sync
                                 vimmSource -> Icons.Rounded.Search
-                                else -> Icons.Rounded.OpenInNew
+                                else -> Icons.AutoMirrored.Rounded.OpenInNew
                             },
                             null,
                             Modifier.size(15.dp),
@@ -1790,7 +1791,7 @@ private fun BlueprintCatalogScreen(
                                 when {
                                     jsonSource -> Icons.Rounded.Sync
                                     vimmSource -> Icons.Rounded.Search
-                                    else -> Icons.Rounded.OpenInNew
+                                    else -> Icons.AutoMirrored.Rounded.OpenInNew
                                 },
                                 null,
                                 Modifier.size(13.dp),
@@ -2731,7 +2732,7 @@ private fun DiscoveryDetailsScreen(
                             try { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(source.url))) }
                             catch (_: ActivityNotFoundException) { importMessage = "No browser is available to open ${source.label}" }
                         }) {
-                            Icon(Icons.Rounded.OpenInNew, null, Modifier.size(15.dp))
+                            Icon(Icons.AutoMirrored.Rounded.OpenInNew, null, Modifier.size(15.dp))
                             Text(source.label, Modifier.padding(start = 7.dp), fontSize = 11.sp)
                         }
                     }
@@ -2750,7 +2751,7 @@ private fun DiscoveryDetailsScreen(
                             try { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) }
                             catch (_: ActivityNotFoundException) { importMessage = "No browser is available to open " + label }
                         }) {
-                            Icon(Icons.Rounded.OpenInNew, null, Modifier.size(15.dp))
+                            Icon(Icons.AutoMirrored.Rounded.OpenInNew, null, Modifier.size(15.dp))
                             Text(label, Modifier.padding(start = 7.dp), fontSize = 11.sp)
                         }
                     }
