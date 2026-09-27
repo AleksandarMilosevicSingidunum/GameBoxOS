@@ -6,11 +6,11 @@ not prove working emulators, providers, saves or release signing.
 | Priority | Work | Current evidence / next gate |
 | --- | --- | --- |
 | P0 | Honest first-run library and installation state | Merged in PR #267 after Android unit/instrumentation, phone/DeX screenshot and Windows build checks passed. Catalog claims no longer create installed or queued games. |
-| P0 | One complete authorized game journey | Galaxy Patrol is bundled and hash-pinned. The API-35 live run now proves GameBox install, real RetroArch/FCEUmm gameplay, controller-key dispatch, emulator save-state creation and restore, return, content-only uninstall, reinstall and relaunch. The connected Honor remains adapter-pending, and managed GameBox save synchronization is a separate gate. |
+| P0 | One complete authorized game journey | Galaxy Patrol is bundled and hash-pinned. The connected Honor Magic6 Pro now proves GameBox install, real RetroArch/FCEUmm gameplay, controller-key dispatch, emulator save-state creation and restore, return, content-only uninstall, reinstall and relaunch. API-35 remains the reproducible emulator check; managed GameBox save synchronization is a separate gate. |
 | P0 | Reproducible signed release and upgrade | Debug APK, API-35 UI tests, and a real API-35 `MainActivity` startup pass locally. Production signing, clean install/upgrade and rollback validation remain separate gates. |
 | P1 | Remove simulated installation controls | Merged and automated checks passed in PR #267. Manual completion APIs removed; fake repository moved to unit-test sources. Details pause/resume uses the real download controller; in-progress actions open Downloads. Unavailable-source jobs report recovery guidance rather than simulate progress. |
 | P1 | Durable download updates | PRs #269–#271 merged after their checks passed. Ordered Room writes read persisted rows, startup waits for database records, work identity distinguishes fast reinstalls, and remote recovery verifies current content while preserving uninstall state. Live provider transfer/recovery still needs separate evidence. |
-| P1 | General game lifecycle | The Galaxy Patrol/RetroArch lifecycle is validated on API-35; full supported-console gameplay, adapter-specific save ownership and physical-device validation remain pending. |
+| P1 | General game lifecycle | The Galaxy Patrol/RetroArch lifecycle is validated on the Honor and API-35; full supported-console gameplay, adapter-specific save ownership and physical external-controller validation remain pending. |
 | P1 | Real providers | TheGamesDB transport/enrichment exists; live authenticated discovery/media, limits and failures require provider evidence. |
 | P1 | Windows communication journey | Pairing/authentication, transfer/synchronization and recovery require a complete Android↔Windows integration run, not only independent builds. |
 | P2 | UI interaction and populated-state coverage | PR #266 passed unit, instrumentation and real phone/DeX screenshot jobs. Populated provider, active downloads, large fonts and physical controller flows need broader coverage. |
@@ -45,6 +45,20 @@ RetroArch's `Loaded state from slot: 0` confirmation. Logcat also recorded execu
 This proves the authorized API-35 emulator lifecycle, including emulator-owned save-state
 continuity. It does not prove managed GameBox save import/cloud synchronization, a physical
 Honor emulator adapter, every supported console group, or signed release behavior.
+
+Physical Honor Magic6 Pro critical-path checkpoint (27 September 2026): the official
+RetroArch 1.22.2 ARM64 package launched on the connected `PGT-N19` device, and the
+FCEUmm core was installed through its Online Updater. GameBox then installed Galaxy
+Patrol, opened the real `RetroActivityFuture`, rendered the game, accepted controller
+key events, and created `/sdcard/RetroArch/states/FCEUmm/galaxy-patrol.state`. Close
+Content and Quit returned to GameBox. The product's uninstall confirmation removed the
+49,168-byte content file while explicitly retaining saves and external emulator files;
+the state file remained. Reinstall restored the app-private `.nes` file, relaunch opened
+RetroArch again, and loading slot 0 displayed `Loaded state from slot: 0`.
+
+This is physical-device gameplay and emulator-save continuity evidence on the Honor. It
+does not yet cover a separately connected external controller, external-display/DeX
+soak, managed GameBox save import/cloud synchronization, or other adapter families.
 
 PR #268's real WorkManager/Room/files lifecycle test passed without skipping and
 was merged. It covers hash-verified installation, synthetic save backup,

@@ -26,7 +26,8 @@ Wi-Fi transport now passes the complete 60-test debug instrumentation suite with
 failures and zero skips. The earlier failure exposed a production focus defect: the root
 Compose container handled controller key events but did not request focus on a physical
 phone. The root now owns an initial focus target. This is physical UI/controller evidence,
-not emulator gameplay or external-controller hardware evidence.
+and the same device now also has a verified real emulator gameplay/lifecycle run below;
+separately connected external-controller and external-display evidence remain pending.
 
 Local emulator validation checkpoint (27 September 2026): after installing the official
 Android command-line tools and creating the `GameBox_API35` AVD from the Google APIs
@@ -52,6 +53,18 @@ relaunch opened the real RetroArch activity again. Loading slot 0 after reinstal
 `Loaded state from slot: 0`, and logcat recorded execution of the installed FCEUmm core.
 This is real emulator gameplay and emulator-save continuity evidence, separate from the
 managed GameBox save/cloud contract and from physical-device adapter validation.
+
+Physical Honor Magic6 Pro gameplay/lifecycle checkpoint (27 September 2026): the official
+RetroArch 1.22.2 ARM64 package launched on the connected `PGT-N19` device, and FCEUmm was
+installed through RetroArch's Online Updater. GameBox installed Galaxy Patrol, launched
+the real `RetroActivityFuture`, rendered the game screen, accepted controller key events,
+and created `/sdcard/RetroArch/states/FCEUmm/galaxy-patrol.state`. Close Content and Quit
+returned to GameBox. GameBox's content-only uninstall removed the 49,168-byte game file
+while retaining saves and external emulator files; the state file remained. Reinstall
+restored `files/installed/retro/galaxy-patrol/content/galaxy-patrol.nes`, relaunch opened
+RetroArch again, and loading slot 0 displayed `Loaded state from slot: 0`. This is real
+physical-device gameplay and emulator-save continuity; it remains separate from managed
+GameBox save/cloud synchronization and external-controller/display soak testing.
 
 The current debug APK was also installed on `GameBox_API35` and launched through the
 real `com.gamebox.os/.MainActivity` entry point. The process remained alive, the
@@ -242,7 +255,7 @@ prove a real emulator launch or gameplay.
 1. Extend real game/save/return/uninstall/reinstall proof across the supported adapter patterns.
 2. Validate managed GameBox save import/backup/cloud behavior against production emulators and real endpoints.
 3. Live provider/download/volume validation against real configured endpoints and storage.
-4. Physical controller and Honor Magic5 Pro external-display recovery/soak acceptance.
+4. Separately connected physical controller and Honor external-display recovery/soak acceptance.
 5. Signed production build, clean upgrade, update-channel and rollback rehearsal.
 6. Windows Companion production-signed LAN session; the live debug mutation cleanup
    rehearsal is complete, with the retained save/backup state documented above.
