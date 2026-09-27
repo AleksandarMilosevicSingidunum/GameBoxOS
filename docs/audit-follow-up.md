@@ -13,7 +13,8 @@ destination. Automatic layout selection now keeps 16:9 high-density displays on 
 wide living-room composition and retains compact behavior for phones and narrow
 windows. The fresh production screenshot flow passed on the authorized Honor device
 and API-35 emulator after this revision; the wide render was visually compared with
-the Blueprint Home composition. This is Android UI/instrumentation evidence, not
+the Blueprint Home composition. The screenshot flow also opens Downloads through
+the header utility action, proving the non-primary route remains reachable. This is Android UI/instrumentation evidence, not
 physical DeX, external-controller, hover/motion, or complete state-matrix acceptance.
 
 Per-game managed-save controls are now used by every Details screen, not only the

@@ -68,6 +68,10 @@ class BlueprintScreenshotsTest {
             }
             capture("${index + 3}-${title.lowercase()}")
         }
+        // Downloads is a utility destination in the Blueprint, not a primary tab.
+        rule.onNodeWithContentDescription("Open download activity").performClick()
+        rule.waitForIdle()
+        capture("08-downloads")
         capturePopulatedLayout()
     }
 
