@@ -31,6 +31,16 @@ Resume, or Retry affordance, with terminal completed jobs exposing no action. Th
 passes on both API-35 and the connected Honor device; transfer-engine and live-provider
 behavior remain separate evidence.
 
+The production screenshot flow now adapts its Downloads proof to both intended layouts:
+wide displays use the Blueprint header utility action, while compact phone layouts use
+the controller Quick Actions Downloads entry. The complete API-35 instrumentation suite
+passed 64/64 with zero skips after this correction. A subsequent 64-test Honor run could
+not execute the accessibility test body because Honor Desktop Mode's package display map
+to external display 23 force-stopped the instrumentation process at startup; logcat shows
+`HwPCUtils` performing that termination rather than an app assertion. The earlier
+phone-only Honor instrumentation evidence and the separate manual TV UI evidence remain
+valid and are kept distinct from this firmware-specific runner limitation.
+
 Honor external-display checkpoint (28 September 2026): the connected Honor Magic6 Pro
 reported the SMART TV as Android display 23 at 1920x1080/160 dpi. Launching
 `MainActivity` explicitly on that display produced a real GameBox task on the TV, and

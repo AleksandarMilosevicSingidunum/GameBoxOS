@@ -1,6 +1,7 @@
 package com.gamebox.os.ui
 
 import android.graphics.Bitmap
+import android.view.KeyEvent
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
@@ -69,10 +70,26 @@ class BlueprintScreenshotsTest {
             capture("${index + 3}-${title.lowercase()}")
         }
         // Downloads is a utility destination in the Blueprint, not a primary tab.
-        rule.onNodeWithContentDescription("Open download activity").performClick()
+        if (rule.activity.resources.configuration.screenWidthDp >= 900) {
+            rule.onNodeWithContentDescription("Open download activity").performClick()
+        } else {
+            sendButton(KeyEvent.KEYCODE_BUTTON_START)
+            rule.onNodeWithContentDescription("Controller quick actions").assertIsDisplayed()
+            // Settings may also expose a Downloads section chip in the same compact
+            // semantics tree; the dialog action is the last matching entry.
+            rule.onAllNodesWithText("Downloads").onLast().performClick()
+        }
         rule.waitForIdle()
         capture("08-downloads")
         capturePopulatedLayout()
+    }
+
+    private fun sendButton(keyCode: Int) {
+        rule.runOnUiThread {
+            rule.activity.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, keyCode))
+            rule.activity.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_UP, keyCode))
+        }
+        rule.waitForIdle()
     }
 
     /** Test-only installed flags exercise layout, not installation or gameplay. */
