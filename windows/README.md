@@ -115,6 +115,18 @@ The pairing secret is supplied only at runtime and is not printed by the probe. 
 the resulting test save through the product's supported save/content cleanup flow after
 validation.
 
+For an explicit live owned-content transfer check, provide an existing GameBox game ID
+and a legally owned local content file. The probe streams the file through the
+authenticated Android route and verifies the returned filename, length, and SHA-256;
+the transfer registers content on the Android device and should be followed by the
+product's supported uninstall/cleanup flow:
+
+```powershell
+dotnet run --project windows/GameBox.Windows.Core.Tests/GameBox.Windows.Core.Tests.csproj -c Release -- --live-companion-content 192.168.1.2 49500 $pairingSecret galaxy-patrol app/src/main/assets/downloads/galaxy-patrol.nes
+```
+
+The pairing secret is supplied only at runtime and is not printed by the probe.
+
 
 ## Signed Windows release
 

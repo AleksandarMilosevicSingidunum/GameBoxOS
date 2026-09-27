@@ -30,6 +30,12 @@ authenticated library response reported `savePresent=true`. This is real managed
 transport evidence, separate from content installation and emulator-owned save-state
 continuity.
 
+The repository's live-content probe also streamed the legal Galaxy Patrol fixture to
+the Honor, and Android confirmed the 49,168-byte file and matching SHA-256. The
+authenticated library response changed Galaxy Patrol to `INSTALLED` while retaining
+`savePresent=true`; a direct app-sandbox hash/length check matched the client response.
+Content cleanup/recovery and gameplay remain separate gates.
+
 The catalog repair changes database state only for six known legacy demo IDs
 without local content references or a real download source. It does not delete
 files, save records, favorites, history or emulator preferences. Imported copies,

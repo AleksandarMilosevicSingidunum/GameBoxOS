@@ -112,6 +112,10 @@ The same repository harness now exposes an explicitly mutating
 uploads a small managed-save payload through the real authenticated Android route,
 downloads it again, and verifies the exact bytes and checksum; the command documents
 that its test save remains on the paired device until removed through the product flow.
+It also exposes `--live-companion-content <host> <port> <pairing-secret> <game-id>
+<content-path>` for a streamed, checksum-verified upload of a user-authorized local
+content file. This probe intentionally registers content on Android and must be
+followed by the supported uninstall/cleanup flow.
 The same harness now verifies that caller cancellation before an owned-content upload
 prevents network dispatch and retry; cancellation during a real long-running LAN
 transfer now also has deterministic client coverage: a streaming HTTP boundary reads
@@ -190,6 +194,14 @@ verified the exact returned bytes and SHA-256
 follow-up authenticated library read reported `savePresent=true` for Galaxy Patrol.
 This validates the real Windows client ↔ Android managed-save route, while content
 installation and emulator-owned saves remain separate lifecycle evidence.
+
+Live owned-content checkpoint from the same session: the new repository
+`--live-companion-content` probe streamed the repository's legal Galaxy Patrol fixture
+to the Honor device. Android confirmed `galaxy-patrol.nes`, 49,168 bytes, and SHA-256
+`97c1757ffd6a5bc1a591809b2b0f8988741f61f6abd82889c148ecae8a2f471f`; the subsequent
+authenticated library read reported `INSTALLED` and `savePresent=true`. A direct
+app-sandbox check confirmed the same byte length and digest. This is live content
+transfer evidence, not proof of gameplay or content cleanup/recovery.
 
 The local Android JVM suite then exposed a host-capability failure in
 `DirectorySaveAdapterTest`: Windows symbolic-link creation is denied without the

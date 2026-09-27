@@ -23,6 +23,11 @@ if (args.Length > 0 && string.Equals(args[0], "--live-companion-save", StringCom
     await RunLiveCompanionSaveProbeAsync(args.Skip(1).ToArray());
     return;
 }
+if (args.Length > 0 && string.Equals(args[0], "--live-companion-content", StringComparison.OrdinalIgnoreCase))
+{
+    await RunLiveCompanionContentProbeAsync(args.Skip(1).ToArray());
+    return;
+}
 
 var root = Path.Combine(Path.GetTempPath(), "gamebox-windows-tests-" + Guid.NewGuid().ToString("N"));
 Directory.CreateDirectory(root);
@@ -945,6 +950,19 @@ static async Task RunLiveCompanionSaveProbeAsync(string[] args)
     Console.WriteLine(
         $"Live Companion save round-trip: game={uploaded.GameId}, bytes={downloaded.Bytes.Length}, " +
         $"sha256={downloaded.Sha256}, conflictPreserved={uploaded.ConflictPreserved}");
+}
+
+static async Task RunLiveCompanionContentProbeAsync(string[] args)
+{
+    if (args.Length != 5 || !int.TryParse(args[1], out var port))
+        throw new ArgumentException("Usage: --live-companion-content <host> <port> <pairing-secret> <game-id> <content-path>");
+
+    using var http = new HttpClient();
+    var client = new CompanionContentClient(http);
+    var uploaded = await client.UploadWithRetryAsync(args[0], port, args[2], args[3], args[4]);
+    Console.WriteLine(
+        $"Live Companion content upload: game={uploaded.GameId}, file={uploaded.FileName}, " +
+        $"bytes={uploaded.SizeBytes}, sha256={uploaded.Sha256}");
 }
 
 sealed class BlockingHandler : HttpMessageHandler
