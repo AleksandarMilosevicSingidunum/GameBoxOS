@@ -84,6 +84,29 @@ class BlueprintScreenshotsTest {
         capturePopulatedLayout()
     }
 
+    @Test
+    fun updateAvailableStateIsVisibleInLibraryAndDetails() {
+        rule.waitUntil(15_000) {
+            rule.onAllNodesWithContentDescription("Home tab").fetchSemanticsNodes().isNotEmpty()
+        }
+        val app = InstrumentationRegistry.getInstrumentation().targetContext.applicationContext as GameBoxApplication
+        val repository = app.container.gameRepository
+        val target = repository.observeGames().value.firstOrNull()
+            ?: error("Update-state coverage requires a seeded catalog record")
+        val originalState = target.state
+        try {
+            runBlocking { repository.setInstallStateAndAwait(target.id, InstallState.UPDATE_AVAILABLE) }
+            rule.onNodeWithContentDescription("Library tab").performClick()
+            rule.waitForIdle()
+            rule.onNodeWithContentDescription("Availability: Update").assertIsDisplayed()
+            rule.onNode(hasContentDescription(target.title, substring = true)).performClick()
+            rule.waitForIdle()
+            rule.onNodeWithText("Update").assertExists()
+        } finally {
+            runBlocking { repository.setInstallStateAndAwait(target.id, originalState) }
+        }
+    }
+
     private fun sendButton(keyCode: Int) {
         rule.runOnUiThread {
             rule.activity.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, keyCode))
