@@ -121,6 +121,19 @@ class BlueprintScreenshotsTest {
         rule.onNodeWithText("Search games").assertIsDisplayed()
     }
 
+    @Test
+    fun compactSettingsKeepsExternalLibraryActionReachable() {
+        rule.waitUntil(15_000) {
+            rule.onAllNodesWithContentDescription("Home tab").fetchSemanticsNodes().isNotEmpty()
+        }
+        if (rule.activity.resources.configuration.screenWidthDp >= 900) return
+
+        rule.onNodeWithContentDescription("Settings tab").performClick()
+        rule.waitForIdle()
+        rule.onNodeWithText("External game library").performScrollTo().assertIsDisplayed()
+        rule.onNodeWithText("Choose folder").performScrollTo().assertIsDisplayed()
+    }
+
     private fun sendButton(keyCode: Int) {
         rule.runOnUiThread {
             rule.activity.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, keyCode))

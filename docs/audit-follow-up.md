@@ -31,8 +31,9 @@ physical DeX, external-controller, hover/motion, or complete state-matrix accept
 Compact Settings follow-up: external-library Choose/Change folder and Forget actions now
 stack full-width on compact layouts, preventing narrow-width and enlarged-text crowding
 while preserving the wide TV/Desktop row. The focused production screenshot flow passed
-on API-35 after this change. This is emulator UI evidence; physical TV overscan and
-controller-only acceptance remain separate.
+on API-35 after this change, including `compactSettingsKeepsExternalLibraryActionReachable`.
+This is emulator UI evidence; physical TV overscan and controller-only acceptance remain
+separate.
 
 Catalog state-matrix checkpoint: `CatalogRefreshStateTest` now drives the production
 Store screen through offline fallback, provider-unavailable fallback, and terminal

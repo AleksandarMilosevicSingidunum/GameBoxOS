@@ -40,4 +40,6 @@ The compact Settings Storage section now stacks Choose/Change folder and Forget 
 full-width instead of forcing them into a narrow horizontal row. This protects the
 external-library controls at phone width and enlarged text while preserving the existing
 wide TV/Desktop row. The production screenshot flow passed on API-35 after the change;
-this is UI/instrumentation evidence, not physical TV overscan or controller acceptance.
+the focused `compactSettingsKeepsExternalLibraryActionReachable` instrumentation test
+also passed. This is UI/instrumentation evidence, not physical TV overscan or controller
+acceptance.
