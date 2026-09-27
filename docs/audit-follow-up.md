@@ -37,7 +37,8 @@ Windows companion status, library, save, and content clients now normalize incom
 or malformed JSON confirmations into bounded invalid-data failures, with console-test
 coverage for missing response fields. The shared bounded retry policy now also classifies
 HTTP 408, 429, and 5xx responses as transient while authentication and malformed payload
-failures remain non-retryable. Managed-save downloads now use that policy; save uploads
+failures remain non-retryable (including the .NET InvalidDataException/IOException subtype
+boundary). Managed-save downloads now use that policy; save uploads
 and identical content replacements are safe to replay because Android treats repeated
 checksummed uploads as no-ops. Windows now exposes the same retry entry points for
 idempotent favorite and configuration updates. Android save uploads with an identical

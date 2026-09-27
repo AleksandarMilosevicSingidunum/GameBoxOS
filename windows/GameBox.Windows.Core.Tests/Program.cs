@@ -669,6 +669,20 @@ try
     Require(authenticationFailure && authenticationAttempts == 1,
         "Reconnect policy must never retry rejected authentication.");
 
+    var malformedRetryAttempts = 0;
+    var malformedRetryFailure = false;
+    try
+    {
+        await CompanionRetryPolicy.ExecuteAsync<int>(
+            _ => { malformedRetryAttempts++; throw new InvalidDataException("malformed payload"); },
+            maxAttempts: 3,
+            initialDelay: TimeSpan.Zero,
+            delay: (_, _) => Task.CompletedTask);
+    }
+    catch (InvalidDataException) { malformedRetryFailure = true; }
+    Require(malformedRetryFailure && malformedRetryAttempts == 1,
+        "Reconnect policy must never retry malformed companion payloads.");
+
     using var cancelledReconnect = new CancellationTokenSource();
     cancelledReconnect.Cancel();
     var cancelledAttempts = 0;

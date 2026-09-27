@@ -46,7 +46,8 @@ public static class CompanionRetryPolicy
     }
 
     public static bool IsTransient(Exception exception, CancellationToken callerToken) =>
-        exception is HttpRequestException or IOException ||
+        exception is HttpRequestException or CompanionTransientHttpException ||
+        (exception is IOException && exception is not InvalidDataException) ||
         (exception is TaskCanceledException && !callerToken.IsCancellationRequested);
 
     public static void ThrowIfTransient(HttpStatusCode statusCode, string message)
