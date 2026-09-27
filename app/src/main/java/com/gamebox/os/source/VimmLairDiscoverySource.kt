@@ -2,9 +2,8 @@ package com.gamebox.os.source
 
 import com.gamebox.os.domain.normalizeCatalogTitle
 import java.net.URI
+import java.net.URL
 import javax.net.ssl.HttpsURLConnection
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 
 fun interface VimmLairTransport {
     suspend fun get(uri: URI): String
@@ -69,46 +68,29 @@ private fun defaultVimmLairTransport(): VimmLairTransport =
 
 class HttpsVimmLairTransport(
     private val maxResponseBytes: Int = 2 * 1024 * 1024,
+    private val connectionFactory: (URL) -> HttpsURLConnection = {
+        it.openConnection() as HttpsURLConnection
+    },
 ) : VimmLairTransport {
     init {
         require(maxResponseBytes in 1..8 * 1024 * 1024)
     }
 
-    override suspend fun get(uri: URI): String = withContext(Dispatchers.IO) {
+    override suspend fun get(uri: URI): String {
         val validated = validateVimmLairUrl(uri.toASCIIString())
-        val connection = URI(validated).toURL().openConnection() as HttpsURLConnection
-        connection.connectTimeout = 10_000
-        connection.readTimeout = 15_000
-        connection.instanceFollowRedirects = false
-        connection.setRequestProperty("Accept", "text/html,application/xhtml+xml")
-        connection.setRequestProperty("User-Agent", "GameBoxOS/0.1")
-        try {
-            val status = connection.responseCode
-            require(status in 200..299) {
-                if (status in 300..399) "Vimm's Lair redirects are not accepted"
-                else "Vimm's Lair request failed with HTTP " + status
-            }
-            require(connection.contentLengthLong < 0 || connection.contentLengthLong <= maxResponseBytes) {
-                "Vimm's Lair response is too large"
-            }
-            val output = java.io.ByteArrayOutputStream()
-            connection.inputStream.use { input ->
-                val buffer = ByteArray(8_192)
-                var total = 0
-                while (true) {
-                    val count = input.read(buffer)
-                    if (count < 0) break
-                    total += count
-                    require(total <= maxResponseBytes) {
-                        "Vimm's Lair response is too large"
-                    }
-                    output.write(buffer, 0, count)
-                }
-            }
-            output.toString(Charsets.UTF_8.name())
-        } finally {
-            connection.disconnect()
-        }
+        return fetchCancellableHttpsText(
+            URI(validated).toURL(),
+            maxResponseBytes,
+            "Vimm's Lair request",
+            configure = {
+            it.connectTimeout = 10_000
+            it.readTimeout = 15_000
+            it.instanceFollowRedirects = false
+            it.setRequestProperty("Accept", "text/html,application/xhtml+xml")
+            it.setRequestProperty("User-Agent", "GameBoxOS/0.1")
+            },
+            connectionFactory = connectionFactory,
+        )
     }
 }
 

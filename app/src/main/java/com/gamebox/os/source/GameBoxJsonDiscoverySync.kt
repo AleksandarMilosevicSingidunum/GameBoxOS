@@ -6,10 +6,9 @@ import com.gamebox.os.data.local.CatalogGameEntity
 import com.gamebox.os.data.local.CatalogPlatformEntity
 import com.gamebox.os.domain.normalizeCatalogTitle
 import java.net.URI
+import java.net.URL
 import javax.net.ssl.HttpsURLConnection
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.first
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.decodeFromString
@@ -151,46 +150,29 @@ fun interface GameBoxJsonDiscoveryTransport {
 
 class HttpsGameBoxJsonDiscoveryTransport(
     private val maxResponseBytes: Int = 2 * 1024 * 1024,
+    private val connectionFactory: (URL) -> HttpsURLConnection = {
+        it.openConnection() as HttpsURLConnection
+    },
 ) : GameBoxJsonDiscoveryTransport {
     init {
         require(maxResponseBytes in 1..8 * 1024 * 1024)
     }
 
-    override suspend fun get(uri: URI): String = withContext(Dispatchers.IO) {
+    override suspend fun get(uri: URI): String {
         val validated = URI(validateGameSourceUrl(uri.toASCIIString(), "GameBox JSON source URL"))
-        val connection = validated.toURL().openConnection() as HttpsURLConnection
-        connection.connectTimeout = 10_000
-        connection.readTimeout = 15_000
-        connection.instanceFollowRedirects = false
-        connection.setRequestProperty("Accept", "application/json")
-        connection.setRequestProperty("User-Agent", "GameBoxOS/0.1")
-        try {
-            val status = connection.responseCode
-            require(status in 200..299) {
-                if (status in 300..399) "GameBox JSON source redirects are not accepted"
-                else "GameBox JSON source failed with HTTP $status"
-            }
-            require(connection.contentLengthLong < 0 || connection.contentLengthLong <= maxResponseBytes) {
-                "GameBox JSON source response is too large"
-            }
-            val output = java.io.ByteArrayOutputStream()
-            connection.inputStream.use { input ->
-                val buffer = ByteArray(8_192)
-                var total = 0
-                while (true) {
-                    val count = input.read(buffer)
-                    if (count < 0) break
-                    total += count
-                    require(total <= maxResponseBytes) {
-                        "GameBox JSON source response is too large"
-                    }
-                    output.write(buffer, 0, count)
-                }
-            }
-            output.toString(Charsets.UTF_8.name())
-        } finally {
-            connection.disconnect()
-        }
+        return fetchCancellableHttpsText(
+            validated.toURL(),
+            maxResponseBytes,
+            "GameBox JSON source",
+            configure = {
+            it.connectTimeout = 10_000
+            it.readTimeout = 15_000
+            it.instanceFollowRedirects = false
+            it.setRequestProperty("Accept", "application/json")
+            it.setRequestProperty("User-Agent", "GameBoxOS/0.1")
+            },
+            connectionFactory = connectionFactory,
+        )
     }
 }
 

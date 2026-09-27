@@ -190,8 +190,15 @@ emulator save compatibility.
 Catalog transport cancellation hardening (27 September 2026): authenticated HTTPS,
 WebDAV, and S3 catalog fetches now disconnect their active blocking connection when
 the caller cancels. A deterministic blocking-connection regression covers this path,
-and the physical Honor instrumentation rerun completed with `OK (61 tests)`, zero
+and the physical Honor instrumentation rerun completed with `OK (62 tests)`, zero
 failures, and zero skips. Live provider acceptance remains separate evidence.
+
+Discovery-provider cancellation hardening (27 September 2026): the configured GameBox
+JSON manifest transport and the Vimm's Lair metadata/navigation transport now share the
+same bounded cancellable HTTPS reader. Cancelling either active request disconnects its
+socket instead of waiting for the read timeout; JVM regressions cover both production
+transport entry points. The Honor rerun above also covers the resulting Android build,
+while real provider availability and live-service acceptance remain separate evidence.
 
 Managed multi-artifact save snapshots now publish each complete backup set under a
 unique generation directory and atomically switch the manifest only after every artifact
