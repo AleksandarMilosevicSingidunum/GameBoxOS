@@ -32,6 +32,11 @@ Windows content-upload client to the Android route's lowercase ASCII game-ID gra
 The Windows core harness passes the rejection regression for an uppercase ID, so the
 client now fails closed before sending an incompatible request.
 
+Companion maximum-size checkpoint: commit `263ab29` adds an Android HTTP-reader
+regression proving a content request above the 64 GiB contract is rejected from its
+headers before the body is read. The existing storage-unavailable and staging-space
+tests remain separate and continue to cover disk-pressure classification.
+
 PSP emulator readiness now recognizes the official PPSSPP Android package variants:
 the free `org.ppsspp.ppsspp` build, PPSSPP Gold `org.ppsspp.ppssppgold`, and PPSSPP
 Legacy `org.ppsspp.ppsspplegacy`. They use the same documented scoped-content launch
