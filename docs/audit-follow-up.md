@@ -37,6 +37,11 @@ regression proving a content request above the 64 GiB contract is rejected from 
 headers before the body is read. The existing storage-unavailable and staging-space
 tests remain separate and continue to cover disk-pressure classification.
 
+Windows storage-pressure checkpoint: commit `ebabb46` maps the Android companion's
+HTTP 507 response to a typed retryable `CompanionStorageUnavailableException`, with a
+Windows harness regression. The client no longer collapses disk pressure into generic
+invalid content data.
+
 PSP emulator readiness now recognizes the official PPSSPP Android package variants:
 the free `org.ppsspp.ppsspp` build, PPSSPP Gold `org.ppsspp.ppssppgold`, and PPSSPP
 Legacy `org.ppsspp.ppsspplegacy`. They use the same documented scoped-content launch
