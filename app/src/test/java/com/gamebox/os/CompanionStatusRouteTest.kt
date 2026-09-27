@@ -20,6 +20,17 @@ class CompanionStatusRouteTest {
         assertTrue(response.body.contains("\"protocolVersion\":1"))
     }
 
+    @Test fun statusRouteEscapesJsonControlCharacters() {
+        val authorization = CompanionProtocol.createAuthorization(secret, "GET", "/v1/status", 1_700_000_000)
+
+        val response = CompanionStatusRoute.handle(
+            "GET", "/v1/status", authorization, secret, "GameBox\n\u0001", 1_700_000_030,
+        )
+
+        assertEquals(200, response.status)
+        assertTrue(response.body.contains("\"deviceName\":\"GameBox\\n\\u0001\""))
+    }
+
     @Test fun statusRouteRejectsUnauthenticatedAndUnknownRequests() {
         assertEquals(
             401,

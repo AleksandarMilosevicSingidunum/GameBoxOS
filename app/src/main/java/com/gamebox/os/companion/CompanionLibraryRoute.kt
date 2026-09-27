@@ -30,18 +30,5 @@ object CompanionLibraryRoute {
     }
 
     private fun CompanionLibraryItem.toJson() =
-        """{"id":"${id.jsonEscape()}","title":"${title.jsonEscape()}","platform":"${platform.jsonEscape()}","installState":"${installState.jsonEscape()}","favorite":$favorite,"minutesPlayed":${minutesPlayed.coerceAtLeast(0)},"savePresent":$savePresent}"""
-
-    private fun String.jsonEscape() = buildString {
-        this@jsonEscape.forEach { character ->
-            when (character) {
-                '\\' -> append("\\\\")
-                '"' -> append("\\\"")
-                '\n' -> append("\\n")
-                '\r' -> append("\\r")
-                '\t' -> append("\\t")
-                else -> if (character.code < 0x20) append("\\u%04x".format(character.code)) else append(character)
-            }
-        }
-    }
+        """{"id":"${id.companionJsonEscape()}","title":"${title.companionJsonEscape()}","platform":"${platform.companionJsonEscape()}","installState":"${installState.companionJsonEscape()}","favorite":$favorite,"minutesPlayed":${minutesPlayed.coerceAtLeast(0)},"savePresent":$savePresent}"""
 }

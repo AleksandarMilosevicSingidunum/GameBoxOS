@@ -81,26 +81,50 @@ public sealed class CompanionContentClient
         if (!response.IsSuccessStatusCode)
             throw new InvalidDataException("GameBox rejected the game content (" + (int)response.StatusCode + ").");
 
-        var declaredResponse = response.Content.Headers.ContentLength;
-        if (declaredResponse is < 0 or > MaxResponseBytes)
-            throw new InvalidDataException("GameBox returned an oversized content response.");
-        var bytes = await response.Content.ReadAsByteArrayAsync(timeoutSource.Token).ConfigureAwait(false);
-        if (bytes.Length > MaxResponseBytes)
-            throw new InvalidDataException("GameBox returned an oversized content response.");
+        var bytes = await ReadBoundedAsync(response.Content, timeoutSource.Token).ConfigureAwait(false);
         JsonDocument document;
         try { document = JsonDocument.Parse(bytes); }
         catch (JsonException exception) { throw new InvalidDataException("GameBox returned invalid content JSON.", exception); }
         using (document)
         {
-            var root = document.RootElement;
-            if (root.GetProperty("protocolVersion").GetInt32() != CompanionProtocol.Version ||
-                root.GetProperty("gameId").GetString() != gameId ||
-                root.GetProperty("fileName").GetString() != file.Name ||
-                root.GetProperty("sizeBytes").GetInt64() != file.Length ||
-                !string.Equals(root.GetProperty("sha256").GetString(), hash, StringComparison.OrdinalIgnoreCase))
-                throw new InvalidDataException("GameBox content confirmation did not match the selected file.");
+            try
+            {
+                var root = document.RootElement;
+                if (root.GetProperty("protocolVersion").GetInt32() != CompanionProtocol.Version ||
+                    root.GetProperty("gameId").GetString() != gameId ||
+                    root.GetProperty("fileName").GetString() != file.Name ||
+                    root.GetProperty("sizeBytes").GetInt64() != file.Length ||
+                    !string.Equals(root.GetProperty("sha256").GetString(), hash, StringComparison.OrdinalIgnoreCase))
+                    throw new InvalidDataException("GameBox content confirmation did not match the selected file.");
+            }
+            catch (Exception exception) when (
+                exception is JsonException or KeyNotFoundException or InvalidOperationException or FormatException)
+            {
+                throw new InvalidDataException("GameBox returned an incomplete content confirmation.", exception);
+            }
         }
         return new CompanionContentUploadResult(gameId, file.Name, file.Length, hash);
+    }
+
+    private static async Task<byte[]> ReadBoundedAsync(
+        HttpContent content,
+        CancellationToken cancellationToken)
+    {
+        var declaredLength = content.Headers.ContentLength;
+        if (declaredLength is < 0 or > MaxResponseBytes)
+            throw new InvalidDataException("GameBox returned an oversized content response.");
+
+        await using var stream = await content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
+        using var output = new MemoryStream();
+        var buffer = new byte[4096];
+        while (true)
+        {
+            var read = await stream.ReadAsync(buffer, cancellationToken).ConfigureAwait(false);
+            if (read == 0) return output.ToArray();
+            if (output.Length + read > MaxResponseBytes)
+                throw new InvalidDataException("GameBox returned an oversized content response.");
+            await output.WriteAsync(buffer.AsMemory(0, read), cancellationToken).ConfigureAwait(false);
+        }
     }
 
     private static string ContentPath(string gameId)

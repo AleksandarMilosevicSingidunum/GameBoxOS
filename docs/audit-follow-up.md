@@ -5,6 +5,30 @@ Keep implementation, production integration, automated validation, live-service/
 validation and hardware acceptance separate. The original audit is a frozen baseline,
 not a claim that subsequent branch work is already on main.
 
+## Current implementation checkpoint (27 September 2026)
+
+Main is now at `51c1601` after the Vimm's Lair discovery increment. Configured sources
+can probe the bounded HTTPS listing structure, search supported consoles, hydrate
+metadata, and route users to legal local import or the external vault page. This remains
+metadata/navigation only; it does not authorize binary downloads. The Windows companion
+also rejects oversized content-upload confirmations while streaming the response through
+a bounded buffer, closing a peer-controlled memory-growth path. The local checkout does
+not include the Android SDK or .NET runtime, so these changes require the existing CI
+Android/Windows jobs for executable verification.
+
+The current unmerged Vimm follow-up adds a five-minute bounded in-memory page cache and
+deterministic exact/prefix/word-prefix result ranking. It caches only successful bounded
+HTML responses and preserves the metadata-only legal-source boundary.
+
+Companion JSON responses now share control-character escaping for device names and
+transferred filenames, with JVM coverage for status serialization. This keeps the LAN
+protocol parseable for valid user metadata without expanding the content-transfer trust
+boundary. Companion content replacement now also recovers an orphaned previous copy
+before retrying, preserving the old installed content when a staged replacement fails.
+Windows companion status, library, save, and content clients now normalize incomplete
+or malformed JSON confirmations into bounded invalid-data failures, with console-test
+coverage for missing response fields.
+
 ## Companion HTTP connection recovery (EXT-14)
 
 - Fixed the request-header terminator: the previous `return@repeat` continued reading

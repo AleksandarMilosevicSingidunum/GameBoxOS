@@ -297,6 +297,18 @@ try
     Require(companionRequest?.RequestUri?.ToString() == "http://192.168.1.22:49500/v1/status", "Companion status must use the configured LAN endpoint.");
     Require(companionRequest?.Headers.Contains(CompanionProtocol.AuthorizationHeader) == true, "Companion status must authenticate its request.");
 
+    using var incompleteStatusClient = new HttpClient(new StubHttpMessageHandler(_ =>
+        new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent("{}") }));
+    var incompleteStatusRejected = false;
+    try
+    {
+        await new CompanionStatusClient(incompleteStatusClient).GetStatusAsync(
+            "192.168.1.22", 49_500, companionSecret);
+    }
+    catch (InvalidDataException) { incompleteStatusRejected = true; }
+    Require(incompleteStatusRejected,
+        "Companion status must classify incomplete JSON as invalid data.");
+
     using var rejectedCompanionClient = new HttpClient(new StubHttpMessageHandler(_ => new HttpResponseMessage(HttpStatusCode.Unauthorized)));
     var rejectedCompanionSecret = false;
     try { await new CompanionStatusClient(rejectedCompanionClient).GetStatusAsync("192.168.1.22", 49_500, companionSecret); }
@@ -370,6 +382,17 @@ try
             companionSecret, "PUT", "/v1/saves/nes-1", saveUploadAuthorization,
             authorizationNow, bodySha256: new string('0', 64)),
         "Save upload authorization must reject altered payload bytes.");
+    using var incompleteSaveClient = new HttpClient(new StubHttpMessageHandler(_ =>
+        new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent("{}") }));
+    var incompleteSaveRejected = false;
+    try
+    {
+        await new CompanionSaveClient(incompleteSaveClient).UploadAsync(
+            "192.168.1.22", 49_500, companionSecret, "nes-1", saveBytes);
+    }
+    catch (InvalidDataException) { incompleteSaveRejected = true; }
+    Require(incompleteSaveRejected,
+        "Companion save upload must classify incomplete confirmations as invalid data.");
     RequireThrows<ArgumentException>(() =>
         new CompanionSaveClient(new HttpClient()).DownloadAsync(
             "192.168.1.22", 49_500, companionSecret, "../escape").GetAwaiter().GetResult(),
@@ -416,6 +439,34 @@ try
             companionSecret, "PUT", "/v1/content/galaxy-patrol", contentAuthorization,
             DateTimeOffset.UtcNow.ToUnixTimeSeconds(), bodySha256: contentHash),
         "Content upload authorization must bind the exact file checksum.");
+    using var oversizedContentResponse = new HttpClient(new StubHttpMessageHandler(_ =>
+        new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new UnknownLengthHttpContent(new string('x', 65 * 1024))
+        }));
+    var oversizedContentRejected = false;
+    try
+    {
+        await new CompanionContentClient(oversizedContentResponse).UploadAsync(
+            "192.168.1.22", 49_500, companionSecret, "galaxy-patrol", contentPath);
+    }
+    catch (InvalidDataException) { oversizedContentRejected = true; }
+    Require(oversizedContentRejected,
+        "Content upload must reject oversized confirmations before buffering them.");
+    using var malformedContentResponse = new HttpClient(new StubHttpMessageHandler(_ =>
+        new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent("{}")
+        }));
+    var malformedContentRejected = false;
+    try
+    {
+        await new CompanionContentClient(malformedContentResponse).UploadAsync(
+            "192.168.1.22", 49_500, companionSecret, "galaxy-patrol", contentPath);
+    }
+    catch (InvalidDataException) { malformedContentRejected = true; }
+    Require(malformedContentRejected,
+        "Content upload must classify incomplete confirmations as invalid data.");
     RequireThrows<ArgumentException>(() =>
         new CompanionContentClient(new HttpClient()).UploadAsync(
             "192.168.1.22", 49_500, companionSecret, "../escape", contentPath)
@@ -653,4 +704,18 @@ sealed class StubHttpMessageHandler(Func<HttpRequestMessage, HttpResponseMessage
 {
     protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         => Task.FromResult(responder(request));
+}
+
+sealed class UnknownLengthHttpContent(string value) : HttpContent
+{
+    private readonly byte[] bytes = System.Text.Encoding.UTF8.GetBytes(value);
+
+    protected override Task SerializeToStreamAsync(Stream stream, TransportContext? context) =>
+        stream.WriteAsync(bytes);
+
+    protected override bool TryComputeLength(out long length)
+    {
+        length = 0;
+        return false;
+    }
 }

@@ -51,7 +51,7 @@ internal class CompanionContentTransferStore(
         val partial = File(destination.parentFile, destination.name + ".companion-partial")
         val backup = File(destination.parentFile, destination.name + ".companion-backup")
         partial.delete()
-        backup.delete()
+        recoverInterruptedReplacement(destination, backup)
         try {
             val hashes = source.inputStream().buffered().use { input ->
                 partial.outputStream().buffered().use { output ->
@@ -111,6 +111,15 @@ internal class CompanionContentTransferStore(
             Files.move(source.toPath(), destination.toPath(), StandardCopyOption.REPLACE_EXISTING)
         }
     }
+
+    private fun recoverInterruptedReplacement(destination: File, backup: File) {
+        if (!backup.exists()) return
+        if (destination.exists()) {
+            backup.delete()
+        } else {
+            move(backup, destination)
+        }
+    }
 }
 
 internal object CompanionContentRoute {
@@ -147,7 +156,7 @@ internal object CompanionContentRoute {
                     200,
                     "{\"protocolVersion\":" + CompanionProtocol.VERSION +
                         ",\"gameId\":\"" + result.gameId +
-                        "\",\"fileName\":\"" + escape(result.fileName) +
+                        "\",\"fileName\":\"" + result.fileName.companionJsonEscape() +
                         "\",\"sizeBytes\":" + result.sizeBytes +
                         ",\"sha256\":\"" + result.sha256 + "\"}",
                 )
@@ -155,7 +164,4 @@ internal object CompanionContentRoute {
             onFailure = { CompanionHttpResponse(400, """{"error":"content_rejected"}""") },
         )
     }
-
-    private fun escape(value: String): String =
-        value.replace("\\", "\\\\").replace("\"", "\\\"")
 }

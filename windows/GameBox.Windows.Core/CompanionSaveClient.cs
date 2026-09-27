@@ -51,23 +51,31 @@ public sealed class CompanionSaveClient
         await EnsureSuccessAsync(response).ConfigureAwait(false);
         var envelope = await ReadBoundedAsync(response, timeoutSource.Token).ConfigureAwait(false);
         using var document = ParseEnvelope(envelope);
-        var root = document.RootElement;
-        RequireProtocol(root);
-        var returnedGameId = root.GetProperty("gameId").GetString();
-        var hash = root.GetProperty("sha256").GetString();
-        var base64 = root.GetProperty("payloadBase64").GetString();
-        if (returnedGameId != gameId || hash is null || hash.Length != 64 || base64 is null)
-            throw new InvalidDataException("GameBox returned an invalid save envelope.");
-        byte[] bytes;
-        try { bytes = Convert.FromBase64String(base64); }
-        catch (FormatException exception) { throw new InvalidDataException("GameBox returned invalid save bytes.", exception); }
-        if (bytes.Length is <= 0 or > MaxSaveBytes || !Sha256(bytes).Equals(hash, StringComparison.OrdinalIgnoreCase))
-            throw new InvalidDataException("GameBox save checksum verification failed.");
-        return new CompanionSaveDownload(
-            gameId,
-            root.GetProperty("updatedAtMillis").GetInt64(),
-            hash.ToLowerInvariant(),
-            bytes);
+        try
+        {
+            var root = document.RootElement;
+            RequireProtocol(root);
+            var returnedGameId = root.GetProperty("gameId").GetString();
+            var hash = root.GetProperty("sha256").GetString();
+            var base64 = root.GetProperty("payloadBase64").GetString();
+            if (returnedGameId != gameId || hash is null || hash.Length != 64 || base64 is null)
+                throw new InvalidDataException("GameBox returned an invalid save envelope.");
+            byte[] bytes;
+            try { bytes = Convert.FromBase64String(base64); }
+            catch (FormatException exception) { throw new InvalidDataException("GameBox returned invalid save bytes.", exception); }
+            if (bytes.Length is <= 0 or > MaxSaveBytes || !Sha256(bytes).Equals(hash, StringComparison.OrdinalIgnoreCase))
+                throw new InvalidDataException("GameBox save checksum verification failed.");
+            return new CompanionSaveDownload(
+                gameId,
+                root.GetProperty("updatedAtMillis").GetInt64(),
+                hash.ToLowerInvariant(),
+                bytes);
+        }
+        catch (Exception exception) when (
+            exception is KeyNotFoundException or InvalidOperationException or FormatException)
+        {
+            throw new InvalidDataException("GameBox returned an incomplete save envelope.", exception);
+        }
     }
 
     public async Task<CompanionSaveUploadResult> UploadAsync(
@@ -100,17 +108,25 @@ public sealed class CompanionSaveClient
         await EnsureSuccessAsync(response).ConfigureAwait(false);
         var envelope = await ReadBoundedAsync(response, timeoutSource.Token).ConfigureAwait(false);
         using var document = ParseEnvelope(envelope);
-        var root = document.RootElement;
-        RequireProtocol(root);
-        var returnedGameId = root.GetProperty("gameId").GetString();
-        var hash = root.GetProperty("sha256").GetString();
-        if (returnedGameId != gameId || !Sha256(bytes).Equals(hash, StringComparison.OrdinalIgnoreCase))
-            throw new InvalidDataException("GameBox did not confirm the uploaded save checksum.");
-        return new CompanionSaveUploadResult(
-            gameId,
-            root.GetProperty("updatedAtMillis").GetInt64(),
-            hash!.ToLowerInvariant(),
-            root.GetProperty("conflictPreserved").GetBoolean());
+        try
+        {
+            var root = document.RootElement;
+            RequireProtocol(root);
+            var returnedGameId = root.GetProperty("gameId").GetString();
+            var hash = root.GetProperty("sha256").GetString();
+            if (returnedGameId != gameId || !Sha256(bytes).Equals(hash, StringComparison.OrdinalIgnoreCase))
+                throw new InvalidDataException("GameBox did not confirm the uploaded save checksum.");
+            return new CompanionSaveUploadResult(
+                gameId,
+                root.GetProperty("updatedAtMillis").GetInt64(),
+                hash!.ToLowerInvariant(),
+                root.GetProperty("conflictPreserved").GetBoolean());
+        }
+        catch (Exception exception) when (
+            exception is KeyNotFoundException or InvalidOperationException or FormatException)
+        {
+            throw new InvalidDataException("GameBox returned an incomplete save confirmation.", exception);
+        }
     }
 
     private HttpRequestMessage CreateRequest(

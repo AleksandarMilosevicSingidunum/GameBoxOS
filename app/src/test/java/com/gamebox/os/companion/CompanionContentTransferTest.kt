@@ -98,6 +98,34 @@ class CompanionContentTransferTest {
         }
     }
 
+    @Test fun failedReplacementRecoversOrphanedPreviousContent(): Unit = runBlocking {
+        val root = Files.createTempDirectory("companion-content-recovery-").toFile()
+        try {
+            val destination = root.resolve("imports/galaxy-patrol/Galaxy Patrol.nes")
+            destination.parentFile.mkdirs()
+            val backup = destination.resolveSibling(destination.name + ".companion-backup")
+            backup.writeText("PREVIOUS-CONTENT")
+            val incoming = root.resolve("request.partial").apply { writeText("NEW-CONTENT") }
+            val games = FakeGames()
+
+            val result = runCatching {
+                CompanionContentTransferStore(root, games).import(
+                    "galaxy-patrol",
+                    Base64.getEncoder().encodeToString("Galaxy Patrol.nes".toByteArray()),
+                    incoming,
+                    incoming.length(),
+                    "0".repeat(64),
+                )
+            }
+            assertTrue(result.isFailure)
+
+            assertEquals("PREVIOUS-CONTENT", destination.readText())
+            assertFalse(backup.exists())
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
     @Test fun requestReaderAuthenticatesBeforeReadingAndStagesContent(): Unit {
         val root = Files.createTempDirectory("companion-reader-").toFile()
         try {

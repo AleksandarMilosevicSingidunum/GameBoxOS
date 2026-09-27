@@ -81,7 +81,8 @@ public sealed class CompanionStatusClient
                 throw new InvalidDataException("GameBox returned an incomplete device status.");
             return new CompanionDeviceStatus(version, deviceName, status);
         }
-        catch (JsonException exception)
+        catch (Exception exception) when (
+            exception is JsonException or KeyNotFoundException or InvalidOperationException or FormatException)
         {
             throw new InvalidDataException("GameBox returned invalid device status JSON.", exception);
         }
@@ -135,7 +136,8 @@ public sealed class CompanionStatusClient
             }
             return games;
         }
-        catch (JsonException exception)
+        catch (Exception exception) when (
+            exception is JsonException or KeyNotFoundException or InvalidOperationException or FormatException)
         {
             throw new InvalidDataException("GameBox returned invalid library JSON.", exception);
         }
@@ -184,7 +186,8 @@ public sealed class CompanionStatusClient
                 root.GetProperty("favorite").GetBoolean() != favorite)
                 throw new InvalidDataException("GameBox returned an invalid library update confirmation.");
         }
-        catch (JsonException exception)
+        catch (Exception exception) when (
+            exception is JsonException or KeyNotFoundException or InvalidOperationException or FormatException)
         {
             throw new InvalidDataException("GameBox returned invalid library update JSON.", exception);
         }

@@ -24,7 +24,7 @@ object CompanionStatusRoute {
         ) {
             return CompanionHttpResponse(401, """{"error":"unauthorized"}""")
         }
-        val safeName = deviceName.replace("\\", "\\\\").replace("\"", "\\\"")
+        val safeName = deviceName.companionJsonEscape()
         return CompanionHttpResponse(
             200,
             """{"protocolVersion":1,"deviceName":"$safeName","status":"ready"}""",
