@@ -16,6 +16,14 @@ not prove working emulators, providers, saves or release signing.
 | P2 | UI interaction and populated-state coverage | PR #266 passed unit, instrumentation and real phone/DeX screenshot jobs. Populated provider, active downloads, large fonts and physical controller flows need broader coverage. |
 | P2 | Hardware and external services | Physical DeX/controller/storage/thermal checks and authenticated cloud endpoints must be validated when resources are available; they do not block independent software work. |
 
+Fresh physical Honor↔Windows checkpoint (27 September 2026): after reinstalling the
+debug APK, the Windows Companion was re-enabled through the phone's Network settings.
+The repository .NET 8 probes then verified UDP discovery, authenticated `GameBox / ready /
+protocol 1` status, an 8-entry library response, and the authenticated configuration
+round-trip. The clean reinstall intentionally reports all catalog entries as
+`NOT_INSTALLED`; this evidence is separate from the earlier physical Galaxy Patrol
+gameplay and managed-save mutation rehearsals.
+
 The catalog repair changes database state only for six known legacy demo IDs
 without local content references or a real download source. It does not delete
 files, save records, favorites, history or emulator preferences. Imported copies,

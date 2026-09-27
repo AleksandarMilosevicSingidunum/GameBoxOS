@@ -168,6 +168,16 @@ cloud-preflight message interpolation defect that had rendered `${safeCloudError
 literally. `GeneralContentRemovalTest` now asserts the real failure message shape, and
 three focused instrumentation tests passed on the Honor device.
 
+Reproduction checkpoint after the debug APK was reinstalled on the Honor (27 September
+2026): the Windows Companion switch was initially disabled, so port 49500 correctly
+refused a TCP connection. Enabling it through the physical Network settings flow made
+the endpoint reachable again. The repository's .NET 8 probes then completed nonce-
+correlated UDP discovery, authenticated status (`GameBox / ready / protocol 1`), an
+8-entry library read, and an authenticated configuration round-trip. The freshly
+installed app has no retained Galaxy Patrol installation, so the live library correctly
+reports the eight catalog entries as `NOT_INSTALLED`; this is a clean-install state and
+does not replace the earlier physical gameplay or live mutation evidence above.
+
 The local Android JVM suite then exposed a host-capability failure in
 `DirectorySaveAdapterTest`: Windows symbolic-link creation is denied without the
 required privilege. The test now classifies that specific capability absence as a
