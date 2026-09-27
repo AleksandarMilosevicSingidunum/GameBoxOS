@@ -26,6 +26,12 @@ After rebuilding with the PSP adapter change, the selected physical Honor Magic6
 instrumentation run completed `62/62`, zero failures, zero skips. `ANDROID_SERIAL` was
 used so this result is explicitly the Honor hardware result rather than an emulator run.
 
+Windows validation checkpoint (27 September 2026): the installed .NET SDK/runtime
+`8.0.314`/`8.0.17` ran the complete `GameBox.Windows.Core.Tests` harness successfully.
+The companion then published self-contained for `win-x64`; the generated ZIP and unsigned
+MSIX both passed the repository checksum and provenance validators. This is local Windows
+software/package evidence, not signed-install or physical Windows acceptance.
+
 The repository baseline is now extended through local commits `0b12fb6`, `ea2bb9f`, and
 `a92bacc` after the Vimm's Lair discovery increment. Configured sources
 can probe the bounded HTTPS listing structure, search supported consoles, hydrate
