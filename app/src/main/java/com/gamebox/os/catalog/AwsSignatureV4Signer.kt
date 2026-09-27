@@ -1,6 +1,7 @@
 package com.gamebox.os.catalog
 
 import java.net.URI
+import java.nio.charset.StandardCharsets
 import java.time.Clock
 import java.time.Instant
 import java.time.ZoneOffset
@@ -20,7 +21,7 @@ class AwsSignatureV4Signer(
         val date = amzDate.substring(0, 8)
         val parsed = URI(uri)
         val host = parsed.host ?: throw IllegalArgumentException("S3 URI must include a host")
-        val canonicalUri = (parsed.rawPath.ifEmpty { "/" }).split("/").joinToString("/") { java.net.URLEncoder.encode(it, "UTF-8").replace("+", "%20") }
+        val canonicalUri = canonicalUriForSigning(uri)
         val canonicalQuery = parsed.rawQuery.orEmpty().split("&").filter { it.isNotBlank() }.sorted().joinToString("&")
         val canonicalHeaders = "host:$host\nx-amz-content-sha256:$payloadSha256\nx-amz-date:$amzDate\n"
         val signedHeaders = "host;x-amz-content-sha256;x-amz-date"
@@ -35,3 +36,51 @@ class AwsSignatureV4Signer(
         return SignedRequest("AWS4-HMAC-SHA256 Credential=" + credentials.accessKey + "/" + scope + ", SignedHeaders=" + signedHeaders + ", Signature=" + signature, amzDate)
     }
 }
+
+/**
+ * Canonicalizes an already parsed URI path without double-encoding existing escapes.
+ * S3 object keys may legitimately contain spaces, plus signs, or non-ASCII bytes.
+ */
+internal fun canonicalUriForSigning(uri: String): String {
+    val rawPath = URI(uri).rawPath.ifEmpty { "/" }
+    return rawPath.split('/').joinToString("/") { canonicalPathSegment(it) }
+}
+
+private fun canonicalPathSegment(segment: String): String {
+    val result = StringBuilder(segment.length)
+    var index = 0
+    while (index < segment.length) {
+        val character = segment[index]
+        if (character == '%' && index + 2 < segment.length &&
+            hexValue(segment[index + 1]) >= 0 && hexValue(segment[index + 2]) >= 0
+        ) {
+            result.append('%')
+                .append(segment[index + 1].uppercaseChar())
+                .append(segment[index + 2].uppercaseChar())
+            index += 3
+            continue
+        }
+
+        val codePoint = segment.codePointAt(index)
+        String(Character.toChars(codePoint)).toByteArray(StandardCharsets.UTF_8).forEach { byte ->
+            val value = byte.toInt() and 0xff
+            val decoded = value.toChar()
+            if (value < 128 && isUnreserved(decoded)) result.append(decoded)
+            else result.append('%').append(HEX[value ushr 4]).append(HEX[value and 0x0f])
+        }
+        index += Character.charCount(codePoint)
+    }
+    return result.toString()
+}
+
+private fun isUnreserved(value: Char): Boolean =
+    value.isLetterOrDigit() || value == '-' || value == '_' || value == '.' || value == '~'
+
+private fun hexValue(value: Char): Int = when (value) {
+    in '0'..'9' -> value - '0'
+    in 'a'..'f' -> value - 'a' + 10
+    in 'A'..'F' -> value - 'A' + 10
+    else -> -1
+}
+
+private val HEX = "0123456789ABCDEF"

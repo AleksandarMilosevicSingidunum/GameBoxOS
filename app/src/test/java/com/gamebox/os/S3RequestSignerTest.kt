@@ -2,10 +2,20 @@ package com.gamebox.os
 
 import com.gamebox.os.catalog.CatalogProviderConfig
 import com.gamebox.os.catalog.CatalogTransport
+import com.gamebox.os.catalog.canonicalUriForSigning
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class S3RequestSignerTest {
+    @Test
+    fun canonicalPathPreservesEscapesAndEncodesUnescapedObjectKeyBytes() {
+        assertEquals(
+            "/My%20Saves/game%2Bone/%E2%98%83",
+            canonicalUriForSigning("https://s3.example.test/My%20Saves/game%2bone/☃"),
+        )
+        assertEquals("/a//b", canonicalUriForSigning("https://s3.example.test/a//b"))
+    }
+
     @Test
     fun s3CatalogConfigurationRetainsItsSigningRegion() {
         val config = CatalogProviderConfig(
