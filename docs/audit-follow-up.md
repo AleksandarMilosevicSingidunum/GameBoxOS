@@ -22,7 +22,7 @@ deterministic exact/prefix/word-prefix result ranking. It caches only successful
 HTML responses and preserves the metadata-only legal-source boundary.
 
 Physical Android validation checkpoint (27 September 2026): the authorized Honor Magic6 Pro
-Wi-Fi transport now passes the complete 60-test debug instrumentation suite with zero
+Wi-Fi transport now passes the complete 61-test debug instrumentation suite with zero
 failures and zero skips. The earlier local capability-limited run exposed a production focus defect: the root
 Compose container handled controller key events but did not request focus on a physical
 phone. The root now owns an initial focus target. This is physical UI/controller evidence,
@@ -31,8 +31,8 @@ separately connected external-controller and external-display evidence remain pe
 
 Local emulator validation checkpoint (27 September 2026): after installing the official
 Android command-line tools and creating the `GameBox_API35` AVD from the Google APIs
-x86_64 image, the same complete 60-test instrumentation suite passed with zero failures
-and zero skips. A separate API 37.1 Play Store AVD booted successfully but its 30 UI
+x86_64 image, the same complete 61-test instrumentation suite passed with zero failures
+and one explicit permission-gated skip. A separate API 37.1 Play Store AVD booted successfully but its 30 UI
 failures were all the Espresso `InputManager.getInstance` incompatibility, so that run
 is not treated as app-failure evidence. Neither emulator run proves real game execution,
 controller input, save ownership, or uninstall/reinstall recovery.
@@ -174,10 +174,11 @@ on the same listening socket. Parser tests cover truncation, line endings, inval
 and duplicate headers, line/head/header-count limits and unsupported request bodies.
 
 Merged in PR #276 after Android unit/build, instrumentation, phone/DeX screenshots
-and Windows build checks passed. Pending: real Android service lifecycle/start-stop
-coverage and the Windows client against the Android device endpoint. This change
-does not implement file transfer/synchronization, durable pairing discovery, or
-general save management, and does not close the full EXT-14 acceptance gate.
+and Windows build checks passed. The connected-device lifecycle regression now starts
+the foreground service, authenticates a loopback status request, stops it, and restores
+the prior settings. The separate Honor↔Windows live probe above validates the client
+against the Android endpoint. These checks still do not replace routed-network,
+long-transfer, or production-signed acceptance.
 
 
 ## Nearest-neighbor controller focus recovery (UI-42)

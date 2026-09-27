@@ -10,7 +10,8 @@ Two pure identity tests pass locally. A new Android test exercises two controlle
 with separate imports, backup/restore, corrupt cross-game records and synthetic
 save bytes. The Android unit/build check and Windows build passed at c683dbf;
 subsequent local API-35 emulator instrumentation and Honor Magic6 Pro
-instrumentation both passed their complete 60-test suites.
+instrumentation both passed their complete 61-test suites; the API-35 run has the
+documented permission-gated skip while the Honor run has no skips.
 Game details now receive the per-game factory and show a
 managed-copy panel with import, backup, export and confirmed restore. Compose tests
 cover confirmation, cancellation and disabled controls; they pass on the API-35

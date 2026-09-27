@@ -180,6 +180,10 @@ class SettingsRepository(private val context: Context) {
         secret
     }
 
+    suspend fun clearCompanionPairingSecret() = withContext(Dispatchers.IO) {
+        secretStore.put(COMPANION_PAIRING_SECRET, null)
+    }
+
     suspend fun setCompanionConfiguration(enabled: Boolean, port: Int = 49_500) {
         require(port in 10_240..65_535) { "Companion port must be between 10240 and 65535" }
         context.gameBoxDataStore.edit { preferences ->
