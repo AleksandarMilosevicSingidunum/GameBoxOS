@@ -711,7 +711,7 @@ sealed class UnknownLengthHttpContent(string value) : HttpContent
     private readonly byte[] bytes = System.Text.Encoding.UTF8.GetBytes(value);
 
     protected override Task SerializeToStreamAsync(Stream stream, TransportContext? context) =>
-        stream.WriteAsync(bytes);
+        stream.WriteAsync(bytes).AsTask();
 
     protected override bool TryComputeLength(out long length)
     {

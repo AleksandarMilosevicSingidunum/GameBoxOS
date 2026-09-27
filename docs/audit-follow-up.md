@@ -37,6 +37,12 @@ Windows companion status, library, save, and content clients now normalize incom
 or malformed JSON confirmations into bounded invalid-data failures, with console-test
 coverage for missing response fields.
 
+The PC now has the official .NET 8.0.314 SDK installed, including the .NET 8 runtime.
+The Windows core executable test harness passes locally. Its unknown-length HTTP test
+content was made compatible with the .NET 8 `Task` override contract by converting the
+stream write `ValueTask` to a `Task`. This is local Windows protocol evidence; a real
+Android-to-Windows LAN session is still pending.
+
 ## Companion HTTP connection recovery (EXT-14)
 
 - Fixed the request-header terminator: the previous `return@repeat` continued reading
