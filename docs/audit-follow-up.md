@@ -79,7 +79,7 @@ boundary. Companion content replacement now also recovers an orphaned previous c
 before retrying, preserving the old installed content when a staged replacement fails.
 The catalog transport failure double is now test-only; the Android production source no
 longer contains a `NoopCatalogTransportClient` placeholder. The complete Android JVM
-suite was rerun after this cleanup: 504 tests, zero failures, and one explicit
+suite was rerun after this cleanup: 514 tests, zero failures, and one explicit
 privilege-based skip.
 Windows companion status, library, save, and content clients now normalize incomplete
 or malformed JSON confirmations into bounded invalid-data failures, with console-test
@@ -130,7 +130,9 @@ Managed multi-artifact save snapshots now publish each complete backup set under
 unique generation directory and atomically switch the manifest only after every artifact
 has succeeded. Restore follows the active generation, while legacy version-1 manifests
 remain readable. JVM coverage exercises generation round-tripping, legacy decoding, and
-restore through the active generation; real emulator save compatibility and cloud
+restore through the active generation. Incomplete or failed manifest publications now
+discard only their newly-created generation, leaving the active generation intact. Real
+emulator save compatibility and cloud
 endpoint acceptance remain separate evidence.
 
 The rebuilt debug APK was installed on the authorized Honor Magic6 Pro over Wi-Fi ADB.
@@ -162,7 +164,7 @@ The local Android JVM suite then exposed a host-capability failure in
 `DirectorySaveAdapterTest`: Windows symbolic-link creation is denied without the
 required privilege. The test now classifies that specific capability absence as a
 skip while retaining full symlink coverage on capable CI hosts. The complete local
-suite passes with 504 tests, zero failures, and one explicit privilege-based skip;
+suite passes with 514 tests, zero failures, and one explicit privilege-based skip;
 the Windows .NET core suite also passes.
 
 ## Companion HTTP connection recovery (EXT-14)

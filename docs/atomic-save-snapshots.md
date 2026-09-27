@@ -8,7 +8,8 @@ Multi-artifact coordination preflights every discovered source and publishes eac
 set under a unique generation directory. The manifest is atomically replaced only after
 every generation artifact succeeds; restore follows the active generation, so a process
 stop between individual artifact writes leaves the prior complete generation selected.
-Legacy version-1 manifests remain readable and continue to use their original paths.
+If an artifact or manifest publication fails, the newly-created generation is discarded
+without touching the active generation. Legacy version-1 manifests remain readable and continue to use their original paths.
 
 Generation, legacy-compatibility, combined snapshot, service and manifest-wiring tests
 pass in the Android JVM suite. This does not prove real emulator save compatibility.
