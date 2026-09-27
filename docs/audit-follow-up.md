@@ -7,6 +7,15 @@ not a claim that subsequent branch work is already on main.
 
 ## Current implementation checkpoint (27 September 2026)
 
+Blueprint UI revision checkpoint: primary navigation now matches the mockup hierarchy
+(Home, Library, Store, Media, PC and Settings), while Downloads remains a utility
+destination. Automatic layout selection now keeps 16:9 high-density displays on the
+wide living-room composition and retains compact behavior for phones and narrow
+windows. The fresh production screenshot flow passed on the authorized Honor device
+and API-35 emulator after this revision; the wide render was visually compared with
+the Blueprint Home composition. This is Android UI/instrumentation evidence, not
+physical DeX, external-controller, hover/motion, or complete state-matrix acceptance.
+
 Per-game managed-save controls are now used by every Details screen, not only the
 bundled Galaxy Patrol fixture. The selected game's save controller is also used for
 content-removal preflight, so imported PSP/other-console titles no longer risk reading
