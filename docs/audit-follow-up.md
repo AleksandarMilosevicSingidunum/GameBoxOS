@@ -107,6 +107,9 @@ probe for nonce-correlated UDP discovery and an idempotent
 round-trip probe. Its unknown-length HTTP test
 content was made compatible with the .NET 8 `Task` override contract by converting the
 stream write `ValueTask` to a `Task`.
+The same harness now verifies that caller cancellation before an owned-content upload
+prevents network dispatch and retry; cancellation during a real long-running LAN
+transfer remains separate acceptance evidence.
 
 The protected Android production workflow now runs the release-manifest unit tests,
 creates a schema-compatible APK provenance manifest from the signed artifact, requires

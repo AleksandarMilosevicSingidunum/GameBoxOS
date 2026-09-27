@@ -519,6 +519,24 @@ try
         "192.168.1.22", 49_500, companionSecret, "galaxy-patrol", contentPath);
     Require(retryContentUploadAttempts == 2 && retriedContentUpload.Sha256 == contentHash,
         "Owned-content uploads must retry transient LAN failures after idempotent replay support.");
+    using var cancelledContent = new CancellationTokenSource();
+    cancelledContent.Cancel();
+    var cancelledContentAttempts = 0;
+    using var cancelledContentHttp = new HttpClient(new StubHttpMessageHandler(_ =>
+    {
+        cancelledContentAttempts++;
+        return new HttpResponseMessage(HttpStatusCode.OK);
+    }));
+    var cancelledContentObserved = false;
+    try
+    {
+        await new CompanionContentClient(cancelledContentHttp).UploadAsync(
+            "192.168.1.22", 49_500, companionSecret, "galaxy-patrol", contentPath,
+            cancelledContent.Token);
+    }
+    catch (OperationCanceledException) { cancelledContentObserved = true; }
+    Require(cancelledContentObserved && cancelledContentAttempts == 0,
+        "Owned-content uploads must honor caller cancellation before network access.");
     using var oversizedContentResponse = new HttpClient(new StubHttpMessageHandler(_ =>
         new HttpResponseMessage(HttpStatusCode.OK)
         {

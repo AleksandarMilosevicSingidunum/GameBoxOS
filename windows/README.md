@@ -42,6 +42,11 @@ packaging, and physical Windows acceptance testing. Authenticode signing and sig
 release upload are prepared through the protected `release-windows-production.yml`
 workflow.
 
+The local core harness also verifies that caller cancellation before an owned-content
+upload prevents hashing/network dispatch and does not enter retry logic. This is
+automated client evidence; cancellation during a real long-running LAN transfer still
+requires live acceptance.
+
 CI publishes the self-contained ZIP with a SHA-256 file and a validated JSON provenance manifest containing the exact artifact name, hash, byte size, runtime, self-contained flag, and source commit. Validation also requires exactly one non-empty `GameBox.Windows.exe` in the archive and verifies the published executable before upload.
 
 ## Build and test
