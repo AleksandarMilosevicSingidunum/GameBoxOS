@@ -19,4 +19,25 @@ class CatalogProviderConfigTest {
             CatalogProviderConfig(CatalogTransport.S3("https://example.test", "games"), " ")
         }
     }
+
+    @Test
+    fun rejectsMalformedAndCredentialBearingEndpointsBeforeStorage() {
+        assertThrows(IllegalArgumentException::class.java) {
+            CatalogProviderConfig(CatalogTransport.Https("https://"))
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+            CatalogProviderConfig(CatalogTransport.WebDav("https://user:pass@example.test/library"))
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+            CatalogProviderConfig(CatalogTransport.S3("https://example.test/s3?tenant=one", "games"))
+        }
+    }
+
+    @Test
+    fun allowsHttpsCatalogQueryButRejectsCollectionQueries() {
+        CatalogProviderConfig(CatalogTransport.Https("https://example.test/catalog.json?channel=stable"))
+        assertThrows(IllegalArgumentException::class.java) {
+            CatalogProviderConfig(CatalogTransport.WebDav("https://example.test/library?tenant=one"))
+        }
+    }
 }
