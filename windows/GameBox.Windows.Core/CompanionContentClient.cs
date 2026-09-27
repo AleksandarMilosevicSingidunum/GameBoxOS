@@ -145,9 +145,8 @@ public sealed class CompanionContentClient
 
     private static string ContentPath(string gameId)
     {
-        if (string.IsNullOrWhiteSpace(gameId) || gameId.Length > 96 ||
-            !char.IsLetterOrDigit(gameId[0]) ||
-            gameId.Any(static c => !(char.IsLower(c) || char.IsDigit(c) || c == '-')))
+        if (string.IsNullOrWhiteSpace(gameId) ||
+            !System.Text.RegularExpressions.Regex.IsMatch(gameId, "^[a-z0-9][a-z0-9-]{0,95}$"))
             throw new ArgumentException("Game ID is invalid.", nameof(gameId));
         return "/v1/content/" + gameId;
     }

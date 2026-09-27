@@ -653,6 +653,11 @@ try
             "192.168.1.22", 49_500, companionSecret, "../escape", contentPath)
             .GetAwaiter().GetResult(),
         "Content upload must reject traversal IDs.");
+    RequireThrows<ArgumentException>(() =>
+        new CompanionContentClient(new HttpClient()).UploadAsync(
+            "192.168.1.22", 49_500, companionSecret, "Galaxy-Patrol", contentPath)
+            .GetAwaiter().GetResult(),
+        "Content upload must reject IDs that the Android route does not accept.");
 
     HttpRequestMessage? favoriteRequest = null;
     using var favoriteHttp = new HttpClient(new StubHttpMessageHandler(request =>
