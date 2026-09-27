@@ -47,6 +47,12 @@ complete debug instrumentation suite passed `65/65` with zero skips and zero fai
 This supersedes the earlier 64-test emulator count while preserving the separate Honor
 Desktop Mode runner limitation described above.
 
+The subsequent compact Store and stale-discovery-detail UI increments were installed
+on the same API-35 emulator. The complete instrumentation suite then passed `66/66`
+with zero skips and zero failures, including direct phone console-filter semantics and
+the updated Details composition. This remains emulator UI/lifecycle evidence, separate
+from the Honor Desktop Mode runner limitation and live provider behavior.
+
 Honor external-display checkpoint (28 September 2026): the connected Honor Magic6 Pro
 reported the SMART TV as Android display 23 at 1920x1080/160 dpi. Launching
 `MainActivity` explicitly on that display produced a real GameBox task on the TV, and
