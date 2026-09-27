@@ -55,6 +55,16 @@ This validates authenticated device status and library retrieval. Save/content a
 favorite mutations remain explicit client operations and are not run by the default
 probe.
 
+To validate unauthenticated LAN discovery separately, provide the expected device
+address and Companion port:
+
+```powershell
+dotnet run --project windows/GameBox.Windows.Core.Tests/GameBox.Windows.Core.Tests.csproj -c Release -- --live-companion-discovery 192.168.1.2 49500
+```
+
+The discovery probe requires the Android device and Windows PC to permit the bounded
+UDP broadcast on port 49499; it does not expose or require the pairing secret.
+
 
 ## Signed Windows release
 

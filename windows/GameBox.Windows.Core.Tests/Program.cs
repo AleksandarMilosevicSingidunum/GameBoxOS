@@ -8,6 +8,11 @@ if (args.Length > 0 && string.Equals(args[0], "--live-companion", StringComparis
     await RunLiveCompanionProbeAsync(args.Skip(1).ToArray());
     return;
 }
+if (args.Length > 0 && string.Equals(args[0], "--live-companion-discovery", StringComparison.OrdinalIgnoreCase))
+{
+    await RunLiveCompanionDiscoveryProbeAsync(args.Skip(1).ToArray());
+    return;
+}
 
 var root = Path.Combine(Path.GetTempPath(), "gamebox-windows-tests-" + Guid.NewGuid().ToString("N"));
 Directory.CreateDirectory(root);
@@ -708,6 +713,20 @@ static async Task RunLiveCompanionProbeAsync(string[] args)
     Console.WriteLine($"Live Companion library entries: {library.Count}");
     foreach (var game in library)
         Console.WriteLine($"- {game.Id}: {game.Title} [{game.Platform}] {game.InstallState}");
+}
+
+static async Task RunLiveCompanionDiscoveryProbeAsync(string[] args)
+{
+    if (args.Length != 2 || !int.TryParse(args[1], out var expectedPort))
+        throw new ArgumentException("Usage: --live-companion-discovery <expected-host> <expected-port>");
+
+    var devices = await new CompanionDiscoveryClient().DiscoverAsync();
+    var device = devices.FirstOrDefault(item =>
+        string.Equals(item.Host, args[0], StringComparison.OrdinalIgnoreCase) &&
+        item.Port == expectedPort);
+    if (device is null)
+        throw new InvalidOperationException($"Companion discovery did not find {args[0]}:{expectedPort}.");
+    Console.WriteLine($"Live Companion discovery: {device.DeviceName} at {device.Host}:{device.Port}");
 }
 
 sealed class BlockingHandler : HttpMessageHandler
