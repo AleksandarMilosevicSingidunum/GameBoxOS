@@ -1,4 +1,4 @@
-# Per-game save controls — integration in progress
+# Per-game save controls — managed-copy integration
 
 The local controller accepts a validated game ID and derives initial/cloud save
 paths from it. Observed records outside that game's path are excluded before
@@ -12,8 +12,9 @@ save bytes. The Android unit/build check and Windows build passed at c683dbf;
 subsequent local API-35 emulator instrumentation and Honor Magic6 Pro
 instrumentation both passed their complete 61-test suites; the API-35 run has the
 documented permission-gated skip while the Honor run has no skips.
-Game details now receive the per-game factory and show a
-managed-copy panel with import, backup, export and confirmed restore. Compose tests
+Game details now receive the per-game factory and show the same managed-copy panel
+for every title, including imported PSP content, with import, backup, export and
+confirmed restore. Compose tests
 cover confirmation, cancellation and disabled controls; they pass on the API-35
 emulator. The integration remains separate from emulator-private save validation.
 
