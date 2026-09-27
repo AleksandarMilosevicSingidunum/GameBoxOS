@@ -7,6 +7,14 @@ not a claim that subsequent branch work is already on main.
 
 ## Current implementation checkpoint (27 September 2026)
 
+The Vimm PSP flow is now regression-covered with a concrete `God of War: Chains of
+Olympus` metadata fixture: bounded PSP listing search resolves the numeric vault link,
+details hydration preserves title/platform/region/year/artwork, and the result remains
+metadata/navigation-only. Multi-console Vimm search now propagates coroutine
+cancellation instead of converting cancellation into a reported platform failure. The
+complete Android JVM suite and the connected-device instrumentation suite pass after
+this change. No Vimm binary is downloaded or extracted.
+
 The repository baseline is now extended through local commits `0b12fb6`, `ea2bb9f`, and
 `a92bacc` after the Vimm's Lair discovery increment. Configured sources
 can probe the bounded HTTPS listing structure, search supported consoles, hydrate

@@ -4,6 +4,7 @@ import com.gamebox.os.domain.normalizeCatalogTitle
 import java.net.URI
 import java.net.URL
 import javax.net.ssl.HttpsURLConnection
+import kotlinx.coroutines.CancellationException
 
 fun interface VimmLairTransport {
     suspend fun get(uri: URI): String
@@ -423,10 +424,13 @@ suspend fun searchVimmLairAcrossPlatforms(
     val games = mutableListOf<DiscoverySourceGame>()
     val failed = mutableListOf<String>()
     platforms.forEach { platform ->
-        runCatching {
-            source.search(platform = platform, query = query).games
-        }.onSuccess(games::addAll)
-            .onFailure { failed += platform }
+        try {
+            games += source.search(platform = platform, query = query).games
+        } catch (error: CancellationException) {
+            throw error
+        } catch (_: Throwable) {
+            failed += platform
+        }
     }
     return VimmLairSearchSummary(
         games = games

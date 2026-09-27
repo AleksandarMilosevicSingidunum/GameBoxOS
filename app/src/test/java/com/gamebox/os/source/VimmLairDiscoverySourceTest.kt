@@ -1,6 +1,8 @@
 package com.gamebox.os.source
 
 import java.net.URI
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -87,6 +89,72 @@ class VimmLairDiscoverySourceTest {
         assertEquals(1, summary.games.size)
         assertEquals("PS2", summary.games.single().platform)
         assertEquals("God Hand", summary.games.single().title)
+    }
+
+    @Test
+    fun pspChainsOfOlympusFlowSearchesHydratesAndKeepsVimmMetadataOnly() = runBlocking {
+        val config = GameSourceConfig(
+            id = "vimm",
+            name = "Vimm's Lair",
+            type = GameSourceProviderType.VIMM_LAIR,
+            baseUrl = "https://vimm.net/vault",
+            platforms = setOf("PSP"),
+        )
+        val transport = VimmLairTransport { uri ->
+            when (uri.path) {
+                "/vault/PSP/G" -> """
+                    <a href="/vault/24680">God of War: Chains of Olympus</a>
+                """.trimIndent()
+                "/vault/24680" -> """
+                    <meta property="og:title" content="God of War: Chains of Olympus - Vimm's Lair">
+                    <meta property="og:image" content="https://vimm.net/image.php?id=24680">
+                    <table>
+                      <tr><td>System</td><td>PSP</td></tr>
+                      <tr><td>Region</td><td>USA</td></tr>
+                      <tr><td>Release Date</td><td>March 4, 2008</td></tr>
+                    </table>
+                """.trimIndent()
+                else -> error("unexpected Vimm request: $uri")
+            }
+        }
+        val source = VimmLairDiscoverySource(config, transport)
+
+        val result = source.search(platform = "PSP", query = "God of War Chains of Olympus").games.single()
+        val hydrated = source.hydrate(result)
+
+        assertEquals("24680", result.externalId)
+        assertEquals("God of War: Chains of Olympus", hydrated.title)
+        assertEquals("PSP", hydrated.platform)
+        assertEquals("USA", hydrated.region)
+        assertEquals(2008, hydrated.year)
+        assertEquals("https://vimm.net/vault/24680", hydrated.detailsUrl)
+        assertEquals("https://vimm.net/image.php?id=24680", hydrated.coverUrl)
+        assertTrue(hydrated.detailsUrl!!.startsWith("https://vimm.net/vault/"))
+    }
+
+    @Test
+    fun multiConsoleSearchPropagatesCancellationInsteadOfMarkingPlatformFailed() = runBlocking {
+        val config = GameSourceConfig(
+            id = "vimm",
+            name = "Vimm's Lair",
+            type = GameSourceProviderType.VIMM_LAIR,
+            baseUrl = "https://vimm.net/vault",
+            platforms = setOf("PSP", "PS2"),
+        )
+        val cancellation = CancellationException("cancelled")
+        val sourceJob = launch {
+            try {
+                searchVimmLairAcrossPlatforms(
+                    config = config,
+                    query = "God of War",
+                    transport = VimmLairTransport { throw cancellation },
+                )
+                error("expected cancellation")
+            } catch (error: CancellationException) {
+                assertEquals("cancelled", error.message)
+            }
+        }
+        sourceJob.join()
     }
 
 
