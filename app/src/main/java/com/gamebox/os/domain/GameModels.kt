@@ -120,7 +120,7 @@ fun InstallState.primaryAction(): String = when (this) {
     InstallState.PAUSED -> "Resume"
     InstallState.VERIFYING, InstallState.INSTALLING -> "View progress"
     InstallState.INSTALLED -> "Play"
-    InstallState.UPDATE_AVAILABLE -> "Play"
+    InstallState.UPDATE_AVAILABLE -> "Update"
     InstallState.MISSING_FILES -> "Locate or reinstall"
     InstallState.FAILED -> "Retry"
 }

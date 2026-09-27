@@ -18,6 +18,18 @@ class DetailControllerActionPlanTest {
     }
 
     @Test
+    fun updateAvailableGameOffersUpdateInsteadOfPlay() {
+        assertEquals(
+            DetailControllerActionPlan(
+                "Update",
+                DetailControllerPrimaryAction.PRIMARY,
+                "Favorite",
+            ),
+            plan(InstallState.UPDATE_AVAILABLE),
+        )
+    }
+
+    @Test
     fun activeWorkOpensDownloads() {
         listOf(
             InstallState.QUEUED,

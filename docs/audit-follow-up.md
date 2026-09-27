@@ -217,6 +217,12 @@ The API-35 emulator now also has RetroArch 1.22.2's official universal Android p
 installed and initialized, with the `Nintendo - NES / Famicom (FCEUmm)` core installed
 through RetroArch's own Online Updater. This closes the missing-frontend/core setup gate.
 
+Update-available UI checkpoint (28 September 2026): the Blueprint's `UPDATE_AVAILABLE`
+state now exposes an explicit **Update** primary action and controller X label. For a
+configured remote source it enters the remote download/install workflow; when no source
+is available it opens Downloads for recovery instead of launching stale installed content.
+The JVM action-plan coverage now protects this distinction from regressing.
+
 Live API-35 gameplay/lifecycle checkpoint (27 September 2026): GameBox installed the
 bundled hash-verified Galaxy Patrol fixture, reported a successful verified-asset worker,
 and opened the real `com.retroarch/.browser.retroactivity.RetroActivityFuture`. The

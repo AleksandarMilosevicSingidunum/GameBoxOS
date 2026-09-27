@@ -3062,7 +3062,8 @@ internal fun detailControllerActionPlan(
         DetailControllerPrimaryAction.OPEN_DOWNLOADS -> "View download"
         DetailControllerPrimaryAction.OPEN_GAME_SETTINGS -> "Game settings"
         DetailControllerPrimaryAction.PRIMARY -> when {
-            state in setOf(InstallState.INSTALLED, InstallState.UPDATE_AVAILABLE) -> "Play"
+            state == InstallState.INSTALLED -> "Play"
+            state == InstallState.UPDATE_AVAILABLE -> "Update"
             state == InstallState.PAUSED -> "Resume"
             state == InstallState.FAILED -> "Retry"
             authorizedFixture -> "Install game"
@@ -3141,8 +3142,10 @@ private fun DetailsScreen(
                     if (hasRemoteSource) remoteDownloadController.resume(game) else onDownloads()
                 InstallState.QUEUED, InstallState.DOWNLOADING, InstallState.VERIFYING,
                 InstallState.INSTALLING -> onDownloads()
-                InstallState.INSTALLED, InstallState.UPDATE_AVAILABLE ->
+                InstallState.INSTALLED ->
                     gameLaunchController.launch(game)
+                InstallState.UPDATE_AVAILABLE ->
+                    if (hasRemoteSource) remoteDownloadController.install(game) else onDownloads()
             }
         }
     }
