@@ -29,6 +29,13 @@ phone. The root now owns an initial focus target. This is physical UI/controller
 and the same device now also has a verified real emulator gameplay/lifecycle run below;
 separately connected external-controller and external-display evidence remain pending.
 
+Direct physical rerun (27 September 2026): the rebuilt debug APK and instrumentation APK
+were installed over the authorized Honor Magic6 Pro Wi-Fi ADB serial
+`adb-A54J023318002698-YK2vvO._adb-tls-connect._tcp`, and `am instrument` completed the
+full 61-test suite with `OK (61 tests)`, zero failures, and zero skips. This is a fresh
+physical-device instrumentation result; it is kept separate from the API-35 emulator
+run and from live RetroArch gameplay evidence.
+
 Local emulator validation checkpoint (27 September 2026): after installing the official
 Android command-line tools and creating the `GameBox_API35` AVD from the Google APIs
 x86_64 image, the same complete 61-test instrumentation suite passed with zero failures
