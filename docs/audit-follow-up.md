@@ -40,8 +40,14 @@ coverage for missing response fields.
 The PC now has the official .NET 8.0.314 SDK installed, including the .NET 8 runtime.
 The Windows core executable test harness passes locally. Its unknown-length HTTP test
 content was made compatible with the .NET 8 `Task` override contract by converting the
-stream write `ValueTask` to a `Task`. This is local Windows protocol evidence; a real
-Android-to-Windows LAN session is still pending.
+stream write `ValueTask` to a `Task`.
+
+The rebuilt debug APK was installed on the authorized Honor Magic6 Pro over Wi-Fi ADB.
+The physical Network settings flow enabled the Windows Companion on port 49500 and
+generated a runtime pairing secret. A local .NET 8 client then connected to the phone
+over `192.168.1.2:49500`, authenticated successfully, received `GameBox / ready /
+protocol 1`, and read all 8 library entries. This is real Android-to-Windows LAN
+evidence; save/content mutation and a production-signed companion session remain open.
 
 ## Companion HTTP connection recovery (EXT-14)
 
@@ -147,7 +153,7 @@ and live emulator gameplay remain pending. Intent dispatch is not proof of gamep
 3. Live provider/download/volume validation against real configured endpoints and storage.
 4. Physical controller and Honor Magic5 Pro external-display recovery/soak acceptance.
 5. Signed production build, clean upgrade, update-channel and rollback rehearsal.
-6. Windows Companion end-to-end validation against the Android endpoint on a real LAN.
+6. Windows Companion save/content mutation validation and a production-signed LAN session.
 
 The released-schema migration matrix and monotonic Android version-code generation are now
 implemented and exercised by automated CI. They remain prerequisites for the signed
