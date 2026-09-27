@@ -3,7 +3,6 @@ package com.gamebox.os.catalog
 interface CatalogTransportClient {
     suspend fun fetch(transport: CatalogTransport, credentials: CatalogCredentials?): String
 }
-
 class CatalogTransportProvider(
     private val client: CatalogTransportClient,
     private val parser: CatalogParser,
@@ -21,8 +20,3 @@ class CatalogTransportProvider(
     }
 }
 
-class NoopCatalogTransportClient : CatalogTransportClient {
-    override suspend fun fetch(transport: CatalogTransport, credentials: CatalogCredentials?): String {
-        throw UnsupportedOperationException("No catalog transport client configured for $transport")
-    }
-}

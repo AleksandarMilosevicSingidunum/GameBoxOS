@@ -33,6 +33,10 @@ transferred filenames, with JVM coverage for status serialization. This keeps th
 protocol parseable for valid user metadata without expanding the content-transfer trust
 boundary. Companion content replacement now also recovers an orphaned previous copy
 before retrying, preserving the old installed content when a staged replacement fails.
+The catalog transport failure double is now test-only; the Android production source no
+longer contains a `NoopCatalogTransportClient` placeholder. The complete Android JVM
+suite was rerun after this cleanup: 503 tests, zero failures, and one explicit
+privilege-based skip.
 Windows companion status, library, save, and content clients now normalize incomplete
 or malformed JSON confirmations into bounded invalid-data failures, with console-test
 coverage for missing response fields. The shared bounded retry policy now also classifies

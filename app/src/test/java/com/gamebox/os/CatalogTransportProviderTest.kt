@@ -7,7 +7,6 @@ import com.gamebox.os.catalog.CatalogProviderConfig
 import com.gamebox.os.catalog.CatalogParser
 import com.gamebox.os.catalog.CatalogCredentials
 import com.gamebox.os.catalog.InMemoryCatalogCredentialStore
-import com.gamebox.os.catalog.NoopCatalogTransportClient
 import com.gamebox.os.catalog.CatalogProvider
 import com.gamebox.os.catalog.CatalogSnapshot
 import com.gamebox.os.catalog.SelectingCatalogProvider
@@ -23,7 +22,7 @@ class CatalogTransportProviderTest {
     @Test
     fun noopClientFailsExplicitly() {
         assertThrows(UnsupportedOperationException::class.java) {
-            runBlocking { NoopCatalogTransportClient().fetch(CatalogTransport.WebDav("https://example.test"), null) }
+            runBlocking { FailingCatalogTransportClient().fetch(CatalogTransport.WebDav("https://example.test"), null) }
         }
     }
 
@@ -87,7 +86,7 @@ class CatalogTransportProviderTest {
     @Test
     fun connectionTestReturnsFailureInsteadOfThrowing() = runBlocking {
         val provider = CatalogTransportProvider(
-            client = NoopCatalogTransportClient(),
+            client = FailingCatalogTransportClient(),
             parser = CatalogParser(),
             config = { CatalogProviderConfig(CatalogTransport.Https("https://example.test/catalog.json")) },
         )
@@ -120,4 +119,9 @@ class CatalogTransportProviderTest {
         assertEquals("s3", provider.load().providerId)
     }
 
+}
+
+private class FailingCatalogTransportClient : CatalogTransportClient {
+    override suspend fun fetch(transport: CatalogTransport, credentials: CatalogCredentials?): String =
+        throw UnsupportedOperationException("No catalog transport client configured for $transport")
 }
