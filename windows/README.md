@@ -43,6 +43,18 @@ dotnet run --project windows/GameBox.Windows.Core.Tests/GameBox.Windows.Core.Tes
 dotnet publish windows/GameBox.Windows/GameBox.Windows.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true
 ```
 
+For an explicitly requested live LAN read-only check, provide the Android device's
+address, companion port, and pairing secret at runtime; the secret is not persisted
+or printed:
+
+```powershell
+dotnet run --project windows/GameBox.Windows.Core.Tests/GameBox.Windows.Core.Tests.csproj -c Release -- --live-companion 192.168.1.2 49500 $pairingSecret
+```
+
+This validates authenticated device status and library retrieval. Save/content and
+favorite mutations remain explicit client operations and are not run by the default
+probe.
+
 
 ## Signed Windows release
 

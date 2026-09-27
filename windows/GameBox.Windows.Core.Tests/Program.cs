@@ -3,6 +3,12 @@ using System.Text.Json;
 using GameBox.Windows.Core;
 using GameBox.Windows;
 
+if (args.Length > 0 && string.Equals(args[0], "--live-companion", StringComparison.OrdinalIgnoreCase))
+{
+    await RunLiveCompanionProbeAsync(args.Skip(1).ToArray());
+    return;
+}
+
 var root = Path.Combine(Path.GetTempPath(), "gamebox-windows-tests-" + Guid.NewGuid().ToString("N"));
 Directory.CreateDirectory(root);
 try
@@ -689,6 +695,20 @@ static void RequireThrows<TException>(Action action, string message) where TExce
     throw new InvalidOperationException(message);
 }
 
+static async Task RunLiveCompanionProbeAsync(string[] args)
+{
+    if (args.Length != 3 || !int.TryParse(args[1], out var port))
+        throw new ArgumentException("Usage: --live-companion <host> <port> <pairing-secret>");
+
+    using var http = new HttpClient();
+    var client = new CompanionStatusClient(http);
+    var status = await client.GetStatusAsync(args[0], port, args[2]);
+    var library = await client.GetLibraryAsync(args[0], port, args[2]);
+    Console.WriteLine($"Live Companion status: {status.DeviceName} / {status.Status} / protocol {status.ProtocolVersion}");
+    Console.WriteLine($"Live Companion library entries: {library.Count}");
+    foreach (var game in library)
+        Console.WriteLine($"- {game.Id}: {game.Title} [{game.Platform}] {game.InstallState}");
+}
 
 sealed class BlockingHandler : HttpMessageHandler
 {
