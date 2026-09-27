@@ -11,6 +11,24 @@ import org.junit.Test
 
 class VimmLairDiscoverySourceTest {
     @Test
+    fun vimmSourceExposesDiscoveryOnlyCapabilities() {
+        val source = VimmLairDiscoverySource(
+            GameSourceConfig(
+                id = "vimm",
+                name = "Vimm's Lair",
+                type = GameSourceProviderType.VIMM_LAIR,
+                baseUrl = "https://vimm.net/vault",
+            ),
+            VimmLairTransport { error("transport must not be called") },
+        )
+
+        assertTrue(source.capabilities.search)
+        assertTrue(source.capabilities.details)
+        assertTrue(source.capabilities.externalOpen)
+        assertTrue(!source.capabilities.paging)
+    }
+
+    @Test
     fun platformMappingsCoverGameBoxTargetConsoles() {
         assertEquals("PS2", vimmLairPlatformSlug("PS2"))
         assertEquals("GameCube", vimmLairPlatformSlug("Nintendo GameCube"))

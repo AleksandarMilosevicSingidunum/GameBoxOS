@@ -115,6 +115,12 @@ same Vimm page. Failed responses are not cached. Search results are ranked with 
 normalized-title matches first, then title-prefix matches, word-prefix matches, and
 finally looser substring matches.
 
+Third-party projects such as [NullShield-Official/VimmsDownloader](https://github.com/NullShield-Official/VimmsDownloader)
+are not GameBox dependencies or supported download backends. That project is archived
+and automates Vimm binary downloads; GameBox deliberately does not reproduce that
+behavior. Only the bounded metadata/navigation flow and legally owned local-import path
+are supported.
+
 Current GameBox mappings include PS2, GameCube, Wii, PSP and Dreamcast, plus several
 retro platform aliases in the adapter. 3DS and Switch are intentionally unmapped because
 the adapter has no verified Vimm vault mapping for those GameBox console labels.
