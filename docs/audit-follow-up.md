@@ -20,6 +20,14 @@ The current unmerged Vimm follow-up adds a five-minute bounded in-memory page ca
 deterministic exact/prefix/word-prefix result ranking. It caches only successful bounded
 HTML responses and preserves the metadata-only legal-source boundary.
 
+Physical Android validation checkpoint (27 September 2026): the authorized Honor Magic6 Pro
+Wi-Fi transport ran the complete 60-test debug instrumentation suite with 59 tests passing.
+The one failure exposed a production focus defect: the root Compose container handled
+controller key events but did not request focus on a physical phone. The root now owns an
+initial focus target, and the previously failing `ControllerOverlayTest` passes in isolation
+on the Honor device. This is physical UI/controller evidence, not emulator gameplay or
+external-controller hardware evidence.
+
 Companion JSON responses now share control-character escaping for device names and
 transferred filenames, with JVM coverage for status serialization. This keeps the LAN
 protocol parseable for valid user metadata without expanding the content-transfer trust

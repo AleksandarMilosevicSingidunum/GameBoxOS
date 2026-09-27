@@ -193,6 +193,7 @@ fun GameBoxApp(
     var showQuickActions by remember { mutableStateOf(false) }
     var showSystemStatus by remember { mutableStateOf(false) }
     var focusStoreSearchOnEnter by remember { mutableStateOf(false) }
+    val rootFocusRequester = remember { FocusRequester() }
     val uiState = rememberGameBoxUiState()
     val destination = runCatching { Destination.valueOf(uiState.destination) }
         .getOrDefault(Destination.HOME)
@@ -211,6 +212,10 @@ fun GameBoxApp(
         }
     }
 
+    LaunchedEffect(Unit) {
+        rootFocusRequester.requestFocus()
+    }
+
     fun moveTab(offset: Int) {
         val tabs = Destination.entries
         val target = tabs[(destination.ordinal + offset + tabs.size) % tabs.size]
@@ -227,6 +232,8 @@ fun GameBoxApp(
     ) {
     BoxWithConstraints(
         Modifier.fillMaxSize()
+            .focusRequester(rootFocusRequester)
+            .focusable()
             .onPreviewKeyEvent { event ->
                 if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
                 when (event.nativeKeyEvent.keyCode) {
