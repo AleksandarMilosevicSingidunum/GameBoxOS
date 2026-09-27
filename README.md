@@ -105,6 +105,13 @@ testDebugUnitTest
 assembleDebug
 ```
 
+For a local instrumentation run, the validated emulator profile is `GameBox_API35`
+using the Google APIs x86_64 API-35 image. Boot it with the Android Emulator, then
+run `connectedDebugAndroidTest` with `ANDROID_SERIAL=emulator-5554`; the current
+60-test suite passes with zero skips and failures. This validates Android UI and
+lifecycle behavior, not real emulator gameplay, emulator-private saves, or controller
+hardware.
+
 The optional Windows Companion discovers Windows shortcuts plus Steam, Epic Games, and GOG installations, runs its core test harness, and publishes a self-contained `win-x64` ZIP from `.github/workflows/windows-ci.yml`.
 
 Each CI run produces a temporary debug APK and SHA-256 artifact. Release APKs are debug-signed development builds until production signing is configured.
