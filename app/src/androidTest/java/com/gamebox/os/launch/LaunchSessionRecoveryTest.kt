@@ -84,8 +84,8 @@ class LaunchSessionRecoveryTest {
             }
             val sessionFixtureMigration =
                 object : androidx.room.migration.Migration(11, GAMEBOX_DATABASE_VERSION) {
-                    override fun migrate(database: androidx.sqlite.db.SupportSQLiteDatabase) {
-                        MIGRATION_11_12.migrate(database)
+                    override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
+                        MIGRATION_11_12.migrate(db)
                     }
                 }
             val migrated = Room.databaseBuilder(context, GameBoxDatabase::class.java, name)

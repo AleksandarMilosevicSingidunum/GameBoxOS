@@ -85,15 +85,15 @@ class ReleasedSchemaMigrationMatrixTest {
             SupportSQLiteOpenHelper.Configuration.builder(context)
                 .name(name)
                 .callback(object : SupportSQLiteOpenHelper.Callback(version) {
-                    override fun onCreate(database: SupportSQLiteDatabase) {
-                        createVersionOne(database)
+                    override fun onCreate(db: SupportSQLiteDatabase) {
+                        createVersionOne(db)
                         migrations
                             .filter { it.endVersion <= version }
-                            .forEach { it.migrate(database) }
+                            .forEach { it.migrate(db) }
                     }
 
                     override fun onUpgrade(
-                        database: SupportSQLiteDatabase,
+                        db: SupportSQLiteDatabase,
                         oldVersion: Int,
                         newVersion: Int,
                     ) = error("Unexpected helper upgrade $oldVersion -> $newVersion")
