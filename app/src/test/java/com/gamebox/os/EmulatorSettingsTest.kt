@@ -16,6 +16,10 @@ class EmulatorSettingsTest {
         val psp = Game(GameId("psp-demo"), "PSP Demo", "PSP", 2020, "Action", 1, InstallState.INSTALLED,
             expectedSha256 = "abc")
         assertEquals("org.ppsspp.ppsspp", registry.forGame(psp)?.packageName)
+        assertEquals(
+            listOf("org.ppsspp.ppsspp", "org.ppsspp.ppssppgold"),
+            registry.optionsFor(psp),
+        )
     }
 
     @Test
@@ -85,6 +89,7 @@ class EmulatorSettingsTest {
     fun supportedPackagesHaveFriendlyNames() {
         assertEquals("RetroArch", registry.displayName("com.retroarch.aarch64"))
         assertEquals("PPSSPP", registry.displayName("org.ppsspp.ppsspp"))
+        assertEquals("PPSSPP", registry.displayName("org.ppsspp.ppssppgold"))
     }
     @Test
     fun androidPlatformHasNoExternalEmulatorOptions() {

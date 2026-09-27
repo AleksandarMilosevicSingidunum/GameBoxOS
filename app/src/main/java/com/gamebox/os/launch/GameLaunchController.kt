@@ -78,7 +78,7 @@ class EmulatorCapabilityRegistry(
 
     fun displayName(packageName: String): String = when (packageName) {
         "com.retroarch.aarch64", "com.retroarch", "com.retroarch.ra32" -> "RetroArch"
-        "org.ppsspp.ppsspp" -> "PPSSPP"
+        "org.ppsspp.ppsspp", "org.ppsspp.ppssppgold" -> "PPSSPP"
         "org.dolphinemu.dolphinemu" -> "Dolphin"
         "xyz.aethersx2.android" -> "AetherSX2"
         "com.github.stenzek.duckstation" -> "DuckStation"
@@ -97,7 +97,8 @@ class EmulatorCapabilityRegistry(
 
     fun optionsFor(game: Game): List<String> = when (game.platform.lowercase().filter(Char::isLetterOrDigit)) {
         in retroArchPlatformAliases -> retroArchPackages
-        "psp", "playstationportable", "sonyplaystationportable" -> listOf("org.ppsspp.ppsspp")
+        "psp", "playstationportable", "sonyplaystationportable" ->
+            listOf("org.ppsspp.ppsspp", "org.ppsspp.ppssppgold")
         "ps1", "psx", "playstation", "sonyplaystation" -> listOf("com.github.stenzek.duckstation", "com.retroarch.aarch64")
         "n64", "nintendo64" -> listOf("org.mupen64plusae.v3.fzurita", "com.retroarch.aarch64")
         "dreamcast", "segadreamcast" -> listOf("com.flycast.emulator", "com.retroarch.aarch64")

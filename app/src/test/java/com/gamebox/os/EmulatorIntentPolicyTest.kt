@@ -44,6 +44,22 @@ class EmulatorIntentPolicyTest {
     }
 
     @Test
+    fun ppssppGoldUsesTheSameOfficialScopedContentContract() {
+        val plan = EmulatorIntentPolicy.plan(
+            EmulatorIntentPolicy.PPSSPP_GOLD_PACKAGE,
+            uri,
+            "Performance",
+        )
+
+        assertEquals(EmulatorIntentStyle.LAUNCHER_EXTRAS, plan.style)
+        assertEquals(
+            "--graphics=vulkan \"$uri\"",
+            plan.stringExtras[EmulatorIntentPolicy.PPSSPP_ARGS],
+        )
+        assertTrue(plan.graphicsProfileApplied)
+    }
+
+    @Test
     fun dolphinUsesOfficialAutoStartFilesContract() {
         val plan = EmulatorIntentPolicy.plan(EmulatorIntentPolicy.DOLPHIN_PACKAGE, uri, "Performance")
 
