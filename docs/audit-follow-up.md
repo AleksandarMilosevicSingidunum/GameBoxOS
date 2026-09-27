@@ -51,8 +51,9 @@ evidence. The same session then toggled and restored a real library favorite, up
 and downloaded two managed save payloads (the second upload preserved the first as a
 conflict), and uploaded a checksummed content file for `galaxy-patrol`. The live
 mutation responses and returned hashes matched the Windows client checks. The phone
-now contains that intentionally created test save/content state; this is real debug
-LAN mutation evidence, not signed-build or gameplay/save-recovery proof.
+now contains the intentionally created test save state and its verified local backup;
+the uploaded content was removed during the cleanup rehearsal. This is real debug LAN
+mutation evidence, not signed-build or gameplay/save-recovery proof.
 
 The live test content was then removed through the product's supported uninstall flow on
 the Honor device. GameBox created the verified local backup and retained the managed save,
@@ -60,6 +61,13 @@ as designed; no test content file remains. The same physical flow exposed and fi
 cloud-preflight message interpolation defect that had rendered `${safeCloudError(it)}`
 literally. `GeneralContentRemovalTest` now asserts the real failure message shape, and
 three focused instrumentation tests passed on the Honor device.
+
+The local Android JVM suite then exposed a host-capability failure in
+`DirectorySaveAdapterTest`: Windows symbolic-link creation is denied without the
+required privilege. The test now classifies that specific capability absence as a
+skip while retaining full symlink coverage on capable CI hosts. The complete local
+suite passes with 502 tests, zero failures, and one explicit privilege-based skip;
+the Windows .NET core suite also passes.
 
 ## Companion HTTP connection recovery (EXT-14)
 
@@ -165,8 +173,8 @@ and live emulator gameplay remain pending. Intent dispatch is not proof of gamep
 3. Live provider/download/volume validation against real configured endpoints and storage.
 4. Physical controller and Honor Magic5 Pro external-display recovery/soak acceptance.
 5. Signed production build, clean upgrade, update-channel and rollback rehearsal.
-6. Windows Companion production-signed LAN session and cleanup/rehearsal of the live
-   test mutation state.
+6. Windows Companion production-signed LAN session; the live debug mutation cleanup
+   rehearsal is complete, with the retained save/backup state documented above.
 
 The released-schema migration matrix and monotonic Android version-code generation are now
 implemented and exercised by automated CI. They remain prerequisites for the signed

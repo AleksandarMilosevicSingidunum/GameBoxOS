@@ -5,8 +5,11 @@ import com.gamebox.os.storage.SaveDiscoveryLimitExceededException
 import java.io.File
 import org.junit.Assert.assertEquals
 import kotlin.io.path.createTempDirectory
+import org.junit.Assume.assumeNoException
 import org.junit.Assert.assertThrows
 import org.junit.Test
+import java.nio.file.Path
+import java.nio.file.FileSystemException
 
 class DirectorySaveAdapterTest {
     @Test(timeout = 5_000)
@@ -22,7 +25,7 @@ class DirectorySaveAdapterTest {
             val otherSave = File(other, "progress.sav").apply { writeText("B") }
             File(game, "save-import-123.part").writeText("incomplete")
             File(game, "progress.sav.restore.part").writeText("incomplete")
-            java.nio.file.Files.createSymbolicLink(loop, game.toPath())
+            createSymbolicLinkOrSkip(loop, game.toPath())
             java.nio.file.Files.createSymbolicLink(linkedFile, otherSave.toPath())
             java.nio.file.Files.createSymbolicLink(linkedGame, other.toPath())
             assertEquals(listOf("game-a/progress.sav"),
@@ -36,6 +39,14 @@ class DirectorySaveAdapterTest {
             java.nio.file.Files.deleteIfExists(linkedFile)
             java.nio.file.Files.deleteIfExists(linkedGame)
             root.deleteRecursively()
+        }
+    }
+
+    private fun createSymbolicLinkOrSkip(link: Path, target: Path) {
+        try {
+            java.nio.file.Files.createSymbolicLink(link, target)
+        } catch (error: FileSystemException) {
+            assumeNoException("Symbolic-link privileges are unavailable on this host", error)
         }
     }
 
