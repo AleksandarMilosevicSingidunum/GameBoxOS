@@ -16,6 +16,7 @@ This optional native .NET 8/WPF companion complements the Android/DeX GameBox OS
 - Read and atomically apply reduced-motion, unavailable-game, unavailable-shortcut, and unmetered-download settings through authenticated `/v1/config` requests. Configuration flags are checksum-bound to the request signature and Android echoes the committed snapshot for verification.
 - Verify save SHA-256 on both platforms, limit saves to 16 MiB, support cancellation, retry idempotent downloads and save uploads, make identical uploads true no-ops, and preserve a different Android save before replacement. Identical owned-content replacements are also safe to retry; different content preserves the prior copy before replacement.
 - Stream owned game copies up to 64 GiB without buffering them in memory. Android authenticates the declared checksum before reading the body, stages with an inactivity timeout, verifies SHA-256 again, enforces the selected console's format allowlist, and atomically registers the installed content. Identical streamed replacements are no-ops, so the client can retry transient uploads safely; a failed or cancelled transfer retains no partial content, and a different-content replacement restores the previous copy on failure.
+- Produce a reproducible unsigned MSIX installer package beside the portable ZIP, with generated package assets, SHA-256 checksum, and provenance validation. Production package signing remains a separate release gate.
 
 - Sort by favorites/title or recent play history.
 - Edit validated titles, platforms, and command-line arguments without changing game identity or executable paths.
@@ -37,7 +38,8 @@ authenticated status/library access, idempotent configuration round-trip, favori
 mutation, managed-save upload/download/conflict preservation, and a checksummed content
 upload through the repository probe. Remaining acceptance includes routed/VLAN/firewall
 coverage, large-file and cancellation behavior, disk-full and replacement testing,
-DPAPI reconnect on a real paired profile, additional PC-runtime integrations, installer
+DPAPI reconnect on a real paired profile, additional PC-runtime integrations, MSIX
+signing/install acceptance,
 packaging, and physical Windows acceptance testing. Authenticode signing and signed
 release upload are prepared through the protected `release-windows-production.yml`
 workflow.
@@ -52,13 +54,19 @@ and the managed-import copy, preventing a transfer that cannot complete promotio
 The Android JVM regression suite covers rejection before any request-body bytes are
 read; this remains deterministic storage evidence rather than a physical disk-full run.
 
-CI publishes the self-contained ZIP with a SHA-256 file and a validated JSON provenance manifest containing the exact artifact name, hash, byte size, runtime, self-contained flag, and source commit. Validation also requires exactly one non-empty `GameBox.Windows.exe` in the archive and verifies the published executable before upload.
+CI publishes the self-contained ZIP and unsigned MSIX package with SHA-256 files and
+validated JSON provenance manifests containing the exact artifact name, hash, byte size,
+runtime, package format where applicable, self-contained flag, and source commit.
+Validation requires exactly one non-empty `GameBox.Windows.exe` in the ZIP and verifies
+both published package formats. The MSIX is a development artifact until signed with
+the protected production certificate workflow.
 
 ## Build and test
 
 ```powershell
 dotnet run --project windows/GameBox.Windows.Core.Tests/GameBox.Windows.Core.Tests.csproj -c Release
 dotnet publish windows/GameBox.Windows/GameBox.Windows.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true
+powershell -File scripts/package-windows-msix.ps1 -PublishDirectory artifacts/GameBoxWindows -OutputPath artifacts/GameBoxWindows-win-x64.msix
 ```
 
 For an explicitly requested live LAN read-only check, provide the Android device's

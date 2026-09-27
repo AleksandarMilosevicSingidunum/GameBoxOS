@@ -114,6 +114,12 @@ part of the request body, blocks, and confirms cancellation propagates after net
 dispatch without entering retry. Cancellation during a real long-running LAN transfer
 remains separate acceptance evidence.
 
+Windows CI now also packages the self-contained companion as an unsigned MSIX beside
+the portable ZIP. The package is built with the Windows SDK `makeappx.exe`, carries
+generated visual assets, and is checked with a SHA-256/provenance validator. Local
+packaging and validation pass; package signing, installation acceptance, and physical
+Windows validation remain separate release gates.
+
 The protected Android production workflow now runs the release-manifest unit tests,
 creates a schema-compatible APK provenance manifest from the signed artifact, requires
 the distinct rollback tag in that manifest, and uploads the manifest alongside the APK
