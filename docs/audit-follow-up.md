@@ -178,6 +178,12 @@ screenshot jobs, and that PR is merged. Local Android SDK and device execution a
 launch lifecycle: persistent sessions, large-file frame measurements
 and live emulator gameplay remain pending. Intent dispatch is not proof of gameplay.
 
+Emulator readiness now automatically selects the first installed approved adapter when
+no per-game emulator choice has been saved, while preserving an explicit approved
+selection and its missing-selection guidance. JVM coverage exercises the installed
+alternative path; this improves software detection/configuration behavior but does not
+prove a real emulator launch or gameplay.
+
 1. One real emulator game/save/return/uninstall/reinstall proof, without synthetic-save claims.
 2. Actual emulator-save ownership and production-emulator validation across the supported adapter patterns.
 3. Live provider/download/volume validation against real configured endpoints and storage.

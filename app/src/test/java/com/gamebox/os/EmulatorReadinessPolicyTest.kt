@@ -38,6 +38,20 @@ class EmulatorReadinessPolicyTest {
     }
 
     @Test
+    fun automaticSelectionPrefersAnInstalledApprovedAlternative() {
+        val readiness = EmulatorReadinessPolicy.evaluate(
+            approvedOptions = listOf("emulator.preferred", "emulator.alternative"),
+            selectedPackage = null,
+            installedPackages = setOf("emulator.alternative"),
+            displayName = { it.substringAfterLast('.') },
+        )
+
+        assertEquals(EmulatorReadinessState.READY, readiness.state)
+        assertEquals("emulator.alternative", readiness.selectedPackage)
+        assertTrue(readiness.message.contains("ready"))
+    }
+
+    @Test
     fun missingExplicitSelectionOffersInstalledAlternative() {
         val readiness = EmulatorReadinessPolicy.evaluate(
             approvedOptions = listOf("emulator.preferred", "emulator.alternative"),

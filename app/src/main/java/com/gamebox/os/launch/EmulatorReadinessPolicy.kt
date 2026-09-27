@@ -33,6 +33,7 @@ object EmulatorReadinessPolicy {
         val installed = approvedOptions.filter(installedPackages::contains)
         val selected = selectedPackage
             ?.takeIf(approvedOptions::contains)
+            ?: installed.firstOrNull()
             ?: approvedOptions.first()
 
         if (selected in installedPackages) {
