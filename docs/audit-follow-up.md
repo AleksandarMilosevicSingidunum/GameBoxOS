@@ -28,6 +28,14 @@ Compose container handled controller key events but did not request focus on a p
 phone. The root now owns an initial focus target. This is physical UI/controller evidence,
 not emulator gameplay or external-controller hardware evidence.
 
+Local emulator validation checkpoint (27 September 2026): after installing the official
+Android command-line tools and creating the `GameBox_API35` AVD from the Google APIs
+x86_64 image, the same complete 60-test instrumentation suite passed with zero failures
+and zero skips. A separate API 37.1 Play Store AVD booted successfully but its 30 UI
+failures were all the Espresso `InputManager.getInstance` incompatibility, so that run
+is not treated as app-failure evidence. Neither emulator run proves real game execution,
+controller input, save ownership, or uninstall/reinstall recovery.
+
 Companion JSON responses now share control-character escaping for device names and
 transferred filenames, with JVM coverage for status serialization. This keeps the LAN
 protocol parseable for valid user metadata without expanding the content-transfer trust
