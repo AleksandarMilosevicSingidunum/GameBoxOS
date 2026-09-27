@@ -537,6 +537,28 @@ try
     catch (OperationCanceledException) { cancelledContentObserved = true; }
     Require(cancelledContentObserved && cancelledContentAttempts == 0,
         "Owned-content uploads must honor caller cancellation before network access.");
+    using var inFlightCancellation = new CancellationTokenSource();
+    var inFlightReadStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+    var inFlightBytesRead = 0L;
+    using var inFlightContentHttp = new HttpClient(new InFlightUploadCancellationHandler(
+        bytesRead =>
+        {
+            inFlightBytesRead = bytesRead;
+            inFlightReadStarted.TrySetResult();
+        }));
+    var inFlightCancellationObserved = false;
+    var inFlightUpload = new CompanionContentClient(inFlightContentHttp).UploadAsync(
+        "192.168.1.22", 49_500, companionSecret, "galaxy-patrol", contentPath,
+        inFlightCancellation.Token);
+    await inFlightReadStarted.Task.WaitAsync(TimeSpan.FromSeconds(2));
+    inFlightCancellation.Cancel();
+    try
+    {
+        await inFlightUpload;
+    }
+    catch (OperationCanceledException) { inFlightCancellationObserved = true; }
+    Require(inFlightCancellationObserved && inFlightBytesRead > 0,
+        "Owned-content uploads must propagate cancellation after request streaming begins.");
     using var oversizedContentResponse = new HttpClient(new StubHttpMessageHandler(_ =>
         new HttpResponseMessage(HttpStatusCode.OK)
         {
@@ -913,6 +935,23 @@ sealed class StubHttpMessageHandler(Func<HttpRequestMessage, HttpResponseMessage
 {
     protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         => Task.FromResult(responder(request));
+}
+
+sealed class InFlightUploadCancellationHandler(Action<long> bytesRead) : HttpMessageHandler
+{
+    protected override async Task<HttpResponseMessage> SendAsync(
+        HttpRequestMessage request,
+        CancellationToken cancellationToken)
+    {
+        if (request.Content is null) throw new InvalidOperationException("Upload content is missing.");
+        await using var stream = await request.Content.ReadAsStreamAsync(cancellationToken);
+        var buffer = new byte[4096];
+        var read = await stream.ReadAsync(buffer, cancellationToken);
+        if (read <= 0) throw new InvalidDataException("Upload content was empty.");
+        bytesRead(read);
+        await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
+        throw new InvalidOperationException("unreachable");
+    }
 }
 
 sealed class UnknownLengthHttpContent(string value) : HttpContent

@@ -109,7 +109,10 @@ content was made compatible with the .NET 8 `Task` override contract by converti
 stream write `ValueTask` to a `Task`.
 The same harness now verifies that caller cancellation before an owned-content upload
 prevents network dispatch and retry; cancellation during a real long-running LAN
-transfer remains separate acceptance evidence.
+transfer now also has deterministic client coverage: a streaming HTTP boundary reads
+part of the request body, blocks, and confirms cancellation propagates after network
+dispatch without entering retry. Cancellation during a real long-running LAN transfer
+remains separate acceptance evidence.
 
 The protected Android production workflow now runs the release-manifest unit tests,
 creates a schema-compatible APK provenance manifest from the signed artifact, requires
