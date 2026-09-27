@@ -17,7 +17,6 @@ object EmulatorIntentPolicy {
     const val PPSSPP_GOLD_PACKAGE = "org.ppsspp.ppssppgold"
     const val PPSSPP_LEGACY_PACKAGE = "org.ppsspp.ppsspplegacy"
     const val DOLPHIN_PACKAGE = "org.dolphinemu.dolphinemu"
-    const val PPSSPP_ARGS = "org.ppsspp.ppsspp.Args"
     const val DOLPHIN_AUTO_START_FILES = "AutoStartFiles"
     const val RETROARCH_ROM = "ROM"
     const val RETROARCH_CORE = "LIBRETRO"
