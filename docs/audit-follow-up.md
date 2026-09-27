@@ -66,6 +66,21 @@ RetroArch again, and loading slot 0 displayed `Loaded state from slot: 0`. This 
 physical-device gameplay and emulator-save continuity; it remains separate from managed
 GameBox save/cloud synchronization and external-controller/display soak testing.
 
+Physical Honor companion-import checkpoint (27 September 2026): the authenticated Windows
+companion content route streamed the 49,168-byte legal Galaxy Patrol fixture directly into
+the Honor app sandbox with a matching SHA-256. The Store details page reported installed
+content and the physical Play action opened RetroArch's real activity with the imported ROM
+rendering on the phone; DPAD/button events were dispatched and RetroArch reported
+`Saved state to slot: 0`. RetroArch's own Close Content and Quit actions returned to GameBox.
+The supported content-only uninstall confirmation reported one 49,168-byte file and that
+saves/backups/metadata/history and external emulator files would be retained. After the
+confirmation, Android showed `Game content · not installed` and `1 managed save files · 0.0
+MB`; a direct `run-as` check found no imported ROM and retained `files/saves/galaxy-patrol/save.dat`
+with SHA-256 `17c75cabe91d5339d4237d4ccfca3a20d4eb78ff357355a274df8162cdac3c24`. This is
+the first physical proof of companion-imported content reaching real gameplay and the
+save-safe cleanup boundary; it remains separate from cloud-provider and external-hardware
+acceptance.
+
 The current debug APK was also installed on `GameBox_API35` and launched through the
 real `com.gamebox.os/.MainActivity` entry point. The process remained alive, the
 activity stayed resumed, and the crash buffer was empty after startup. The later live

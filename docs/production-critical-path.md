@@ -34,7 +34,16 @@ The repository's live-content probe also streamed the legal Galaxy Patrol fixtur
 the Honor, and Android confirmed the 49,168-byte file and matching SHA-256. The
 authenticated library response changed Galaxy Patrol to `INSTALLED` while retaining
 `savePresent=true`; a direct app-sandbox hash/length check matched the client response.
-Content cleanup/recovery and gameplay remain separate gates.
+The same imported file then launched through the Store details page into the real
+RetroArch/FCEUmm activity on the Honor; controller key events were accepted and RetroArch
+reported `Saved state to slot: 0`. RetroArch Close Content and Quit returned to GameBox.
+GameBox's supported content-only uninstall confirmation retained saves/backups/metadata,
+history and external emulator files while removing the 49,168-byte ROM. The final details
+screen reported `Game content · not installed` and `1 managed save files · 0.0 MB`; direct
+app-sandbox checks confirmed the ROM was absent while `files/saves/galaxy-patrol/save.dat`
+remained with SHA-256 `17c75cabe91d5339d4237d4ccfca3a20d4eb78ff357355a274df8162cdac3c24`.
+This closes the physical companion-import → gameplay → save-safe cleanup slice; cloud,
+other adapters and external hardware remain separate gates.
 
 The catalog repair changes database state only for six known legacy demo IDs
 without local content references or a real download source. It does not delete
