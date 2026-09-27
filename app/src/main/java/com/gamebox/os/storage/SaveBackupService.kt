@@ -51,6 +51,14 @@ class SaveBackupService(
         return BackupResult.SUCCESS
     }
 
+    /** Removes a newly-created snapshot generation after an incomplete publication. */
+    internal fun discardGeneration(generation: String) {
+        require(generation.matches(Regex("[A-Za-z0-9._-]+"))) { "Snapshot generation is invalid" }
+        val directory = resolveContained(backupsRoot, ".snapshots/$generation")
+        if (!directory.exists()) return
+        directory.deleteRecursively()
+    }
+
     internal fun inspectSource(relativePath: String): BackupResult {
         val source = resolveContained(savesRoot, relativePath)
         if (!source.isFile) return BackupResult.SOURCE_MISSING

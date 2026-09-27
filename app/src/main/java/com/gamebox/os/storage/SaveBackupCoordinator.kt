@@ -65,14 +65,21 @@ class SaveBackupCoordinator(
                     .filter { it.result == BackupResult.SUCCESS }
                     .map { it.artifact.relativePath }
                 if (successfulPaths.isNotEmpty() && successfulPaths.size == results.size) {
-                    manifestStore?.save(
-                        SaveSnapshotManifest(
-                            gameId = gameId,
-                            createdAtMillis = nowMillis(),
-                            relativePaths = successfulPaths,
-                            generation = generation,
-                        ),
-                    )
+                    try {
+                        manifestStore?.save(
+                            SaveSnapshotManifest(
+                                gameId = gameId,
+                                createdAtMillis = nowMillis(),
+                                relativePaths = successfulPaths,
+                                generation = generation,
+                            ),
+                        )
+                    } catch (error: Throwable) {
+                        generation?.let(backupService::discardGeneration)
+                        throw error
+                    }
+                } else {
+                    generation?.let(backupService::discardGeneration)
                 }
                 GameSaveBackupResult(
                     gameId = gameId,

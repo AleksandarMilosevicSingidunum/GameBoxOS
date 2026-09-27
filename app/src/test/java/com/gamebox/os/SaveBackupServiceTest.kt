@@ -11,6 +11,7 @@ import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
+import java.io.File
 import java.io.InputStream
 import java.io.IOException
 
@@ -232,5 +233,24 @@ class SaveBackupServiceTest {
         save.writeText("CURRENT")
         assertEquals(BackupResult.SUCCESS, service.restore("game/save.dat"))
         assertEquals("ORIGINAL", save.readText())
+    }
+
+    @Test fun discardedSnapshotGenerationRemovesOnlyThatGeneration() {
+        val saves = temporaryFolder.newFolder("saves")
+        val backups = temporaryFolder.newFolder("backups")
+        val service = SaveBackupService(saves, backups)
+        File(backups, ".snapshots/gen-a/game/save.dat").apply {
+            parentFile.mkdirs()
+            writeText("PARTIAL")
+        }
+        File(backups, ".snapshots/gen-b/game/save.dat").apply {
+            parentFile.mkdirs()
+            writeText("RETAIN")
+        }
+
+        service.discardGeneration("gen-a")
+
+        assertEquals(false, File(backups, ".snapshots/gen-a").exists())
+        assertEquals(true, File(backups, ".snapshots/gen-b/game/save.dat").isFile)
     }
 }
