@@ -101,7 +101,7 @@ jobs:
           cp app/build/outputs/apk/release/app-release.apk "$asset"
           jarsigner -verify -strict "$asset"
           sha256sum "$asset" > "$asset.sha256"
-          test -s "$asset.sha256"
+          sha256sum --check "$asset.sha256"
           python scripts/create-apk-manifest.py "$asset" "$RELEASE_TAG" PRODUCTION "GameBoxOS-$RELEASE_TAG-manifest.json" "$ROLLBACK_TAG"
           test -s "GameBoxOS-$RELEASE_TAG-manifest.json"
 

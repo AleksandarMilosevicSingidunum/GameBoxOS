@@ -47,8 +47,9 @@ stream write `ValueTask` to a `Task`.
 The protected Android production workflow now runs the release-manifest unit tests,
 creates a schema-compatible APK provenance manifest from the signed artifact, requires
 the distinct rollback tag in that manifest, and uploads the manifest alongside the APK
-and checksum. Local Python is not installed on this Windows host, so the new script's
-automated execution remains a CI-side validation rather than local evidence.
+and checksum. It also verifies the generated checksum file before publication. Local
+Python is not installed on this Windows host, so the new script's automated execution
+remains a CI-side validation rather than local evidence.
 
 The rebuilt debug APK was installed on the authorized Honor Magic6 Pro over Wi-Fi ADB.
 The physical Network settings flow enabled the Windows Companion on port 49500 and
