@@ -342,8 +342,11 @@ prove a real emulator launch or gameplay.
 3. Live provider/download/volume validation against real configured endpoints and storage.
 4. Separately connected physical controller and Honor external-display recovery/soak acceptance.
 5. Signed production build, clean upgrade, update-channel and rollback rehearsal.
-6. Windows Companion production-signed LAN session; the live debug mutation cleanup
-   rehearsal is complete, with the retained save/backup state documented above.
+6. Windows Companion production-signed LAN session; the live debug LAN pairing,
+   configuration, managed-save, content-import, gameplay handoff and save-safe cleanup
+   journey is now documented above. Large-file, cancellation, disk-full, replacement,
+   routed-network, MSIX signing/install and physical Windows acceptance remain separate
+   gates.
 
 The released-schema migration matrix and monotonic Android version-code generation are now
 implemented and exercised by automated CI. They remain prerequisites for the signed
