@@ -92,7 +92,7 @@ The local Android JVM suite then exposed a host-capability failure in
 `DirectorySaveAdapterTest`: Windows symbolic-link creation is denied without the
 required privilege. The test now classifies that specific capability absence as a
 skip while retaining full symlink coverage on capable CI hosts. The complete local
-suite passes with 502 tests, zero failures, and one explicit privilege-based skip;
+suite passes with 503 tests, zero failures, and one explicit privilege-based skip;
 the Windows .NET core suite also passes.
 
 ## Companion HTTP connection recovery (EXT-14)
