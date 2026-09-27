@@ -42,6 +42,11 @@ HTTP 507 response to a typed retryable `CompanionStorageUnavailableException`, w
 Windows harness regression. The client no longer collapses disk pressure into generic
 invalid content data.
 
+Fresh physical Android checkpoint: after the companion size/error-path changes, the
+connected Honor Magic6 Pro completed all `62/62` instrumentation tests with zero skips
+and zero failures. This confirms the Android integration build remains healthy; it is
+not evidence of a live provider, PSP gameplay, or external-controller run.
+
 PSP emulator readiness now recognizes the official PPSSPP Android package variants:
 the free `org.ppsspp.ppsspp` build, PPSSPP Gold `org.ppsspp.ppssppgold`, and PPSSPP
 Legacy `org.ppsspp.ppsspplegacy`. They use the same documented scoped-content launch
