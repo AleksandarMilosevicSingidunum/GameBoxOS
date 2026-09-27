@@ -17,6 +17,13 @@ the Blueprint Home composition. The screenshot flow also opens Downloads through
 the header utility action, proving the non-primary route remains reachable. This is Android UI/instrumentation evidence, not
 physical DeX, external-controller, hover/motion, or complete state-matrix acceptance.
 
+Catalog state-matrix checkpoint: `CatalogRefreshStateTest` now drives the production
+Store screen through offline fallback, provider-unavailable fallback, and terminal
+error states, asserting their accessible live-region descriptions and actionable
+Refresh control. The test passes on both API-35 and the connected Honor device after
+resetting the device's stale PPSSPP foreground session. This is deterministic UI
+state evidence; it does not validate a live provider or airplane-mode transport.
+
 Per-game managed-save controls are now used by every Details screen, not only the
 bundled Galaxy Patrol fixture. The selected game's save controller is also used for
 content-removal preflight, so imported PSP/other-console titles no longer risk reading
