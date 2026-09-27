@@ -60,6 +60,17 @@ handoff correction remains covered by policy tests and requires another legal PS
 fixture for successful gameplay validation.
 this is emulator installation/startup evidence, not PSP gameplay or save compatibility.
 
+Legal PSP homebrew compatibility checkpoint (27 September 2026): the SourceForge
+project identified as “Zelda - Oni Link Begins (PSP Game)” was downloaded through its
+direct project host (ZIP SHA-256
+`d7fd341b1f22f65c0d770fa7943091ea541ec8df2feef0b0399664ad99313f1c`; extracted
+`EBOOT.PBP` SHA-256
+`936e74eadd867011cbf3d2a000417b709aca665beccc9163b00a2175ab8cd8bd`). The folder was
+visible in PPSSPP's SAF-backed PSP browser on the Honor, but launching the EBOOT failed
+with PPSSPP's `Could not find executable ms0:/PSP/GAME/ZELDAOLB/EBOOT.PBP` dialog.
+This is a real legal-fixture compatibility failure, not gameplay evidence; no
+commercial title was accessed.
+
 Windows validation checkpoint (27 September 2026): the installed .NET SDK/runtime
 `8.0.314`/`8.0.17` ran the complete `GameBox.Windows.Core.Tests` harness successfully.
 The companion then published self-contained for `win-x64`; the generated ZIP and unsigned
