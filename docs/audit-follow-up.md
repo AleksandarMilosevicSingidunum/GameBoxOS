@@ -310,6 +310,9 @@ classifying the incomplete body through the shared retryable transport policy ra
 than accepting a truncated payload when no checksum is available. JVM coverage verifies
 the disconnect and recovery classification; live WebDAV/S3 endpoint evidence remains
 separate.
+The configured HTTPS/WebDAV/S3 catalog transport now applies the same declared-length
+check, classifying truncated catalog bodies as transient provider failures while keeping
+oversized responses permanent. Focused JVM coverage protects both classifications.
 
 The PC now has the official .NET 8.0.314 SDK installed, including the .NET 8 runtime.
 The Windows core executable test harness and self-contained `win-x64` publish both pass

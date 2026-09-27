@@ -125,6 +125,14 @@ class HttpsCatalogTransportClient(
                             error = IllegalArgumentException("catalog response is too large"),
                         )
                     }
+                    if (declaredLength >= 0L && bytes.size.toLong() != declaredLength) {
+                        throw catalogTransportFailure(
+                            error = IOException(
+                                "catalog response ended before its declared length " +
+                                    "(" + bytes.size + "/" + declaredLength + ")"
+                            ),
+                        )
+                    }
                     bytes.toString(Charsets.UTF_8)
                 } catch (error: CatalogTransportException) {
                     throw error

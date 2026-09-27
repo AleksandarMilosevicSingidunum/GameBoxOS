@@ -129,6 +129,25 @@ class HttpsCatalogTransportClientTest {
     }
 
     @Test
+    fun truncatedDeclaredResponsesBecomeRetryableProviderFailures() {
+        val connection = RecordingConnection(
+            content = "short".toByteArray(),
+            declaredLength = 10,
+        )
+        val error = assertThrows(CatalogTransportException::class.java) {
+            runBlocking {
+                HttpsCatalogTransportClient(
+                    maxRetries = 0,
+                    connectionFactory = { connection },
+                ).fetch(CatalogTransport.Https("https://example.test/catalog.json"), null)
+            }
+        }
+
+        assertEquals(ProviderFailureKind.TRANSIENT_NETWORK, error.recovery.kind)
+        assertTrue(error.recovery.retryable)
+    }
+
+    @Test
     fun cancellationDisconnectsAnActiveBlockingCatalogConnection() = runBlocking {
         val connection = BlockingConnection()
         val created = CountDownLatch(1)
