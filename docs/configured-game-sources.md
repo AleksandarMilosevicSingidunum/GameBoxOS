@@ -71,6 +71,11 @@ page and hydrates non-binary metadata when present: page title, system/platform,
 release year, and Vimm-hosted Open Graph artwork. If the detail request fails or the page
 is sparse, the original listing result remains usable.
 
+For example, a user-provided vault link such as
+`https://vimm.net/vault/23719` is treated as a metadata/details page. GameBox may display
+its title and PSP metadata and can open the page externally, but it does not request,
+extract, or download the page's copyrighted game media.
+
 GameBox derives a stable, source-namespaced local identity from the configured source id
 plus Vimm's numeric vault id. From Details the user can:
 

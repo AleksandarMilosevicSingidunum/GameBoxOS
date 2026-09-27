@@ -279,6 +279,38 @@ class VimmLairDiscoverySourceTest {
     }
 
     @Test
+    fun exactGodOfWarChainsVaultLinkHydratesMetadataWithoutCreatingMediaFields() = runBlocking {
+        var requested: URI? = null
+        val source = VimmLairDiscoverySource(
+            GameSourceConfig(
+                id = "vimm",
+                name = "Vimm's Lair",
+                type = GameSourceProviderType.VIMM_LAIR,
+                baseUrl = "https://vimm.net/vault",
+                platforms = setOf("PSP"),
+            ),
+            VimmLairTransport { uri ->
+                requested = uri
+                """
+                    <meta property="og:title" content="God of War: Chains of Olympus - Vimm's Lair">
+                    <table>
+                      <tr><td>System</td><td>PSP</td></tr>
+                      <tr><td>Region</td><td>USA</td></tr>
+                    </table>
+                """.trimIndent()
+            },
+        )
+
+        val details = source.details("23719")
+
+        assertEquals("https://vimm.net/vault/23719", requested.toString())
+        assertEquals("God of War: Chains of Olympus", details.title)
+        assertEquals("PSP", details.platform)
+        assertEquals("USA", details.region)
+        assertEquals("23719", details.externalId)
+    }
+
+    @Test
     fun hydratePreservesSearchIdentityWhenDetailPageIsSparse() = runBlocking {
         val result = DiscoverySourceGame(
             sourceId = "vimm",
