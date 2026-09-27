@@ -17,7 +17,7 @@ class EmulatorSettingsTest {
             expectedSha256 = "abc")
         assertEquals("org.ppsspp.ppsspp", registry.forGame(psp)?.packageName)
         assertEquals(
-            listOf("org.ppsspp.ppsspp", "org.ppsspp.ppssppgold"),
+            listOf("org.ppsspp.ppsspp", "org.ppsspp.ppssppgold", "org.ppsspp.ppsspplegacy"),
             registry.optionsFor(psp),
         )
     }
@@ -90,6 +90,7 @@ class EmulatorSettingsTest {
         assertEquals("RetroArch", registry.displayName("com.retroarch.aarch64"))
         assertEquals("PPSSPP", registry.displayName("org.ppsspp.ppsspp"))
         assertEquals("PPSSPP", registry.displayName("org.ppsspp.ppssppgold"))
+        assertEquals("PPSSPP", registry.displayName("org.ppsspp.ppsspplegacy"))
     }
     @Test
     fun androidPlatformHasNoExternalEmulatorOptions() {

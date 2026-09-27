@@ -60,6 +60,19 @@ class EmulatorIntentPolicyTest {
     }
 
     @Test
+    fun ppssppLegacyUsesTheSameOfficialScopedContentContract() {
+        val plan = EmulatorIntentPolicy.plan(
+            EmulatorIntentPolicy.PPSSPP_LEGACY_PACKAGE,
+            uri,
+            "Balanced",
+        )
+
+        assertEquals(EmulatorIntentStyle.LAUNCHER_EXTRAS, plan.style)
+        assertEquals("\"$uri\"", plan.stringExtras[EmulatorIntentPolicy.PPSSPP_ARGS])
+        assertFalse(plan.graphicsProfileApplied)
+    }
+
+    @Test
     fun dolphinUsesOfficialAutoStartFilesContract() {
         val plan = EmulatorIntentPolicy.plan(EmulatorIntentPolicy.DOLPHIN_PACKAGE, uri, "Performance")
 

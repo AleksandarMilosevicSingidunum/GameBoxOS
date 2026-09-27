@@ -15,6 +15,7 @@ data class EmulatorIntentPlan(
 object EmulatorIntentPolicy {
     const val PPSSPP_PACKAGE = "org.ppsspp.ppsspp"
     const val PPSSPP_GOLD_PACKAGE = "org.ppsspp.ppssppgold"
+    const val PPSSPP_LEGACY_PACKAGE = "org.ppsspp.ppsspplegacy"
     const val DOLPHIN_PACKAGE = "org.dolphinemu.dolphinemu"
     const val PPSSPP_ARGS = "org.ppsspp.ppsspp.Args"
     const val DOLPHIN_AUTO_START_FILES = "AutoStartFiles"
@@ -45,7 +46,9 @@ object EmulatorIntentPolicy {
                 uri.fragment == null
         ) { "Emulator content must use an absolute scoped content URI" }
         return when {
-            packageName == PPSSPP_PACKAGE || packageName == PPSSPP_GOLD_PACKAGE ->
+            packageName == PPSSPP_PACKAGE ||
+                packageName == PPSSPP_GOLD_PACKAGE ||
+                packageName == PPSSPP_LEGACY_PACKAGE ->
                 ppssppPlan(contentUri, graphicsProfile)
             packageName == RETROARCH_PACKAGE ||
                 packageName.startsWith(RETROARCH_PACKAGE + ".") -> EmulatorIntentPlan(

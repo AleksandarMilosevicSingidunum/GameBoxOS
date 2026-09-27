@@ -60,7 +60,7 @@ Latest verified increments: the primary shell now includes an original scalable 
 - SAF external-library selection with persisted permissions, explicit migration confirmation, verified move/cutover, launch resolution, exact uninstall, and retryable disconnect/read-only status
 - Sanitized diagnostics export that excludes credentials, source URLs, checksums, paths, and save contents
 - Automated unit tests covering storage/provider/release/accessibility contracts plus a clean API-35 emulator run of the Compose migration, navigation, Room, lifecycle, and accessibility instrumentation suite; debug APK builds, self-contained Windows Companion builds, and green Android/Windows CI verification on the latest main commit with superseded-run cancellation, bounded Gradle/build steps, and executable catalog-timeout coverage
-- Friendly emulator selection with validated graphics profiles, launch-time profile handoff, PPSSPP free/Gold detection for PSP, and unsupported-platform guidance
+- Friendly emulator selection with validated graphics profiles, launch-time profile handoff, PPSSPP free/Gold/Legacy detection for PSP, and unsupported-platform guidance
 - Deterministic release manifest generation containing APK hash, size, channel, and optional rollback tag
 - Network-aware offline catalog selection with a reactive accessible offline-mode banner, explicit degraded refresh states, bundled recovery after provider failure, and non-fatal optional metadata enrichment
 - Release validation rejects unsupported tags, manifest channel/tag mismatches, and missing rollback tags for signed channels before publication
