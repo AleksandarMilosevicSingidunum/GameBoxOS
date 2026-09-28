@@ -100,6 +100,29 @@ class EmulatorSettingsTest {
     }
 
     @Test
+    fun additionalRetroPlatformsCarryDeterministicCoreContracts() {
+        val cases = listOf(
+            Triple("SNES", "Nintendo - SNES / SFC (Snes9x)", "snes9x_libretro_android.so"),
+            Triple("GBA", "Nintendo - Game Boy Advance (mGBA)", "mgba_libretro_android.so"),
+            Triple("Genesis", "Sega - MS/GG/MD/CD (Genesis Plus GX)", "genesis_plus_gx_libretro_android.so"),
+            Triple("N64", "Nintendo - Nintendo 64 (Mupen64Plus-Next)", "mupen64plus_next_libretro_android.so"),
+        )
+
+        cases.forEachIndexed { index, (platform, core, fileName) ->
+            val game = Game(
+                GameId("retro-core-$index"), "Retro Core $platform", platform, 2020, "Action", 1,
+                InstallState.INSTALLED,
+                localContentRelativePath = "retro-core-$index/game.rom",
+                localContentSha256 = "c".repeat(64),
+                localContentMimeType = "application/octet-stream",
+            )
+            val capability = requireNotNull(registry.forGame(game))
+            assertEquals(core, capability.requiredCore)
+            assertEquals(fileName, capability.retroArchCoreFileName)
+        }
+    }
+
+    @Test
     fun unsupportedGameWithoutDiagnosticCapabilityIsRejected() {
         val android = Game(GameId("android-demo"), "Android Demo", "Android", 2020, "Action", 1, InstallState.INSTALLED,
             expectedSha256 = "abc")

@@ -1124,3 +1124,12 @@ then completed successfully. This is physical Honor evidence for legal GBC impor
 RetroArch handoff, input, emulator save-state, cleanup, uninstall, reinstall, and restore.
 Managed GameBox cloud-save transport, physical controller input, and long-duration TV soak
 remain separate acceptance gates.
+
+RetroArch core-profile expansion checkpoint (2026-09-28): the emulator registry now
+provides deterministic core names and Android core filenames for imported SNES/SFC,
+Game Boy Advance, Genesis/Mega Drive, and Nintendo 64 content in addition to the
+validated NES/FCEUmm and GBC/Gambatte profiles. The mappings use Libretro's documented
+preferred cores: Snes9x, mGBA, Genesis Plus GX, and Mupen64Plus-Next. JVM coverage checks
+each platform's required core contract and filename. This advances emulator setup and
+launch preparation; it is not gameplay, save-state, BIOS, or physical-device evidence
+for those additional families.

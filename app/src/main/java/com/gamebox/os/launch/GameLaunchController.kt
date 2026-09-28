@@ -88,6 +88,23 @@ class EmulatorCapabilityRegistry(
                 requiredCore = "Nintendo - Game Boy / Color (Gambatte)",
                 coreFileName = "gambatte_libretro_android.so",
             )
+            "snes", "superfamicom", "supernintendo", "supernintendoentertainmentsystem" ->
+                RetroArchPlatformProfile(
+                    requiredCore = "Nintendo - SNES / SFC (Snes9x)",
+                    coreFileName = "snes9x_libretro_android.so",
+                )
+            "gba", "gameboyadvance", "nintendogameboyadvance" -> RetroArchPlatformProfile(
+                requiredCore = "Nintendo - Game Boy Advance (mGBA)",
+                coreFileName = "mgba_libretro_android.so",
+            )
+            "genesis", "megadrive", "segagenesis", "segamegadrive" -> RetroArchPlatformProfile(
+                requiredCore = "Sega - MS/GG/MD/CD (Genesis Plus GX)",
+                coreFileName = "genesis_plus_gx_libretro_android.so",
+            )
+            "n64", "nintendo64" -> RetroArchPlatformProfile(
+                requiredCore = "Nintendo - Nintendo 64 (Mupen64Plus-Next)",
+                coreFileName = "mupen64plus_next_libretro_android.so",
+            )
             else -> null
         }
     }
