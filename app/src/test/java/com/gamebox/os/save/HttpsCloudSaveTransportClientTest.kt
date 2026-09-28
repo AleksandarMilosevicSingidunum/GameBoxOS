@@ -251,6 +251,69 @@ class HttpsCloudSaveTransportClientTest {
     }
 
     @Test
+    fun roundTripsPayloadThroughLoopbackHttpServerWithSigV4Authentication() = runBlocking {
+        val payload = byteArrayOf(3, 1, 4, 1, 5, 9)
+        val received = AtomicReference<ByteArray?>(null)
+        val authorization = AtomicReference<String?>(null)
+        val amzDate = AtomicReference<String?>(null)
+        val payloadHash = AtomicReference<String?>(null)
+        val server = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0)
+        val executor = Executors.newSingleThreadExecutor()
+        server.executor = executor
+        server.createContext("/games/authorized/game-1.gamebox-save") { exchange ->
+            authorization.set(exchange.requestHeaders.getFirst("Authorization"))
+            amzDate.set(exchange.requestHeaders.getFirst("x-amz-date"))
+            payloadHash.set(exchange.requestHeaders.getFirst("x-amz-content-sha256"))
+            if (!authorization.get().orEmpty().startsWith("AWS4-HMAC-SHA256 ")) {
+                exchange.sendResponseHeaders(403, -1)
+                exchange.close()
+                return@createContext
+            }
+            exchange.requestBody.use { body ->
+                if (exchange.requestMethod == "PUT") received.set(body.readBytes())
+            }
+            if (exchange.requestMethod == "PUT") {
+                exchange.sendResponseHeaders(204, -1)
+            } else {
+                val stored = received.get() ?: ByteArray(0)
+                exchange.sendResponseHeaders(200, stored.size.toLong())
+                exchange.responseBody.use { it.write(stored) }
+            }
+            exchange.close()
+        }
+        server.start()
+
+        try {
+            val endpoint = URI("https://objects.example.test/games/authorized/game-1.gamebox-save")
+            val request = this@HttpsCloudSaveTransportClientTest.request.copy(
+                endpoint = endpoint,
+                payloadBytes = payload.size.toLong(),
+                expectedSha256 = sha256(payload),
+            )
+            val client = HttpsCloudSaveTransportClient(
+                s3Signer = com.gamebox.os.catalog.AwsSignatureV4Signer("eu-central-1"),
+                connectionFactory = {
+                    URL("http://127.0.0.1:${server.address.port}/games/authorized/game-1.gamebox-save")
+                        .openConnection() as HttpURLConnection
+                },
+            )
+            val credentials = CatalogCredentials(accessKey = "access-key", secretKey = "secret-key")
+
+            client.upload(request, payload, credentials)
+            val downloaded = client.download(request.copy(payloadBytes = 0), credentials)
+
+            assertArrayEquals(payload, received.get())
+            assertArrayEquals(payload, downloaded)
+            assertTrue(authorization.get().orEmpty().startsWith("AWS4-HMAC-SHA256 "))
+            assertTrue(amzDate.get().orEmpty().matches(Regex("\\d{8}T\\d{6}Z")))
+            assertEquals(64, payloadHash.get().orEmpty().length)
+        } finally {
+            server.stop(0)
+            executor.shutdownNow()
+        }
+    }
+
+    @Test
     fun classifiesTruncatedDeclaredResponseAsRetryableTransportFailure() {
         val connection = FakeConnection(
             status = 200,
