@@ -1054,6 +1054,7 @@ private fun CatalogScreen(
     val controllerActions = LocalControllerActions.current
     val searchFocusRequester = remember { FocusRequester() }
     val firstWideCatalogRailItem = remember { FocusRequester() }
+    val firstWideCatalogContent = remember { FocusRequester() }
     LaunchedEffect(focusSearchOnEnter) {
         if (focusSearchOnEnter) {
             runCatching { searchFocusRequester.requestFocus() }
@@ -1372,6 +1373,7 @@ val allDiscoveryGames by discoveryRepository.observeGames(null, "", 250).collect
             },
             searchFocusRequester = searchFocusRequester,
             initialRailFocusRequester = firstWideCatalogRailItem,
+            railRightFocusRequester = firstWideCatalogContent,
         )
         return
     }
@@ -1726,6 +1728,7 @@ private fun BlueprintCatalogScreen(
     discoveryPlatformNames: Map<String, String> = emptyMap(),
     searchFocusRequester: FocusRequester? = null,
     initialRailFocusRequester: FocusRequester? = null,
+    railRightFocusRequester: FocusRequester? = null,
 ) {
     var installedOnly by remember(uiState) { mutableStateOf(uiState.screenValue("store.installed") == "true") }
     var sortByRating by remember(uiState) { mutableStateOf(uiState.screenValue("store.rating") == "true") }
@@ -1765,6 +1768,7 @@ private fun BlueprintCatalogScreen(
             BlueprintRailItem(
                 "All", allDiscoveryGames.size + authorizedGames.size, selectedConsole == null,
                 Icons.Rounded.GridView, focusRequester = initialRailFocusRequester,
+                rightFocusRequester = railRightFocusRequester,
             ) {
                 onSelectConsole(null)
             }
@@ -1777,6 +1781,7 @@ private fun BlueprintCatalogScreen(
                     selectedConsole?.key == console.key,
                     console.icon,
                     brandKey = console.key,
+                    rightFocusRequester = railRightFocusRequester,
                 ) {
                     onSelectConsole(console)
                 }
@@ -1860,6 +1865,8 @@ private fun BlueprintCatalogScreen(
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth().then(
                         searchFocusRequester?.let { Modifier.focusRequester(it) } ?: Modifier
+                    ).then(
+                        railRightFocusRequester?.let { Modifier.focusRequester(it) } ?: Modifier
                     ),
                     shape = RoundedCornerShape(8.dp),
                 )
@@ -2407,6 +2414,7 @@ private fun BlueprintRailItem(
     icon: ImageVector,
     brandKey: String? = null,
     focusRequester: FocusRequester? = null,
+    rightFocusRequester: FocusRequester? = null,
     onClick: () -> Unit,
 ) {
     val interactionSource = remember { MutableInteractionSource() }
@@ -2414,6 +2422,17 @@ private fun BlueprintRailItem(
     Surface(
         modifier = Modifier.fillMaxWidth()
             .then(focusRequester?.let { Modifier.focusRequester(it) } ?: Modifier)
+            .then(rightFocusRequester?.let { requester ->
+                Modifier.onPreviewKeyEvent { event ->
+                    if (event.type == KeyEventType.KeyDown &&
+                        event.nativeKeyEvent.keyCode == AndroidKeyEvent.KEYCODE_DPAD_RIGHT
+                    ) {
+                        requester.requestFocus()
+                    } else {
+                        false
+                    }
+                }
+            } ?: Modifier)
             .hoverable(interactionSource).blueprintClick(onClick)
             .semantics { this.selected = selected },
         color = if (selected || hovered) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.72f) else Color.Transparent,

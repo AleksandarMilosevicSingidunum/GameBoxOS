@@ -1429,3 +1429,12 @@ is outside Compose and outside the app window flags; it is controlled by the Hon
 window manager. The APK remains fullscreen at the Android window-policy level, but a true
 caption-free HDMI result requires the firmware's maximize/fullscreen desktop action or a
 different mirroring/presentation mode.
+
+TV Store horizontal-focus checkpoint (2026-09-28): the Store rail now handles a
+display-targeted Right key explicitly on wide layouts, requesting the first visible
+content target instead of relying on Honor's spatial focus search. On the physical HDMI
+display, Store entry focused the console rail at `[266,252][391,293]`; Right moved focus
+to the visible Galaxy Patrol card at `[250,325][1104,509]`, whose hierarchy included
+`Galaxy Patrol, Retro, installed, continue playing`. This closes the previously observed
+zero-bounds Right handoff for the Store TV flow; phone-screen rendering was not used for
+this acceptance.
