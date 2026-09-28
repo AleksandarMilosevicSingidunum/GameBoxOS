@@ -1508,3 +1508,10 @@ front. An explicit `MainActivity` relaunch restored the GameBox surface and reta
 an ordinary activity start rather than HOME resolution. The HOME role itself remained
 `com.gamebox.os`. This is evidence for the pending process-death/cold-start firmware
 recovery gate, not a regression in the normal borderless HOME surface.
+
+TV navigation semantics checkpoint (2026-09-28): the top navigation tabs now expose
+their content description and `OnClick` action on the same semantics node, preserving
+controller/accessibility activation when an unmerged TV hierarchy is used. The JVM
+unit suite, debug APK assembly, and `TvActivityTest` passed on the connected Android
+test target. The catalog fallback instrumentation still has a separate provider-
+simulation gate issue on that target; it is not counted as TV launcher acceptance.

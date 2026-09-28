@@ -618,12 +618,16 @@ internal fun NavButton(item: Destination, selected: Destination, onSelect: (Dest
             .hoverable(interactionSource)
             .focusDebugTarget()
             .onFocusChanged { focused = it.isFocused }
-            .clickable(interactionSource = interactionSource, indication = null) { onSelect(item) }
             .semantics {
                 contentDescription = item.title + " tab"
                 role = Role.Tab
                 this.selected = item == selected
+                onClick(label = "Select ${item.title}") {
+                    onSelect(item)
+                    true
+                }
             }
+            .clickable(interactionSource = interactionSource, indication = null) { onSelect(item) }
     ) {
         Box(contentAlignment = Alignment.Center) {
             Text(
