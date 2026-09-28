@@ -294,6 +294,13 @@ was visible but remained a 1312×1037 freeform desktop window. Automated launche
 cover the bounds contract. Fresh visual TV acceptance still depends on Honor Desktop
 Mode's firmware window manager and must be checked on the actual TV surface.
 
+TV window-policy follow-up (28 September 2026): `TvActivity` now requests landscape,
+opts into edge-to-edge rendering, and hides system bars with transient-bar recovery
+after Desktop Mode focus changes. This keeps the shared Blueprint 16:9 viewport from
+being reduced by phone navigation/status chrome when the dedicated activity owns the
+presentation display. Build and instrumentation evidence remain separate from the
+firmware-dependent confirmation, overscan, controller, and long-duration TV gates.
+
 Authenticated catalog transport checkpoint: the shared HTTPS/WebDAV/S3 client now
 rejects credential types that do not match the selected transport before opening a
 network connection. S3 requires access-key/secret-key credentials, while HTTPS and
