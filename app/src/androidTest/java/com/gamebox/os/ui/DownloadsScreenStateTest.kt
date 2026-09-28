@@ -1,6 +1,7 @@
 package com.gamebox.os.ui
 
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -130,7 +131,10 @@ class DownloadsScreenStateTest {
         }
 
         compose.onNodeWithText("No active downloads").assertIsDisplayed()
-        compose.onNodeWithText("Browse Store").assertIsDisplayed().performClick()
+        compose.onNodeWithText("Browse Store")
+            .assertIsDisplayed()
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .performClick()
         assert(storeOpened)
     }
 }

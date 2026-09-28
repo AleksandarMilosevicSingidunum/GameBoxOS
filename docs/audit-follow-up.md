@@ -1760,3 +1760,10 @@ on a text-only dead end. The production Downloads UI regression passed `OK (2
 tests)` on API-35, and the rebuilt artifact completed the combined wide Blueprint
 flow plus dedicated TV-host suite at 1920×1080/160 dpi with `OK (10 tests)`. The
 emulator was restored to 1080×2400/420 afterward.
+
+TV Downloads focus follow-up (2026-09-28): the empty-state Store action now claims
+initial focus after the TV navigation transition settles, while the global root
+focus fallback is suppressed for the Downloads destination. The production wide
+Blueprint flow explicitly verified the clickable `Browse Store` node as focused;
+the final combined TV-profile run remained `OK (10 tests)` at 1920×1080/160 dpi,
+and the isolated Downloads state run remained `OK (2 tests)`.

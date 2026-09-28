@@ -99,6 +99,9 @@ class BlueprintScreenshotsTest {
         rule.waitForIdle()
         if (rule.activity.resources.configuration.screenWidthDp >= 900) {
             rule.onNodeWithText("Download Manager").assertIsDisplayed()
+            val browseStore = rule.onAllNodesWithText("Browse Store").filter(hasClickAction())
+            browseStore.assertCountEquals(1)
+            browseStore.onFirst().assertIsFocused()
         } else {
             rule.onNodeWithText("Downloads").assertIsDisplayed()
         }

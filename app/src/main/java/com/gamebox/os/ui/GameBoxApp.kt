@@ -240,7 +240,11 @@ fun GameBoxApp(
     }
 
     LaunchedEffect(destination, selectedGameId) {
-        if (destination != Destination.SETTINGS && destination != Destination.STORE && selectedGameId == null) {
+        if (destination != Destination.SETTINGS &&
+            destination != Destination.STORE &&
+            destination != Destination.DOWNLOADS &&
+            selectedGameId == null
+        ) {
             rootFocusRequester.requestFocus()
         }
     }
@@ -3946,6 +3950,22 @@ internal fun DownloadsScreen(
     val jobs by downloadRepository.observeJobs().collectAsState()
     val context = LocalContext.current
     val controllerActions = LocalControllerActions.current
+    val focusManager = androidx.compose.ui.platform.LocalFocusManager.current
+    val emptyDownloadsFocusRequester = remember { FocusRequester() }
+    var emptyDownloadsFocusClaimed by remember { mutableStateOf(false) }
+    LaunchedEffect(jobs.isEmpty()) {
+        if (jobs.isEmpty()) {
+            repeat(8) {
+                val focused = runCatching { emptyDownloadsFocusRequester.requestFocus() }
+                    .getOrDefault(false)
+                if (focused) return@LaunchedEffect
+                withFrameNanos { }
+            }
+            kotlinx.coroutines.delay(300)
+            focusManager.clearFocus(force = true)
+            runCatching { emptyDownloadsFocusRequester.requestFocus() }
+        }
+    }
     val actionable = jobs.mapNotNull { job ->
         repository.game(job.gameId)
             ?.takeIf { it.sourceUrl != null && it.expectedSha256 != null }
@@ -4019,7 +4039,22 @@ internal fun DownloadsScreen(
                 Icon(Icons.Rounded.Downloading, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                 Text("No active downloads", fontWeight = FontWeight.Bold)
                 Text("Games you queue from authorized sources will appear here.", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp)
-                Button(onClick = onStore) {
+                Button(
+                    onClick = onStore,
+                    modifier = Modifier
+                        .focusRequester(emptyDownloadsFocusRequester)
+                        .focusable()
+                        .bringFocusedControlIntoView()
+                        .onGloballyPositioned {
+                            if (!emptyDownloadsFocusClaimed) {
+                                val focused = runCatching {
+                                    focusManager.clearFocus(force = true)
+                                    emptyDownloadsFocusRequester.requestFocus()
+                                }.getOrDefault(false)
+                                if (focused) emptyDownloadsFocusClaimed = true
+                            }
+                        },
+                ) {
                     Text("Browse Store")
                 }
             }
