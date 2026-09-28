@@ -361,6 +361,13 @@ secrets are configured. The Windows Release core harness also passed independent
 the same continuation. This confirms compilation/package integrity only, not trusted
 installation or update-channel readiness.
 
+Emulator handoff URI hardening (2026-09-28): the allowlisted PPSSPP, Dolphin,
+RetroArch, and fallback intent policy now requires a scoped `content://` URI with a
+non-empty document path, in addition to rejecting credentials, query strings, and
+fragments. The focused policy suite and complete Android JVM suite pass (567 tests,
+zero failures, zero errors, one explicit skip). This strengthens launch-input
+validation; it does not claim gameplay or emulator-private save compatibility.
+
 Release provenance hardening (27 September 2026): alpha, beta, combined preview, and
 protected production APK workflows now use the same tested manifest generator. It accepts
 the PREVIEW channel and records the checked-out source commit plus signing status alongside

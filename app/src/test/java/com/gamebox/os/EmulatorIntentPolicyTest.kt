@@ -17,6 +17,9 @@ class EmulatorIntentPolicyTest {
             EmulatorIntentPolicy.plan(EmulatorIntentPolicy.PPSSPP_PACKAGE, "content://", "Balanced")
         }
         assertThrows(IllegalArgumentException::class.java) {
+            EmulatorIntentPolicy.plan(EmulatorIntentPolicy.PPSSPP_PACKAGE, "content://com.gamebox.os.files", "Balanced")
+        }
+        assertThrows(IllegalArgumentException::class.java) {
             EmulatorIntentPolicy.plan(EmulatorIntentPolicy.PPSSPP_PACKAGE, "content://user:pass@files/game.iso", "Balanced")
         }
         assertThrows(IllegalArgumentException::class.java) {

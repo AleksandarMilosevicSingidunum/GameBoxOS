@@ -40,6 +40,7 @@ object EmulatorIntentPolicy {
             uri != null &&
                 uri.scheme.equals("content", ignoreCase = true) &&
                 !uri.host.isNullOrBlank() &&
+                !uri.path.isNullOrBlank() &&
                 uri.userInfo == null &&
                 uri.query == null &&
                 uri.fragment == null
