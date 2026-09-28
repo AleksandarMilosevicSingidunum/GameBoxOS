@@ -33,6 +33,12 @@ class BlueprintLayoutPolicyTest {
     }
 
     @Test
+    fun physicalTvDimensionsMapToBlueprintScale() {
+        assertEquals(1.5f, blueprintViewportScale(1920f, 1080f), 0.0001f)
+        assertEquals(2f, blueprintViewportScale(3840f, 2160f), 0.0001f)
+    }
+
+    @Test
     fun phoneViewportDoesNotShrinkForWideDesignMath() {
         assertEquals(1f, blueprintViewportScale(412f, 915f), 0.0001f)
         assertEquals(1f, blueprintViewportScale(Float.NaN, 675f), 0.0001f)

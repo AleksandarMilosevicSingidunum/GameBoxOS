@@ -1228,6 +1228,12 @@ screencap is unavailable through this device's ADB presentation-display interfac
 authoritative window/configuration and display-targeted hierarchy/input evidence are
 therefore used for this checkpoint.
 
+Physical TV dimension regression checkpoint (2026-09-28): the viewport policy now has
+explicit tests for the connected HDMI profile (1920x1080 at 1.5x Blueprint scale) and a
+4K 3840x2160 profile (2.0x cap). This complements the existing 160-dpi/content-safe
+viewport cases and protects the wide 16:9 composition from future density or resolution
+regressions.
+
 TV controller-navigation regression checkpoint (2026-09-28): the dedicated
 `TvActivityTest` now covers the Blueprint shoulder-button contract in addition to the
 quick-actions overlay: R1 moves Home to Library and L1 returns to Home, with selected
