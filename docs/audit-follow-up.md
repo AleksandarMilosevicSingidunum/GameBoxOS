@@ -1688,3 +1688,9 @@ and fullscreen launch hint. The rebuilt artifact compiled successfully, the
 complete JVM suite remained green, and the dedicated TV host suite passed
 `OK (5 tests)` at 1920×1080/160 dpi. This is software TV-dimension evidence;
 Honor firmware windowing still requires an unlocked physical-TV acceptance run.
+
+Combined post-fix TV gate (2026-09-28): the latest bounds-free debug and test
+APKs completed the production-wide Blueprint flow plus dedicated TV-host suite
+at 1920×1080/160 dpi with `OK (9 tests)`. The emulator was restored to
+1080×2400/420 afterward. This confirms the UI/navigation and host-policy gates
+remain green together after the external gameplay launch change.
