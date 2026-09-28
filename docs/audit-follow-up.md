@@ -1401,3 +1401,12 @@ Download Manager with its active/queued/completed metric cards, empty-state pane
 controller footer. The hierarchy confirmed `No active downloads` and the authorized-source
 guidance at TV bounds; this is physical external-display UI evidence for the empty Downloads
 state, separate from live provider transfer and hardware-controller acceptance.
+
+TV Store focus checkpoint (2026-09-28): the wide Store root no longer requests the global
+GameBox focus target while Store is active. On the wired Honor HDMI display, entering Store
+from Home placed focus on the visible `All` console rail item at TV bounds `[119,207][309,270]`;
+a display-targeted Down key moved focus to the visible `PS2` item at `[119,261][309,324]`.
+This makes the first Store filter reachable by remote/D-pad without phone-screen validation.
+The direct Right probe still exposed a zero-bounds Compose semantics target on this Honor
+Desktop Mode presentation surface, so horizontal rail-to-content navigation remains an
+identified follow-up rather than a claimed fix.

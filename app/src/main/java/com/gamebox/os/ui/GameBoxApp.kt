@@ -225,7 +225,7 @@ fun GameBoxApp(
     }
 
     LaunchedEffect(destination) {
-        if (destination != Destination.SETTINGS) {
+        if (destination != Destination.SETTINGS && destination != Destination.STORE) {
             rootFocusRequester.requestFocus()
         }
     }
@@ -247,7 +247,7 @@ fun GameBoxApp(
     BoxWithConstraints(
         Modifier.fillMaxSize()
             .focusRequester(rootFocusRequester)
-            .focusable(enabled = destination != Destination.SETTINGS)
+            .focusable(enabled = destination != Destination.SETTINGS && destination != Destination.STORE)
             .onPreviewKeyEvent { event ->
                 if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
                 when (event.nativeKeyEvent.keyCode) {
@@ -1053,10 +1053,16 @@ private fun CatalogScreen(
     val scope = rememberCoroutineScope()
     val controllerActions = LocalControllerActions.current
     val searchFocusRequester = remember { FocusRequester() }
+    val firstWideCatalogRailItem = remember { FocusRequester() }
     LaunchedEffect(focusSearchOnEnter) {
         if (focusSearchOnEnter) {
             runCatching { searchFocusRequester.requestFocus() }
             onSearchFocusHandled()
+        }
+    }
+    LaunchedEffect(uiState.destination, compact) {
+        if (!compact && uiState.destination == Destination.STORE.name) {
+            runCatching { firstWideCatalogRailItem.requestFocus() }
         }
     }
     var query by remember(uiState) { mutableStateOf(uiState.screenValue("store.query").orEmpty()) }
@@ -1365,6 +1371,7 @@ val allDiscoveryGames by discoveryRepository.observeGames(null, "", 250).collect
                 uiState.rememberScreenValue("store.discovery", it.id.value)
             },
             searchFocusRequester = searchFocusRequester,
+            initialRailFocusRequester = firstWideCatalogRailItem,
         )
         return
     }
@@ -1718,6 +1725,7 @@ private fun BlueprintCatalogScreen(
     allDiscoveryGames: List<DiscoveryGame> = discoveryGames,
     discoveryPlatformNames: Map<String, String> = emptyMap(),
     searchFocusRequester: FocusRequester? = null,
+    initialRailFocusRequester: FocusRequester? = null,
 ) {
     var installedOnly by remember(uiState) { mutableStateOf(uiState.screenValue("store.installed") == "true") }
     var sortByRating by remember(uiState) { mutableStateOf(uiState.screenValue("store.rating") == "true") }
@@ -1754,7 +1762,10 @@ private fun BlueprintCatalogScreen(
     Row(Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         BlueprintRail(Modifier.width(railWidth)) {
             Text("CONSOLES", color = MaterialTheme.colorScheme.primary, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-            BlueprintRailItem("All", allDiscoveryGames.size + authorizedGames.size, selectedConsole == null, Icons.Rounded.GridView) {
+            BlueprintRailItem(
+                "All", allDiscoveryGames.size + authorizedGames.size, selectedConsole == null,
+                Icons.Rounded.GridView, focusRequester = initialRailFocusRequester,
+            ) {
                 onSelectConsole(null)
             }
             storeConsoles.forEach { console ->
@@ -2395,12 +2406,15 @@ private fun BlueprintRailItem(
     selected: Boolean,
     icon: ImageVector,
     brandKey: String? = null,
+    focusRequester: FocusRequester? = null,
     onClick: () -> Unit,
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val hovered by interactionSource.collectIsHoveredAsState()
     Surface(
-        modifier = Modifier.fillMaxWidth().hoverable(interactionSource).blueprintClick(onClick)
+        modifier = Modifier.fillMaxWidth()
+            .then(focusRequester?.let { Modifier.focusRequester(it) } ?: Modifier)
+            .hoverable(interactionSource).blueprintClick(onClick)
             .semantics { this.selected = selected },
         color = if (selected || hovered) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.72f) else Color.Transparent,
         shape = RoundedCornerShape(8.dp),
