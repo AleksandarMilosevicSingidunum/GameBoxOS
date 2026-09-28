@@ -1010,6 +1010,14 @@ RetroArch/PPSSPP/Dolphin/DuckStation/M64Plus FZ/Flycast adapter guidance, report
 the external-settings boundary and display-state reporting only; installed emulator
 availability and gameplay remain adapter-specific evidence.
 
+Fresh Android release packaging checkpoint (2026-09-28): `:app:assembleRelease`
+completed successfully after the emulator visibility changes. The resulting unsigned
+preview is `app-release-unsigned.apk`, 14,543,205 bytes, SHA-256
+`beaa33d538dfe5515e94c5153dc5827dac0197c91d5015d3dce976e4f275f56f`. `apksigner verify`
+correctly reports `DOES NOT VERIFY` because the unsigned artifact has no
+`META-INF/MANIFEST.MF`; this is expected preview evidence and does not satisfy the
+protected production signing, upgrade, or rollback gate.
+
 1. Extend real game/save/return/uninstall/reinstall proof across the supported adapter patterns.
 2. Validate managed GameBox save import/backup/cloud behavior against production emulators and real endpoints.
 3. Live provider/download/volume validation against real configured endpoints and storage.
