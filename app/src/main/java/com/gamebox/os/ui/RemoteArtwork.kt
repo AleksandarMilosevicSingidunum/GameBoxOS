@@ -80,19 +80,11 @@ private fun loadArtwork(url: String, cacheDir: File): Bitmap? {
         try {
             if (connection.responseCode !in 200..299 || connection.contentLengthLong > MAX_ARTWORK_BYTES) return null
             bytes = connection.inputStream.use { stream ->
-                val output = java.io.ByteArrayOutputStream()
-                val buffer = ByteArray(16 * 1024)
-                while (output.size() <= MAX_ARTWORK_BYTES) {
-                    val count = stream.read(buffer)
-                    if (count < 0) break
-                    output.write(buffer, 0, count)
-                }
-                output.toByteArray()
+                readBoundedArtworkResponse(stream, connection.contentLengthLong, MAX_ARTWORK_BYTES)
             }
-            if (bytes.size > MAX_ARTWORK_BYTES) return null
         } finally { connection.disconnect() }
     }
-    val data = bytes ?: return null
+    val data = bytes
     val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
     BitmapFactory.decodeByteArray(data, 0, data.size, bounds)
     if (bounds.outWidth <= 0 || bounds.outHeight <= 0) { cached.delete(); return null }
@@ -117,6 +109,29 @@ private fun loadArtwork(url: String, cacheDir: File): Bitmap? {
         }
     }
     return result
+}
+
+internal fun readBoundedArtworkResponse(
+    input: java.io.InputStream,
+    declaredLength: Long,
+    maxBytes: Int,
+): ByteArray {
+    val output = java.io.ByteArrayOutputStream()
+    val buffer = ByteArray(16 * 1024)
+    var total = 0
+    while (true) {
+        val count = input.read(buffer)
+        if (count < 0) break
+        total += count
+        require(total <= maxBytes) { "Artwork response is too large" }
+        output.write(buffer, 0, count)
+    }
+    if (declaredLength >= 0L && total.toLong() != declaredLength) {
+        throw java.io.IOException(
+            "Artwork response ended with an unexpected length ($total/$declaredLength)",
+        )
+    }
+    return output.toByteArray()
 }
 
 @Composable

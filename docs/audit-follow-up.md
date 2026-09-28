@@ -874,6 +874,13 @@ test requiring a configured legal fixture and the real SAF save-root round trip.
 connected Honor remains a separate physical gate; ADB currently reports its secure
 AOD/keyguard state, so no Honor Compose result is inferred from this emulator run.
 
+Artwork transport framing hardening (2026-09-28): remote HTTPS artwork now uses a
+bounded reader that rejects bodies shorter or longer than a declared `Content-Length`
+and stops at the 4 MiB limit for unknown-length responses. Focused tests cover unknown
+length, truncated length, and over-limit bodies. The complete Android JVM suite now
+passes 564 tests with zero failures, zero errors, and one explicit skip; this remains
+local transport evidence and does not claim live CDN acceptance.
+
 1. Extend real game/save/return/uninstall/reinstall proof across the supported adapter patterns.
 2. Validate managed GameBox save import/backup/cloud behavior against production emulators and real endpoints.
 3. Live provider/download/volume validation against real configured endpoints and storage.
