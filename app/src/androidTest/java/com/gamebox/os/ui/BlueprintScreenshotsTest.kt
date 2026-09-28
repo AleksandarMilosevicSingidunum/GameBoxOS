@@ -11,7 +11,9 @@ import androidx.test.platform.app.InstrumentationRegistry
 import com.gamebox.os.MainActivity
 import com.gamebox.os.GameBoxApplication
 import com.gamebox.os.domain.InstallState
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -136,6 +138,51 @@ class BlueprintScreenshotsTest {
             rule.waitForIdle()
             // The details action and the controller footer both expose the same label.
             rule.onAllNodesWithText("Update").onLast().assertIsDisplayed()
+        } finally {
+            runBlocking { repository.setInstallStateAndAwait(target.id, originalState) }
+        }
+    }
+
+    @Test
+    fun installedGameIsPlayReadyOnWideTv() {
+        if (rule.activity.resources.configuration.screenWidthDp < 900) return
+        rule.waitUntil(15_000) {
+            rule.onAllNodesWithContentDescription("Home tab").fetchSemanticsNodes().isNotEmpty()
+        }
+        val app = InstrumentationRegistry.getInstrumentation().targetContext.applicationContext as GameBoxApplication
+        val repository = app.container.gameRepository
+        val target = repository.observeGames().value.firstOrNull()
+            ?: error("Installed-state coverage requires a seeded catalog record")
+        val originalState = target.state
+        try {
+            runBlocking { repository.setInstallStateAndAwait(target.id, InstallState.INSTALLED) }
+            val installedTarget = runBlocking {
+                withTimeout(5_000) {
+                    repository.observeGames().first { games ->
+                        games.any { it.id == target.id && it.state == InstallState.INSTALLED }
+                    }
+                }.first { it.id == target.id }
+            }
+            rule.onNodeWithContentDescription("Library tab").performClick()
+            rule.waitForIdle()
+            rule.waitUntil(5_000) {
+                rule.onAllNodesWithContentDescription(
+                    GameBoxSemantics.gameCardDescription(installedTarget, hero = false)
+                ).fetchSemanticsNodes().isNotEmpty()
+            }
+            rule.onNodeWithContentDescription(
+                GameBoxSemantics.gameCardDescription(installedTarget, hero = false)
+            ).assertIsDisplayed()
+
+            // Use the production card semantics so this covers the same selection path
+            // a TV controller uses, rather than opening Details through a test shortcut.
+            rule.onNodeWithContentDescription(
+                GameBoxSemantics.gameCardDescription(installedTarget, hero = false)
+            ).performClick()
+            rule.waitUntil(5_000) {
+                rule.onAllNodesWithText("Play Now").fetchSemanticsNodes().isNotEmpty()
+            }
+            rule.onNodeWithText("Play Now").assertIsDisplayed()
         } finally {
             runBlocking { repository.setInstallStateAndAwait(target.id, originalState) }
         }

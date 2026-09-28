@@ -1869,3 +1869,13 @@ TV 1280×720 dimension gate (2026-09-29): the combined production Blueprint and
 dedicated TV host flow passed `OK (12 tests)` at 1280×720/160, and the emulator
 display override was restored afterward. This complements the 1920×1080/160
 profile; physical HDMI overscan and Honor Desktop Mode windowing remain separate.
+
+TV installed-game readiness checkpoint (2026-09-29): the production-wide
+instrumentation flow now marks a seeded catalog record installed, waits for the
+updated repository/UI state, selects its real Library card through production
+semantics, and verifies the wide Details installation panel exposes `Play Now`.
+The focused test passed, followed by the complete Blueprint plus dedicated TV
+host profile at 1920×1080/160 with `OK (13 tests)`. The emulator was restored to
+1080×2400/420. This proves the software TV installed-state user flow; it does
+not claim emulator launch success, gameplay, physical controller input, or
+Honor Desktop Mode acceptance.
