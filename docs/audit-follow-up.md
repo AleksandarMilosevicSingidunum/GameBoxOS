@@ -1056,3 +1056,11 @@ passes on API-35; the production `GameCard` still exposes the expected descripti
 clickable semantics, so this is tracked as an Honor/Compose instrumentation compatibility
 issue pending a device-specific diagnostic, not counted as a clean physical accessibility
 pass. The authorized install lifecycle test itself remains green on the Honor.
+
+Cloud-save transport regression checkpoint (2026-09-28): the focused Android JVM suite
+passed 25 tests across `HttpsCloudSaveTransportClientTest`, `CloudSaveEndpointPolicyTest`,
+`CloudSaveEnvelopeCodecTest`, and `CloudSaveSyncContractTest`. The transport loopback
+tests exercise upload/download round trips with Basic and SigV4-style authentication,
+checksum enforcement, retry classification, cancellation, and response-size bounds.
+This is local integration evidence; authenticated WebDAV/S3 endpoint acceptance remains
+an external-provider gate and is not implied by the loopback server.
