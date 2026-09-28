@@ -4019,6 +4019,9 @@ internal fun DownloadsScreen(
                 Icon(Icons.Rounded.Downloading, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                 Text("No active downloads", fontWeight = FontWeight.Bold)
                 Text("Games you queue from authorized sources will appear here.", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp)
+                Button(onClick = onStore) {
+                    Text("Browse Store")
+                }
             }
         }
         jobs.forEach { job ->

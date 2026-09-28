@@ -111,4 +111,26 @@ class DownloadsScreenStateTest {
             }
         }
     }
+
+    @Test
+    fun emptyDownloadsProvidesControllerReachableStoreRoute() {
+        var storeOpened = false
+        jobs.value = emptyList()
+        compose.setContent {
+            MaterialTheme {
+                DownloadsScreen(
+                    repository = gameRepository,
+                    downloadRepository = downloadRepository,
+                    remoteDownloadController = remoteController,
+                    compact = false,
+                    onStore = { storeOpened = true },
+                    onSettings = {},
+                )
+            }
+        }
+
+        compose.onNodeWithText("No active downloads").assertIsDisplayed()
+        compose.onNodeWithText("Browse Store").assertIsDisplayed().performClick()
+        assert(storeOpened)
+    }
 }

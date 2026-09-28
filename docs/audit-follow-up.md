@@ -1753,3 +1753,10 @@ otherwise restore window decorations while the dedicated TV activity remained
 alive. The rebuilt artifact passed the dedicated TV-host instrumentation suite
 with `OK (6 tests)`; physical firmware windowing and HDMI reconnect behavior remain
 separate hardware evidence.
+
+TV Downloads empty-state increment (2026-09-28): the empty Download Manager now
+provides a focusable `Browse Store` action instead of leaving a TV/controller user
+on a text-only dead end. The production Downloads UI regression passed `OK (2
+tests)` on API-35, and the rebuilt artifact completed the combined wide Blueprint
+flow plus dedicated TV-host suite at 1920×1080/160 dpi with `OK (10 tests)`. The
+emulator was restored to 1080×2400/420 afterward.
