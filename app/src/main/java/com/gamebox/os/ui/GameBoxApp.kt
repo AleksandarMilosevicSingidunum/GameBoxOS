@@ -1098,9 +1098,12 @@ private fun CatalogScreen(
     )
     val scope = rememberCoroutineScope()
     val controllerActions = LocalControllerActions.current
+    val focusManager = androidx.compose.ui.platform.LocalFocusManager.current
     val searchFocusRequester = remember { FocusRequester() }
     val firstWideCatalogRailItem = remember { FocusRequester() }
     val firstWideCatalogContent = remember { FocusRequester() }
+    val emptyCatalogActionFocusRequester = remember { FocusRequester() }
+    var emptyCatalogActionFocusClaimed by remember { mutableStateOf(false) }
     LaunchedEffect(focusSearchOnEnter) {
         if (focusSearchOnEnter) {
             runCatching { searchFocusRequester.requestFocus() }
@@ -1135,6 +1138,20 @@ val allDiscoveryGames by discoveryRepository.observeGames(null, "", 250).collect
     var discoverySyncMessage by remember { mutableStateOf<String?>(null) }
     var discoverySyncing by remember { mutableStateOf(false) }
     var discoverySyncProgress by remember { mutableStateOf(0f) }
+    val emptyCatalogActionVisible = !compact && discoveryGames.isEmpty() &&
+        selectedDiscoveryId == null && !discoverySyncing
+    val focusSyncAction = emptyCatalogActionVisible &&
+        (selectedConsole == null || selectedConsole.theGamesDbName != null)
+    val focusRefreshAction = emptyCatalogActionVisible && !focusSyncAction &&
+        refreshState != CatalogRefreshState.REFRESHING
+    LaunchedEffect(emptyCatalogActionVisible, focusSyncAction, focusRefreshAction) {
+        if (emptyCatalogActionVisible) {
+            androidx.compose.runtime.withFrameNanos { }
+            kotlinx.coroutines.delay(300)
+            focusManager.clearFocus(force = true)
+            runCatching { emptyCatalogActionFocusRequester.requestFocus() }
+        }
+    }
     var configuredSourceResults by remember { mutableStateOf<List<DiscoverySourceGame>>(emptyList()) }
     var selectedConfiguredResult by remember { mutableStateOf<DiscoverySourceGame?>(null) }
     var configuredResultNotice by remember { mutableStateOf<String?>(null) }
@@ -1421,6 +1438,9 @@ val allDiscoveryGames by discoveryRepository.observeGames(null, "", 250).collect
             searchFocusRequester = searchFocusRequester,
             initialRailFocusRequester = firstWideCatalogRailItem,
             railRightFocusRequester = firstWideCatalogContent,
+            emptyCatalogActionFocusRequester = emptyCatalogActionFocusRequester,
+            focusSyncAction = focusSyncAction,
+            focusRefreshAction = focusRefreshAction,
         )
         return
     }
@@ -1776,9 +1796,13 @@ private fun BlueprintCatalogScreen(
     searchFocusRequester: FocusRequester? = null,
     initialRailFocusRequester: FocusRequester? = null,
     railRightFocusRequester: FocusRequester? = null,
+    emptyCatalogActionFocusRequester: FocusRequester? = null,
+    focusSyncAction: Boolean = false,
+    focusRefreshAction: Boolean = false,
 ) {
     var installedOnly by remember(uiState) { mutableStateOf(uiState.screenValue("store.installed") == "true") }
     var sortByRating by remember(uiState) { mutableStateOf(uiState.screenValue("store.rating") == "true") }
+    var emptyCatalogActionFocusClaimed by remember { mutableStateOf(false) }
     LaunchedEffect(installedOnly, sortByRating) {
         uiState.rememberScreenValue("store.installed", installedOnly.toString())
         uiState.rememberScreenValue("store.rating", sortByRating.toString())
@@ -2041,12 +2065,34 @@ private fun BlueprintCatalogScreen(
             Button(
                 onClick = onSync,
                 enabled = !discoverySyncing && (selectedConsole == null || selectedConsole.theGamesDbName != null),
-                modifier = Modifier.weight(1f),
+                modifier = Modifier.weight(1f).then(
+                    if (focusSyncAction && emptyCatalogActionFocusRequester != null) {
+                        Modifier
+                            .focusRequester(emptyCatalogActionFocusRequester)
+                            .onGloballyPositioned {
+                                if (!emptyCatalogActionFocusClaimed) {
+                                    val focused = runCatching { emptyCatalogActionFocusRequester.requestFocus() }.getOrDefault(false)
+                                    if (focused) emptyCatalogActionFocusClaimed = true
+                                }
+                            }
+                    } else Modifier
+                ),
             ) { Text(if (discoverySyncing) "Syncing…" else "Sync ${selectedConsole?.label ?: "all consoles"}", fontSize = 10.sp) }
             OutlinedButton(
                 onClick = onRefresh,
                 enabled = refreshState != CatalogRefreshState.REFRESHING,
-                modifier = Modifier.weight(1f).semantics {
+                modifier = Modifier.weight(1f).then(
+                    if (focusRefreshAction && emptyCatalogActionFocusRequester != null) {
+                        Modifier
+                            .focusRequester(emptyCatalogActionFocusRequester)
+                            .onGloballyPositioned {
+                                if (!emptyCatalogActionFocusClaimed) {
+                                    val focused = runCatching { emptyCatalogActionFocusRequester.requestFocus() }.getOrDefault(false)
+                                    if (focused) emptyCatalogActionFocusClaimed = true
+                                }
+                            }
+                    } else Modifier
+                ).semantics {
                     contentDescription = catalogRefreshButtonDescription(refreshState)
                     if (refreshState == CatalogRefreshState.REFRESHING) liveRegion = LiveRegionMode.Polite
                 },
@@ -4622,13 +4668,6 @@ private fun BlueprintAppHubScreen(
                         Icon(Icons.Rounded.DesktopWindows, null, Modifier.size(16.dp))
                         Text("Desktop mode", Modifier.padding(start = 6.dp), fontSize = 11.sp)
                     }
-                    OutlinedButton(
-                        onClick = onExternalDisplay,
-                        modifier = Modifier.semantics { contentDescription = "Show GameBox on external display" },
-                    ) {
-                        Icon(Icons.Rounded.Cast, null, Modifier.size(16.dp))
-                        Text("Show on TV", Modifier.padding(start = 6.dp), fontSize = 11.sp)
-                    }
                 }
             }
             message?.let { Text(it, color = MaterialTheme.colorScheme.primary, fontSize = 12.sp,
@@ -4640,6 +4679,15 @@ private fun BlueprintAppHubScreen(
                 HomeStatusItem(Icons.Rounded.Wifi, "Connection", networkLabel)
                 HomeStatusItem(Icons.Rounded.SportsEsports, "Controller", connectedControllerLabel())
                 HomeStatusItem(Icons.Rounded.Smartphone, "Android ${Build.VERSION.RELEASE}", Build.MODEL)
+                OutlinedButton(
+                    onClick = onExternalDisplay,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .semantics { contentDescription = "Show GameBox on external display" },
+                ) {
+                    Icon(Icons.Rounded.Cast, null, Modifier.size(16.dp))
+                    Text("Show on TV", Modifier.padding(start = 6.dp), fontSize = 11.sp)
+                }
             } else {
                 HomeStatusItem(
                     Icons.AutoMirrored.Rounded.VolumeUp,

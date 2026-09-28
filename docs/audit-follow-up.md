@@ -1785,3 +1785,15 @@ focus-capable, the full JVM suite passed, the Android Downloads state run passed
 `OK (2 tests)`, and the production wide Blueprint flow passed `OK (1 test)`.
 Automatic focus on a real populated transfer remains separately documented from
 the isolated Compose semantics evidence.
+
+TV PC Hub action increment (2026-09-28): the supported external-display action
+was moved into the visible wide-layout status rail, so the TV/desktop user can
+reach `Show on TV` without scrolling below the hub content. The production
+Blueprint assertion now requires that action to be displayed, and the rebuilt
+Android artifacts plus the complete JVM suite passed (`600 tests, 0 failures,
+0 errors`). On the physical Honor HDMI display, the action launched
+`TvActivity` on display 172 with a 1920x1080 fullscreen display configuration.
+The Honor desktop shell still assigned the activity a 1152x691
+`hw-pc-freeform` task with a caption and desktop background, so borderless
+launcher visuals remain a firmware/windowing evidence gate rather than a
+claimed app-level pass.

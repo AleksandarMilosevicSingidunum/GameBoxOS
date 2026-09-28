@@ -61,7 +61,7 @@ class BlueprintScreenshotsTest {
                         rule.onNodeWithContentDescription("Y button: Filters").assertIsDisplayed()
                     }
                     "PC" -> rule.onNodeWithContentDescription("Show GameBox on external display")
-                        .assertExists()
+                        .assertIsDisplayed()
                     "Settings" -> {
                         rule.onNodeWithText("Display").performScrollTo().assertIsDisplayed()
                         rule.onAllNodes(hasContentDescription("TV safe area", substring = true))
