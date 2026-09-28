@@ -95,6 +95,7 @@ class TvActivity : GameBoxHostActivity() {
     }
 
     private fun applyBorderlessFullscreenWindow() {
+        requestGameBoxFullscreenMode()
         WindowCompat.setDecorFitsSystemWindows(window, false)
         window.addFlags(
             WindowManager.LayoutParams.FLAG_FULLSCREEN or

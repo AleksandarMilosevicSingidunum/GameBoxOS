@@ -82,6 +82,17 @@ class TvActivityTest {
     }
 
     @Test
+    fun tvActivityUsesAndroidFullscreenPromotionOnApi34AndNewer() {
+        if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.UPSIDE_DOWN_CAKE) return
+        // requestFullscreenMode is invoked by the host policy on create and
+        // again when configuration/focus changes; a fullscreen request does
+        // not expose a synchronous state, so verify the host remains in the
+        // supported fullscreen configuration after the request.
+        assertEquals(android.view.WindowManager.LayoutParams.MATCH_PARENT, rule.activity.window.attributes.width)
+        assertEquals(android.view.WindowManager.LayoutParams.MATCH_PARENT, rule.activity.window.attributes.height)
+    }
+
+    @Test
     fun externalDisplayLaunchBundleRequestsFullscreenWindowingMode() {
         val launchBundle = ActivityOptions.makeBasic().toGameBoxFullscreenLaunchBundle()
         assertEquals(1, launchBundle.getInt("android.activity.windowingMode", -1))

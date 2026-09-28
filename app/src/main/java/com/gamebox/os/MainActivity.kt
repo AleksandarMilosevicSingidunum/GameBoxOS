@@ -47,6 +47,7 @@ class MainActivity : GameBoxHostActivity() {
     private fun applyExternalDisplayWindowPolicy() {
         if (!isExternalDisplay) return
         requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+        requestGameBoxFullscreenMode()
         window.addFlags(
             WindowManager.LayoutParams.FLAG_FULLSCREEN or
                 WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,

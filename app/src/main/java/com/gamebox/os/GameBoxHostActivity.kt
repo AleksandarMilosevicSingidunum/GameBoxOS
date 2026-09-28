@@ -1,7 +1,9 @@
 package com.gamebox.os
 
 import android.content.Intent
+import android.os.Build
 import android.os.Bundle
+import android.os.OutcomeReceiver
 import android.view.InputDevice
 import android.view.KeyEvent
 import android.view.MotionEvent
@@ -27,6 +29,23 @@ abstract class GameBoxHostActivity : ComponentActivity() {
     private val analogNavigation = AnalogNavigationDebouncer()
     private val navigationRequest = mutableStateOf<GameBoxNavigationRequest?>(null)
     private var navigationSequence = 0L
+
+    /**
+     * Ask Android desktop windowing to promote this host to a real fullscreen
+     * surface. Window flags remain the fallback for older releases and for
+     * firmware that does not implement the promotion request.
+     */
+    protected fun requestGameBoxFullscreenMode() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) return
+        requestFullscreenMode(
+            FULLSCREEN_MODE_REQUEST_ENTER,
+            object : OutcomeReceiver<Void, Throwable> {
+                override fun onResult(result: Void?) = Unit
+
+                override fun onError(error: Throwable) = Unit
+            },
+        )
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)

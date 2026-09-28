@@ -1797,3 +1797,14 @@ The Honor desktop shell still assigned the activity a 1152x691
 `hw-pc-freeform` task with a caption and desktop background, so borderless
 launcher visuals remain a firmware/windowing evidence gate rather than a
 claimed app-level pass.
+
+Android fullscreen-promotion follow-up (2026-09-28): both external-display
+hosts now call the Android 14+ `Activity.requestFullscreenMode()` API when
+their existing edge-to-edge/window-flag policy is applied, while retaining the
+flag fallback for older releases. The rebuilt production and instrumentation
+artifacts compile and the complete JVM suite remains green. A fresh physical
+Honor HDMI run through the in-product `Show on TV` action still reports
+`hw-pc-freeform` and task bounds `[192,103][1344,794]` after the official
+promotion request, with the desktop caption visible. This is stronger evidence
+that the remaining borderless-TV gap is Honor Desktop Mode firmware behavior,
+not an unimplemented app fullscreen request.
