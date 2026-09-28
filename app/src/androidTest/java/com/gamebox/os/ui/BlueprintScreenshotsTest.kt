@@ -54,6 +54,7 @@ class BlueprintScreenshotsTest {
                         rule.onNodeWithContentDescription("X button: Search").assertIsDisplayed()
                         rule.onNodeWithContentDescription("Y button: Filters").assertIsDisplayed()
                     }
+                    "PC" -> rule.onNodeWithText("The system may ask you to confirm the display switch.").assertIsDisplayed()
                 }
             }
             if (title == "Store" &&

@@ -146,6 +146,12 @@ The launcher result now says that the display switch was requested and asks the 
 confirm a system prompt, rather than claiming the TV task is already open. The focused
 JVM launcher regression passes after this correction.
 
+PC Hub confirmation guidance checkpoint (28 September 2026): compact and wide PC Hub
+layouts now explain that Android/Desktop Mode may require confirmation on the TV before
+the external-display task appears. The focused production UI instrumentation class
+passed 4/4 on API-35 after this change. This improves the user-facing software flow but
+does not convert the Honor firmware prompt into an automated hardware pass.
+
 Per-game managed-save controls are now used by every Details screen, not only the
 bundled Galaxy Patrol fixture. The selected game's save controller is also used for
 content-removal preflight, so imported PSP/other-console titles no longer risk reading

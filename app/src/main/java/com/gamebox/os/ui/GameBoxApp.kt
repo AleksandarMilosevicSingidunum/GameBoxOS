@@ -4002,6 +4002,11 @@ private fun AppHubScreen(
                 Icon(Icons.Rounded.Cast, null, Modifier.size(16.dp))
                 Text("Show on TV", Modifier.padding(start = 6.dp))
             }
+            Text(
+                "The system may ask you to confirm the display switch on the TV.",
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                fontSize = 11.sp,
+            )
             Spacer(Modifier.height(18.dp))
         } else {
             Spacer(Modifier.height(18.dp))
@@ -4154,6 +4159,11 @@ private fun BlueprintAppHubScreen(
                     OutlinedButton(onClick = { onLaunch(files) }) { Text("Open files", fontSize = 11.sp) }
                 }
                 if (isPc) {
+                    Text(
+                        "The system may ask you to confirm the display switch.",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontSize = 11.sp,
+                    )
                     OutlinedButton(
                         onClick = { runCatching { context.startActivity(desktopHomeIntent()) } },
                         modifier = Modifier.semantics { contentDescription = "Return to Android or DeX desktop" },
