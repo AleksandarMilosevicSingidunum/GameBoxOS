@@ -860,6 +860,13 @@ selection and its missing-selection guidance. JVM coverage exercises the install
 alternative path; this improves software detection/configuration behavior but does not
 prove a real emulator launch or gameplay.
 
+Configured HTTPS catalog framing hardening (2026-09-28): the production catalog reader
+now rejects a response whose bytes do not exactly match a declared `Content-Length`,
+while retaining the bounded-response guard for unknown-length streams. The framing
+helper has focused coverage for unknown length, truncated bodies, and overlong bodies;
+the focused test and full Android JVM suite pass. This is local transport evidence, not
+live endpoint acceptance.
+
 1. Extend real game/save/return/uninstall/reinstall proof across the supported adapter patterns.
 2. Validate managed GameBox save import/backup/cloud behavior against production emulators and real endpoints.
 3. Live provider/download/volume validation against real configured endpoints and storage.

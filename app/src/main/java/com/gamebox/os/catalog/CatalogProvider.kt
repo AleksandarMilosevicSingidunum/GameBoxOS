@@ -251,17 +251,7 @@ class HttpsCatalogProvider(
                             "Catalog response is too large"
                         }
                         val bytes = connection.inputStream.use { input ->
-                            val output = java.io.ByteArrayOutputStream()
-                            val buffer = ByteArray(8_192)
-                            var total = 0
-                            while (true) {
-                                val count = input.read(buffer)
-                                if (count < 0) break
-                                total += count
-                                require(total <= maxResponseBytes) { "Catalog response is too large" }
-                                output.write(buffer, 0, count)
-                            }
-                            output.toByteArray()
+                            readBoundedCatalogResponse(input, declaredLength, maxResponseBytes)
                         }
                         bytes.toString(Charsets.UTF_8)
                     } finally {
@@ -279,6 +269,29 @@ class HttpsCatalogProvider(
                 worker.cancel()
             }
         }
+}
+
+internal fun readBoundedCatalogResponse(
+    input: java.io.InputStream,
+    declaredLength: Long,
+    maxResponseBytes: Int,
+): ByteArray {
+    val output = java.io.ByteArrayOutputStream()
+    val buffer = ByteArray(8_192)
+    var total = 0
+    while (true) {
+        val count = input.read(buffer)
+        if (count < 0) break
+        total += count
+        require(total <= maxResponseBytes) { "Catalog response is too large" }
+        output.write(buffer, 0, count)
+    }
+    if (declaredLength >= 0L && total.toLong() != declaredLength) {
+        throw java.io.IOException(
+            "Catalog response ended with an unexpected length ($total/$declaredLength)",
+        )
+    }
+    return output.toByteArray()
 }
 
 
