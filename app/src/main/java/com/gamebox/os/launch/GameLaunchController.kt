@@ -5,6 +5,8 @@ import android.content.ClipData
 import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
+import android.graphics.Rect
+import android.hardware.display.DisplayManager
 import android.net.Uri
 import android.provider.MediaStore
 import android.os.Environment
@@ -251,12 +253,23 @@ enum class GatewayResult {
 internal fun externalDisplayLaunchId(displayId: Int?): Int? =
     displayId?.takeIf { it > Display.DEFAULT_DISPLAY }
 
+private fun externalDisplayLaunchBounds(context: Context, displayId: Int): Rect? {
+    val display = context.getSystemService(DisplayManager::class.java)?.getDisplay(displayId)
+        ?: return null
+    val metrics = android.util.DisplayMetrics()
+    display.getRealMetrics(metrics)
+    return Rect(0, 0, metrics.widthPixels, metrics.heightPixels)
+}
+
 internal fun startIntentOnDisplay(context: Context, intent: Intent, displayId: Int?) {
     val targetDisplayId = externalDisplayLaunchId(displayId)
     if (targetDisplayId == null) {
         context.startActivity(intent)
     } else {
-        val options = ActivityOptions.makeBasic().apply { launchDisplayId = targetDisplayId }
+        val options = ActivityOptions.makeBasic().apply {
+            launchDisplayId = targetDisplayId
+            externalDisplayLaunchBounds(context, targetDisplayId)?.let(::setLaunchBounds)
+        }
         context.startActivity(intent, options.toBundle())
     }
 }
