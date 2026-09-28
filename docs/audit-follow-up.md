@@ -132,6 +132,8 @@ firmware display-switch confirmation (`ActivityTaskManager` result 98); because 
 confirmation was not accepted on the TV during the probe, no `TvActivity` task was
 created. This confirms the app-side route reaches the firmware boundary, but does not
 claim a completed physical-TV render for this fresh host build.
+An ADB-sent standard Enter confirmation produced the same firmware result and was
+logged as cancelled, so the prompt cannot be accepted through this phone-side probe.
 
 The launcher result now says that the display switch was requested and asks the user to
 confirm a system prompt, rather than claiming the TV task is already open. The focused
