@@ -601,6 +601,13 @@ installed on the Honor and the real HDMI task reported a fullscreen 1920x1080 ap
 configuration and frame at 160 dpi; the TV hierarchy confirmed the GameBox package, Home,
 and logo. Phone/default-display behavior remains outside this policy.
 
+Routed-TV cross-screen checkpoint (2026-09-28): the same rebuilt `MainActivity` was
+navigated on the real HDMI display to Store through the supported destination deep link.
+The app window remained `[0,0][1920,1080]`, and the TV hierarchy confirmed `GAMEBOX OS /
+STORE`, GameBox package ownership, and the Blueprint controller footer. The task was
+returned to Home afterward; this confirms the routed fullscreen policy across navigation,
+not only initial launch.
+
 TV display-status clarity checkpoint (2026-09-28): runtime status now distinguishes a
 physical display from virtual capture surfaces when both are present. For example, the
 connected setup reports `HDMI Screen · 1920×1080 · 1 virtual display` instead of the
