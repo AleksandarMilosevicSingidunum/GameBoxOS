@@ -278,6 +278,14 @@ and rejects a Windows companion content confirmation whose game ID does not matc
 requested upload. Android JVM tests and the Windows core harness pass; this strengthens
 metadata and transfer integrity without treating Vimm as a binary source.
 
+Legal-homebrew adapter checkpoint (28 September 2026): explicit content-path policies
+now cover Nintendo DS, GBA, SNES, Mega Drive, Master System, Game Gear, PC Engine,
+WonderSwan, and Atari 2600 in addition to the previously exercised families. Focused
+and complete Android JVM suites pass, including native-extension/path regressions. This
+enables the same authorized-download/import validation harness to be used with a
+properly licensed homebrew fixture for each adapter; it does not approve or fetch any
+ROM, and source leads remain separate from per-artifact license/checksum evidence.
+
 Authenticated catalog transport checkpoint: the shared HTTPS/WebDAV/S3 client now
 rejects credential types that do not match the selected transport before opening a
 network connection. S3 requires access-key/secret-key credentials, while HTTPS and

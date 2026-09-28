@@ -18,6 +18,9 @@ release identifier, and SHA-256 before using a fixture in an acceptance run.
 | Nintendo 64 | FissionFailure64 | `.z64` / M64Plus FZ or RetroArch | Upstream repository is marked MIT and describes the ROM as N64brew homebrew | Candidate; validate the release checksum and M64Plus FZ handoff |
 | Dreamcast | Drift Los Angeles | `.cdi` / Flycast | Upstream repository states original projects are MIT; KallistiOS attribution applies | Candidate; validate CDI release and Flycast launch/save behavior |
 | Sega Genesis / Mega Drive | Scorpion Illuminati | Genesis ROM / RetroArch | Project site states Artistic License | Candidate; verify the downloadable artifact and checksum before import |
+| Nintendo DS | DScraft / DS-Homebrew ecosystem | `.nds` / melonDS | DS-Homebrew documents DScraft as homebrew; obtain the author's license and release checksum before use | Source lead only; no binary approved yet |
+| SNES / Super Famicom | SNES Studio generated sample | `.sfc` / Snes9x | Project documents a reproducible ROM build and CC0 sample art; verify the generated game/source license | Build lead only; generate locally before acceptance |
+| Game Boy Advance | RetroBrews GBA collection | `.gba` / mGBA | The project states listed ROMs are approved for free distribution on its site; verify the individual game's license and checksum | Source lead only; no binary approved yet |
 
 ## Source-led candidates
 
@@ -48,3 +51,8 @@ repository that says “bring your own ROM/assets” remains a source-only candi
    return, content-only uninstall, reinstall, and save restoration.
 5. Report emulator-family and hardware results separately. A successful import or
    intent dispatch is not gameplay or save-compatibility evidence.
+
+The source leads above are deliberately not acceptance binaries. They identify where
+to obtain or build a legal fixture while preserving the approval gate for per-game
+license evidence, exact artifact, and checksum. No commercial ROMs are needed for
+the GameBox flow tests.

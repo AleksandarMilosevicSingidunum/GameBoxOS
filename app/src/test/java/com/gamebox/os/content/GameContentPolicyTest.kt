@@ -86,6 +86,17 @@ class GameContentPolicyTest {
     }
 
     @Test
+    fun legalHomebrewConsoleProfilesKeepTheirNativeContentExtensions() {
+        assertEquals("remote/demo/content.nds", GameContentPolicy.describe("demo", "Nintendo DS", "https://cdn.example/demo.nds").relativePath)
+        assertEquals("remote/demo/content.gba", GameContentPolicy.describe("demo", "Game Boy Advance", "https://cdn.example/demo.gba").relativePath)
+        assertEquals("remote/demo/content.sfc", GameContentPolicy.describe("demo", "SNES", "https://cdn.example/demo.sfc").relativePath)
+        assertEquals("remote/demo/content.md", GameContentPolicy.describe("demo", "Mega Drive", "https://cdn.example/demo.md").relativePath)
+        assertEquals("remote/demo/content.pce", GameContentPolicy.describe("demo", "PC Engine", "https://cdn.example/demo.pce").relativePath)
+        assertEquals("remote/demo/content.ws", GameContentPolicy.describe("demo", "WonderSwan", "https://cdn.example/demo.ws").relativePath)
+        assertEquals("remote/demo/content.a26", GameContentPolicy.describe("demo", "Atari 2600", "https://cdn.example/demo.a26").relativePath)
+    }
+
+    @Test
     fun rejectsUnsafeGameIdsBeforeBuildingStoragePath() {
         assertThrows(IllegalArgumentException::class.java) {
             GameContentPolicy.describe("../outside", "PSP", "https://cdn.example/game.iso")

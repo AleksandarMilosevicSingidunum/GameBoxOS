@@ -49,6 +49,66 @@ object GameContentPolicy {
                 "pbp" to "application/x-psp-pbp",
             ),
         ),
+        "nds" to PlatformPolicy(
+            defaultExtension = "nds",
+            extensions = mapOf(
+                "nds" to "application/x-nintendo-ds-rom",
+                "dsi" to "application/x-nintendo-dsi-rom",
+                "zip" to "application/zip",
+            ),
+        ),
+        "gba" to PlatformPolicy(
+            defaultExtension = "gba",
+            extensions = mapOf(
+                "gba" to "application/x-gba-rom",
+                "agb" to "application/x-gba-rom",
+                "zip" to "application/zip",
+            ),
+        ),
+        "snes" to PlatformPolicy(
+            defaultExtension = "sfc",
+            extensions = mapOf(
+                "sfc" to "application/x-snes-rom",
+                "smc" to "application/x-snes-rom",
+                "fig" to "application/octet-stream",
+                "swc" to "application/octet-stream",
+                "zip" to "application/zip",
+            ),
+        ),
+        "genesis" to PlatformPolicy(
+            defaultExtension = "md",
+            extensions = mapOf(
+                "md" to "application/x-genesis-rom",
+                "gen" to "application/x-genesis-rom",
+                "smd" to "application/x-genesis-rom",
+                "bin" to "application/octet-stream",
+                "zip" to "application/zip",
+            ),
+        ),
+        "megadrive" to PlatformPolicy(
+            defaultExtension = "md",
+            extensions = mapOf(
+                "md" to "application/x-genesis-rom",
+                "gen" to "application/x-genesis-rom",
+                "smd" to "application/x-genesis-rom",
+                "bin" to "application/octet-stream",
+                "zip" to "application/zip",
+            ),
+        ),
+        "mastersystem" to PlatformPolicy(
+            defaultExtension = "sms",
+            extensions = mapOf(
+                "sms" to "application/x-sega-master-system-rom",
+                "zip" to "application/zip",
+            ),
+        ),
+        "gamegear" to PlatformPolicy(
+            defaultExtension = "gg",
+            extensions = mapOf(
+                "gg" to "application/x-sega-game-gear-rom",
+                "zip" to "application/zip",
+            ),
+        ),
         "ps2" to PlatformPolicy(
             defaultExtension = "iso",
             extensions = mapOf(
@@ -71,6 +131,33 @@ object GameContentPolicy {
                 "gcz" to "application/x-dolphin-gcz",
                 "wia" to "application/x-dolphin-wia",
                 "ciso" to "application/x-compressed-iso",
+            ),
+        ),
+        "pce" to PlatformPolicy(
+            defaultExtension = "pce",
+            extensions = mapOf(
+                "pce" to "application/x-pce-rom",
+                "sgx" to "application/x-pce-rom",
+                "cue" to "application/x-cue",
+                "bin" to "application/octet-stream",
+                "chd" to "application/x-chd",
+                "zip" to "application/zip",
+            ),
+        ),
+        "wonderswan" to PlatformPolicy(
+            defaultExtension = "ws",
+            extensions = mapOf(
+                "ws" to "application/x-wonderswan-rom",
+                "wsc" to "application/x-wonderswan-color-rom",
+                "zip" to "application/zip",
+            ),
+        ),
+        "atari2600" to PlatformPolicy(
+            defaultExtension = "a26",
+            extensions = mapOf(
+                "a26" to "application/x-atari-2600-rom",
+                "bin" to "application/octet-stream",
+                "zip" to "application/zip",
             ),
         ),
         "wii" to PlatformPolicy(
@@ -139,6 +226,18 @@ object GameContentPolicy {
         "playstation2" to "ps2",
         "sonyplaystation2" to "ps2",
         "playstationportable" to "psp",
+        "nintendods" to "nds",
+        "gameboyadvance" to "gba",
+        "nintendogameboyadvance" to "gba",
+        "supernintendo" to "snes",
+        "superfamicom" to "snes",
+        "segamegadrive" to "megadrive",
+        "segamastersystem" to "mastersystem",
+        "segagamegear" to "gamegear",
+        "pcengine" to "pce",
+        "turbografx16" to "pce",
+        "wonderswancolor" to "wonderswan",
+        "atari" to "atari2600",
         "sonyplaystationportable" to "psp",
         "nintendogamecube" to "gamecube",
         "nintendo64" to "n64",
