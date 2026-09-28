@@ -1064,3 +1064,11 @@ tests exercise upload/download round trips with Basic and SigV4-style authentica
 checksum enforcement, retry classification, cancellation, and response-size bounds.
 This is local integration evidence; authenticated WebDAV/S3 endpoint acceptance remains
 an external-provider gate and is not implied by the loopback server.
+
+Legal homebrew fixture research checkpoint (2026-09-28): `docs/legal-homebrew-test-matrix.md`
+now records license-visible candidates for Game Boy, GBA, N64, Dreamcast, Genesis, PSP,
+3DS, and Wii, while retaining Galaxy Patrol as the already-validated NES fixture. The
+matrix requires upstream license/release evidence and a pinned SHA-256 before a binary is
+used, and explicitly excludes source ports that require commercial assets. It also marks
+PS1, PS2, PS3, GameCube, Switch, Xbox, PC Engine, WonderSwan, Neo Geo, and arcade
+families as needing further approved fixture research rather than implying coverage.

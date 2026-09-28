@@ -16,6 +16,10 @@ See the [production critical path](docs/production-critical-path.md) for current
 release blockers. Starter catalog entries are discovery metadata, not preinstalled
 games; installation state must come from local operations.
 
+Legal emulator fixtures are tracked in the [legal homebrew test matrix](docs/legal-homebrew-test-matrix.md).
+Only license-cleared or locally reproducible homebrew is eligible for acceptance runs;
+commercial game binaries and unauthorized provider downloads are excluded.
+
 This repository is an active pre-1.0 implementation of the August 2026 **GameBox Development Blueprint**. The blueprint is a six-month working plan, not a claim that every item is already complete.
 
 Status as of 28 September 2026:
