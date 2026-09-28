@@ -958,6 +958,12 @@ navigation, focus treatment, status rail, and controller legend. This is live ex
 display rendering evidence; it does not claim physical controller input, HDMI/DeX soak,
 or populated-provider gameplay.
 
+Fresh local baseline checkpoint (2026-09-28): `testDebugUnitTest` completed with 567
+tests, zero failures, zero errors, and one explicit skip using the Android Studio JDK;
+the Windows companion core suite completed with `GameBox Windows core tests passed.`
+These are local automated software checks after the visual-QA workflow hardening, not
+live authenticated-provider, signed-release, emulator-gameplay, or hardware evidence.
+
 1. Extend real game/save/return/uninstall/reinstall proof across the supported adapter patterns.
 2. Validate managed GameBox save import/backup/cloud behavior against production emulators and real endpoints.
 3. Live provider/download/volume validation against real configured endpoints and storage.
