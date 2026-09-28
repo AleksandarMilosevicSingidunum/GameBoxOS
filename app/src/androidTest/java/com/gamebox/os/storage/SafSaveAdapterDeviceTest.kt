@@ -38,11 +38,21 @@ class SafSaveAdapterDeviceTest {
             val restored = adapter.openArtifact(artifact).use { it.readBytes() }
             assertEquals("emulator-save-v2", restored.toString(StandardCharsets.UTF_8))
             assertTrue(restored.isNotEmpty())
+            assertTrue(
+                adapter.discover("game-a").none {
+                    it.relativePath.contains(".gamebox-restore-backup-")
+                },
+            )
         } finally {
             adapter.restoreArtifact(artifact, original.inputStream())
         }
 
         val finalBytes = adapter.openArtifact(artifact).use { it.readBytes() }
         assertEquals(original.toList(), finalBytes.toList())
+        assertTrue(
+            adapter.discover("game-a").none {
+                it.relativePath.contains(".gamebox-restore-backup-")
+            },
+        )
     }
 }

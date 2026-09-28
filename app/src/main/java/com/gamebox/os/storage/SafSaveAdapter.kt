@@ -5,6 +5,7 @@ import android.net.Uri
 import androidx.documentfile.provider.DocumentFile
 import java.io.InputStream
 import java.security.MessageDigest
+import java.util.UUID
 
 /** The SAF save-root convention is <selected-root>/<game-id>/<save files>. */
 internal fun safSaveSegments(gameId: String, relativePath: String? = null): List<String> {
@@ -75,8 +76,21 @@ class SafSaveAdapter(
             val destination = parent.findFile(fileName)
             val destinationDigest = digest(requireNotNull(resolver.openInputStream(partial.uri)))
             check(sourceDigest.contentEquals(destinationDigest)) { "SAF save destination verification failed" }
-            destination?.delete()
-            check(partial.renameTo(fileName)) { "SAF save destination could not be finalized" }
+            val backupName = "$fileName.gamebox-restore-backup-${UUID.randomUUID()}"
+            val backup = destination?.let {
+                check(it.renameTo(backupName)) { "SAF save destination could not be staged for replacement" }
+                requireNotNull(parent.findFile(backupName)) {
+                    "SAF save replacement backup could not be verified"
+                }
+            }
+            try {
+                check(partial.renameTo(fileName)) { "SAF save destination could not be finalized" }
+                backup?.delete()
+            } catch (error: Throwable) {
+                parent.findFile(fileName)?.delete()
+                backup?.takeIf { it.exists() }?.renameTo(fileName)
+                throw error
+            }
         } finally {
             parent.findFile(partialName)?.delete()
         }

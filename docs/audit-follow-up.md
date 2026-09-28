@@ -55,6 +55,14 @@ and promotion from staging to the final content path. The fixtures are synthetic
 test data; this proves the local download lifecycle only, not availability or
 authorization of any external game source.
 
+SAF save replacement hardening (28 September 2026): verified emulator-save restores
+now stage an existing document under a unique reversible backup name before promoting
+the verified replacement. A failed final rename removes only the new candidate and
+restores the prior document; successful restores clean up the backup. The real
+DocumentsProvider instrumentation assertion checks that no backup artifact remains
+after replacement. This improves save-integrity behavior; provider-specific emulator
+formats and physical unplug recovery remain separate validation.
+
 ## Current implementation checkpoint (28 September 2026)
 
 Windows release packaging checkpoint: the self-contained `win-x64` publish completed
