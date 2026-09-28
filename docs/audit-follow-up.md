@@ -1898,3 +1898,10 @@ inset, and restores the prior preference. The combined Blueprint plus TV-host
 profile passed `OK (15 tests)` at 1920×1080/160; the emulator was restored to
 1080×2400/420. This is controller/UI software evidence, separate from physical
 controller hardware acceptance and Honor Desktop Mode behavior.
+
+TV controller-confirmation dimension recheck (2026-09-29): the same rebuilt
+artifact, including focused `BUTTON_A` activation, passed the complete Blueprint
+plus dedicated TV-host profile at 1280×720/160 with `OK (15 tests)`. The
+emulator was restored to 1080×2400/420. This complements the 1920×1080/160
+result and remains software TV-dimension evidence; physical controller,
+overscan, and Honor Desktop Mode acceptance are separate.
