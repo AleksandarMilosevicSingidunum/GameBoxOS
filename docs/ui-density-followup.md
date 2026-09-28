@@ -1,30 +1,32 @@
 # UI density follow-up (10 September 2026)
 
-The visual review compared Blueprint pages 8–16 with PR281's phone/DeX captures
-from workflow 34404188849, head 02b6328. This is not a new gameplay or motion test.
+The original visual review compared Blueprint pages 8–16 with PR281's phone/DeX
+captures from workflow 34404188849, head 02b6328. These opening notes are historical
+review context; later checkpoints in this document supersede the original pending
+wording where implementation and production tests have since advanced.
 
 Local draft: desktop Home quick-launch tiles use 100 dp height and 8 dp icon/text
 spacing; phone tiles retain 140 dp and 18 dp. Status labels now declare 12 sp and
 14 sp line heights rather than inheriting larger Material body line heights.
-This addresses part of the excess vertical space observed in the desktop Home
-capture. No new render or Android build has verified the edit yet.
+This addressed part of the excess vertical space observed in the desktop Home capture.
 
-Before publishing, reapply only this delta to current main GameBoxApp.kt: the
-local checkout has older unrelated sections and must not replace that file whole.
 Populated Home/Library captures have been added to the production-activity
 screenshot test. They temporarily set six catalog entries' installed flags and
 restore them in finally; file installation, artwork availability and gameplay
 are not asserted by these layout fixtures. The latest connected-device
-instrumentation runs execute this test; fresh visual captures for this exact density
-revision remain pending.
-Verify normal and enlarged font scales,
-and compare desktop/phone renders before merging. Artwork, accurate brand marks,
-hero action placement, compact Settings panels and motion validation remain open.
+instrumentation runs execute this test. Normal and enlarged font-scale coverage is
+also exercised by the production screenshot flow and dedicated layout tests. Artwork
+availability and physical motion/controller behavior remain separate validation
+concerns.
 
 
 ## 10 September screenshot review and accessibility follow-up
 
-PR #282 head 841b325 produced successful phone/DeX captures in workflow 34448327921. Visual inspection confirmed the populated Home bottom row is now visible; it did not establish complete Blueprint parity. Artwork, branding, navigation shape, Details action placement, Settings density and phone Store adaptation remain open. Populated Library flags are layout fixtures, not gameplay evidence.
+PR #282 head 841b325 produced successful phone/DeX captures in workflow 34448327921.
+Visual inspection confirmed the populated Home bottom row was visible; it did not
+establish pixel identity with the Blueprint. Populated Library flags are layout
+fixtures, not gameplay evidence. Subsequent Store, compact Details, Settings, large
+text, and external-display checkpoints below provide the current implementation status.
 
 The follow-up replaces the quick tiles' fixed height with a minimum height and lets their content determine extra vertical space. HomeQuickLaunchLayoutTest exercises 200% text, checks title/subtitle containment and growth, and clicks all four actions. The production screenshot flow now passes on the API-35 emulator in both the wide header-utility and compact controller-Quick-Actions routes; it captures Home, Details, Library, Store, Media, PC, Settings, the Downloads utility destination, and populated Home/Library states. The wide emulator render was also visually checked at 2400 × 1080 / 160 dpi, and the emulator was restored to its original phone profile afterward. These captures replace the earlier revision's evidence, but they do not claim physical DeX, external-controller, hover, or motion acceptance. Final UI acceptance still requires those separate interaction/hardware checks plus explicit loading/error/offline/downloading/recovery-state review.
 
