@@ -125,6 +125,14 @@ The host split compiles and its launcher regression passes in JVM coverage; the 
 Honor Desktop Mode session still requires firmware-level TV confirmation before this
 change can be counted as a fresh physical-TV pass.
 
+Fresh dedicated-host hardware probe (28 September 2026): the installed build's in-product
+Show on TV action requested `com.gamebox.os/.TvActivity` with display 23 and the expected
+new-task/multiple-task flags. Honor Desktop Mode intercepted the request with its
+firmware display-switch confirmation (`ActivityTaskManager` result 98); because that
+confirmation was not accepted on the TV during the probe, no `TvActivity` task was
+created. This confirms the app-side route reaches the firmware boundary, but does not
+claim a completed physical-TV render for this fresh host build.
+
 Per-game managed-save controls are now used by every Details screen, not only the
 bundled Galaxy Patrol fixture. The selected game's save controller is also used for
 content-removal preflight, so imported PSP/other-console titles no longer risk reading
