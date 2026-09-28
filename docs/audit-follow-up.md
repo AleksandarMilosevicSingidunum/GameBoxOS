@@ -973,6 +973,15 @@ Android JVM suite pass with 568 tests, zero failures, zero errors, and one expli
 This improves launch preparation coverage; it is not evidence of a second physical game
 or emulator gameplay session.
 
+Emulator package-visibility hardening (2026-09-28): the Android manifest now declares
+DuckStation, M64Plus FZ, and Flycast in `<queries>`, matching the approved package list
+already used by `EmulatorCapabilityRegistry`. This lets Android 11+ package discovery
+see installed PS1, N64, and Dreamcast adapters before handoff instead of falsely
+reporting them unavailable. Manifest merge verification found all three entries, and
+the Android JVM suite remains at 568 tests with zero failures, zero errors, and one
+explicit skip. This fixes package visibility only; it does not claim live gameplay for
+those adapter families.
+
 1. Extend real game/save/return/uninstall/reinstall proof across the supported adapter patterns.
 2. Validate managed GameBox save import/backup/cloud behavior against production emulators and real endpoints.
 3. Live provider/download/volume validation against real configured endpoints and storage.
