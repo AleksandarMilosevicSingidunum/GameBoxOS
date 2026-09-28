@@ -608,6 +608,14 @@ STORE`, GameBox package ownership, and the Blueprint controller footer. The task
 returned to Home afterward; this confirms the routed fullscreen policy across navigation,
 not only initial launch.
 
+TV gameplay-display handoff checkpoint (2026-09-28): emulator launch requests now carry
+the GameBox host's non-default display ID through `GameLaunchController` and
+`PackageGateway`, using `ActivityOptions.launchDisplayId`; default-display launches keep
+the existing context-start behavior. JVM coverage verifies display 8 forwarding, the
+Android test APK compiles, and the rebuilt APK retained a fullscreen 1920x1080 HDMI
+GameBox Home frame on the Honor. This proves display-aware handoff plumbing, not live
+emulator gameplay, game compatibility, or physical-controller acceptance.
+
 TV display-status clarity checkpoint (2026-09-28): runtime status now distinguishes a
 physical display from virtual capture surfaces when both are present. For example, the
 connected setup reports `HDMI Screen · 1920×1080 · 1 virtual display` instead of the

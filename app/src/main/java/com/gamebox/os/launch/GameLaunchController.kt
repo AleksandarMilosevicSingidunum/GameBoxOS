@@ -1,5 +1,6 @@
 package com.gamebox.os.launch
 
+import android.app.ActivityOptions
 import android.content.ClipData
 import android.content.ContentValues
 import android.content.Context
@@ -7,6 +8,7 @@ import android.content.Intent
 import android.net.Uri
 import android.provider.MediaStore
 import android.os.Environment
+import android.view.Display
 import androidx.core.content.FileProvider
 import com.gamebox.os.content.GameContentPolicy
 import com.gamebox.os.data.GameRepository
@@ -246,8 +248,26 @@ enum class GatewayResult {
     LAUNCHED, EMULATOR_UNAVAILABLE, CONTENT_MISSING, VERIFICATION_FAILED, HANDOFF_REJECTED
 }
 
+internal fun externalDisplayLaunchId(displayId: Int?): Int? =
+    displayId?.takeIf { it > Display.DEFAULT_DISPLAY }
+
+internal fun startIntentOnDisplay(context: Context, intent: Intent, displayId: Int?) {
+    val targetDisplayId = externalDisplayLaunchId(displayId)
+    if (targetDisplayId == null) {
+        context.startActivity(intent)
+    } else {
+        val options = ActivityOptions.makeBasic().apply { launchDisplayId = targetDisplayId }
+        context.startActivity(intent, options.toBundle())
+    }
+}
+
 interface PackageGateway {
     fun launch(capability: EmulatorCapability, preparation: LaunchPreparation = LaunchPreparation()): GatewayResult
+    fun launchOnDisplay(
+        capability: EmulatorCapability,
+        preparation: LaunchPreparation = LaunchPreparation(),
+        displayId: Int? = null,
+    ): GatewayResult = launch(capability, preparation)
     fun cleanupLaunchedContent() = Unit
 }
 
@@ -265,7 +285,20 @@ class AndroidPackageGateway(
         }
     }
 
-    override fun launch(capability: EmulatorCapability, preparation: LaunchPreparation): GatewayResult {
+    override fun launch(capability: EmulatorCapability, preparation: LaunchPreparation): GatewayResult =
+        launchInternal(capability, preparation, displayId = null)
+
+    override fun launchOnDisplay(
+        capability: EmulatorCapability,
+        preparation: LaunchPreparation,
+        displayId: Int?,
+    ): GatewayResult = launchInternal(capability, preparation, displayId)
+
+    private fun launchInternal(
+        capability: EmulatorCapability,
+        preparation: LaunchPreparation,
+        displayId: Int?,
+    ): GatewayResult {
         preparation.checkActive()
         val resolvedPackage = resolvePackageName(capability.packageName)
             ?: return GatewayResult.EMULATOR_UNAVAILABLE
@@ -383,7 +416,7 @@ class AndroidPackageGateway(
             return GatewayResult.HANDOFF_REJECTED
         }
         return preparation.dispatch { runCatching {
-            context.startActivity(intent)
+            startIntentOnDisplay(context, intent, displayId)
             GatewayResult.LAUNCHED
         }.getOrElse {
             // Some RetroArch Android builds expose a launcher activity but reject
@@ -396,7 +429,7 @@ class AndroidPackageGateway(
                     addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_GRANT_READ_URI_PERMISSION)
                 }
                 runCatching {
-                    context.startActivity(fallback)
+                    startIntentOnDisplay(context, fallback, displayId)
                     GatewayResult.LAUNCHED
                 }.getOrDefault(GatewayResult.HANDOFF_REJECTED)
             } else {
@@ -519,6 +552,7 @@ data class PlaySession(val gameId: GameId, val startedAtMillis: Long, val endedA
 interface GameLaunchController {
     fun observeState(): StateFlow<LaunchUiState>
     fun launch(game: Game)
+    fun launchOnDisplay(game: Game, displayId: Int?) = launch(game)
     fun onHostResumed()
     fun onHostPaused() {}
     fun cancelPreparation() {}
@@ -544,7 +578,9 @@ class DefaultGameLaunchController(
 
     override fun observeState(): StateFlow<LaunchUiState> = state.asStateFlow()
 
-    override fun launch(game: Game) {
+    override fun launch(game: Game) = launchOnDisplay(game, displayId = null)
+
+    override fun launchOnDisplay(game: Game, displayId: Int?) {
         if (state.value.status == LaunchUiState.Status.SESSION_ERROR || waitingForExternalReturn ||
             recovering.get() || !preparing.compareAndSet(false, true)) return
         val preparation = LaunchPreparation()
@@ -552,7 +588,7 @@ class DefaultGameLaunchController(
         update(game.id, LaunchUiState.Status.PREPARING, "Preparing game; checking installed content")
         scope.launch {
             try {
-                launchPrepared(game, preparation)
+                launchPrepared(game, preparation, displayId)
             } catch (cancelled: CancellationException) {
                 update(game.id, LaunchUiState.Status.IDLE, "Launch cancelled")
                 throw cancelled
@@ -576,7 +612,7 @@ class DefaultGameLaunchController(
         activePreparation?.cancel()
     }
 
-    private suspend fun launchPrepared(game: Game, preparation: LaunchPreparation) {
+    private suspend fun launchPrepared(game: Game, preparation: LaunchPreparation, displayId: Int?) {
         preparation.checkActive()
         if (game.state !in setOf(InstallState.INSTALLED, InstallState.UPDATE_AVAILABLE)) {
             update(game.id, LaunchUiState.Status.NOT_INSTALLED, "Install and verify before launching")
@@ -601,7 +637,7 @@ class DefaultGameLaunchController(
             ticket = runBlocking { sessionJournal?.begin(game.id.value) }
             deferredHostReturn.arm()
         }
-        val result = withContext(Dispatchers.IO) { gateway.launch(capability, preparation) }
+        val result = withContext(Dispatchers.IO) { gateway.launchOnDisplay(capability, preparation, displayId) }
         if (result == GatewayResult.LAUNCHED) {
             ticket?.let { sessionJournal?.confirm(it) }
         } else {

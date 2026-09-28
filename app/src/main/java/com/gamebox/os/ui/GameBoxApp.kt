@@ -197,6 +197,7 @@ fun GameBoxApp(
     )
     val allowDeveloperOptions = LocalContext.current.applicationInfo.flags and
         android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE != 0
+    val hostDisplayId = (LocalContext.current as? android.app.Activity)?.display?.displayId
     val runtimeDeviceStatus = rememberRuntimeDeviceStatus()
     val controllerActions = remember { ControllerActionRegistry() }
     val appScope = rememberCoroutineScope()
@@ -346,6 +347,7 @@ fun GameBoxApp(
                             discoveryRepository = catalogDiscoveryRepository,
                             importer = authorizedRomImporter,
                             saveControllerFactory = saveControllerFactory,
+                            hostDisplayId = hostDisplayId,
                             compact = compact,
                             onDownloads = { uiState.openDestination(Destination.DOWNLOADS.name) },
                             onBack = uiState::clearSelection
@@ -3184,6 +3186,7 @@ private fun DetailsScreen(
     importer: AuthorizedRomImporter,
     discoveryRepository: CatalogDiscoveryRepository,
     saveControllerFactory: ((GameId, kotlinx.coroutines.CoroutineScope) -> SaveSafetyController)?,
+    hostDisplayId: Int?,
     compact: Boolean,
     onDownloads: () -> Unit,
     onBack: () -> Unit
@@ -3301,7 +3304,7 @@ private fun DetailsScreen(
                 InstallState.QUEUED, InstallState.DOWNLOADING, InstallState.VERIFYING,
                 InstallState.INSTALLING -> onDownloads()
                 InstallState.INSTALLED ->
-                    gameLaunchController.launch(game)
+                    gameLaunchController.launchOnDisplay(game, hostDisplayId)
                 InstallState.UPDATE_AVAILABLE ->
                     if (hasRemoteSource) remoteDownloadController.install(game) else onDownloads()
             }
@@ -3442,7 +3445,7 @@ private fun DetailsScreen(
                             }
                             if (game.state in setOf(InstallState.INSTALLED, InstallState.UPDATE_AVAILABLE)) {
                                 Button(
-                                    onClick = { gameLaunchController.launch(game) },
+                                    onClick = { gameLaunchController.launchOnDisplay(game, hostDisplayId) },
                                     modifier = Modifier.fillMaxWidth(),
                                 ) {
                                     Icon(Icons.Rounded.PlayArrow, contentDescription = null, modifier = Modifier.size(16.dp))
@@ -3560,7 +3563,7 @@ private fun DetailsScreen(
                     if (isAuthorizedFixture && (game.state == InstallState.INSTALLED ||
                         game.state == InstallState.UPDATE_AVAILABLE)
                     ) {
-                        Button(onClick = { gameLaunchController.launch(game) }) {
+                        Button(onClick = { gameLaunchController.launchOnDisplay(game, hostDisplayId) }) {
                             Text("Play")
                         }
                         OutlinedButton(onClick = { showUninstallConfirmation = true },

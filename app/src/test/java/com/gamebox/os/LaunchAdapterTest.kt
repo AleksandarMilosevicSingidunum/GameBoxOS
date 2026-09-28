@@ -9,6 +9,7 @@ import com.gamebox.os.launch.EmulatorCapabilityRegistry
 import com.gamebox.os.launch.EmulatorContentRoot
 import com.gamebox.os.launch.ReturnTracker
 import com.gamebox.os.launch.retroArchCorePath
+import com.gamebox.os.launch.externalDisplayLaunchId
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
@@ -17,6 +18,13 @@ import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.flow.first
 
 class LaunchAdapterTest {
+    @Test fun emulatorLaunchDisplayIdUsesOnlyExternalDisplays() {
+        assertEquals(null, externalDisplayLaunchId(null))
+        assertEquals(null, externalDisplayLaunchId(0))
+        assertEquals(null, externalDisplayLaunchId(-1))
+        assertEquals(8, externalDisplayLaunchId(8))
+    }
+
     @Test fun launchFailuresInvalidateOnlyBrokenContent(): Unit = runBlocking {
         val cases = listOf(
             com.gamebox.os.launch.GatewayResult.CONTENT_MISSING to InstallState.MISSING_FILES,
@@ -192,6 +200,38 @@ class LaunchAdapterTest {
             assertEquals(packageName, selected.packageName)
             assertEquals(EmulatorContentRoot.IMPORTS, selected.contentRoot)
         }
+    }
+
+    @Test fun launchOnDisplayForwardsExternalDisplayToEmulatorGateway(): Unit = runBlocking {
+        val repository = com.gamebox.os.data.FakeGameRepository()
+        val game = repository.observeGames().value.first().copy(state = InstallState.INSTALLED)
+        var forwardedDisplayId: Int? = null
+        val gateway = object : com.gamebox.os.launch.PackageGateway {
+            override fun launch(
+                capability: EmulatorCapability,
+                preparation: com.gamebox.os.launch.LaunchPreparation,
+            ) = com.gamebox.os.launch.GatewayResult.LAUNCHED
+
+            override fun launchOnDisplay(
+                capability: EmulatorCapability,
+                preparation: com.gamebox.os.launch.LaunchPreparation,
+                displayId: Int?,
+            ): com.gamebox.os.launch.GatewayResult {
+                forwardedDisplayId = displayId
+                return com.gamebox.os.launch.GatewayResult.LAUNCHED
+            }
+        }
+        val controller = com.gamebox.os.launch.DefaultGameLaunchController(
+            EmulatorCapabilityRegistry(listOf(capability.copy(gameId = game.id))),
+            gateway,
+            repository,
+            scope = this,
+        )
+        controller.launchOnDisplay(game, 8)
+        withTimeout(5_000) {
+            controller.observeState().first { it.status == com.gamebox.os.launch.LaunchUiState.Status.LAUNCHED }
+        }
+        assertEquals(8, forwardedDisplayId)
     }
 
     @Test fun returnTracker_recordsOneSessionAndThenClearsIt() {
