@@ -1808,3 +1808,12 @@ Honor HDMI run through the in-product `Show on TV` action still reports
 promotion request, with the desktop caption visible. This is stronger evidence
 that the remaining borderless-TV gap is Honor Desktop Mode firmware behavior,
 not an unimplemented app fullscreen request.
+
+Honor caption-control recheck (2026-09-28): after the fresh supported `Show on
+TV` launch, the visible Desktop Mode fullscreen control was exercised on the
+HDMI task. The shell removed the GameBox task and exposed the Honor desktop
+surface instead of producing a caption-free GameBox surface. The app remains
+correctly configured with the Android fullscreen request, edge-to-edge flags,
+and 1920x1080 display target; this additional probe confirms that the final
+borderless result depends on the Honor Desktop Mode window manager and cannot
+be claimed from app-side instrumentation alone.
