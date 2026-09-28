@@ -1133,3 +1133,11 @@ preferred cores: Snes9x, mGBA, Genesis Plus GX, and Mupen64Plus-Next. JVM covera
 each platform's required core contract and filename. This advances emulator setup and
 launch preparation; it is not gameplay, save-state, BIOS, or physical-device evidence
 for those additional families.
+
+Details emulator-guidance checkpoint (2026-09-28): the Details screen no longer embeds
+the Galaxy Patrol NES/FCEUmm text as a special-case UI string. It derives the required
+core from the selected game's approved emulator capability, so imported GBC, SNES, GBA,
+Genesis, N64, and the existing NES title each present their own core guidance; games with
+no approved adapter omit the guidance. JVM coverage verifies both a GBC core description
+and the unsupported-platform omission. This is Android UI/presentation evidence, separate
+from live emulator gameplay and physical accessibility acceptance.

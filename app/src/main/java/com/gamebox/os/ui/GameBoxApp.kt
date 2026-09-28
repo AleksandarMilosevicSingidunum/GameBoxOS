@@ -3192,6 +3192,7 @@ private fun DetailsScreen(
         discoveryRepository.observeGame(game.id)
     }.collectAsState(initial = null)
     val detail = remember(game, discovery) { GameDetailPresentation.from(game, discovery) }
+    val requiredEmulatorCore = remember(game) { GameDetailPresentation.requiredEmulatorCore(game) }
     val isAuthorizedFixture = game.id.value == "galaxy-patrol"
     val parentSaveScope = rememberCoroutineScope()
     val saveScope = remember(game.id, saveControllerFactory) {
@@ -3495,13 +3496,13 @@ private fun DetailsScreen(
         Surface(color = MaterialTheme.colorScheme.surface, shape = RoundedCornerShape(9.dp)) {
             Column(Modifier.fillMaxWidth().padding(16.dp)) {
                 Text("Game content · " + game.state.displayName(), fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
-                if (game.platform.equals("Retro", ignoreCase = true) && game.id.value == "galaxy-patrol") {
+                requiredEmulatorCore?.let { requiredCore ->
                     Spacer(Modifier.height(8.dp))
                     Text(
-                        "Required core: Nintendo - NES / Famicom (FCEUmm)",
+                        "Required core: $requiredCore",
                         color = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.semantics {
-                            contentDescription = "Required emulator core: Nintendo NES Famicom FCEUmm"
+                            contentDescription = "Required emulator core: $requiredCore"
                         }
                     )
                 }

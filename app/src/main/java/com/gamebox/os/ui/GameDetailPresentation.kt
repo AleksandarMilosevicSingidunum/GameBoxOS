@@ -3,6 +3,7 @@ package com.gamebox.os.ui
 import com.gamebox.os.data.DiscoveryGame
 import com.gamebox.os.domain.Game
 import com.gamebox.os.domain.InstallState
+import com.gamebox.os.launch.EmulatorCapabilityRegistry
 
 enum class GameDetailSource { LIBRARY, DISCOVERY }
 
@@ -24,6 +25,9 @@ data class GameDetailPresentation(
     val source: GameDetailSource,
 ) {
     companion object {
+        fun requiredEmulatorCore(game: Game): String? =
+            EmulatorCapabilityRegistry().forGame(game)?.requiredCore
+
         fun from(game: Game, discovery: DiscoveryGame? = null): GameDetailPresentation {
             // Do not reuse the old identity's gallery after an explicit metadata rematch.
             val cached = discovery?.takeIf { it.id == game.id && game.metadataExternalId == null }

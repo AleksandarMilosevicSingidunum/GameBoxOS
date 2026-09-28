@@ -6,6 +6,7 @@ import com.gamebox.os.domain.GameId
 import com.gamebox.os.domain.InstallState
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -14,35 +15,18 @@ class GameDetailPresentationTest {
     fun libraryAndDiscoveryUseTheSameMetadataContract() {
         val library = GameDetailPresentation.from(
             Game(
-                id = GameId("shared"),
-                title = "Shared Game",
-                platform = "PSP",
-                year = 2006,
-                genre = "Racing",
-                sizeMb = 512,
-                state = InstallState.INSTALLED,
-                favorite = true,
-                artworkUrl = "https://example.test/cover.jpg",
-                description = "Description",
-                players = "2",
-                region = "EU",
+                id = GameId("shared"), title = "Shared Game", platform = "PSP", year = 2006,
+                genre = "Racing", sizeMb = 512, state = InstallState.INSTALLED, favorite = true,
+                artworkUrl = "https://example.test/cover.jpg", description = "Description",
+                players = "2", region = "EU",
             )
         )
         val discovery = GameDetailPresentation.from(
             DiscoveryGame(
-                id = GameId("shared"),
-                title = "Shared Game",
-                platformId = "psp",
-                region = "EU",
-                releaseDate = "2006-04-01",
-                description = "Description",
-                players = "2",
-                rating = 8.5,
-                coverUrl = "https://example.test/cover.jpg",
-                backgroundUrl = "https://example.test/hero.jpg",
-                logoUrl = null,
-                screenshots = listOf("shot-a", "shot-a", "shot-b"),
-                favorite = true,
+                id = GameId("shared"), title = "Shared Game", platformId = "psp", region = "EU",
+                releaseDate = "2006-04-01", description = "Description", players = "2", rating = 8.5,
+                coverUrl = "https://example.test/cover.jpg", backgroundUrl = "https://example.test/hero.jpg",
+                logoUrl = null, screenshots = listOf("shot-a", "shot-a", "shot-b"), favorite = true,
             ),
             "PSP",
         )
@@ -74,5 +58,31 @@ class GameDetailPresentationTest {
 
         assertEquals("No description is available for this title.", library.description)
         assertTrue(discovery.description.contains("legal copy"))
+    }
+
+    @Test
+    fun detailsUsesTheSelectedGamesApprovedCore() {
+        val gbc = Game(
+            GameId("brickster"), "Brickster", "Game Boy Color", 2020, "Puzzle", 1,
+            InstallState.INSTALLED,
+            localContentRelativePath = "brickster/brickster.gbc",
+            localContentSha256 = "a".repeat(64),
+            localContentMimeType = "application/x-gameboy-color-rom",
+        )
+
+        assertEquals(
+            "Nintendo - Game Boy / Color (Gambatte)",
+            GameDetailPresentation.requiredEmulatorCore(gbc),
+        )
+    }
+
+    @Test
+    fun detailsHidesCoreGuidanceWhenNoApprovedAdapterExists() {
+        val android = Game(
+            GameId("android-game"), "Android Game", "Android", 2020, "Action", 1,
+            InstallState.INSTALLED,
+        )
+
+        assertNull(GameDetailPresentation.requiredEmulatorCore(android))
     }
 }
