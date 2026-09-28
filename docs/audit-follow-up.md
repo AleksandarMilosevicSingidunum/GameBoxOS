@@ -1481,3 +1481,12 @@ installed build, an HDMI-targeted D-pad traversal reached the `Play Now` parent 
 Details can leave the hierarchy temporarily without a focused node on Honor, so this
 checkpoint claims the reproducible directional-TV path and not an automatic pointer-tap
 focus result.
+
+TV legal-game launch/return checkpoint (2026-09-28): from the focused wide `Play Now`
+ action, the installed Galaxy Patrol fixture dispatched RetroArch with
+`launchedFromPackage=com.gamebox.os` and the RetroArch task visible on physical display
+8. After ending the legal test session, GameBox was relaunched on the same HDMI display
+and the hierarchy again exposed `Home tab` and `Galaxy Patrol`. This validates the TV
+Details → emulator dispatch → GameBox return surface; Honor still reports the third-party
+RetroArch task as `hw-pc-freeform` with its own desktop bounds, so emulator caption-free
+fullscreen/gameplay remains a separate firmware and hardware gate.
