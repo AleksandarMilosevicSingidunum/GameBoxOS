@@ -1045,3 +1045,14 @@ family, real remote-provider bytes, signed release installation, or physical con
 input. Direct TV screenshot capture was unavailable through the device's current ADB
 presentation-display screencap interface, so the TV claim remains based on the previously
 captured live GameBox surface and the physical-device instrumentation result above.
+
+Instrumentation regression check (2026-09-28): the complete Android instrumentation
+suite passed on `GameBox_API35` with 68 executed tests and one explicit SAF-provider skip.
+The same suite on the unlocked Honor while `SMART TV` was connected reached 32 of 68
+tests before the physical run failed at
+`AccessibilitySemanticsTest.gameCardExposesUsefulSpokenDescriptionAndClickAction` and
+the instrumentation process crashed. The isolated test also fails on the Honor but
+passes on API-35; the production `GameCard` still exposes the expected description and
+clickable semantics, so this is tracked as an Honor/Compose instrumentation compatibility
+issue pending a device-specific diagnostic, not counted as a clean physical accessibility
+pass. The authorized install lifecycle test itself remains green on the Honor.

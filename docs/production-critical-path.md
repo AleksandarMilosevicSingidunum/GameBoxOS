@@ -145,3 +145,12 @@ document-picker import, rejecting empty/oversized files and existing-save
 overwrites. The lifecycle test imports test-only bytes through that API before
 backup, uninstall, reinstall and restore. See [managed save import](save-import.md)
 for the current Galaxy Patrol scope and the separate emulator synchronization gap.
+
+Fresh physical user-flow checkpoint (28 September 2026): the authorized install
+lifecycle instrumentation journey completed on the connected Honor Magic6 Pro while
+its `SMART TV` presentation display was active. It verified installation, durable state
+observation, content-only uninstall with retained save/backup state, reinstall through
+restored work, and verified save restoration. This strengthens the Blueprint journey
+evidence; it does not replace real provider transfer, additional emulator-family
+gameplay, signed release installation, external-controller, or long-duration TV
+acceptance.
