@@ -17,6 +17,15 @@ instrumentation run: 68 tests completed, one explicit real-SAF setup test skippe
 the clean emulator state, and zero failures. This includes the production screenshot
 flow for the PC Hub in the current build.
 
+Honor instrumentation rerun (28 September 2026): the API-35 emulator completed the
+focused and full Compose/integration coverage successfully, but the connected Honor
+returned 35 UI-test failures with `No compose hierarchies found`. Read-only ADB
+diagnostics showed the phone was secure-locked with `NotificationShade` focused and
+no focused application after instrumentation had removed the debug host; reinstalling
+the APK did not clear that device precondition. This is an external-device test-state
+failure requiring the user to unlock the phone before rerunning, not evidence of a
+production Compose assertion failure.
+
 Release metadata checkpoint (28 September 2026): the repository's Android version-code
 and APK manifest regression suite ran 8 tests with zero failures. This validates the
 pre-signing metadata gate; it is not evidence that protected signing secrets or the
