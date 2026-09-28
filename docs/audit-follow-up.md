@@ -1710,3 +1710,9 @@ Home`) now receives the initial TV focus after composition. Populated Home keeps
 its existing remembered-game focus behavior. The rebuilt APK and instrumentation
 APK compiled successfully, the complete JVM suite passed, and `TvActivityTest`
 remained green with `OK (5 tests)` at 1920×1080/160 dpi.
+
+First-run focus policy coverage (2026-09-28): the empty-library/default-Home
+condition is now expressed as a small unit-tested policy, covering empty versus
+populated libraries and both Home-role states. The final rebuilt artifact passed
+the complete JVM suite and the TV-host instrumentation run (`OK (5 tests)` at
+1920×1080/160 dpi); the emulator was restored afterward.

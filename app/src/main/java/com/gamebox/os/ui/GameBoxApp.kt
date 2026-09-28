@@ -891,8 +891,8 @@ private fun HomeScreen(
         )
         onDispose { controllerActions?.clear() }
     }
-    LaunchedEffect(defaultHome, games.isEmpty()) {
-        if (!defaultHome && games.isEmpty()) {
+    LaunchedEffect(defaultHome, games.size) {
+        if (shouldFocusEmptyHomeSetup(defaultHome, games.size)) {
             androidx.compose.runtime.withFrameNanos { }
             runCatching { emptyHomeSetupFocusRequester.requestFocus() }
         }

@@ -6,10 +6,9 @@ import org.junit.Test
 
 class HomeRoleStatusTest {
     @Test
-    fun matchesOnlyTheGameBoxPackage() {
-        assertTrue(defaultHomeMatchesApp("com.gamebox.os", "com.gamebox.os"))
-        assertFalse(defaultHomeMatchesApp("com.android.launcher", "com.gamebox.os"))
-        assertFalse(defaultHomeMatchesApp(null, "com.gamebox.os"))
-        assertFalse(defaultHomeMatchesApp("", "com.gamebox.os"))
+    fun emptyLibrarySetupGetsInitialFocusOnlyWhenHomeRoleIsMissing() {
+        assertTrue(shouldFocusEmptyHomeSetup(isDefaultHome = false, gameCount = 0))
+        assertFalse(shouldFocusEmptyHomeSetup(isDefaultHome = true, gameCount = 0))
+        assertFalse(shouldFocusEmptyHomeSetup(isDefaultHome = false, gameCount = 1))
     }
 }
