@@ -308,6 +308,12 @@ display reported 1920×1080/160 dpi. This is phone-surface instrumentation evide
 with the TV connected; it does not promote the Desktop Mode `canHostTasks=false`
 handoff limitation into a successful dedicated-TV visual acceptance.
 
+Dedicated-TV activity instrumentation checkpoint (28 September 2026): a focused
+Android test now launches the actual non-exported `TvActivity`, verifies its landscape
+request, and asserts the Blueprint Home tab and GameBox mark are rendered. This closes
+the automated activity-host coverage gap; it remains distinct from physical HDMI
+fullscreen, overscan, controller, and Desktop Mode handoff acceptance.
+
 Authenticated catalog transport checkpoint: the shared HTTPS/WebDAV/S3 client now
 rejects credential types that do not match the selected transport before opening a
 network connection. S3 requires access-key/secret-key credentials, while HTTPS and
