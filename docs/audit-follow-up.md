@@ -1098,3 +1098,14 @@ with SHA-256 `24e44e274f8ee77a838d0fc58a607521021b3de122a968f359994c6f7c773a45`,
 Library then displayed Cave Story as installed. This is physical discovery/details/import
 and registration evidence only; GBC emulator detection, gameplay, save, uninstall, and
 reinstall/restore remain separate gates.
+
+GBC platform-resolution checkpoint (2026-09-28): generic catalog labels such as `Retro`
+and `Homebrew` now resolve to a concrete console when the selected extension uniquely
+identifies one, and repository merge upgrades only that broad label while preserving user
+metadata. The physical Brickster re-import on Honor consequently displayed `GAME BOY COLOR`
+in Home/Details and registered the installed content under the concrete profile. The
+emulator registry now maps Game Boy and Game Boy Color to RetroArch's Gambatte core
+(`gambatte_libretro_android.so`) with focused JVM coverage. A physical Play attempt reached
+RetroArch's real `RetroActivityFuture`, but the captured surface was black because the
+connected RetroArch installation exposed no Gambatte core; this is a missing-core/emulator
+setup boundary, not gameplay or save evidence.

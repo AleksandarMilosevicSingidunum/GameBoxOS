@@ -81,6 +81,11 @@ class EmulatorCapabilityRegistry(
                 requiredCore = "Nintendo - NES / Famicom (FCEUmm)",
                 coreFileName = "fceumm_libretro_android.so",
             )
+            "gb", "gameboy", "nintendogameboy",
+            "gbc", "gameboycolor", "nintendogameboycolor" -> RetroArchPlatformProfile(
+                requiredCore = "Nintendo - Game Boy / Color (Gambatte)",
+                coreFileName = "gambatte_libretro_android.so",
+            )
             else -> null
         }
     }

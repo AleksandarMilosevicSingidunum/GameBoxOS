@@ -52,6 +52,24 @@ object RomImportPolicy {
     fun profileLabel(platform: String?): String =
         profileFor(platform)?.label ?: platform?.trim()?.takeIf(String::isNotEmpty) ?: "Unknown platform"
 
+    /**
+     * Catalogs may use a broad platform such as Retro or Homebrew before a user
+     * selects the actual file. Resolve that broad label to a concrete console
+     * profile when the extension identifies exactly one supported profile.
+     */
+    fun resolvedPlatform(platform: String?, fileName: String): String {
+        val current = profileFor(platform)
+        val normalizedPlatform = platform?.let(::normalizePlatform).orEmpty()
+        val broadPlatform = normalizedPlatform in setOf("retro", "homebrew", "unknownplatform")
+        if (!broadPlatform && current != null) return current.label
+        val extension = fileName.substringAfterLast('.', "").lowercase()
+        if (extension.isBlank()) return profileLabel(platform)
+        val candidates = profiles.filter { profile ->
+            profile.label !in setOf("Retro", "Homebrew") && extension in profile.extensions
+        }
+        return candidates.singleOrNull()?.label ?: profileLabel(platform)
+    }
+
     fun supportedExtensions(platform: String?): Set<String> =
         profileFor(platform)?.extensions ?: knownExtensions
 

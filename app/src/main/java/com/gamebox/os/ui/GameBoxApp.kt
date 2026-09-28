@@ -2618,6 +2618,7 @@ private fun DiscoveryDetailsScreen(
             importMessage = "No file selected"
         } else {
             val displayName = queryDisplayName(uri)
+            val resolvedImportPlatform = RomImportPolicy.resolvedPlatform(platformName, displayName)
             importing = true
             importMessage = "Importing and verifying " + displayName + "…"
             scope.launch {
@@ -2628,7 +2629,7 @@ private fun DiscoveryDetailsScreen(
                             ImportedGameRegistration(
                                 id = game.id,
                                 title = game.title,
-                                platform = importPlatformLabel,
+                                platform = resolvedImportPlatform,
                                 year = game.releaseDate?.let { releaseDate ->
                                     Regex("""(?:19|20)\d{2}""").find(releaseDate)?.value?.toIntOrNull()
                                 } ?: 0,
@@ -2647,9 +2648,9 @@ private fun DiscoveryDetailsScreen(
                             importer.confirmRegistration(game.id, result.transactionId)
                         }.isFailure
                         if (cleanupDeferred) {
-                            "$importPlatformLabel copy verified and added to Library. Transaction cleanup will finish after restart."
+                            "$resolvedImportPlatform copy verified and added to Library. Transaction cleanup will finish after restart."
                         } else {
-                            "$importPlatformLabel copy verified and added to Library. SHA-256 " +
+                            "$resolvedImportPlatform copy verified and added to Library. SHA-256 " +
                                 result.hashes.sha256.take(12) + "…"
                         }
                     }.getOrElse { error ->
@@ -2684,11 +2685,15 @@ private fun DiscoveryDetailsScreen(
         } else {
             val sources = uris.map { uri -> RomImportSource(uri, queryDisplayName(uri)) }
             importing = true
-            importMessage = "Importing and verifying ${sources.size} disc-set files…"
+                importMessage = "Importing and verifying ${sources.size} disc-set files…"
             scope.launch {
                 GameMutationGate.withGameLock(game.id.value) {
                 importMessage = when (val result = importer.importSet(game.id, sources, platformName)) {
                     is RomImportSetResult.Imported -> runCatching {
+                        val resolvedImportPlatform = RomImportPolicy.resolvedPlatform(
+                            platformName,
+                            result.launchFile.relativePath.substringAfterLast('/'),
+                        )
                         val importedFiles = result.files.map { file ->
                             LocalContentFile(
                                 relativePath = RomImportPolicy.importRootRelativePath(game.id, file.relativePath),
@@ -2707,7 +2712,7 @@ private fun DiscoveryDetailsScreen(
                             ImportedGameRegistration(
                                 id = game.id,
                                 title = game.title,
-                                platform = importPlatformLabel,
+                                platform = resolvedImportPlatform,
                                 year = game.releaseDate?.let { releaseDate ->
                                     Regex("""(?:19|20)\d{2}""").find(releaseDate)?.value?.toIntOrNull()
                                 } ?: 0,
@@ -3241,6 +3246,7 @@ private fun DetailsScreen(
             authorizedImportMessage = "No file selected"
         } else {
             val displayName = queryImportDisplayName(uri)
+            val resolvedPlatform = RomImportPolicy.resolvedPlatform(game.platform, displayName)
             importingAuthorizedCopy = true
             authorizedImportMessage = "Importing and verifying $displayName…"
             importScope.launch {
@@ -3251,7 +3257,7 @@ private fun DetailsScreen(
                                 ImportedGameRegistration(
                                     id = game.id,
                                     title = game.title,
-                                    platform = RomImportPolicy.profileLabel(game.platform),
+                                    platform = resolvedPlatform,
                                     year = game.year,
                                     sizeBytes = result.hashes.sizeBytes,
                                     relativePath = RomImportPolicy.importRootRelativePath(game.id, result.relativePath),
@@ -3265,7 +3271,7 @@ private fun DetailsScreen(
                                 )
                             )
                             importer.confirmRegistration(game.id, result.transactionId)
-                            "${RomImportPolicy.profileLabel(game.platform)} copy verified and added to Library. SHA-256 " +
+                            "$resolvedPlatform copy verified and added to Library. SHA-256 " +
                                 result.hashes.sha256.take(12) + "…"
                         }.getOrElse { error ->
                             runCatching { importer.rollbackRegistration(game.id, result.transactionId) }

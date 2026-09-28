@@ -63,6 +63,12 @@ fun mergeImportedGame(existing: Game?, imported: ImportedGameRegistration): Game
         region = imported.region,
     )
     return metadata.copy(
+        // A discovery catalog may start with a broad Retro/Homebrew label. Once
+        // the user selects a uniquely identifying file, retain the concrete
+        // console profile so emulator selection and launch become actionable.
+        platform = if (existing == null ||
+            (existing.platform.isBroadImportPlatform() && !imported.platform.isBroadImportPlatform())
+        ) imported.platform else metadata.platform,
         sizeMb = if (imported.sizeBytes == 0L) 0 else
             ceil(imported.sizeBytes / (1024.0 * 1024.0)).toInt().coerceAtLeast(1),
         state = InstallState.INSTALLED,
@@ -74,3 +80,6 @@ fun mergeImportedGame(existing: Game?, imported: ImportedGameRegistration): Game
         ) + imported.additionalFiles,
     )
 }
+
+private fun String.isBroadImportPlatform(): Boolean =
+    lowercase().filter(Char::isLetterOrDigit) in setOf("retro", "homebrew", "unknownplatform")

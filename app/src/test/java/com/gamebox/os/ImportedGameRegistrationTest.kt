@@ -44,6 +44,17 @@ class ImportedGameRegistrationTest {
         assertEquals("Performance", game.graphicsProfile)
     }
 
+    @Test fun concreteImportPlatformReplacesBroadCatalogLabel() {
+        val existing = Game(
+            GameId("game"), "Catalog title", "Retro", 2004, "Adventure", 1,
+            InstallState.MISSING_FILES,
+        )
+
+        val game = mergeImportedGame(existing, imported().copy(platform = "Game Boy Color"))
+
+        assertEquals("Game Boy Color", game.platform)
+    }
+
     @Test fun rejectsTraversalAndInvalidChecksums() {
         assertThrows(IllegalArgumentException::class.java) {
             imported().copy(relativePath = "game/../outside.iso")

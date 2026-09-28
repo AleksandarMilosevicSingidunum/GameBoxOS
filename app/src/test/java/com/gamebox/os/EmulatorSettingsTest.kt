@@ -84,6 +84,22 @@ class EmulatorSettingsTest {
     }
 
     @Test
+    fun gbcImportsCarryTheGambatteRetroArchCoreContract() {
+        val gbc = Game(
+            GameId("gbc-import"), "Brickster", "Game Boy Color", 2020, "Adventure", 1,
+            InstallState.INSTALLED,
+            localContentRelativePath = "gbc-import/brickster.gbc",
+            localContentSha256 = "b".repeat(64),
+            localContentMimeType = "application/x-gameboy-color-rom",
+        )
+
+        val capability = requireNotNull(registry.forGame(gbc))
+        assertEquals("com.retroarch.aarch64", capability.packageName)
+        assertEquals("Nintendo - Game Boy / Color (Gambatte)", capability.requiredCore)
+        assertEquals("gambatte_libretro_android.so", capability.retroArchCoreFileName)
+    }
+
+    @Test
     fun unsupportedGameWithoutDiagnosticCapabilityIsRejected() {
         val android = Game(GameId("android-demo"), "Android Demo", "Android", 2020, "Action", 1, InstallState.INSTALLED,
             expectedSha256 = "abc")
