@@ -1212,3 +1212,18 @@ contract was corrected to the Android GLES3 build filename
 contracts. This is deterministic adapter configuration evidence only; it does not
 claim live core installation, BIOS availability, gameplay, or save compatibility for
 these additional families.
+
+HDMI-first TV interaction checkpoint (2026-09-28): the current debug APK was installed
+on the authorized Honor Magic6 Pro and the supported `Show on TV` route was triggered
+from the phone only as a control surface. Honor Desktop Mode opened GameBox on the real
+wired presentation display 8. Authoritative window/configuration state reported the
+GameBox task and app frame at 1920x1037 @ 160 dpi, with the app window spanning the full
+HDMI task width. Display-targeted input (`adb shell input -d 8`) was then used on the TV
+surface to move from Home to Store; the TV hierarchy confirmed the GameBox tabs, store
+actions, controller footer semantics, and changed screen state. This is actual HDMI
+user-flow evidence, not phone-screen evidence. The firmware routed `MainActivity` into
+Desktop Mode rather than allowing direct launch of the non-exported `TvActivity`, so the
+dedicated TV activity instrumentation remains separately reported. Direct HDMI
+screencap is unavailable through this device's ADB presentation-display interface;
+authoritative window/configuration and display-targeted hierarchy/input evidence are
+therefore used for this checkpoint.
