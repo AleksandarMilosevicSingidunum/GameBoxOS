@@ -1654,5 +1654,6 @@ returns `No activity found` when GameBox supplies `*/*`. The launch gateway now
 preserves the verified content MIME for PPSSPP instead of sending the wildcard;
 this directly fixes the reported `handover rejected` path while retaining the
 scoped URI and read grant. The device resolver check is live Honor evidence;
-the focused JVM regression and rebuilt APK still require the Gradle/CI runner
-because the local Windows Gradle native library could not initialize.
+the focused JVM regression passes after adding Commons Compress's explicit XZ
+codec dependency, while a rebuilt APK/device gameplay handoff still remains to
+be exercised with a legal PSP/homebrew fixture.

@@ -77,6 +77,9 @@ dependencies {
     implementation("androidx.work:work-runtime-ktx:2.11.2")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.11.0")
     implementation("org.apache.commons:commons-compress:1.28.0")
+    // Commons Compress declares XZ/LZMA support optional; 7z imports need it
+    // explicitly because real archives commonly use the LZMA2 codec.
+    implementation("org.tukaani:xz:1.10")
 }
 
 ksp {
