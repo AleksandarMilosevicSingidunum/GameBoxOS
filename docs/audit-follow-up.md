@@ -1499,3 +1499,12 @@ logo and Home tab semantics, and `captionNodes=0`; `dumpsys window displays` rep
 GameBox as the focused window for display 8. This closes the automatic borderless launcher
 path on the current device. Cold boot/unlock recovery, HDMI reconnect, and third-party
 emulator fullscreen remain separate hardware/firmware gates.
+
+TV process-recovery boundary checkpoint (2026-09-28): after force-stopping GameBox, the
+Honor external-display `HOME` intent and the device's available `cmd activity` interface
+did not relaunch the stopped external-display launcher; Desktop SystemUI remained in
+front. An explicit `MainActivity` relaunch restored the GameBox surface and retained
+1920x1080 bounds, but Honor reintroduced its 36 px `hw_caption` because that launch was
+an ordinary activity start rather than HOME resolution. The HOME role itself remained
+`com.gamebox.os`. This is evidence for the pending process-death/cold-start firmware
+recovery gate, not a regression in the normal borderless HOME surface.
