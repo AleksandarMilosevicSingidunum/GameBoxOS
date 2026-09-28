@@ -133,6 +133,10 @@ confirmation was not accepted on the TV during the probe, no `TvActivity` task w
 created. This confirms the app-side route reaches the firmware boundary, but does not
 claim a completed physical-TV render for this fresh host build.
 
+The launcher result now says that the display switch was requested and asks the user to
+confirm a system prompt, rather than claiming the TV task is already open. The focused
+JVM launcher regression passes after this correction.
+
 Per-game managed-save controls are now used by every Details screen, not only the
 bundled Galaxy Patrol fixture. The selected game's save controller is also used for
 content-removal preflight, so imported PSP/other-console titles no longer risk reading

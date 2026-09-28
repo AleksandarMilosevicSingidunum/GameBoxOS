@@ -19,4 +19,12 @@ class ExternalDisplayLauncherTest {
         )
         assertEquals(null, firstPresentationDisplayTarget(emptyList()))
     }
+
+    @Test
+    fun externalDisplaySuccessMessageDoesNotClaimConfirmationAlreadyCompleted() {
+        assertEquals(
+            "Display switch requested for SMART TV; confirm it if the system prompts you",
+            externalDisplayLaunchRequestedMessage(ExternalDisplayTarget(23, "SMART TV")),
+        )
+    }
 }

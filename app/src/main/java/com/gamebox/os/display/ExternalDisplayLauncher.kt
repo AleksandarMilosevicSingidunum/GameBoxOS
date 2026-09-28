@@ -18,6 +18,9 @@ internal val externalDisplayActivityClass = TvActivity::class.java
 internal fun firstPresentationDisplayTarget(targets: List<ExternalDisplayTarget>): ExternalDisplayTarget? =
     targets.firstOrNull()
 
+internal fun externalDisplayLaunchRequestedMessage(target: ExternalDisplayTarget): String =
+    "Display switch requested for ${target.name}; confirm it if the system prompts you"
+
 internal fun presentationDisplayTargets(context: Context): List<ExternalDisplayTarget> =
     context.getSystemService(DisplayManager::class.java)
         ?.getDisplays(DisplayManager.DISPLAY_CATEGORY_PRESENTATION)
@@ -41,7 +44,7 @@ internal fun launchGameBoxOnExternalDisplay(activity: Activity): String {
                 ),
             options.toBundle(),
         )
-        "Opened GameBox on ${target.name}"
+        externalDisplayLaunchRequestedMessage(target)
     }.getOrElse { error ->
         "Could not open GameBox on ${target.name}: ${error.message ?: "display launch failed"}"
     }
