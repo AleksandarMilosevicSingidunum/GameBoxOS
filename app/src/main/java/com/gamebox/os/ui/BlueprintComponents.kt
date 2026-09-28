@@ -89,12 +89,15 @@ internal fun shouldUseCompactLayout(
  * Fit the Blueprint's 1280×720 design surface to a wide TV without shrinking
  * compact phone layouts. A 1920×1080 panel at 160 dpi is 1200×675 dp, so a
  * small reduction is required to keep the complete wide composition inside it.
+ * High-density landscape surfaces can have much less dp-height than a physical
+ * TV, so wide layouts must still be allowed to shrink far enough to fit both
+ * dimensions instead of clipping the collection and recent-game rails.
  */
 internal fun blueprintViewportScale(widthDp: Float, heightDp: Float): Float {
     if (!widthDp.isFinite() || !heightDp.isFinite() || widthDp <= 0f || heightDp <= 0f) return 1f
     val wideLivingRoomViewport = widthDp >= 900f && widthDp / heightDp >= 1.5f
     val baseScale = minOf(widthDp / 1280f, heightDp / 720f)
-    return baseScale.coerceIn(if (wideLivingRoomViewport) 0.85f else 1f, 2f)
+    return baseScale.coerceIn(if (wideLivingRoomViewport) 0.5f else 1f, 2f)
 }
 
 /** Keep the dashboard's proportions on large DeX displays without shrinking phone text. */

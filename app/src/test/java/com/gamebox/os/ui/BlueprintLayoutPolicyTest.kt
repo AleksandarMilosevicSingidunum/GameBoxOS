@@ -45,6 +45,12 @@ class BlueprintLayoutPolicyTest {
     }
 
     @Test
+    fun highDensityLandscapeWideSurfaceFitsItsShortViewport() {
+        assertFalse(shouldUseCompactLayout(DeveloperLayoutMode.AUTO, 914f, 411f))
+        assertEquals(411f / 720f, blueprintViewportScale(914f, 411f), 0.0001f)
+    }
+
+    @Test
     fun phoneViewportDoesNotShrinkForWideDesignMath() {
         assertEquals(1f, blueprintViewportScale(412f, 915f), 0.0001f)
         assertEquals(1f, blueprintViewportScale(Float.NaN, 675f), 0.0001f)
