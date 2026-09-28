@@ -189,6 +189,37 @@ class BlueprintScreenshotsTest {
     }
 
     @Test
+    fun tvSafeAreaSelectionPersistsInWideSettings() {
+        if (rule.activity.resources.configuration.screenWidthDp < 900) return
+        rule.waitUntil(15_000) {
+            rule.onAllNodesWithContentDescription("Home tab").fetchSemanticsNodes().isNotEmpty()
+        }
+        val app = InstrumentationRegistry.getInstrumentation().targetContext.applicationContext as GameBoxApplication
+        val settings = app.container.settingsRepository
+        val originalPercent = runBlocking { settings.settings.first().safeAreaPercent }
+        try {
+            rule.onNodeWithContentDescription("Settings tab").performClick()
+            rule.waitForIdle()
+            rule.onNodeWithText("Display").performScrollTo().assertIsDisplayed()
+            rule.onNodeWithContentDescription("TV safe area 8%")
+                .performSemanticsAction(SemanticsActions.OnClick)
+            rule.waitUntil(5_000) {
+                rule.onAllNodesWithText("Active inset: 8% on every edge.").fetchSemanticsNodes().isNotEmpty()
+            }
+            rule.onNodeWithText("Active inset: 8% on every edge.")
+                .performScrollTo()
+                .assertIsDisplayed()
+            runBlocking {
+                withTimeout(5_000) {
+                    settings.settings.first { current -> kotlin.math.abs(current.safeAreaPercent - 0.08f) < 0.001f }
+                }
+            }
+        } finally {
+            runBlocking { settings.setSafeAreaPercent(originalPercent) }
+        }
+    }
+
+    @Test
     fun compactStoreExposesDirectConsoleFilters() {
         rule.waitUntil(15_000) {
             rule.onAllNodesWithContentDescription("Home tab").fetchSemanticsNodes().isNotEmpty()

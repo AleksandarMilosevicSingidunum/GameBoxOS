@@ -1879,3 +1879,12 @@ host profile at 1920×1080/160 with `OK (13 tests)`. The emulator was restored t
 1080×2400/420. This proves the software TV installed-state user flow; it does
 not claim emulator launch success, gameplay, physical controller input, or
 Honor Desktop Mode acceptance.
+
+TV safe-area interaction checkpoint (2026-09-29): the wide production Settings
+flow now selects the `8%` TV safe-area option through its Compose click
+semantics, verifies the rendered `Active inset: 8% on every edge.` status, and
+confirms the value is persisted by the settings repository before restoring the
+previous value. The complete Blueprint plus dedicated TV-host profile passed
+`OK (14 tests)` at 1920×1080/160, and the emulator returned to 1080×2400/420.
+This is software TV-dimension evidence; physical overscan and Honor Desktop
+Mode behavior remain separate hardware gates.
