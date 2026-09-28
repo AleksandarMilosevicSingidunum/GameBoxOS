@@ -3,6 +3,7 @@ package com.gamebox.os.ui
 import android.graphics.Bitmap
 import android.view.KeyEvent
 import androidx.compose.ui.graphics.asAndroidBitmap
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -61,6 +62,14 @@ class BlueprintScreenshotsTest {
                     }
                     "PC" -> rule.onNodeWithContentDescription("Show GameBox on external display")
                         .assertExists()
+                    "Settings" -> {
+                        rule.onNodeWithText("Display").performScrollTo().assertIsDisplayed()
+                        rule.onAllNodes(hasContentDescription("TV safe area", substring = true))
+                            .onFirst()
+                            .assertExists()
+                            .performSemanticsAction(SemanticsActions.RequestFocus)
+                            .assertIsFocused()
+                    }
                 }
             }
             if (title == "Store" &&

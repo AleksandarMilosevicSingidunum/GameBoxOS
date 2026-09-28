@@ -1604,3 +1604,8 @@ now asserts the TV-specific `Download Manager` heading after opening the utility
 destination from the notification action. This protects the transition from
 game/details actions into the download state surface; the check passed on the
 1920×1080/160-dpi emulator profile.
+
+TV Display-settings coverage (2026-09-28): the wide screenshot flow now also
+asserts that Settings exposes the Display section and a focusable TV safe-area
+control. This protects the user-facing overscan configuration on the TV-sized
+layout; the 1920×1080/160-dpi emulator run remains green.
