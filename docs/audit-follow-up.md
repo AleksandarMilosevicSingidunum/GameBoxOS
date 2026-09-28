@@ -1363,3 +1363,10 @@ even after an explicit full-height measurement attempt. The lower scrollable Det
 card remains measurable and was used successfully for install/uninstall/reinstall. The
 measurement tweak was reverted because it did not change the authoritative TV result; the
 hero overlay remains an identified layout/semantics follow-up rather than a claimed fix.
+
+TV hero rail layout increment (2026-09-28): the wide Details hero was restructured from an
+overlaid installation child into an explicit text-column plus fixed 238dp installation rail,
+with a constrained 220dp rail container. The debug APK and JVM suite pass and the rebuilt
+APK was installed on HDMI display 8. The hierarchy still reports the inner hero labels at
+zero bounds on this Honor presentation surface, so this increment improves the layout
+contract but does not claim the external semantics-bounds issue is resolved.

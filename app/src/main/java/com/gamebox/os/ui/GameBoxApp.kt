@@ -3392,48 +3392,57 @@ private fun DetailsScreen(
                         )
                     )
                 )
-                Column(
-                    Modifier.fillMaxHeight().fillMaxWidth(if (compact) 0.92f else 0.64f)
-                        .padding(if (compact) 18.dp else 26.dp),
-                    verticalArrangement = Arrangement.Center,
+                Row(
+                    Modifier.fillMaxSize().padding(if (compact) 18.dp else 26.dp),
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Surface(
-                        color = MaterialTheme.colorScheme.primaryContainer,
-                        shape = RoundedCornerShape(8.dp),
-                        modifier = Modifier.align(Alignment.Start),
+                    Column(
+                        if (compact) Modifier.fillMaxWidth(0.92f) else Modifier.weight(1f),
+                        verticalArrangement = Arrangement.Center,
                     ) {
-                        Row(
-                            Modifier.padding(horizontal = 9.dp, vertical = 5.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        Surface(
+                            color = MaterialTheme.colorScheme.primaryContainer,
+                            shape = RoundedCornerShape(8.dp),
+                            modifier = Modifier.align(Alignment.Start),
                         ) {
-                            Icon(Icons.Rounded.SportsEsports, contentDescription = null, modifier = Modifier.size(14.dp))
-                            Text(detail.platform.uppercase(), color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold, fontSize = 10.sp)
+                            Row(
+                                Modifier.padding(horizontal = 9.dp, vertical = 5.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            ) {
+                                Icon(Icons.Rounded.SportsEsports, contentDescription = null, modifier = Modifier.size(14.dp))
+                                Text(detail.platform.uppercase(), color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold, fontSize = 10.sp)
+                            }
+                        }
+                        Spacer(Modifier.height(10.dp))
+                        Text(
+                            detail.title,
+                            fontSize = if (compact) 29.sp else 39.sp,
+                            fontWeight = FontWeight.Black,
+                            maxLines = 2,
+                        )
+                        Text(detail.genre ?: "Imported", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp)
+                        Spacer(Modifier.height(12.dp))
+                        Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                            DetailMetric(Icons.Rounded.CalendarMonth, detail.releaseLabel ?: "Unknown")
+                            DetailMetric(Icons.Rounded.Groups, detail.playersLabel ?: "1 player")
+                            DetailMetric(Icons.Rounded.Storage, game.sizeMb.toString() + " MB")
                         }
                     }
-                    Spacer(Modifier.height(10.dp))
-                    Text(
-                        detail.title,
-                        fontSize = if (compact) 29.sp else 39.sp,
-                        fontWeight = FontWeight.Black,
-                        maxLines = 2,
-                    )
-                    Text(detail.genre ?: "Imported", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp)
-                    Spacer(Modifier.height(12.dp))
-                    Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                        DetailMetric(Icons.Rounded.CalendarMonth, detail.releaseLabel ?: "Unknown")
-                        DetailMetric(Icons.Rounded.Groups, detail.playersLabel ?: "1 player")
-                        DetailMetric(Icons.Rounded.Storage, game.sizeMb.toString() + " MB")
-                    }
-                }
-                if (!compact) {
-                    Surface(
-                        modifier = Modifier.align(Alignment.CenterEnd).width(238.dp).padding(end = 18.dp),
-                        color = Color(0xD9151C2C),
-                        shape = RoundedCornerShape(8.dp),
-                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.8f)),
-                    ) {
-                        Column(Modifier.padding(15.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    if (!compact) {
+                        Spacer(Modifier.width(18.dp))
+                        Box(
+                            Modifier
+                                .width(238.dp)
+                                .height(220.dp),
+                        ) {
+                            Surface(
+                                modifier = Modifier.fillMaxSize(),
+                                color = Color(0xD9151C2C),
+                                shape = RoundedCornerShape(8.dp),
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.8f)),
+                            ) {
+                                Column(Modifier.padding(15.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             Text("INSTALLATION", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 9.sp, fontWeight = FontWeight.Bold)
                             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                                 Text("Status", fontSize = 10.sp)
@@ -3477,6 +3486,8 @@ private fun DetailsScreen(
                                 }
                             } else {
                                 Text("Install this authorized title below to make it ready to play.", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 9.sp)
+                            }
+                                }
                             }
                         }
                     }
