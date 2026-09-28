@@ -26,6 +26,19 @@ class MainActivity : GameBoxHostActivity() {
         if (hasFocus) applyExternalDisplayWindowPolicy()
     }
 
+    override fun onResume() {
+        super.onResume()
+        applyExternalDisplayWindowPolicy()
+    }
+
+    override fun onMultiWindowModeChanged(
+        isInMultiWindowMode: Boolean,
+        newConfig: android.content.res.Configuration,
+    ) {
+        super.onMultiWindowModeChanged(isInMultiWindowMode, newConfig)
+        applyExternalDisplayWindowPolicy()
+    }
+
     override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {
         super.onConfigurationChanged(newConfig)
         applyExternalDisplayWindowPolicy()

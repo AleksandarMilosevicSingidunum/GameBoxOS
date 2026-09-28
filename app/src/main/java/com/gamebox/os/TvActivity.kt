@@ -64,6 +64,21 @@ class TvActivity : GameBoxHostActivity() {
         if (hasFocus) hideSystemBars()
     }
 
+    override fun onResume() {
+        super.onResume()
+        hideSystemBars()
+    }
+
+    override fun onMultiWindowModeChanged(
+        isInMultiWindowMode: Boolean,
+        newConfig: android.content.res.Configuration,
+    ) {
+        super.onMultiWindowModeChanged(isInMultiWindowMode, newConfig)
+        requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+        applyBorderlessFullscreenWindow()
+        hideSystemBars()
+    }
+
     private fun hideSystemBars() {
         applyBorderlessFullscreenWindow()
         WindowCompat.getInsetsController(window, window.decorView).apply {

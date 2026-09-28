@@ -1538,3 +1538,18 @@ staged directory. Content-only uninstall removes every registered extracted
 file and retains saves, metadata, and history. PPSSPP handoff now uses its
 scoped ACTION_VIEW URI with a wildcard MIME fallback because some PPSSPP
 Android builds reject GameBox's custom PSP MIME types before launch.
+
+TV window-policy resilience increment (2026-09-28): MainActivity and the
+dedicated TvActivity now reapply their external-display fullscreen, landscape,
+edge-to-edge, and hidden-system-bar policy on resume and on Android
+multi-window-mode changes. This addresses the software-side transition where
+Desktop Mode can resize or reconfigure a task after creation. It cannot override
+Honor's firmware decision to materialize an ordinary freeform window; HOME-mode
+and firmware maximize behavior remain separate hardware/firmware evidence.
+
+Instrumentation evidence for this increment: the API-35 emulator completed all
+four `TvActivityTest` cases. The connected Honor run remains a device-state
+failure: Desktop Mode force-stopped/relaunched `com.gamebox.os` while the first
+non-exported-host test was starting, and the test runner could not retrieve
+logcat afterward; no GameBox Java exception was reported. This is retained as
+hardware-test evidence and is not merged into the emulator pass claim.
