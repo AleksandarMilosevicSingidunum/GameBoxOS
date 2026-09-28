@@ -1634,3 +1634,15 @@ verifies at runtime that the external-display `ActivityOptions` bundle carries
 the platform fullscreen windowing hint. Android 36 exposes no public setter for
 this option, so the existing guarded bundle key remains the software fallback;
 Honor firmware may still classify the task as freeform, as recorded above.
+
+Archive import regression coverage (2026-09-28): the importer already accepts
+ZIP and 7z sources for every configured console profile, extracts only files
+valid for the selected console, stores the extracted content under the managed
+`imports/<console>/<game>/` tree, and removes the archive staging/source after a
+successful registration when Android permits source deletion. The JVM importer
+test now creates a real PSP 7z archive containing an ISO and verifies the ISO is
+the extracted launch candidate with the original bytes. This is local source
+and safety coverage; the current checkout could not start Gradle because both
+cached Windows distributions failed to load `native-platform.dll`, so the test
+must still be rerun in Android CI before treating it as a passing execution
+result.
