@@ -867,6 +867,13 @@ helper has focused coverage for unknown length, truncated bodies, and overlong b
 the focused test and full Android JVM suite pass. This is local transport evidence, not
 live endpoint acceptance.
 
+Fresh API-35 UI/lifecycle gate (2026-09-28): `connectedDebugAndroidTest` completed
+68 tests with zero failures and zero errors on `GameBox_API35`. Two tests were skipped
+by their explicit clean-emulator environment guards: the authorized-install lifecycle
+test requiring a configured legal fixture and the real SAF save-root round trip. The
+connected Honor remains a separate physical gate; ADB currently reports its secure
+AOD/keyguard state, so no Honor Compose result is inferred from this emulator run.
+
 1. Extend real game/save/return/uninstall/reinstall proof across the supported adapter patterns.
 2. Validate managed GameBox save import/backup/cloud behavior against production emulators and real endpoints.
 3. Live provider/download/volume validation against real configured endpoints and storage.
