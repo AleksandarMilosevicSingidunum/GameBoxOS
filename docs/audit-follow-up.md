@@ -1744,3 +1744,12 @@ from silently missing a pre-created directory; the `unknown` bucket covers impor
 whose platform is not yet resolved. The final artifact passed the combined
 Blueprint-wide production flow and dedicated TV-host run at 1920×1080/160 dpi with
 `OK (9 tests)`, and the emulator was restored to 1080×2400/420 afterward.
+
+TV configuration-resilience increment (2026-09-28): `TvActivity` now reapplies
+landscape, edge-to-edge, fullscreen flags, and hidden system bars from
+`onConfigurationChanged`, in addition to display-change, resume, focus, and
+multi-window callbacks. This closes the Android configuration path that could
+otherwise restore window decorations while the dedicated TV activity remained
+alive. The rebuilt artifact passed the dedicated TV-host instrumentation suite
+with `OK (5 tests)`; physical firmware windowing and HDMI reconnect behavior remain
+separate hardware evidence.

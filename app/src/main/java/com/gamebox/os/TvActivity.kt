@@ -79,6 +79,13 @@ class TvActivity : GameBoxHostActivity() {
         hideSystemBars()
     }
 
+    override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {
+        super.onConfigurationChanged(newConfig)
+        requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+        applyBorderlessFullscreenWindow()
+        hideSystemBars()
+    }
+
     private fun hideSystemBars() {
         applyBorderlessFullscreenWindow()
         WindowCompat.getInsetsController(window, window.decorView).apply {
@@ -88,6 +95,7 @@ class TvActivity : GameBoxHostActivity() {
     }
 
     private fun applyBorderlessFullscreenWindow() {
+        WindowCompat.setDecorFitsSystemWindows(window, false)
         window.addFlags(
             WindowManager.LayoutParams.FLAG_FULLSCREEN or
                 WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
