@@ -11,6 +11,7 @@ import android.net.Uri
 import android.provider.MediaStore
 import android.os.Environment
 import android.view.Display
+import com.gamebox.os.display.toGameBoxFullscreenLaunchBundle
 import androidx.core.content.FileProvider
 import com.gamebox.os.content.GameContentPolicy
 import com.gamebox.os.data.GameRepository
@@ -269,7 +270,7 @@ internal fun startIntentOnDisplay(context: Context, intent: Intent, displayId: I
             launchDisplayId = targetDisplayId
             externalDisplayLaunchBounds(context, targetDisplayId)?.let(::setLaunchBounds)
         }
-        context.startActivity(intent, options.toBundle())
+        context.startActivity(intent, options.toGameBoxFullscreenLaunchBundle())
     }
 }
 
