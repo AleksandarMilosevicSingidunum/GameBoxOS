@@ -1003,6 +1003,13 @@ Storage/Controllers/Downloads/Emulators/Display/Audio/Network/Saves/System rail 
 controller footer. This is current physical external-display rendering evidence; the
 phone was unlocked, but no physical controller or long-duration soak was claimed.
 
+The same live Settings session opened the Emulators section, displayed the approved
+RetroArch/PPSSPP/Dolphin/DuckStation/M64Plus FZ/Flycast adapter guidance, reported
+`External display detected · SMART TV · 1920x1080`, and returned to GameBox after the
+`Manage installed emulator apps` action opened Android system settings. This validates
+the external-settings boundary and display-state reporting only; installed emulator
+availability and gameplay remain adapter-specific evidence.
+
 1. Extend real game/save/return/uninstall/reinstall proof across the supported adapter patterns.
 2. Validate managed GameBox save import/backup/cloud behavior against production emulators and real endpoints.
 3. Live provider/download/volume validation against real configured endpoints and storage.
