@@ -30,6 +30,13 @@ response length, and byte/checksum preservation; the focused transport suite pas
 This strengthens local transport-boundary evidence only and does not claim acceptance
 against a live WebDAV/S3 account or endpoint.
 
+Catalog loopback transport checkpoint (28 September 2026): configured WebDAV/HTTPS
+catalog fetches now also have local-socket integration coverage through the actual
+`HttpURLConnection` path. The tests verify Basic authorization, UTF-8 response
+framing, and retryable handling when a server ends before its declared length. This
+is deterministic provider-boundary evidence; live catalog credentials, WebDAV/S3
+permissions, and production endpoint behavior remain separate gates.
+
 ## Current implementation checkpoint (28 September 2026)
 
 Windows release packaging checkpoint: the self-contained `win-x64` publish completed
