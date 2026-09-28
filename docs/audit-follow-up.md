@@ -1723,3 +1723,16 @@ and dedicated TV-host suite at 1920×1080/160 dpi with `OK (9 tests)`. The
 emulator was restored to 1080×2400/420. This closes the software TV-dimension
 regression for the increment; physical Honor/AOD and firmware windowing remain
 separate hardware evidence.
+
+Console-scoped import-tree correction (2026-09-28): the authorized importer now
+promotes imported files into the same stable path it registers, namely
+`files/imports/<console>/<game-id>/`, instead of physically placing new imports in
+the legacy flat `files/imports/<game-id>/` directory. The durable registration
+journal accepts and validates both layouts, so existing imports remain recoverable
+while new PSP, disc-set, archive, and other-console imports share one path contract.
+The startup tree now pre-creates every supported console directory, including the
+canonical `playstation-portable` directory. On API-35, the focused re-import and
+content-removal integration run passed `OK (4 tests)`, including an assertion that
+the PSP file exists only under the console-scoped path. This is software storage
+evidence; physical external storage and long-running migration remain separate
+hardware/deployment gates.

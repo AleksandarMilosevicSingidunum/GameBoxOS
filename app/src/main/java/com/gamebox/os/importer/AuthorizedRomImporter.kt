@@ -120,7 +120,14 @@ class AuthorizedRomImporter(
         }
         val expectedPrefix = "imports/${RomImportPolicy.platformDirectory(platform)}/$id/"
         val root = applicationContext.filesDir.resolve("imports").canonicalFile
-        val targetDirectory = root.resolve(id).canonicalFile
+        // New imports live in the stable console-scoped tree created at app
+        // startup: imports/<console>/<game-id>/. Keep the physical promotion
+        // directory identical to the path recorded in the database so launch,
+        // re-import, companion transfer, and content removal address the same
+        // files.
+        val targetDirectory = root.resolve(RomImportPolicy.platformDirectory(platform))
+            .resolve(id)
+            .canonicalFile
         val rootPrefix = root.path + File.separator
         if (!targetDirectory.path.startsWith(rootPrefix)) {
             return@withContext RomImportSetResult.Rejected("Import path escaped app storage")
@@ -131,6 +138,9 @@ class AuthorizedRomImporter(
         val backup = root.resolve(".backup-$id-$transactionId").canonicalFile
         if (!staging.path.startsWith(rootPrefix) || !backup.path.startsWith(rootPrefix)) {
             return@withContext RomImportSetResult.Rejected("Import transaction path escaped app storage")
+        }
+        require(targetDirectory.parentFile?.isDirectory == true || targetDirectory.parentFile?.mkdirs() == true) {
+            "Import console directory is unavailable"
         }
         staging.mkdirs()
         var pendingRegistration: PendingImportTransaction? = null

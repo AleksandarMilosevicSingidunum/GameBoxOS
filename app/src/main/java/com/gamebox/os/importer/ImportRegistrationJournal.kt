@@ -66,9 +66,7 @@ class ImportRegistrationJournal(
             "Pending import paths must be unique"
         }
         files.forEach { file ->
-            require(file.relativePath.startsWith(gameId.value + "/")) {
-                "Pending import path is outside the selected game"
-            }
+            requirePathBelongsToGame(file.relativePath, gameId.value)
             require(
                 file.relativePath.none { it == '\\' || it == '\u0000' } &&
                     file.relativePath.split('/').none { it.isBlank() || it == "." || it == ".." }
@@ -138,7 +136,7 @@ class ImportRegistrationJournal(
 
     fun targetMatchesPending(pending: PendingImportTransaction): Boolean {
         validatePending(pending)
-        val target = targetDirectory(pending.gameId)
+        val target = targetDirectory(pending)
         if (!target.isDirectory || Files.isSymbolicLink(target.toPath())) return false
         return pending.files.all { expected ->
             val file = File(importsRoot, expected.relativePath)
@@ -159,7 +157,7 @@ class ImportRegistrationJournal(
 
     fun rollback(pending: PendingImportTransaction) {
         validatePending(pending)
-        val target = targetDirectory(pending.gameId)
+        val target = targetDirectory(pending)
         val backup = backupDirectory(pending)
         val staging = stagingDirectory(pending)
 
@@ -259,9 +257,7 @@ class ImportRegistrationJournal(
             "Pending import file paths must be unique"
         }
         pending.files.forEach { file ->
-            require(file.relativePath.startsWith(pending.gameId + "/")) {
-                "Pending import file belongs to another game"
-            }
+            requirePathBelongsToGame(file.relativePath, pending.gameId)
             require(
                 file.relativePath.none { it == '\\' || it == '\u0000' } &&
                     file.relativePath.split('/').none { it.isBlank() || it == "." || it == ".." }
@@ -275,7 +271,40 @@ class ImportRegistrationJournal(
     private fun markerFile(gameId: String, transactionId: String): File =
         File(importsRoot, ".pending-registration-" + gameId + "-" + transactionId + ".json")
 
-    private fun targetDirectory(gameId: String): File = File(importsRoot, gameId)
+    /**
+     * Supports both the legacy imports/<game>/ layout and the managed
+     * imports/<console>/<game>/ layout. Every file in one transaction must
+     * resolve to the same game directory.
+     */
+    private fun targetDirectory(pending: PendingImportTransaction): File {
+        val relative = targetRelativeDirectory(pending.files, pending.gameId)
+        return File(importsRoot, relative)
+    }
+
+    private fun targetRelativeDirectory(
+        files: List<PendingImportFile>,
+        gameId: String,
+    ): String {
+        val directories = files.map { file ->
+            val parts = file.relativePath.split('/')
+            val gameIndex = parts.indexOf(gameId)
+            require(gameIndex >= 0 && gameIndex == parts.size - 2) {
+                "Pending import path is outside the selected game"
+            }
+            parts.dropLast(1).joinToString("/")
+        }.distinct()
+        require(directories.size == 1) {
+            "Pending import files must share one game directory"
+        }
+        return directories.single()
+    }
+
+    private fun requirePathBelongsToGame(path: String, gameId: String) {
+        val parts = path.split('/')
+        require(parts.size >= 2 && parts.indexOf(gameId) == parts.size - 2) {
+            "Pending import path is outside the selected game"
+        }
+    }
 
     private fun backupDirectory(pending: PendingImportTransaction): File =
         File(importsRoot, ".backup-" + pending.gameId + "-" + pending.transactionId)
