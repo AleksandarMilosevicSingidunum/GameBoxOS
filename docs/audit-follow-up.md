@@ -1553,3 +1553,9 @@ failure: Desktop Mode force-stopped/relaunched `com.gamebox.os` while the first
 non-exported-host test was starting, and the test runner could not retrieve
 logcat afterward; no GameBox Java exception was reported. This is retained as
 hardware-test evidence and is not merged into the emulator pass claim.
+
+TV launch-bounds correction (2026-09-28): the external-display launcher no
+longer supplies an explicit `launchBounds` rectangle. That rectangle could
+cause desktop shells to classify an otherwise fullscreen TV task as freeform;
+the launch now supplies only the selected display and fullscreen windowing hint,
+leaving the activity's MATCH_PARENT policy to size the surface.

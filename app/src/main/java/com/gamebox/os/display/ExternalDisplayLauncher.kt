@@ -4,7 +4,6 @@ import android.app.Activity
 import android.app.ActivityOptions
 import android.content.Context
 import android.content.Intent
-import android.graphics.Rect
 import android.hardware.display.DisplayManager
 import android.os.Bundle
 import android.content.pm.PackageManager
@@ -79,9 +78,11 @@ internal fun launchGameBoxOnExternalDisplay(activity: Activity): String {
     return runCatching {
         val options = ActivityOptions.makeBasic().apply {
             launchDisplayId = target.displayId
-            if (target.width > 0 && target.height > 0) {
-                launchBounds = Rect(0, 0, target.width, target.height)
-            }
+            // Do not provide launchBounds here. On Android desktop shells,
+            // even bounds equal to the physical display can force a freeform
+            // task with a caption. The host activities request MATCH_PARENT;
+            // the display-targeted fullscreen windowing hint should decide
+            // the final surface size.
         }
         val launchOptions = options.toGameBoxFullscreenLaunchBundle()
         val launchIntent = if (isDefaultHomeApp(activity)) {
