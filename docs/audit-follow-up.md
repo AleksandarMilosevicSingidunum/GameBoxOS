@@ -1914,3 +1914,9 @@ PC tab opens. The complete Blueprint plus TV-host profile passed `OK (16 tests)`
 at both 1920×1080/160 and 1280×720/160; each run restored the emulator to
 1080×2400/420. This is software controller/focus evidence, separate from
 physical controller and Honor Desktop Mode acceptance.
+
+Shared Blueprint focusability verification (2026-09-29): the JVM suite passed
+after the custom-card TV change, and the production/instrumentation build plus
+TV-host regressions passed at 1920×1080/160 and 1280×720/160 with `OK (16
+tests)` at each profile. This preserves the distinction between software
+focus/key evidence and physical controller acceptance.
