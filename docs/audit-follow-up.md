@@ -1256,3 +1256,11 @@ targets are available, while retaining the first-target fallback if every target
 virtual. This prevents an Android Studio screen-sharing/capture surface from taking the
 Show on TV route ahead of a connected television. JVM coverage verifies physical-over-
 virtual selection; live HDMI validation remains separately recorded above.
+
+Honor HDMI input-boundary checkpoint (2026-09-28): a direct ADB `input -d 8 keyevent`
+probe on the wired display was intercepted by Honor Desktop Mode's `SecondLauncher`;
+the TV hierarchy changed to the firmware launcher and GameBox lost window focus before
+R1/L1 could reach the app. GameBox was restored to the HDMI task afterward. This is
+firmware/controller-boundary evidence, not a failure of the shared TV key-dispatch code;
+the dedicated `TvActivityTest` remains the automated controller-path evidence, while a
+physical controller and final Desktop Mode handoff remain hardware gates.
