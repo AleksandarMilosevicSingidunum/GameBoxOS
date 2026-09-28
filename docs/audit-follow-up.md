@@ -993,6 +993,16 @@ Home/Details, Library, Store, Media, PC, Settings, Downloads, and populated-layo
 capture flow used by the CI matrix. It is emulator screenshot evidence, separate from
 the live SMART TV render checkpoints and physical controller/DeX acceptance.
 
+Fresh live SMART TV recheck after the Honor was unlocked (2026-09-28): the current debug
+APK was installed on `PGT-N19` and launched on the active `SMART TV` presentation display
+at 1920x1080/160 dpi. Home rendered the Finish console mode banner, Galaxy Patrol hero,
+status rail, PC quick-launch tiles, and populated Explore row. Store rendered the console
+rail including PSP/Dreamcast/3DS/Switch, populated authorized source cards, the
+TheGamesDB API-key-required state, and sync/refresh actions. Settings rendered the
+Storage/Controllers/Downloads/Emulators/Display/Audio/Network/Saves/System rail and
+controller footer. This is current physical external-display rendering evidence; the
+phone was unlocked, but no physical controller or long-duration soak was claimed.
+
 1. Extend real game/save/return/uninstall/reinstall proof across the supported adapter patterns.
 2. Validate managed GameBox save import/backup/cloud behavior against production emulators and real endpoints.
 3. Live provider/download/volume validation against real configured endpoints and storage.
