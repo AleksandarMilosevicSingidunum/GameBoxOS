@@ -881,6 +881,14 @@ length, truncated length, and over-limit bodies. The complete Android JVM suite 
 passes 564 tests with zero failures, zero errors, and one explicit skip; this remains
 local transport evidence and does not claim live CDN acceptance.
 
+Discovery text transport framing hardening (2026-09-28): the shared cancellable HTTPS
+reader used by Vimm title discovery and JSON discovery now rejects a response whose
+body length differs from its declared `Content-Length`, while preserving bounded
+reads and socket disconnect on cancellation. Focused tests cover unknown length,
+truncated length, and over-limit bodies. The full Android JVM suite now passes 567
+tests with zero failures, zero errors, and one explicit skip. This is local discovery
+transport evidence; it does not authorize or download copyrighted binaries.
+
 1. Extend real game/save/return/uninstall/reinstall proof across the supported adapter patterns.
 2. Validate managed GameBox save import/backup/cloud behavior against production emulators and real endpoints.
 3. Live provider/download/volume validation against real configured endpoints and storage.

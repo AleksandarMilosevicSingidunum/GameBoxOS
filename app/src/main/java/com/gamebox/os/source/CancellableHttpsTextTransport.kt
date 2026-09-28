@@ -39,22 +39,13 @@ internal suspend fun fetchCancellableHttpsText(
             configure(connection)
             val result = try {
                 validateResponse(connection)
-                require(connection.contentLengthLong < 0 || connection.contentLengthLong <= maxResponseBytes) {
+                val declaredLength = connection.contentLengthLong
+                require(declaredLength < 0 || declaredLength <= maxResponseBytes) {
                     "$requestName response is too large"
                 }
-                val output = java.io.ByteArrayOutputStream()
                 connection.inputStream.use { input ->
-                    val buffer = ByteArray(8_192)
-                    var total = 0
-                    while (true) {
-                        val count = input.read(buffer)
-                        if (count < 0) break
-                        total += count
-                        require(total <= maxResponseBytes) { "$requestName response is too large" }
-                        output.write(buffer, 0, count)
-                    }
+                    readBoundedHttpsTextResponse(input, declaredLength, maxResponseBytes, requestName)
                 }
-                output.toString(Charsets.UTF_8.name())
             } finally {
                 connection.disconnect()
             }
@@ -69,4 +60,28 @@ internal suspend fun fetchCancellableHttpsText(
         connectionReference.get()?.disconnect()
         worker.cancel()
     }
+}
+
+internal fun readBoundedHttpsTextResponse(
+    input: java.io.InputStream,
+    declaredLength: Long,
+    maxResponseBytes: Int,
+    requestName: String,
+): String {
+    val output = java.io.ByteArrayOutputStream()
+    val buffer = ByteArray(8_192)
+    var total = 0
+    while (true) {
+        val count = input.read(buffer)
+        if (count < 0) break
+        total += count
+        require(total <= maxResponseBytes) { "$requestName response is too large" }
+        output.write(buffer, 0, count)
+    }
+    if (declaredLength >= 0L && total.toLong() != declaredLength) {
+        throw java.io.IOException(
+            "$requestName response ended with an unexpected length ($total/$declaredLength)",
+        )
+    }
+    return output.toString(Charsets.UTF_8.name())
 }
