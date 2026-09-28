@@ -70,6 +70,21 @@ class EmulatorCapabilityRegistry(
         )
     )
 ) {
+    private data class RetroArchPlatformProfile(
+        val requiredCore: String,
+        val coreFileName: String,
+    )
+
+    private fun retroArchProfile(platform: String): RetroArchPlatformProfile? {
+        return when (platform.lowercase().filter(Char::isLetterOrDigit)) {
+            "nes", "famicom", "nintendoentertainmentsystem" -> RetroArchPlatformProfile(
+                requiredCore = "Nintendo - NES / Famicom (FCEUmm)",
+                coreFileName = "fceumm_libretro_android.so",
+            )
+            else -> null
+        }
+    }
+
     fun readinessMessage(game: Game): String? = forGame(game)?.let { capability ->
         capability.requiredCore?.let { core ->
             "Install RetroArch (standard, ARM64, or RA32) and the $core core before launching this game."
@@ -127,6 +142,7 @@ class EmulatorCapabilityRegistry(
         val importedPath = game.localContentRelativePath
         val importedChecksum = game.localContentSha256
         val importedMimeType = game.localContentMimeType
+        val platformProfile = retroArchProfile(game.platform)
         if (importedPath != null && importedChecksum != null && importedMimeType != null) {
             val packageName = game.emulatorPackage?.takeIf { it in optionsFor(game) }
                 ?: platformDefaultPackage?.takeIf { it in optionsFor(game) }
@@ -141,8 +157,8 @@ class EmulatorCapabilityRegistry(
                 mimeType = importedMimeType,
                 expectedSha256 = importedChecksum,
                 graphicsProfile = game.graphicsProfile,
-                requiredCore = explicit?.requiredCore,
-                retroArchCoreFileName = explicit?.retroArchCoreFileName,
+                requiredCore = explicit?.requiredCore ?: platformProfile?.requiredCore,
+                retroArchCoreFileName = explicit?.retroArchCoreFileName ?: platformProfile?.coreFileName,
                 contentRoot = EmulatorContentRoot.IMPORTS,
                 companionFiles = game.localContentFiles.filterNot { file ->
                     file.relativePath == importedPath
@@ -166,7 +182,9 @@ class EmulatorCapabilityRegistry(
             contentRelativePath = content.relativePath,
             mimeType = content.mimeType,
             expectedSha256 = checksum,
-            graphicsProfile = game.graphicsProfile
+            graphicsProfile = game.graphicsProfile,
+            requiredCore = explicit?.requiredCore ?: retroArchProfile(game.platform)?.requiredCore,
+            retroArchCoreFileName = explicit?.retroArchCoreFileName ?: retroArchProfile(game.platform)?.coreFileName,
         )
     }
 }

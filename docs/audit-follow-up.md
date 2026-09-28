@@ -964,6 +964,15 @@ the Windows companion core suite completed with `GameBox Windows core tests pass
 These are local automated software checks after the visual-QA workflow hardening, not
 live authenticated-provider, signed-release, emulator-gameplay, or hardware evidence.
 
+NES adapter handoff hardening (2026-09-28): imported and catalog-provided NES games
+selected for RetroArch now carry the validated FCEUmm core name and Android core path,
+not only the bundled Galaxy Patrol record. This keeps the approved content URI handoff
+and missing-core guidance consistent for legal NES imports while deliberately leaving
+unvalidated platform/core mappings unspecified. `EmulatorSettingsTest` and the full
+Android JVM suite pass with 568 tests, zero failures, zero errors, and one explicit skip.
+This improves launch preparation coverage; it is not evidence of a second physical game
+or emulator gameplay session.
+
 1. Extend real game/save/return/uninstall/reinstall proof across the supported adapter patterns.
 2. Validate managed GameBox save import/backup/cloud behavior against production emulators and real endpoints.
 3. Live provider/download/volume validation against real configured endpoints and storage.

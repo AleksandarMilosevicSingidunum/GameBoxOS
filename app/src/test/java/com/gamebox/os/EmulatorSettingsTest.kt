@@ -68,6 +68,22 @@ class EmulatorSettingsTest {
     }
 
     @Test
+    fun nesGamesCarryTheValidatedRetroArchCoreContract() {
+        val nes = Game(
+            GameId("nes-import"), "NES Import", "NES", 2020, "Action", 1,
+            InstallState.INSTALLED,
+            localContentRelativePath = "nes-import/game.nes",
+            localContentSha256 = "a".repeat(64),
+            localContentMimeType = "application/x-nes-rom",
+        )
+
+        val capability = requireNotNull(registry.forGame(nes))
+        assertEquals("com.retroarch.aarch64", capability.packageName)
+        assertEquals("Nintendo - NES / Famicom (FCEUmm)", capability.requiredCore)
+        assertEquals("fceumm_libretro_android.so", capability.retroArchCoreFileName)
+    }
+
+    @Test
     fun unsupportedGameWithoutDiagnosticCapabilityIsRejected() {
         val android = Game(GameId("android-demo"), "Android Demo", "Android", 2020, "Action", 1, InstallState.INSTALLED,
             expectedSha256 = "abc")
