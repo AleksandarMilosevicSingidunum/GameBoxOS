@@ -174,8 +174,6 @@ class BlueprintScreenshotsTest {
                 GameBoxSemantics.gameCardDescription(installedTarget, hero = false)
             ).assertIsDisplayed()
 
-            // Use the production card semantics so this covers the same selection path
-            // a TV controller uses, rather than opening Details through a test shortcut.
             rule.onNodeWithContentDescription(
                 GameBoxSemantics.gameCardDescription(installedTarget, hero = false)
             ).performClick()

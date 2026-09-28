@@ -1920,3 +1920,14 @@ after the custom-card TV change, and the production/instrumentation build plus
 TV-host regressions passed at 1920×1080/160 and 1280×720/160 with `OK (16
 tests)` at each profile. This preserves the distinction between software
 focus/key evidence and physical controller acceptance.
+
+Honor 7z importer recheck (2026-09-29): the rebuilt APK and test APK were
+installed on the physical Honor device after the earlier Crisis Core import
+crash. `SevenZipRuntimeTest#packagedSevenZipRuntimeExtractsSyntheticPspPayload`
+passed on-device with `OK (1 test)`, and the subsequent Honor log contained no
+new `NoClassDefFoundError` for the XZ runtime. The test uses a synthetic PSP
+payload and does not claim commercial-game distribution or gameplay. The
+installed-game TV screenshot test was also kept on its valid MainActivity
+click path; controller confirmation remains covered by the dedicated
+TvActivity production-host tests rather than an invalid focus assertion in the
+screenshot harness.
