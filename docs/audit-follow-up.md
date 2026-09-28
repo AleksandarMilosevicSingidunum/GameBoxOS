@@ -947,6 +947,17 @@ and a successful `OK (...)` result are now required for the visual-QA job to pas
 keeps phone, Desktop/TV-sized, and large-text Blueprint coverage enforceable in CI;
 physical external-display and controller soak evidence remains separate.
 
+Fresh SMART TV wide-layout checkpoint (2026-09-28): with the Honor Magic6 Pro connected
+to the remembered `SMART TV` presentation display at 1920x1080/160 dpi, the live GameBox
+window was navigated through PC Hub, Library, and Media Hub. PC showed the Moonlight,
+Winlator, Termux, Files, and Chrome cards plus host setup and connection status; Library
+showed its zero-game/empty state, filters, storage, saves, and overview rail; Media showed
+the living-room app rail, ready YouTube/Netflix cards, setup-required states, device
+status, and controller footer. All three states rendered with the Blueprint wide-shell
+navigation, focus treatment, status rail, and controller legend. This is live external-
+display rendering evidence; it does not claim physical controller input, HDMI/DeX soak,
+or populated-provider gameplay.
+
 1. Extend real game/save/return/uninstall/reinstall proof across the supported adapter patterns.
 2. Validate managed GameBox save import/backup/cloud behavior against production emulators and real endpoints.
 3. Live provider/download/volume validation against real configured endpoints and storage.
