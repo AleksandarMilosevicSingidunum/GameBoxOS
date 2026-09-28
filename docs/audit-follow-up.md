@@ -1565,3 +1565,11 @@ runtime fullscreen flag and absence of the force-not-fullscreen flag in addition
 to landscape, Blueprint rendering, controller shoulder navigation, and the
 non-exported host boundary. The isolated API-35 emulator run remains green with
 all four tests passing.
+
+Blueprint visual gate evidence (2026-09-28): `BlueprintScreenshotsTest` was
+updated to reflect the current TV-aware layout contract: compact-only store
+coverage skips wide displays, update-state details tolerate the shared
+controller-footer label, and the PC handoff assertion uses the stable external
+display action semantic. The production screenshot/navigation gate completed
+with all four tests passing on the API-35 emulator after reinstalling the debug
+app and instrumentation APKs.

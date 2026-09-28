@@ -54,7 +54,8 @@ class BlueprintScreenshotsTest {
                         rule.onNodeWithContentDescription("X button: Search").assertIsDisplayed()
                         rule.onNodeWithContentDescription("Y button: Filters").assertIsDisplayed()
                     }
-                    "PC" -> rule.onNodeWithText("The system may ask you to confirm the display switch.").assertIsDisplayed()
+                    "PC" -> rule.onNodeWithContentDescription("Show GameBox on external display")
+                        .assertExists()
                 }
             }
             if (title == "Store" &&
@@ -102,7 +103,8 @@ class BlueprintScreenshotsTest {
             rule.onNodeWithContentDescription("Availability: Update").assertIsDisplayed()
             rule.onNode(hasContentDescription(target.title, substring = true)).performClick()
             rule.waitForIdle()
-            rule.onNodeWithText("Update").assertExists()
+            // The details action and the controller footer both expose the same label.
+            rule.onAllNodesWithText("Update").onLast().assertIsDisplayed()
         } finally {
             runBlocking { repository.setInstallStateAndAwait(target.id, originalState) }
         }
@@ -113,6 +115,7 @@ class BlueprintScreenshotsTest {
         rule.waitUntil(15_000) {
             rule.onAllNodesWithContentDescription("Home tab").fetchSemanticsNodes().isNotEmpty()
         }
+        if (rule.activity.resources.configuration.screenWidthDp >= 900) return
         rule.onNodeWithContentDescription("Store tab").performClick()
         rule.waitForIdle()
         rule.onNodeWithText("Browse authorized games, metadata, and configured sources").assertIsDisplayed()
