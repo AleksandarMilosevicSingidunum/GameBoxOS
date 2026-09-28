@@ -268,9 +268,7 @@ fun GameBoxApp(
         Modifier.fillMaxSize()
             .focusRequester(rootFocusRequester)
             .focusable(
-                enabled = destination != Destination.SETTINGS &&
-                    destination != Destination.STORE &&
-                    selectedGameId == null,
+                enabled = selectedGameId == null,
             )
             .onPreviewKeyEvent { event ->
                 if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false

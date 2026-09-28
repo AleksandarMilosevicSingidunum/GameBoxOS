@@ -60,6 +60,31 @@ class TvActivityTest {
     }
 
     @Test
+    fun tvActivityNavigatesWideDestinationsAndDownloadsWithController() {
+        rule.waitUntil(15_000) {
+            rule.onAllNodesWithContentDescription("Home tab").fetchSemanticsNodes().isNotEmpty()
+        }
+        listOf("Library", "Store", "Media", "PC", "Settings").forEach { destination ->
+            rule.onNodeWithContentDescription("$destination tab").performClick()
+            rule.waitUntil(5_000) {
+                runCatching {
+                    rule.onNodeWithContentDescription("$destination tab")
+                        .fetchSemanticsNode()
+                        .config[androidx.compose.ui.semantics.SemanticsProperties.Selected] == true
+                }.getOrDefault(false)
+            }
+            rule.onNodeWithContentDescription("$destination tab").assertIsSelected()
+        }
+        sendButton(KeyEvent.KEYCODE_BUTTON_START)
+        rule.onNodeWithContentDescription("Controller quick actions").assertIsDisplayed()
+        rule.onNodeWithContentDescription("Open download activity").performClick()
+        rule.waitUntil(5_000) {
+            rule.onAllNodesWithText("Download Manager").fetchSemanticsNodes().isNotEmpty()
+        }
+        rule.onNodeWithText("Download Manager").assertIsDisplayed()
+    }
+
+    @Test
     fun tvActivityKeepsNonExportedHostBoundary() {
         val info = rule.activity.packageManager.getActivityInfo(
             ComponentName(rule.activity, TvActivity::class.java),

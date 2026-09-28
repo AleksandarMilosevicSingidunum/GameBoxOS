@@ -1847,3 +1847,12 @@ does not compete for focus on the PC destination. The production Blueprint flow
 requested and verified focus on that action at 1920×1080/160 dpi; this is
 controller-focusability evidence, separate from the Honor firmware's physical
 Desktop Mode window/caption behavior.
+
+Dedicated TV host flow increment (2026-09-29): `TvActivityTest` now traverses
+the wide Home, Library, Store, Media, PC, and Settings destinations, opens the
+controller quick-actions overlay, and enters the Download Manager through its
+accessible action. The shared root remains a focusable controller key-event host
+without stealing per-screen focus. The dedicated TV suite passed `OK (8 tests)`
+and the combined Blueprint + TV profile passed `OK (12 tests)` at 1920×1080/160;
+physical controller and Honor Desktop Mode behavior remain separate hardware
+evidence.
