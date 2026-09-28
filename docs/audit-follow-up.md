@@ -1694,3 +1694,9 @@ APKs completed the production-wide Blueprint flow plus dedicated TV-host suite
 at 1920×1080/160 dpi with `OK (9 tests)`. The emulator was restored to
 1080×2400/420 afterward. This confirms the UI/navigation and host-policy gates
 remain green together after the external gameplay launch change.
+
+Borderless launch regression guard (2026-09-28): `TvActivityTest` now asserts
+that the fullscreen external-display launch bundle contains the platform
+fullscreen hint and no `launchBounds` rectangle. The assertion passed in the
+1920×1080/160-dpi TV-host run (`OK (5 tests)`), protecting the window-policy
+contract from reintroducing desktop freeform sizing.

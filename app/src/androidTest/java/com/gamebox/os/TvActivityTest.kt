@@ -71,6 +71,9 @@ class TvActivityTest {
     fun externalDisplayLaunchBundleRequestsFullscreenWindowingMode() {
         val launchBundle = ActivityOptions.makeBasic().toGameBoxFullscreenLaunchBundle()
         assertEquals(1, launchBundle.getInt("android.activity.windowingMode", -1))
+        // A display-sized launchBounds rectangle can make desktop shells create
+        // a captioned/freeform task instead of a borderless TV surface.
+        assertFalse(launchBundle.containsKey("android:activity.launchBounds"))
     }
 
     private fun sendButton(keyCode: Int) {
