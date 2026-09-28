@@ -1618,3 +1618,13 @@ dedicated `TvActivityTest`. This keeps fullscreen flags, landscape orientation,
 controller tab/overlay behavior, and the non-exported host boundary gated at
 the same dimensions used for the TV screenshots, while phone and large-text
 profiles retain their existing screenshot coverage.
+
+Honor HDMI state recheck (2026-09-28): the connected `PGT-N19` currently
+reports a live physical `HDMI Screen` presentation display at 1920×1080/160 dpi
+(dynamic display ID 149). The foreground Desktop Mode surface is Chrome/system
+UI. A direct ADB `MainActivity` launch on that display focused GameBox but was
+classified by Honor as `hw-pc-freeform` with a desktop task surface, so it is
+not evidence for the supported in-product Show on TV route or borderless
+acceptance. The emulator/CI TV evidence remains authoritative for software;
+physical confirmation still requires the supported handoff to be accepted by
+Honor Desktop Mode.
