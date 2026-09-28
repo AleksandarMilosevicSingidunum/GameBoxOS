@@ -87,6 +87,11 @@ class BlueprintScreenshotsTest {
             rule.onAllNodesWithText("Downloads").onLast().performClick()
         }
         rule.waitForIdle()
+        if (rule.activity.resources.configuration.screenWidthDp >= 900) {
+            rule.onNodeWithText("Download Manager").assertIsDisplayed()
+        } else {
+            rule.onNodeWithText("Downloads").assertIsDisplayed()
+        }
         capture("08-downloads")
         capturePopulatedLayout()
     }

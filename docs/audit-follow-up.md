@@ -1598,3 +1598,9 @@ flow now explicitly asserts that opening the Home hero exposes the authorized
 The check passed on the 1920×1080/160-dpi emulator profile, alongside the
 visible controller-footer `Install game` action; it does not claim a real
 emulator launch or physical-controller acceptance.
+
+TV Downloads destination coverage (2026-09-28): the same wide production flow
+now asserts the TV-specific `Download Manager` heading after opening the utility
+destination from the notification action. This protects the transition from
+game/details actions into the download state surface; the check passed on the
+1920×1080/160-dpi emulator profile.
