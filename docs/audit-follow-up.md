@@ -1798,6 +1798,14 @@ The Honor desktop shell still assigned the activity a 1152x691
 launcher visuals remain a firmware/windowing evidence gate rather than a
 claimed app-level pass.
 
+Post-fullscreen-API software TV gate (2026-09-28): the rebuilt production and
+instrumentation APKs completed `BlueprintScreenshotsTest` plus `TvActivityTest`
+at 1920x1080/160 dpi with `OK (11 tests)`. The emulator was restored to
+1080x2400/420 afterward. This confirms the TV-dimension layout, production
+navigation flow, fullscreen host flags, controller overlay/tab behavior, and
+non-exported TV host boundary in software; it does not override the separate
+Honor Desktop Mode caption/freeform result above.
+
 Android fullscreen-promotion follow-up (2026-09-28): both external-display
 hosts now call the Android 14+ `Activity.requestFullscreenMode()` API when
 their existing edge-to-edge/window-flag policy is applied, while retaining the
