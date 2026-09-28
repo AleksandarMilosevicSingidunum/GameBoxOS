@@ -12,6 +12,11 @@ Windows `GameBox.Windows.Core.Tests` Release harness also passed. These are loca
 software regression results; they do not replace live-provider, signed-release, or
 physical-display acceptance.
 
+The subsequent PC Hub confirmation-guidance change was followed by a complete API-35
+instrumentation run: 68 tests completed, one explicit real-SAF setup test skipped by
+the clean emulator state, and zero failures. This includes the production screenshot
+flow for the PC Hub in the current build.
+
 ## Current implementation checkpoint (28 September 2026)
 
 Windows release packaging checkpoint: the self-contained `win-x64` publish completed
