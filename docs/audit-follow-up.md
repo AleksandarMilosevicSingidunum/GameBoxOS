@@ -352,6 +352,15 @@ source commit `fbee34f`. The Windows companion Release core harness also passed 
 same milestone run. These are current cross-platform build/test results; signing,
 installation, upgrade, rollback, and update-channel execution remain separate gates.
 
+Fresh Android release packaging checkpoint (28 September 2026): `:app:assembleRelease`
+passed again from the current tree and produced `app-release-unsigned.apk` (14,543,093
+bytes, SHA-256
+`1265daef5b0592f90a7c61182337f9dde024a946389e51f5fbf9848ce0133b0c`). `apksigner`
+correctly reported that this unsigned preview does not verify; no production signing
+secrets are configured. The Windows Release core harness also passed independently in
+the same continuation. This confirms compilation/package integrity only, not trusted
+installation or update-channel readiness.
+
 Release provenance hardening (27 September 2026): alpha, beta, combined preview, and
 protected production APK workflows now use the same tested manifest generator. It accepts
 the PREVIEW channel and records the checked-out source commit plus signing status alongside
