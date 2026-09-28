@@ -35,6 +35,16 @@ run. `BlueprintScreenshotsTest` completed all four production screen tests, incl
 the compact Store and Settings routes. This is physical phone UI/lifecycle evidence;
 external-TV overscan, controller, and DeX soak remain separate hardware gates.
 
+Fresh live SMART TV render checkpoint (28 September 2026): the Honor reported an
+active `SMART TV` presentation display at 1920×1080/160 dpi. After reinstalling the
+current debug APK, the exported `MainActivity` was placed on logical display 30 and
+the window was maximized through Desktop Mode. A captured TV frame shows the wide
+Blueprint shell filling the TV surface with Home navigation, the Finish console mode
+banner, Galaxy Patrol hero, status rail, quick-launch cards, populated Explore row,
+and controller footer. This proves the current wide render on the active TV; it is
+not a claim that the shell command launched the non-exported `TvActivity` or that
+physical controller/DeX soak is complete.
+
 Cross-platform post-save-hardening checkpoint (28 September 2026): the complete
 Android JVM suite passed 558 tests with zero failures, zero errors, and one explicit
 skip after the reversible SAF replacement change. The Windows `GameBox.Windows.Core.Tests`
