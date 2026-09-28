@@ -1665,3 +1665,8 @@ same artifact passed the combined API-35 TV-dimension run at 1920×1080/160 dpi:
 emulator profile was restored to its original 1080×2400/420 configuration after
 the run. The Honor was in `Dozing` during the subsequent physical-display probe,
 so no new physical-TV render or PSP gameplay claim is made here.
+
+Full Android JVM regression checkpoint (2026-09-28): after the PSP MIME and
+7z codec changes, the complete `testDebugUnitTest` suite passed 599 tests with
+zero failures and zero errors. This validates the tracked software contracts;
+it does not replace live PPSSPP gameplay or physical-TV acceptance.
