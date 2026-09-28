@@ -46,9 +46,17 @@ tests pass. User-selected save-root configuration, launch-time wiring, and real 
 save validation are now separated: Settings persists an independent emulator-save SAF
 permission, the production launch controller restores a verified snapshot before dispatch,
 and the return path snapshots emulator-owned files alongside managed saves. JVM coverage
-blocks dispatch on failed configured restore. A real SAF/provider round-trip and emulator
-save validation remain open. Managed app-private saves are not being relabeled as emulator
-saves.
+blocks dispatch on failed configured restore. Managed app-private saves are not being
+relabeled as emulator saves.
+
+Real SAF/provider checkpoint (28 September 2026): after selecting the disposable emulator
+folder `Download/GameBoxSafTest` through the production Settings picker, the direct
+instrumentation run `SafSaveAdapterDeviceTest` passed `OK (1 test)` on API-35. It
+discovered `game-a/PSP/SAVEDATA/slot.dat`, read the provider-backed original bytes,
+restored replacement bytes through the staged-and-digest-verified path, read them back,
+and restored the original fixture in `finally`. This proves the selected DocumentsProvider
+round-trip; it is not yet proof of a commercial emulator's gameplay save format or save
+recovery after an actual PPSSPP session.
 
 The same focused Settings test passed on API-35 but the connected Honor run did not
 produce a valid test result: the instrumentation process crashed and the device then
