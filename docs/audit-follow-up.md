@@ -1736,3 +1736,11 @@ content-removal integration run passed `OK (4 tests)`, including an assertion th
 the PSP file exists only under the console-scoped path. This is software storage
 evidence; physical external storage and long-running migration remain separate
 hardware/deployment gates.
+
+Canonical tree-policy follow-up (2026-09-28): the managed directory list is now
+derived directly from the importer’s supported console profiles rather than being
+duplicated in the startup initializer. This keeps newly supported console formats
+from silently missing a pre-created directory; the `unknown` bucket covers imports
+whose platform is not yet resolved. The final artifact passed the combined
+Blueprint-wide production flow and dedicated TV-host run at 1920×1080/160 dpi with
+`OK (9 tests)`, and the emulator was restored to 1080×2400/420 afterward.
