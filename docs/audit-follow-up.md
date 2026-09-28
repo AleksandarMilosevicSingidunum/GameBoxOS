@@ -301,6 +301,13 @@ being reduced by phone navigation/status chrome when the dedicated activity owns
 presentation display. Build and instrumentation evidence remain separate from the
 firmware-dependent confirmation, overscan, controller, and long-duration TV gates.
 
+Fresh Honor regression checkpoint (28 September 2026): after installing the APK with
+the TV window policy, the complete connected Android suite finished with 69 tests, one
+expected SAF skip, and zero failures on `PGT-N19` while the wired HDMI presentation
+display reported 1920×1080/160 dpi. This is phone-surface instrumentation evidence
+with the TV connected; it does not promote the Desktop Mode `canHostTasks=false`
+handoff limitation into a successful dedicated-TV visual acceptance.
+
 Authenticated catalog transport checkpoint: the shared HTTPS/WebDAV/S3 client now
 rejects credential types that do not match the selected transport before opening a
 network connection. S3 requires access-key/secret-key credentials, while HTTPS and
