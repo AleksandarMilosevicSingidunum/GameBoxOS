@@ -27,7 +27,7 @@ import java.security.SecureRandom
 private val Context.gameBoxDataStore: DataStore<Preferences> by preferencesDataStore(name = "gamebox_settings")
 
 data class GameBoxSettings(
-    val safeAreaPercent: Float = 0.04f,
+    val safeAreaPercent: Float = 0f,
     val reducedMotion: Boolean = false,
     val focusDebugOverlayEnabled: Boolean = false,
     val developerLayoutMode: DeveloperLayoutMode = DeveloperLayoutMode.AUTO,
@@ -63,7 +63,7 @@ class SettingsRepository(private val context: Context) {
     private val secretStore = AndroidKeystoreSecretStore(context.applicationContext)
     val settings: Flow<GameBoxSettings> = context.gameBoxDataStore.data.map { preferences ->
         GameBoxSettings(
-            safeAreaPercent = preferences[SAFE_AREA] ?: 0.04f,
+            safeAreaPercent = preferences[SAFE_AREA] ?: 0f,
             reducedMotion = preferences[REDUCED_MOTION] ?: false,
             focusDebugOverlayEnabled = preferences[FOCUS_DEBUG_OVERLAY] ?: false,
             developerLayoutMode = DeveloperLayoutMode.fromStored(preferences[DEVELOPER_LAYOUT_MODE]),

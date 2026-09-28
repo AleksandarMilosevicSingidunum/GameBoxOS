@@ -3262,6 +3262,13 @@ private fun DetailsScreen(
     val workerActive = authorizedState.status == AuthorizedDownloadState.Status.QUEUED ||
         authorizedState.status == AuthorizedDownloadState.Status.RUNNING
     val hasRemoteSource = game.sourceUrl != null && game.expectedSha256 != null
+    val primaryActionFocusRequester = remember(game.id) { FocusRequester() }
+    LaunchedEffect(game.id, detail.title, compact, game.state, workerActive, hasRemoteSource) {
+        if (!compact) {
+            androidx.compose.runtime.withFrameNanos { }
+            runCatching { primaryActionFocusRequester.requestFocus() }
+        }
+    }
     val context = LocalContext.current
     val importScope = rememberCoroutineScope()
     var importingAuthorizedCopy by remember(game.id) { mutableStateOf(false) }
@@ -3490,7 +3497,7 @@ private fun DetailsScreen(
                             if (game.state in setOf(InstallState.INSTALLED, InstallState.UPDATE_AVAILABLE)) {
                                 Button(
                                     onClick = { gameLaunchController.launchOnDisplay(game, hostDisplayId) },
-                                    modifier = Modifier.fillMaxWidth(),
+                                    modifier = Modifier.fillMaxWidth().focusRequester(primaryActionFocusRequester),
                                 ) {
                                     Icon(Icons.Rounded.PlayArrow, contentDescription = null, modifier = Modifier.size(16.dp))
                                     Text("Play Now", modifier = Modifier.padding(start = 6.dp), fontSize = 10.sp)
@@ -3499,7 +3506,7 @@ private fun DetailsScreen(
                                 Button(
                                     onClick = authorizedDownloadController::install,
                                     enabled = !workerActive,
-                                    modifier = Modifier.fillMaxWidth(),
+                                    modifier = Modifier.fillMaxWidth().focusRequester(primaryActionFocusRequester),
                                 ) {
                                     Icon(Icons.Rounded.Download, contentDescription = null, modifier = Modifier.size(16.dp))
                                     Text(
@@ -3514,7 +3521,7 @@ private fun DetailsScreen(
                             ) {
                                 Button(
                                     onClick = { remoteDownloadController.install(game) },
-                                    modifier = Modifier.fillMaxWidth(),
+                                    modifier = Modifier.fillMaxWidth().focusRequester(primaryActionFocusRequester),
                                 ) {
                                     Icon(Icons.Rounded.Download, contentDescription = null, modifier = Modifier.size(16.dp))
                                     Text("Install game", modifier = Modifier.padding(start = 6.dp), fontSize = 10.sp)

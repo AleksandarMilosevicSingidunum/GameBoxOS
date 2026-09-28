@@ -1454,3 +1454,20 @@ when Honor remains the HOME holder, it preserves the dedicated TV-host fallback 
 reports that GameBox must first be selected as default Home for launcher mode. The APK
 build and JVM suite pass, and the live Honor role check still reports
 `com.hihonor.android.launcher`; no launcher role was changed automatically.
+
+TV edge-to-edge safe-area increment (2026-09-28): the GameBox settings model and
+DataStore fallback now default `TV safe area` to `0%`, matching the supplied 1920x1080
+launcher reference and removing the application-owned inset on fresh installs. The
+installed Honor session was validated after activating the desktop fullscreen action:
+the GameBox root hierarchy occupies `[0,0][1920,1080]`, the system caption is absent,
+and the GameBox logo begins at the edge-to-edge layout origin. Existing devices with a
+previously persisted nonzero preference still retain that explicit user choice and can
+switch it to 0% through Settings; no app data reset was used.
+
+Honor desktop border boundary (2026-09-28): the same live HDMI session initially
+materialized a centered `[192,103][1344,794]` `hw-pc-freeform` window despite the app's
+fullscreen/no-limit flags. Activating Honor's own fullscreen window control changed the
+authoritative UI hierarchy to a GameBox root at `[0,0][1920,1080]` with no
+`androidhnext:id/hw_caption`. This proves the app is capable of the requested
+borderless full-display surface, while the initial automatic transition remains an
+Honor Desktop Mode policy boundary and not an app-rendering defect.
