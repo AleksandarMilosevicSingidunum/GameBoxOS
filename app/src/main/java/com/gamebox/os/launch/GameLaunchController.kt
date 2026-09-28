@@ -256,9 +256,8 @@ internal fun externalDisplayLaunchId(displayId: Int?): Int? =
 private fun externalDisplayLaunchBounds(context: Context, displayId: Int): Rect? {
     val display = context.getSystemService(DisplayManager::class.java)?.getDisplay(displayId)
         ?: return null
-    val metrics = android.util.DisplayMetrics()
-    display.getRealMetrics(metrics)
-    return Rect(0, 0, metrics.widthPixels, metrics.heightPixels)
+    val mode = display.mode
+    return Rect(0, 0, mode.physicalWidth, mode.physicalHeight)
 }
 
 internal fun startIntentOnDisplay(context: Context, intent: Intent, displayId: Int?) {
