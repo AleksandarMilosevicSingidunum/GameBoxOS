@@ -1334,3 +1334,10 @@ ignored the requested 1920x1080 bounds (`[192,103][1344,794]`), so GameBox canno
 full-screen emulator presentation on this firmware without a platform/window-manager control.
 This proves legal fixture installation and display-aware launch routing, not gameplay or
 physical-controller acceptance.
+
+TV safe-area persistence checkpoint (2026-09-28): on the wired HDMI display, Settings →
+Display reported `HDMI Screen · 1920×1080`, exposed the TV safe-area controls, and applied an
+8% inset to the wide Blueprint viewport. The TV hierarchy reported `Active inset: 8% on every
+edge`; after force-stopping and reopening GameBox on display 8, the 8% option remained checked.
+The original 4% user setting was restored before ending the session. This validates the TV
+dimension preference and persistence through the real external-display UI, not phone rendering.
