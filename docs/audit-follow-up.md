@@ -1383,3 +1383,10 @@ handling. On HDMI display 8, a display-targeted D-pad probe moved focus from the
 surface into real checkable/clickable controls and scrolled the settings rail instead of
 remaining on the root view. The safe-area chip parents remain explicit focus targets; the
 current directional order reaches the Settings section rail before the Display content rail.
+
+TV Settings initial-focus checkpoint (2026-09-28): entering Settings on HDMI display 8 now
+places focus on the first Storage section item rather than the global navigation. A single
+display-targeted Right key transferred focus into the content pane, where the hierarchy
+reported the STORAGE panel and External game library controls. This establishes a predictable
+rail-to-content D-pad path for the TV app; deeper Display-section traversal remains available
+through the existing section rail and scroll behavior.

@@ -4598,6 +4598,7 @@ private fun SettingsScreen(
     val scrollState = restoredScrollState("settings")
     val sectionOffsets = remember { mutableStateMapOf<SettingsSection, Int>() }
     var selectedSection by remember { mutableStateOf(SettingsSection.STORAGE) }
+    val firstWideSettingsSection = remember { FocusRequester() }
     val diagnosticEvents = remember { DiagnosticEventCollector() }
     val externalStorageController = remember(context, settingsRepository) {
         ExternalStorageController(context, settingsRepository)
@@ -4759,6 +4760,9 @@ private fun SettingsScreen(
 
     LaunchedEffect(scrollState.value, sectionOffsets.size) {
         selectedSection = SettingsNavigationPolicy.selectedSection(scrollState.value, sectionOffsets)
+    }
+    LaunchedEffect(compact) {
+        if (!compact) firstWideSettingsSection.requestFocus()
     }
     if (showMigrationDialog) {
         MigrationConfirmationDialog(
@@ -5858,7 +5862,12 @@ private fun SettingsScreen(
                     val interactionSource = remember(section) { MutableInteractionSource() }
                     val hovered by interactionSource.collectIsHoveredAsState()
                     Surface(
-                        modifier = Modifier.fillMaxWidth().hoverable(interactionSource)
+                        modifier = Modifier.fillMaxWidth()
+                            .then(
+                                if (section == SettingsSection.STORAGE) Modifier.focusRequester(firstWideSettingsSection)
+                                else Modifier
+                            )
+                            .hoverable(interactionSource)
                             .blueprintClick { navigateToSection(section) }
                             .semantics {
                                 this.selected = selected
