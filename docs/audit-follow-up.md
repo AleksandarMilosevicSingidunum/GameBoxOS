@@ -594,6 +594,13 @@ the first physical proof of companion-imported content reaching real gameplay an
 save-safe cleanup boundary; it remains separate from cloud-provider and external-hardware
 acceptance.
 
+Routed-TV fullscreen checkpoint (2026-09-28): because Honor Desktop Mode routes the
+supported Show on TV flow into `MainActivity`, that host now applies the external-display
+landscape/system-bar policy when its actual display is non-default. The rebuilt APK was
+installed on the Honor and the real HDMI task reported a fullscreen 1920x1080 app
+configuration and frame at 160 dpi; the TV hierarchy confirmed the GameBox package, Home,
+and logo. Phone/default-display behavior remains outside this policy.
+
 TV display-status clarity checkpoint (2026-09-28): runtime status now distinguishes a
 physical display from virtual capture surfaces when both are present. For example, the
 connected setup reports `HDMI Screen · 1920×1080 · 1 virtual display` instead of the

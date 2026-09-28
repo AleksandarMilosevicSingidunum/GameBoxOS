@@ -55,6 +55,7 @@ class ExternalDisplayLauncherTest {
         assertEquals(true, shouldFinishTvActivityForRemovedDisplay(23, 23))
         assertEquals(false, shouldFinishTvActivityForRemovedDisplay(23, 24))
         assertEquals(false, shouldFinishTvActivityForRemovedDisplay(0, 0))
+        assertEquals(false, shouldFinishTvActivityForRemovedDisplay(-1, -1))
     }
 
     @Test
@@ -62,5 +63,12 @@ class ExternalDisplayLauncherTest {
         assertEquals(true, shouldReapplyTvWindowPolicyForChangedDisplay(23, 23))
         assertEquals(false, shouldReapplyTvWindowPolicyForChangedDisplay(23, 24))
         assertEquals(false, shouldReapplyTvWindowPolicyForChangedDisplay(0, 0))
+    }
+
+    @Test
+    fun externalDisplayPredicateExcludesDefaultAndUnknownDisplayIds() {
+        assertEquals(false, isExternalDisplayId(-1))
+        assertEquals(false, isExternalDisplayId(0))
+        assertEquals(true, isExternalDisplayId(8))
     }
 }

@@ -32,17 +32,19 @@ internal fun isLikelyVirtualPresentationDisplay(name: String): Boolean {
 internal fun externalDisplayLaunchRequestedMessage(target: ExternalDisplayTarget): String =
     "Display switch requested for ${target.name}; confirm it if the system prompts you"
 
+internal fun isExternalDisplayId(displayId: Int): Boolean = displayId > Display.DEFAULT_DISPLAY
+
 internal fun shouldFinishTvActivityForRemovedDisplay(
     currentDisplayId: Int,
     removedDisplayId: Int,
 ): Boolean =
-    currentDisplayId != Display.DEFAULT_DISPLAY && currentDisplayId == removedDisplayId
+    isExternalDisplayId(currentDisplayId) && currentDisplayId == removedDisplayId
 
 internal fun shouldReapplyTvWindowPolicyForChangedDisplay(
     currentDisplayId: Int,
     changedDisplayId: Int,
 ): Boolean =
-    currentDisplayId != Display.DEFAULT_DISPLAY && currentDisplayId == changedDisplayId
+    isExternalDisplayId(currentDisplayId) && currentDisplayId == changedDisplayId
 
 internal fun presentationDisplayTargets(context: Context): List<ExternalDisplayTarget> =
     context.getSystemService(DisplayManager::class.java)
