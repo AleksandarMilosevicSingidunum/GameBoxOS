@@ -1236,3 +1236,10 @@ successfully and was installed on the authorized Honor; the subsequent HDMI rout
 reported a full 1920x1080 @ 160 dpi GameBox window/configuration on the wired display.
 This software recovery guard is unit-verified; physical cable-unplug/reconnect soak
 remains a separate hardware gate.
+
+Physical-TV target selection checkpoint (2026-09-28): presentation-display discovery now
+marks Android virtual displays and prefers a physical presentation display when multiple
+targets are available, while retaining the first-target fallback if every target is
+virtual. This prevents an Android Studio screen-sharing/capture surface from taking the
+Show on TV route ahead of a connected television. JVM coverage verifies physical-over-
+virtual selection; live HDMI validation remains separately recorded above.

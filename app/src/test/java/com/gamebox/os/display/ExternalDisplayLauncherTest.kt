@@ -21,6 +21,21 @@ class ExternalDisplayLauncherTest {
     }
 
     @Test
+    fun firstPresentationTargetPrefersPhysicalDisplayOverVirtualCapture() {
+        val virtual = ExternalDisplayTarget(24, "Android Studio", isVirtual = true)
+        val physical = ExternalDisplayTarget(23, "SMART TV", width = 1920, height = 1080)
+        assertEquals(physical, firstPresentationDisplayTarget(listOf(virtual, physical)))
+        assertEquals(virtual, firstPresentationDisplayTarget(listOf(virtual)))
+    }
+
+    @Test
+    fun knownCaptureAndScreenSharingNamesAreVirtual() {
+        assertEquals(true, isLikelyVirtualPresentationDisplay("studio.screen.sharing:8"))
+        assertEquals(true, isLikelyVirtualPresentationDisplay("Android Studio Capture"))
+        assertEquals(false, isLikelyVirtualPresentationDisplay("SMART TV"))
+    }
+
+    @Test
     fun externalTargetCanCarryFullDisplayLaunchBounds() {
         val target = ExternalDisplayTarget(23, "SMART TV", width = 1920, height = 1080)
         assertEquals(1920, target.width)

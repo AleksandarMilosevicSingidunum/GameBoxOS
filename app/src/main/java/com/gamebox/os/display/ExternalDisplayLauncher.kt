@@ -7,6 +7,7 @@ import android.content.Intent
 import android.graphics.Rect
 import android.hardware.display.DisplayManager
 import android.view.Display
+import java.util.Locale
 import com.gamebox.os.TvActivity
 
 internal data class ExternalDisplayTarget(
@@ -14,12 +15,19 @@ internal data class ExternalDisplayTarget(
     val name: String,
     val width: Int = 0,
     val height: Int = 0,
+    val isVirtual: Boolean = false,
 )
 
 internal val externalDisplayActivityClass = TvActivity::class.java
 
 internal fun firstPresentationDisplayTarget(targets: List<ExternalDisplayTarget>): ExternalDisplayTarget? =
-    targets.firstOrNull()
+    targets.firstOrNull { !it.isVirtual } ?: targets.firstOrNull()
+
+internal fun isLikelyVirtualPresentationDisplay(name: String): Boolean {
+    val normalized = name.lowercase(Locale.ROOT)
+    return listOf("android studio", "screen sharing", "screen.sharing", "virtual", "capture")
+        .any(normalized::contains)
+}
 
 internal fun externalDisplayLaunchRequestedMessage(target: ExternalDisplayTarget): String =
     "Display switch requested for ${target.name}; confirm it if the system prompts you"
@@ -42,6 +50,7 @@ internal fun presentationDisplayTargets(context: Context): List<ExternalDisplayT
                 name = display.name.ifBlank { "External display" },
                 width = mode.physicalWidth,
                 height = mode.physicalHeight,
+                isVirtual = isLikelyVirtualPresentationDisplay(display.name),
             )
         }
 
