@@ -1483,10 +1483,19 @@ checkpoint claims the reproducible directional-TV path and not an automatic poin
 focus result.
 
 TV legal-game launch/return checkpoint (2026-09-28): from the focused wide `Play Now`
- action, the installed Galaxy Patrol fixture dispatched RetroArch with
+action, the installed Galaxy Patrol fixture dispatched RetroArch with
 `launchedFromPackage=com.gamebox.os` and the RetroArch task visible on physical display
 8. After ending the legal test session, GameBox was relaunched on the same HDMI display
 and the hierarchy again exposed `Home tab` and `Galaxy Patrol`. This validates the TV
 Details → emulator dispatch → GameBox return surface; Honor still reports the third-party
 RetroArch task as `hw-pc-freeform` with its own desktop bounds, so emulator caption-free
 fullscreen/gameplay remains a separate firmware and hardware gate.
+
+TV launcher-mode acceptance checkpoint (2026-09-28): the connected Honor now resolves
+`com.gamebox.os` as the Android HOME role holder. A HOME intent targeted at physical HDMI
+display 8 opened GameBox as the launcher surface rather than a normal desktop activity.
+The authoritative UI hierarchy reported a GameBox root at `[0,0][1920,1080]`, GameBox
+logo and Home tab semantics, and `captionNodes=0`; `dumpsys window displays` reported
+GameBox as the focused window for display 8. This closes the automatic borderless launcher
+path on the current device. Cold boot/unlock recovery, HDMI reconnect, and third-party
+emulator fullscreen remain separate hardware/firmware gates.
