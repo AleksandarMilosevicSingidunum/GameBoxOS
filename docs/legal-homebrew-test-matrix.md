@@ -13,6 +13,7 @@ release identifier, and SHA-256 before using a fixture in an acceptance run.
 | --- | --- | --- | --- | --- |
 | NES / Famicom | Galaxy Patrol | `.nes` / RetroArch FCEUmm | Existing repository MIT-attributed fixture | Already validated on Honor and API-35 through gameplay, input, save-state, uninstall, reinstall, and restore |
 | Game Boy | Bustfree! | `.gb` / approved RetroArch core | MIT in the upstream repository | Candidate; obtain a release or build locally, then pin checksum |
+| Game Boy Color | Brickster | `.gbc` / approved RetroArch core | RetroBrews states the listed ROMs are approved for free distribution on its site/project | Artifact staged outside the user library and pushed to Honor; SHA-256 `24e44e274f8ee77a838d0fc58a607521021b3de122a968f359994c6f7c773a45`; UI import completion still pending |
 | Game Boy Advance | Solar Guard | `.gba` / approved RetroArch core | GPL-3.0 for source and original assets; Open Game Art attribution remains required | Candidate; build/release and asset notices must be captured |
 | Nintendo 64 | FissionFailure64 | `.z64` / M64Plus FZ or RetroArch | Upstream repository is marked MIT and describes the ROM as N64brew homebrew | Candidate; validate the release checksum and M64Plus FZ handoff |
 | Dreamcast | Drift Los Angeles | `.cdi` / Flycast | Upstream repository states original projects are MIT; KallistiOS attribution applies | Candidate; validate CDI release and Flycast launch/save behavior |
@@ -47,4 +48,3 @@ repository that says “bring your own ROM/assets” remains a source-only candi
    return, content-only uninstall, reinstall, and save restoration.
 5. Report emulator-family and hardware results separately. A successful import or
    intent dispatch is not gameplay or save-compatibility evidence.
-

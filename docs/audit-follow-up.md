@@ -1072,3 +1072,12 @@ matrix requires upstream license/release evidence and a pinned SHA-256 before a 
 used, and explicitly excludes source ports that require commercial assets. It also marks
 PS1, PS2, PS3, GameCube, Switch, Xbox, PC Engine, WonderSwan, Neo Geo, and arcade
 families as needing further approved fixture research rather than implying coverage.
+
+Legal homebrew fixture staging checkpoint (2026-09-28): the RetroBrews Game Boy Color
+collection's `brickster.gbc` was downloaded from its public repository into a dedicated
+temporary fixture directory, verified at 32,768 bytes with SHA-256
+`24e44e274f8ee77a838d0fc58a607521021b3de122a968f359994c6f7c773a45`, and pushed to the
+connected Honor Magic6 Pro at `/sdcard/Download/GameBoxOS-Legal/brickster.gbc`. This is
+legal-fixture provenance and device transfer evidence only; the file was not copied into
+the user's `D:\GameBoxOS\games` directory, and the Store UI import completion plus
+Game Boy Color emulator gameplay/save evidence remain open.
