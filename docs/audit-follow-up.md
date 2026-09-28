@@ -1390,3 +1390,8 @@ display-targeted Right key transferred focus into the content pane, where the hi
 reported the STORAGE panel and External game library controls. This establishes a predictable
 rail-to-content D-pad path for the TV app; deeper Display-section traversal remains available
 through the existing section rail and scroll behavior.
+
+TV controller-shortcut boundary checkpoint (2026-09-28): a display-targeted Android
+`KEYCODE_BUTTON_X` probe did not advance the Settings section on the Honor session, while
+directional focus transfer worked. This is recorded as a controller/firmware input boundary;
+the software Settings initial-focus and rail-to-content behavior remains validated separately.
