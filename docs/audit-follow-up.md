@@ -1582,3 +1582,12 @@ fitting scale rather than a fixed floor. The new policy case, Android JVM suite,
 Blueprint screenshot gate (`OK (4 tests)`), and dedicated TV host
 instrumentation (`OK (4 tests)`) all pass. This is emulator TV-dimension
 evidence; it does not replace physical overscan or Desktop Mode acceptance.
+
+Blueprint TV-profile visual checkpoint (2026-09-28): the API-35 emulator was
+temporarily configured to 1920×1080 at 160 dpi, matching the documented living-
+room profile. The combined instrumentation run completed `OK (8 tests)`:
+`BlueprintScreenshotsTest` 4/4 and `TvActivityTest` 4/4. The captured Home frame
+shows the full wide composition—hero, collection area, quick launch, Explore
+games rail, and controller footer—without vertical clipping. Emulator size and
+density were restored afterward; this remains software TV-dimension evidence,
+not physical Honor/HDMI acceptance.
