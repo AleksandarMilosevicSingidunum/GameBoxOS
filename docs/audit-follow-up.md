@@ -1395,3 +1395,9 @@ TV controller-shortcut boundary checkpoint (2026-09-28): a display-targeted Andr
 `KEYCODE_BUTTON_X` probe did not advance the Settings section on the Honor session, while
 directional focus transfer worked. This is recorded as a controller/firmware input boundary;
 the software Settings initial-focus and rail-to-content behavior remains validated separately.
+
+TV Downloads empty-state checkpoint (2026-09-28): the live HDMI display rendered the wide
+Download Manager with its active/queued/completed metric cards, empty-state panel, and
+controller footer. The hierarchy confirmed `No active downloads` and the authorized-source
+guidance at TV bounds; this is physical external-display UI evidence for the empty Downloads
+state, separate from live provider transfer and hardware-controller acceptance.
