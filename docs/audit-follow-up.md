@@ -601,6 +601,13 @@ ambiguous `2 external displays`; single-display and all-physical fallbacks remai
 unchanged and are JVM-tested. The rebuilt APK installed successfully and the real HDMI
 hierarchy still confirmed the GameBox package, Home, and logo.
 
+Physical HDMI status-section checkpoint (2026-09-28): using the supported Settings deep
+link and the TV hierarchy's discovered section bounds, the real display 8 task opened
+Settings and selected Emulators. The HDMI hierarchy confirmed `External display
+detected`, `HDMI Screen`, and `1920×1080` from the rebuilt APK, alongside the GameBox
+package and controller footer. This is direct TV user-flow evidence for display-status
+reporting; it does not claim physical controller input or overscan acceptance.
+
 TV display-change policy checkpoint (2026-09-28): `TvActivity` now reapplies its
 landscape and system-bar policy when its own external display reports a configuration or
 mode change, while ignoring changes on the default or an unrelated display. JVM coverage
