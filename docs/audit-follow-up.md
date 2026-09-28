@@ -1109,3 +1109,18 @@ emulator registry now maps Game Boy and Game Boy Color to RetroArch's Gambatte c
 RetroArch's real `RetroActivityFuture`, but the captured surface was black because the
 connected RetroArch installation exposed no Gambatte core; this is a missing-core/emulator
 setup boundary, not gameplay or save evidence.
+
+Physical GBC emulator lifecycle checkpoint (2026-09-28): the legal Brickster fixture was
+tested end to end on the connected Honor Magic6 Pro. The official ARM64 Gambatte core was
+sideloaded through RetroArch's documented debug sideload activity, after which GameBox
+launch handed RetroArch a temporary absolute Downloads path and rendered the real
+Brickster session. Directional input was dispatched, Gambatte created a save state at
+`/sdcard/RetroArch/states/Gambatte/brickster.state`, and the state was visibly loaded
+after returning to the session. Returning to GameBox removed the temporary
+`Download/GameBox/brickster.gbc` handoff copy while retaining the original legal fixture.
+GameBox content-only uninstall removed the app-private content while retaining metadata and
+managed save state; re-import through DocumentsUI, relaunch, and visible slot-0 state restore
+then completed successfully. This is physical Honor evidence for legal GBC import,
+RetroArch handoff, input, emulator save-state, cleanup, uninstall, reinstall, and restore.
+Managed GameBox cloud-save transport, physical controller input, and long-duration TV soak
+remain separate acceptance gates.

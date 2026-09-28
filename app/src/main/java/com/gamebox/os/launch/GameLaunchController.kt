@@ -4,6 +4,7 @@ import android.content.ClipData
 import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import android.provider.MediaStore
 import android.os.Environment
 import androidx.core.content.FileProvider
@@ -28,6 +29,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.runBlocking
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.ConcurrentHashMap
 import java.io.File
 
 data class EmulatorCapability(
@@ -200,6 +202,7 @@ enum class GatewayResult {
 
 interface PackageGateway {
     fun launch(capability: EmulatorCapability, preparation: LaunchPreparation = LaunchPreparation()): GatewayResult
+    fun cleanupLaunchedContent() = Unit
 }
 
 class AndroidPackageGateway(
@@ -207,6 +210,15 @@ class AndroidPackageGateway(
     private val verifier: Sha256Verifier = Sha256Verifier(),
     private val externalContent: ExternalLibraryContentStore? = null,
 ) : PackageGateway {
+    private val temporaryPublishedContent = ConcurrentHashMap.newKeySet<Uri>()
+
+    override fun cleanupLaunchedContent() {
+        temporaryPublishedContent.toList().forEach { uri ->
+            runCatching { context.contentResolver.delete(uri, null, null) }
+            temporaryPublishedContent.remove(uri)
+        }
+    }
+
     override fun launch(capability: EmulatorCapability, preparation: LaunchPreparation): GatewayResult {
         preparation.checkActive()
         val resolvedPackage = resolvePackageName(capability.packageName)
@@ -265,21 +277,22 @@ class AndroidPackageGateway(
                 retroArchCorePath(resolvedPackage, coreFileName)
             },
         )
-        // RetroArch's native external launcher does not reliably consume a FileProvider
-        // content URI. In particular, it may leave RetroActivityFuture on a permanent
-        // black screen even though the core is installed. The bundled Galaxy Patrol
-        // fixture is explicitly redistributable, so publish that verified copy to the
-        // public Downloads collection and hand RetroArch the normal absolute path it
-        // expects. Imported/private content deliberately remains URI-based.
-        val retroArchRom = if (
-            resolvedPackage.startsWith("com.retroarch") &&
-            capability.gameId == GameId("galaxy-patrol")
-        ) {
-            primaryLocalFile?.let(::publishGalaxyPatrolForRetroArch)
-                ?: primaryExternalContent?.let { external ->
-                    publishGalaxyPatrolForRetroArch { externalContent!!.open(external) }
-                }
-                ?: return GatewayResult.HANDOFF_REJECTED
+        // RetroArch's native external launcher does not reliably consume a
+        // FileProvider content URI. Publish the verified primary file to the
+        // Downloads collection for the duration of the session and hand RetroArch
+        // the absolute path it expects. The copy is removed when GameBox resumes.
+        val retroArchRom = if (resolvedPackage.startsWith("com.retroarch")) {
+            val fileName = capability.contentRelativePath.substringAfterLast('/').ifBlank {
+                capability.gameId.value + ".rom"
+            }
+            primaryLocalFile?.let { local ->
+                publishContentForRetroArch(local, fileName, capability.mimeType)
+            } ?: primaryExternalContent?.let { external ->
+                publishContentForRetroArch(
+                    fileName = fileName,
+                    mimeType = capability.mimeType,
+                ) { externalContent!!.open(external) }
+            } ?: return GatewayResult.HANDOFF_REJECTED
         } else {
             uri.toString()
         }
@@ -360,15 +373,29 @@ class AndroidPackageGateway(
     internal fun publishGalaxyPatrolForRetroArch(
         source: File,
         relativePath: String = "Download/GameBox"
-    ): String? = publishGalaxyPatrolForRetroArch(relativePath) { source.inputStream() }
+    ): String? = publishContentForRetroArch(
+        source = source,
+        fileName = "galaxy-patrol.nes",
+        mimeType = "application/x-nes-rom",
+        relativePath = relativePath,
+    )
 
-    private fun publishGalaxyPatrolForRetroArch(
+    private fun publishContentForRetroArch(
+        source: File,
+        fileName: String,
+        mimeType: String,
+        relativePath: String = "Download/GameBox",
+    ): String? = publishContentForRetroArch(fileName, mimeType, relativePath) { source.inputStream() }
+
+    private fun publishContentForRetroArch(
+        fileName: String,
+        mimeType: String,
         relativePath: String = "Download/GameBox",
         openSource: () -> java.io.InputStream,
     ): String? = runCatching {
         val values = ContentValues().apply {
-            put(MediaStore.Downloads.DISPLAY_NAME, "galaxy-patrol.nes")
-            put(MediaStore.Downloads.MIME_TYPE, "application/x-nes-rom")
+            put(MediaStore.Downloads.DISPLAY_NAME, fileName)
+            put(MediaStore.Downloads.MIME_TYPE, mimeType)
             put(MediaStore.Downloads.RELATIVE_PATH, relativePath)
             put(MediaStore.Downloads.IS_PENDING, 1)
         }
@@ -394,6 +421,7 @@ class AndroidPackageGateway(
             check(!exportedPath.isNullOrBlank() && File(exportedPath).isAbsolute) {
                 "Exported game has no filesystem path"
             }
+            temporaryPublishedContent += published
             exportedPath
         } catch (error: Exception) {
             context.contentResolver.delete(published, null, null)
@@ -569,6 +597,7 @@ class DefaultGameLaunchController(
             deferredHostReturn.onResumed()
             return
         }
+        gateway.cleanupLaunchedContent()
         if (sessionJournal != null) {
             if (preparing.get() || !recovering.compareAndSet(false, true)) return
             scope.launch {
