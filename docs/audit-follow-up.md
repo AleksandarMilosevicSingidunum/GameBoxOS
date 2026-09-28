@@ -1348,3 +1348,11 @@ layout policy now has a focused JVM regression asserting that this caption-reduc
 stays non-compact and scales the Blueprint surface to the available 1037dp height. The
 focused test passed; this protects the real TV window profile without treating the desktop
 caption area as usable content.
+
+TV Details action checkpoint (2026-09-28): the wide Details installation panel now exposes
+the primary Install game action alongside status and size, so TV users do not have to scroll
+to the lower content card before starting an authorized install. The rebuilt APK was installed
+on HDMI display 8; the legal Galaxy Patrol content was removed through the TV confirmation
+dialog, reinstalled through the TV Details flow, and the hierarchy returned `Game content ·
+installed` and `Verified asset worker: succeeded`. This is TV user-flow evidence; it does not
+claim third-party emulator fullscreen or physical-controller acceptance.

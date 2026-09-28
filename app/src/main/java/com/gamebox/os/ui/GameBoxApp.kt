@@ -3451,6 +3451,30 @@ private fun DetailsScreen(
                                     Icon(Icons.Rounded.PlayArrow, contentDescription = null, modifier = Modifier.size(16.dp))
                                     Text("Play Now", modifier = Modifier.padding(start = 6.dp), fontSize = 10.sp)
                                 }
+                            } else if (isAuthorizedFixture) {
+                                Button(
+                                    onClick = authorizedDownloadController::install,
+                                    enabled = !workerActive,
+                                    modifier = Modifier.fillMaxWidth(),
+                                ) {
+                                    Icon(Icons.Rounded.Download, contentDescription = null, modifier = Modifier.size(16.dp))
+                                    Text(
+                                        if (workerActive) "Installing…" else "Install game",
+                                        modifier = Modifier.padding(start = 6.dp),
+                                        fontSize = 10.sp,
+                                    )
+                                }
+                            } else if (
+                                game.state in setOf(InstallState.NOT_INSTALLED, InstallState.FAILED, InstallState.MISSING_FILES) &&
+                                hasRemoteSource
+                            ) {
+                                Button(
+                                    onClick = { remoteDownloadController.install(game) },
+                                    modifier = Modifier.fillMaxWidth(),
+                                ) {
+                                    Icon(Icons.Rounded.Download, contentDescription = null, modifier = Modifier.size(16.dp))
+                                    Text("Install game", modifier = Modifier.padding(start = 6.dp), fontSize = 10.sp)
+                                }
                             } else {
                                 Text("Install this authorized title below to make it ready to play.", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 9.sp)
                             }
