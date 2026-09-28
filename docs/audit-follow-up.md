@@ -1356,3 +1356,10 @@ on HDMI display 8; the legal Galaxy Patrol content was removed through the TV co
 dialog, reinstalled through the TV Details flow, and the hierarchy returned `Game content ·
 installed` and `Verified asset worker: succeeded`. This is TV user-flow evidence; it does not
 claim third-party emulator fullscreen or physical-controller acceptance.
+
+TV hero-panel bounds investigation (2026-09-28): the connected HDMI hierarchy exposes the
+hero installation labels (`INSTALLATION`, status, and `Play Now`) as zero-bounds Compose nodes
+even after an explicit full-height measurement attempt. The lower scrollable Details action
+card remains measurable and was used successfully for install/uninstall/reinstall. The
+measurement tweak was reverted because it did not change the authoritative TV result; the
+hero overlay remains an identified layout/semantics follow-up rather than a claimed fix.
