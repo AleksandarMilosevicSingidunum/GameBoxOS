@@ -67,7 +67,8 @@ Settings → Display exposes a persisted 0–10% TV safe-area inset. The inset i
 applied symmetrically only when the production viewport is at least 900 dp wide
 and has a living-room aspect ratio of at least 1.5:1. Phone and narrow-window
 layouts intentionally remain edge-to-edge. The policy clamps invalid values and
-is covered by unit tests; the DeX visual profile exercises the default 4% inset.
+is covered by unit tests; fresh installs use the Blueprint-matching default 0%
+edge-to-edge inset, while users can explicitly select up to 10% for overscan.
 Physical television overscan acceptance remains a separate hardware check.
 
 
