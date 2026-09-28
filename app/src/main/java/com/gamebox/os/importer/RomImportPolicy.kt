@@ -115,6 +115,12 @@ object RomImportPolicy {
         profileLabel(platform).lowercase().filter { it.isLetterOrDigit() || it == ' ' }
             .trim().replace(Regex("\\s+"), "-").ifBlank { "unknown" }
 
+    /** All stable directories needed by the managed game tree. */
+    fun managedPlatformDirectories(): List<String> =
+        (profiles.map { platformDirectory(it.label) } + "unknown")
+            .distinct()
+            .sorted()
+
     fun importRootRelativePath(gameId: GameId, storedRelativePath: String): String {
         val legacyPrefix = "imports/${gameId.value}/"
         val newPrefix = "imports/"
