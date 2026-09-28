@@ -28,7 +28,7 @@ data class ImportedGameRegistration(
         require(sizeBytes >= 0) { "Imported size must not be negative" }
         require(sha256.matches(Regex("^[a-f0-9]{64}$"))) { "Imported SHA-256 is invalid" }
         require(mimeType.isNotBlank()) { "Imported MIME type is required" }
-        require(relativePath.startsWith(id.value + "/")) { "Imported path is outside the selected game" }
+        require(relativePath.split('/').dropLast(1).contains(id.value)) { "Imported path is outside the selected game" }
         require(relativePath.none { it == '\\' } && relativePath.split('/').none { it == ".." || it.isEmpty() }) {
             "Imported path is unsafe"
         }
@@ -36,7 +36,7 @@ data class ImportedGameRegistration(
         require(allFiles.map { it.relativePath.lowercase() }.distinct().size == allFiles.size) {
             "Imported file paths must be unique"
         }
-        require(allFiles.all { it.relativePath.startsWith(id.value + "/") }) {
+        require(allFiles.all { it.relativePath.split('/').dropLast(1).contains(id.value) }) {
             "Imported companion path is outside the selected game"
         }
     }

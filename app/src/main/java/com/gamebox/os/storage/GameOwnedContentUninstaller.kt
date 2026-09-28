@@ -38,7 +38,9 @@ class GameOwnedContentUninstaller(filesDirectory: File) {
             require(path.isNotBlank() && !File(path).isAbsolute &&
                 path.none { it == '\\' || it == ':' || it == '\u0000' } &&
                 path.split('/').none { it.isEmpty() || it == "." || it == ".." }) { "Unsafe content path" }
-            val owned = path.startsWith("imports/$id/") || path.startsWith("installed/remote/$id/") ||
+            val parts = path.split('/')
+            val owned = (parts.firstOrNull() == "imports" && parts.dropLast(1).contains(id)) ||
+                path.startsWith("imports/$id/") || path.startsWith("installed/remote/$id/") ||
                 (id == "galaxy-patrol" && path == "installed/retro/galaxy-patrol/content/galaxy-patrol.nes")
             require(owned) { "Content does not belong to the selected game" }
             File(root, path).also(::validateFile)

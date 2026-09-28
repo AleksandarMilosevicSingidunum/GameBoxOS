@@ -76,6 +76,7 @@ dependencies {
     implementation("androidx.datastore:datastore-preferences:1.2.1")
     implementation("androidx.work:work-runtime-ktx:2.11.2")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.11.0")
+    implementation("org.apache.commons:commons-compress:1.28.0")
 }
 
 ksp {

@@ -1527,3 +1527,14 @@ retained and the UI reports that outcome. PSP authorized-copy import now accepts
 with MIME `application/x-7z-compressed`; the archive is moved as a verified content
 file, not silently extracted or treated as an emulator binary source. JVM tests,
 debug assembly, and the TV instrumentation target passed after this increment.
+Archive import and console-tree increment (2026-09-28): new legal local imports
+now use a console-scoped managed directory such as
+`files/imports/psp/<game-id>/` while legacy bundled fixture paths remain
+compatible. ZIP and 7Z sources are staged, safely extracted with traversal and
+size/file-count limits, and only supported files are registered. The archive
+itself is never promoted into the game directory and is deleted from staging
+after extraction; registration or transaction failure still rolls back the
+staged directory. Content-only uninstall removes every registered extracted
+file and retains saves, metadata, and history. PPSSPP handoff now uses its
+scoped ACTION_VIEW URI with a wildcard MIME fallback because some PPSSPP
+Android builds reject GameBox's custom PSP MIME types before launch.

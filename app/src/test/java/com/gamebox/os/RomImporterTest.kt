@@ -36,6 +36,14 @@ class RomImporterTest {
     }
 
     @Test
+    fun buildsConsoleScopedManagedPathsForNewImports() {
+        assertEquals(
+            "imports/psp/god-of-war/Chains.cso",
+            RomImportPolicy.managedRelativePath(GameId("god-of-war"), "Chains.cso", "PSP"),
+        )
+    }
+
+    @Test
     fun acceptsSwitchXciAndOtherPlatformSpecificLegalCopyFormats() {
         val cases = listOf(
             Triple("nintendoswitch", "Super Mario Odyssey.xci", "super-mario-odyssey"),

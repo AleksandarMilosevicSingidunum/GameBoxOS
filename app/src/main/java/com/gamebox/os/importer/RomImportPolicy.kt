@@ -104,10 +104,27 @@ object RomImportPolicy {
         return "imports/$id/" + safeFileName(fileName, platform)
     }
 
+    fun managedRelativePath(gameId: GameId, fileName: String, platform: String? = null): String {
+        val id = gameId.value
+        require(id.matches(Regex("[a-z0-9][a-z0-9-]{0,95}"))) { "Invalid game id" }
+        return "imports/${platformDirectory(platform)}/$id/" + safeFileName(fileName, platform)
+    }
+
+    /** Stable, filesystem-safe console directory used by the managed game tree. */
+    fun platformDirectory(platform: String?): String =
+        profileLabel(platform).lowercase().filter { it.isLetterOrDigit() || it == ' ' }
+            .trim().replace(Regex("\\s+"), "-").ifBlank { "unknown" }
+
     fun importRootRelativePath(gameId: GameId, storedRelativePath: String): String {
-        val expectedPrefix = "imports/${gameId.value}/"
-        require(storedRelativePath.startsWith(expectedPrefix)) { "Import path is outside the selected game" }
+        val legacyPrefix = "imports/${gameId.value}/"
+        val newPrefix = "imports/"
+        require(storedRelativePath.startsWith(legacyPrefix) || storedRelativePath.startsWith(newPrefix)) {
+            "Import path is outside the selected game"
+        }
         val relative = storedRelativePath.removePrefix("imports/")
+        require(relative.split('/').dropLast(1).contains(gameId.value)) {
+            "Import path is outside the selected game"
+        }
         require(relative.none { it == '\\' } && relative.split('/').none { it == ".." || it.isEmpty() }) {
             "Import path is unsafe"
         }

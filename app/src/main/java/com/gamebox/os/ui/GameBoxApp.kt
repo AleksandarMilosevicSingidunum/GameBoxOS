@@ -2690,7 +2690,7 @@ private fun DiscoveryDetailsScreen(
                                 sizeBytes = result.hashes.sizeBytes,
                                 relativePath = RomImportPolicy.importRootRelativePath(game.id, result.relativePath),
                                 sha256 = result.hashes.sha256,
-                                mimeType = RomImportPolicy.mimeType(displayName),
+                                mimeType = result.mimeType,
                                 favorite = game.favorite,
                                 artworkUrl = game.coverUrl,
                                 description = game.description,
@@ -2744,7 +2744,7 @@ private fun DiscoveryDetailsScreen(
         if (uri == null) {
             importMessage = "No file selected"
         } else {
-            importAuthorizedUri(uri, queryDisplayName(uri))
+            importAuthorizedUri(uri, queryDisplayName(uri), removeSourceAfterSuccess = true)
         }
     }
     val importSetLauncher = rememberLauncherForActivityResult(
@@ -2801,10 +2801,11 @@ private fun DiscoveryDetailsScreen(
                         val cleanupDeferred = runCatching {
                             importer.confirmRegistration(game.id, result.transactionId)
                         }.isFailure
+                        val sourcesRemoved = sources.count { removeTrackedDownload(it.uri) }
                         if (cleanupDeferred) {
-                            "${result.files.size}-file disc set verified and added to Library. Transaction cleanup will finish after restart."
+                            "${result.files.size}-file disc set verified and added to Library; $sourcesRemoved source archive/file(s) removed. Transaction cleanup will finish after restart."
                         } else {
-                            "${result.files.size}-file disc set verified and added to Library"
+                            "${result.files.size}-file disc set verified and added to Library; $sourcesRemoved source archive/file(s) removed"
                         }
                     }.getOrElse { error ->
                         val rolledBack = runCatching {
@@ -3411,7 +3412,7 @@ private fun DetailsScreen(
                                     sizeBytes = result.hashes.sizeBytes,
                                     relativePath = RomImportPolicy.importRootRelativePath(game.id, result.relativePath),
                                     sha256 = result.hashes.sha256,
-                                    mimeType = RomImportPolicy.mimeType(displayName),
+                                    mimeType = result.mimeType,
                                     favorite = game.favorite,
                                     artworkUrl = game.artworkUrl,
                                     description = game.description,
@@ -3420,7 +3421,11 @@ private fun DetailsScreen(
                                 )
                             )
                             importer.confirmRegistration(game.id, result.transactionId)
-                            "$resolvedPlatform copy verified and added to Library. SHA-256 " +
+                            val sourceRemoved = runCatching {
+                                if (uri.scheme == "file") uri.path?.let { java.io.File(it).delete() } == true
+                                else context.contentResolver.delete(uri, null, null) > 0
+                            }.getOrDefault(false)
+                            "$resolvedPlatform copy verified and added to Library; source ${if (sourceRemoved) "removed" else "retained by Android"}. SHA-256 " +
                                 result.hashes.sha256.take(12) + "…"
                         }.getOrElse { error ->
                             runCatching { importer.rollbackRegistration(game.id, result.transactionId) }

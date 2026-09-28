@@ -36,6 +36,7 @@ sealed interface RomImportResult {
         val relativePath: String,
         val hashes: RomHashes,
         val transactionId: String,
+        val mimeType: String = "application/octet-stream",
     ) : RomImportResult
     data object SourceUnavailable : RomImportResult
     data class Rejected(val reason: String) : RomImportResult
@@ -89,6 +90,7 @@ class AuthorizedRomImporter(
                 relativePath = result.launchFile.relativePath,
                 hashes = result.launchFile.hashes,
                 transactionId = result.transactionId,
+                mimeType = result.launchFile.mimeType,
             )
             RomImportSetResult.SourceUnavailable -> RomImportResult.SourceUnavailable
             is RomImportSetResult.Rejected -> RomImportResult.Rejected(result.reason)
@@ -116,7 +118,7 @@ class AuthorizedRomImporter(
         if (!id.matches(Regex("[a-z0-9][a-z0-9-]{0,95}"))) {
             return@withContext RomImportSetResult.Rejected("Invalid game id")
         }
-        val expectedPrefix = "imports/$id/"
+        val expectedPrefix = "imports/${RomImportPolicy.platformDirectory(platform)}/$id/"
         val root = applicationContext.filesDir.resolve("imports").canonicalFile
         val targetDirectory = root.resolve(id).canonicalFile
         val rootPrefix = root.path + File.separator
@@ -135,27 +137,54 @@ class AuthorizedRomImporter(
         try {
             var totalBytes = 0L
             val stagedFiles = mutableListOf<ImportedRomFile>()
-            sources.zip(safeNames).forEach { (source, safeName) ->
+            sources.zip(safeNames).forEachIndexed { index, (source, safeName) ->
                 val input = applicationContext.contentResolver.openInputStream(source.uri)
                     ?: return@withContext RomImportSetResult.SourceUnavailable
-                val stagedFile = staging.resolve(safeName)
-                val remaining = (maxBytes - totalBytes).coerceAtLeast(1L)
-                val hashes = input.use { stream ->
-                    stagedFile.outputStream().buffered().use { output ->
-                        RomHasher.hash(stream, remaining) { buffer, count ->
-                            output.write(buffer, 0, count)
+                val archive = safeName.substringAfterLast('.', "").lowercase() in setOf("zip", "7z")
+                if (archive) {
+                    val archiveFile = staging.resolve(".source-$index.$safeName")
+                    input.use { stream -> archiveFile.outputStream().buffered().use { stream.copyTo(it, DEFAULT_BUFFER_SIZE) } }
+                    val extracted = requireNotNull(RomArchiveExtractor.extractIfArchive(
+                        source = archiveFile,
+                        staging = staging,
+                        platform = platform,
+                        maxFiles = 64 - stagedFiles.size,
+                        maxBytes = (maxBytes - totalBytes).coerceAtLeast(1L),
+                    ))
+                    extracted.forEach { item ->
+                        val destination = staging.resolve(item.displayName)
+                        Files.move(item.file.toPath(), destination.toPath(), StandardCopyOption.REPLACE_EXISTING)
+                        val hashes = destination.inputStream().use { stream -> RomHasher.hash(stream, (maxBytes - totalBytes).coerceAtLeast(1L)) }
+                        totalBytes += hashes.sizeBytes
+                        stagedFiles += ImportedRomFile(
+                            relativePath = expectedPrefix + item.displayName,
+                            hashes = hashes,
+                            mimeType = RomImportPolicy.mimeType(item.displayName),
+                        )
+                    }
+                    archiveFile.delete()
+                    staging.resolve("archive-content").deleteRecursively()
+                } else {
+                    val stagedFile = staging.resolve(safeName)
+                    val remaining = (maxBytes - totalBytes).coerceAtLeast(1L)
+                    val hashes = input.use { stream ->
+                        stagedFile.outputStream().buffered().use { output ->
+                            RomHasher.hash(stream, remaining) { buffer, count ->
+                                output.write(buffer, 0, count)
+                            }
                         }
                     }
+                    totalBytes += hashes.sizeBytes
+                    require(totalBytes <= maxBytes) { "Disc set exceeds the configured import limit" }
+                    stagedFiles += ImportedRomFile(
+                        relativePath = expectedPrefix + safeName,
+                        hashes = hashes,
+                        mimeType = RomImportPolicy.mimeType(safeName),
+                    )
                 }
-                totalBytes += hashes.sizeBytes
-                require(totalBytes <= maxBytes) { "Disc set exceeds the configured import limit" }
-                stagedFiles += ImportedRomFile(
-                    relativePath = expectedPrefix + safeName,
-                    hashes = hashes,
-                    mimeType = RomImportPolicy.mimeType(safeName),
-                )
             }
-            val launchName = DiscSetPolicy.selectLaunchFile(staging, safeNames)
+            val stagedNames = stagedFiles.map { it.relativePath.substringAfterLast('/') }
+            val launchName = DiscSetPolicy.selectLaunchFile(staging, stagedNames)
             val launchFile = requireNotNull(stagedFiles.firstOrNull {
                 it.relativePath.substringAfterLast('/').equals(launchName, ignoreCase = true)
             })

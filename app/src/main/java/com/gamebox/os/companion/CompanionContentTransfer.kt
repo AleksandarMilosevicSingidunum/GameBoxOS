@@ -50,7 +50,13 @@ internal class CompanionContentTransferStore(
         val declared = requireNotNull(expectedSha256).lowercase()
         require(declared.matches(Regex("^[a-f0-9]{64}$"))) { "Transferred content checksum is invalid" }
 
-        val storedRelative = RomImportPolicy.relativePath(id, safeName, game.platform)
+            // Keep the bundled fixture's legacy path stable; newly imported
+            // user games use the console-scoped managed tree.
+            val storedRelative = if (id.value == "galaxy-patrol") {
+                RomImportPolicy.relativePath(id, safeName, game.platform)
+            } else {
+                RomImportPolicy.managedRelativePath(id, safeName, game.platform)
+            }
         val destination = filesDir.resolve(storedRelative)
         require(destination.canonicalPath.startsWith(filesDir.resolve("imports").canonicalPath + File.separator)) {
             "Content destination is unsafe"

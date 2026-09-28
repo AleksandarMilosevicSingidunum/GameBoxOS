@@ -390,7 +390,18 @@ class AndroidPackageGateway(
         }
         val intent = (when (plan.style) {
             EmulatorIntentStyle.ACTION_VIEW -> Intent(Intent.ACTION_VIEW)
-                .setDataAndType(uri, capability.mimeType)
+                // PPSSPP accepts scoped ACTION_VIEW URIs, but some Android
+                // builds do not advertise GameBox's custom PSP MIME types in
+                // their intent filter. Keep the URI and grant intact while
+                // using a broadly compatible type for the package-specific
+                // handoff.
+                .setDataAndType(
+                    uri,
+                    if (resolvedPackage == EmulatorIntentPolicy.PPSSPP_PACKAGE ||
+                        resolvedPackage == EmulatorIntentPolicy.PPSSPP_GOLD_PACKAGE ||
+                        resolvedPackage == EmulatorIntentPolicy.PPSSPP_LEGACY_PACKAGE
+                    ) "*/*" else capability.mimeType,
+                )
                 .setPackage(resolvedPackage)
             EmulatorIntentStyle.LAUNCHER_EXTRAS -> {
                 val baseIntent = plan.activityClassName?.let { activityClassName ->
@@ -436,7 +447,7 @@ class AndroidPackageGateway(
             // launcher extras. Retry once with the standard scoped ACTION_VIEW contract.
             if (resolvedPackage.startsWith("com.retroarch")) {
                 val fallback = Intent(Intent.ACTION_VIEW).apply {
-                    setDataAndType(uri, capability.mimeType)
+                    setDataAndType(uri, "*/*")
                     setPackage(resolvedPackage)
                     clipData = contentClipData(uri, contentUris.drop(1))
                     addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_GRANT_READ_URI_PERMISSION)
