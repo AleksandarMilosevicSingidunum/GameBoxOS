@@ -3,6 +3,7 @@ package com.gamebox.os.download
 import com.gamebox.os.catalog.CatalogCredentials
 import com.gamebox.os.catalog.CatalogProviderConfig
 import com.gamebox.os.catalog.CatalogTransport
+import com.sun.net.httpserver.HttpServer
 import org.junit.Assert.*
 import org.junit.Rule
 import org.junit.Test
@@ -11,9 +12,11 @@ import java.io.ByteArrayInputStream
 import java.io.IOException
 import java.io.InputStream
 import java.net.HttpURLConnection
+import java.net.InetSocketAddress
 import java.net.URL
 import java.security.MessageDigest
 import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -39,6 +42,62 @@ class AuthenticatedTransferLifecycleTest {
         assertArrayEquals(payload, target.finalFile.readBytes())
         assertFalse(target.stagingFile.exists())
         assertTrue(connection.disconnected)
+    }
+
+    @Test fun authenticatedLoopbackResumeCommitsChecksumVerifiedContent() {
+        val target = FileStagingTarget(temporary.newFolder(), "game/content.nes")
+        target.openOutput().use { it.write(payload, 0, 7) }
+        val requestedRange = CountDownLatch(1)
+        val server = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0)
+        val executor = Executors.newSingleThreadExecutor()
+        server.executor = executor
+        server.createContext("/library/demo.nes") { exchange ->
+            val authorization = exchange.requestHeaders.getFirst("Authorization")
+            val range = exchange.requestHeaders.getFirst("Range")
+            if (authorization != "Basic cGxheWVyOnNlY3JldA==") {
+                exchange.sendResponseHeaders(401, -1)
+                exchange.close()
+                return@createContext
+            }
+            val offset = range?.removePrefix("bytes=")?.removeSuffix("-")?.toIntOrNull() ?: 0
+            if (offset > 0) requestedRange.countDown()
+            val body = payload.copyOfRange(offset, payload.size)
+            if (offset > 0) {
+                exchange.responseHeaders.set(
+                    "Content-Range",
+                    "bytes $offset-${payload.lastIndex}/${payload.size}",
+                )
+                exchange.sendResponseHeaders(206, body.size.toLong())
+            } else {
+                exchange.sendResponseHeaders(200, body.size.toLong())
+            }
+            exchange.responseBody.use { it.write(body) }
+            exchange.close()
+        }
+        server.start()
+
+        try {
+            val source = HttpsTransferSource(
+                sourceUrl = url,
+                totalBytes = payload.size.toLong(),
+                expectedSha256 = hash,
+                requestHeaders = auth::headers,
+                connectionFactory = {
+                    URL("http://127.0.0.1:${server.address.port}/library/demo.nes")
+                        .openConnection() as HttpURLConnection
+                },
+            )
+
+            val result = ResumableTransferEngine().transfer(source, target, 1024, { false }, {})
+
+            assertEquals(ResumableTransferResult.Success(payload.size.toLong()), result)
+            assertTrue(requestedRange.await(2, TimeUnit.SECONDS))
+            assertArrayEquals(payload, target.finalFile.readBytes())
+            assertFalse(target.stagingFile.exists())
+        } finally {
+            server.stop(0)
+            executor.shutdownNow()
+        }
     }
 
     @Test fun rejectedCredentialsKeepPartialFileWithoutInstalling() {

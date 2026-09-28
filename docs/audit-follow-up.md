@@ -38,6 +38,13 @@ before its declared length. This is deterministic provider-boundary evidence; li
 catalog credentials, WebDAV/S3 permissions, and production endpoint behavior remain
 separate gates.
 
+Authorized download loopback checkpoint (28 September 2026): the resumable download
+engine now has a real local-socket integration test covering configured Basic auth,
+HTTP range resume, `Content-Range` validation, checksum verification, and promotion
+from staging to the final content path. The fixture is synthetic/legal test data;
+this proves the local download lifecycle only, not availability or authorization of
+any external game source.
+
 ## Current implementation checkpoint (28 September 2026)
 
 Windows release packaging checkpoint: the self-contained `win-x64` publish completed
