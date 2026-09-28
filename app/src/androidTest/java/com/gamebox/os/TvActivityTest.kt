@@ -124,6 +124,25 @@ class TvActivityTest {
     }
 
     @Test
+    fun tvControllerConfirmsFocusedBlueprintQuickLaunchCard() {
+        rule.waitUntil(15_000) {
+            rule.onAllNodesWithContentDescription("Home tab").fetchSemanticsNodes().isNotEmpty()
+        }
+        val desktop = rule.onNodeWithContentDescription("Quick launch Desktop; opens PC Hub")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .assertIsFocused()
+        desktop.performSemanticsAction(SemanticsActions.RequestFocus)
+        sendButton(KeyEvent.KEYCODE_BUTTON_A)
+        rule.waitUntil(5_000) {
+            runCatching {
+                rule.onNodeWithContentDescription("PC tab").fetchSemanticsNode()
+                    .config[androidx.compose.ui.semantics.SemanticsProperties.Selected] == true
+            }.getOrDefault(false)
+        }
+        rule.onNodeWithContentDescription("PC tab").assertIsSelected()
+    }
+
+    @Test
     fun tvActivityKeepsNonExportedHostBoundary() {
         val info = rule.activity.packageManager.getActivityInfo(
             ComponentName(rule.activity, TvActivity::class.java),

@@ -1,9 +1,11 @@
 package com.gamebox.os.ui
 
+import android.view.KeyEvent as AndroidKeyEvent
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.hoverable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsHoveredAsState
@@ -16,6 +18,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
@@ -163,7 +168,23 @@ internal fun Modifier.blueprintClick(onClick: () -> Unit): Modifier = composed {
     )
     this.graphicsLayer { scaleX = scale; scaleY = scale }
         .focusDebugTarget()
+        .focusable()
         .onFocusChanged { focused = it.isFocused }
         .hoverable(source)
+        .onPreviewKeyEvent { event ->
+            if (event.type != KeyEventType.KeyDown) {
+                false
+            } else {
+                when (event.nativeKeyEvent.keyCode) {
+                    AndroidKeyEvent.KEYCODE_BUTTON_A,
+                    AndroidKeyEvent.KEYCODE_DPAD_CENTER,
+                    AndroidKeyEvent.KEYCODE_ENTER -> {
+                        onClick()
+                        true
+                    }
+                    else -> false
+                }
+            }
+        }
         .clickable(interactionSource = source, indication = androidx.compose.foundation.LocalIndication.current, onClick = onClick)
 }

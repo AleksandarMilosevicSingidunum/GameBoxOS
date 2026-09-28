@@ -1905,3 +1905,12 @@ plus dedicated TV-host profile at 1280×720/160 with `OK (15 tests)`. The
 emulator was restored to 1080×2400/420. This complements the 1920×1080/160
 result and remains software TV-dimension evidence; physical controller,
 overscan, and Honor Desktop Mode acceptance are separate.
+
+TV custom-card focus increment (2026-09-29): the shared `blueprintClick`
+modifier now makes custom Blueprint cards explicitly focusable and confirms
+focused cards with A/DPAD-center/Enter. A dedicated TV regression focuses the
+Home quick-launch Desktop card, activates it with `BUTTON_A`, and verifies the
+PC tab opens. The complete Blueprint plus TV-host profile passed `OK (16 tests)`
+at both 1920×1080/160 and 1280×720/160; each run restored the emulator to
+1080×2400/420. This is software controller/focus evidence, separate from
+physical controller and Honor Desktop Mode acceptance.
