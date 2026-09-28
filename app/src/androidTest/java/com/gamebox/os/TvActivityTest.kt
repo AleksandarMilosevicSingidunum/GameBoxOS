@@ -37,6 +37,18 @@ class TvActivityTest {
         rule.onAllNodesWithContentDescription("Controller quick actions").assertCountEquals(0)
     }
 
+    @Test
+    fun tvActivityMovesBlueprintTabsWithControllerShoulders() {
+        rule.waitUntil(15_000) {
+            rule.onAllNodesWithContentDescription("Home tab").fetchSemanticsNodes().isNotEmpty()
+        }
+        rule.onNodeWithContentDescription("Home tab").assertIsSelected()
+        sendButton(KeyEvent.KEYCODE_BUTTON_R1)
+        rule.onNodeWithContentDescription("Library tab").assertIsSelected()
+        sendButton(KeyEvent.KEYCODE_BUTTON_L1)
+        rule.onNodeWithContentDescription("Home tab").assertIsSelected()
+    }
+
     private fun sendButton(keyCode: Int) {
         rule.runOnUiThread {
             rule.activity.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, keyCode))

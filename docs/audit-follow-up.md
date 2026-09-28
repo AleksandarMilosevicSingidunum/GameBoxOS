@@ -1228,6 +1228,13 @@ screencap is unavailable through this device's ADB presentation-display interfac
 authoritative window/configuration and display-targeted hierarchy/input evidence are
 therefore used for this checkpoint.
 
+TV controller-navigation regression checkpoint (2026-09-28): the dedicated
+`TvActivityTest` now covers the Blueprint shoulder-button contract in addition to the
+quick-actions overlay: R1 moves Home to Library and L1 returns to Home, with selected
+tab semantics asserted after each event. The JVM suite and Android test APK compilation
+pass. This is host/controller-runtime coverage; the physical HDMI render and physical
+controller hardware gates remain separately recorded.
+
 TV display-loss recovery checkpoint (2026-09-28): `TvActivity` now registers a
 `DisplayManager.DisplayListener` for its started/stopped lifecycle and finishes only when
 the external display hosting that activity is removed. Default-display removal and
