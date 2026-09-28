@@ -53,6 +53,13 @@ including Settings, were fully within the compact viewport; no navigation resizi
 change was required. This is emulator visual evidence, not a claim of pixel identity
 or physical TV/controller acceptance.
 
+Fresh API-35 wide visual check (28 September 2026): the documented temporary 1920x1080
+at 160-dpi profile rendered the current Home screen with the Blueprint living-room
+composition: centered primary navigation, full-width hero, storage/network/controller
+status rail, quick-launch region, dense discovery strip, and controller footer. The
+emulator was restored to its original 1080x2400 at 420-dpi phone profile after capture.
+This is wide emulator visual evidence, not physical-TV overscan or controller acceptance.
+
 Compact Settings follow-up: external-library Choose/Change folder and Forget actions now
 stack full-width on compact layouts, preventing narrow-width and enlarged-text crowding
 while preserving the wide TV/Desktop row. The focused production screenshot flow passed
