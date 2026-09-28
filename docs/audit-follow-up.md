@@ -22,6 +22,14 @@ and APK manifest regression suite ran 8 tests with zero failures. This validates
 pre-signing metadata gate; it is not evidence that protected signing secrets or the
 production update channel have been exercised.
 
+Cloud-save loopback transport checkpoint (28 September 2026): the authenticated save
+client now has a JVM integration test that opens a real loopback HTTP socket and
+round-trips a checksum-protected payload through the actual `HttpURLConnection`
+request path. The test verifies PUT/GET framing, Basic authorization, declared
+response length, and byte/checksum preservation; the focused transport suite passed.
+This strengthens local transport-boundary evidence only and does not claim acceptance
+against a live WebDAV/S3 account or endpoint.
+
 ## Current implementation checkpoint (28 September 2026)
 
 Windows release packaging checkpoint: the self-contained `win-x64` publish completed

@@ -11,8 +11,13 @@ import java.net.URL
 import java.security.MessageDigest
 import java.io.IOException
 import java.io.InputStream
+import java.net.InetSocketAddress
 import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
+import java.util.Collections
+import java.util.concurrent.atomic.AtomicReference
+import com.sun.net.httpserver.HttpServer
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.cancelAndJoin
@@ -188,6 +193,61 @@ class HttpsCloudSaveTransportClientTest {
         }
         assertFalse(connection.inputOpened)
         assertTrue(connection.disconnected)
+    }
+
+    @Test
+    fun roundTripsPayloadThroughLoopbackHttpServerWithBasicAuthentication() = runBlocking {
+        val payload = byteArrayOf(7, 4, 2, 9, 1)
+        val received = AtomicReference<ByteArray?>(null)
+        val methods = Collections.synchronizedList(mutableListOf<String>())
+        val authorization = AtomicReference<String?>(null)
+        val server = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0)
+        val executor = Executors.newSingleThreadExecutor()
+        server.executor = executor
+        server.createContext("/saves/game-1.bin") { exchange ->
+            methods += exchange.requestMethod
+            authorization.set(exchange.requestHeaders.getFirst("Authorization"))
+            exchange.requestBody.use { body ->
+                if (exchange.requestMethod == "PUT") received.set(body.readBytes())
+            }
+            if (exchange.requestMethod == "PUT") {
+                exchange.sendResponseHeaders(204, -1)
+            } else {
+                val stored = received.get() ?: ByteArray(0)
+                exchange.responseHeaders.set("Content-Type", "application/octet-stream")
+                exchange.sendResponseHeaders(200, stored.size.toLong())
+                exchange.responseBody.use { it.write(stored) }
+            }
+            exchange.close()
+        }
+        server.start()
+
+        try {
+            val endpoint = URI("https://cloud.example.test/saves/game-1.bin")
+            val request = this@HttpsCloudSaveTransportClientTest.request.copy(
+                endpoint = endpoint,
+                payloadBytes = payload.size.toLong(),
+                expectedSha256 = sha256(payload),
+            )
+            val client = HttpsCloudSaveTransportClient(
+                connectionFactory = {
+                    URL("http://127.0.0.1:${server.address.port}/saves/game-1.bin")
+                        .openConnection() as HttpURLConnection
+                },
+            )
+            val credentials = CatalogCredentials("player", "secret")
+
+            client.upload(request, payload, credentials)
+            val downloaded = client.download(request.copy(payloadBytes = 0), credentials)
+
+            assertArrayEquals(payload, received.get())
+            assertArrayEquals(payload, downloaded)
+            assertEquals(listOf("PUT", "GET"), methods)
+            assertTrue(authorization.get().orEmpty().startsWith("Basic "))
+        } finally {
+            server.stop(0)
+            executor.shutdownNow()
+        }
     }
 
     @Test
