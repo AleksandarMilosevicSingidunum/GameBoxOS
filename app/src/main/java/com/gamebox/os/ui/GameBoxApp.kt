@@ -224,8 +224,8 @@ fun GameBoxApp(
         }
     }
 
-    LaunchedEffect(destination) {
-        if (destination != Destination.SETTINGS && destination != Destination.STORE) {
+    LaunchedEffect(destination, selectedGameId) {
+        if (destination != Destination.SETTINGS && destination != Destination.STORE && selectedGameId == null) {
             rootFocusRequester.requestFocus()
         }
     }
@@ -247,7 +247,11 @@ fun GameBoxApp(
     BoxWithConstraints(
         Modifier.fillMaxSize()
             .focusRequester(rootFocusRequester)
-            .focusable(enabled = destination != Destination.SETTINGS && destination != Destination.STORE)
+            .focusable(
+                enabled = destination != Destination.SETTINGS &&
+                    destination != Destination.STORE &&
+                    selectedGameId == null,
+            )
             .onPreviewKeyEvent { event ->
                 if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
                 when (event.nativeKeyEvent.keyCode) {
@@ -3263,9 +3267,23 @@ private fun DetailsScreen(
         authorizedState.status == AuthorizedDownloadState.Status.RUNNING
     val hasRemoteSource = game.sourceUrl != null && game.expectedSha256 != null
     val primaryActionFocusRequester = remember(game.id) { FocusRequester() }
-    LaunchedEffect(game.id, detail.title, compact, game.state, workerActive, hasRemoteSource) {
+    var primaryActionFocusClaimed by remember(game.id) { mutableStateOf(false) }
+    val primaryActionModifier = Modifier
+        .fillMaxWidth()
+        .focusRequester(primaryActionFocusRequester)
+        .onGloballyPositioned {
+            val focused = runCatching { primaryActionFocusRequester.requestFocus() }.getOrDefault(false)
+            if (!primaryActionFocusClaimed && focused) {
+                primaryActionFocusClaimed = true
+            }
+        }
+    LaunchedEffect(game.id, compact) {
         if (!compact) {
             androidx.compose.runtime.withFrameNanos { }
+            // Details enters through the shared 220 ms TV transition. Requesting
+            // focus before that transition has attached the action leaves the
+            // window-level root as the only focused semantics node.
+            kotlinx.coroutines.delay(300)
             runCatching { primaryActionFocusRequester.requestFocus() }
         }
     }
@@ -3497,7 +3515,7 @@ private fun DetailsScreen(
                             if (game.state in setOf(InstallState.INSTALLED, InstallState.UPDATE_AVAILABLE)) {
                                 Button(
                                     onClick = { gameLaunchController.launchOnDisplay(game, hostDisplayId) },
-                                    modifier = Modifier.fillMaxWidth().focusRequester(primaryActionFocusRequester),
+                                    modifier = primaryActionModifier,
                                 ) {
                                     Icon(Icons.Rounded.PlayArrow, contentDescription = null, modifier = Modifier.size(16.dp))
                                     Text("Play Now", modifier = Modifier.padding(start = 6.dp), fontSize = 10.sp)
@@ -3506,7 +3524,7 @@ private fun DetailsScreen(
                                 Button(
                                     onClick = authorizedDownloadController::install,
                                     enabled = !workerActive,
-                                    modifier = Modifier.fillMaxWidth().focusRequester(primaryActionFocusRequester),
+                                    modifier = primaryActionModifier,
                                 ) {
                                     Icon(Icons.Rounded.Download, contentDescription = null, modifier = Modifier.size(16.dp))
                                     Text(
@@ -3521,7 +3539,7 @@ private fun DetailsScreen(
                             ) {
                                 Button(
                                     onClick = { remoteDownloadController.install(game) },
-                                    modifier = Modifier.fillMaxWidth().focusRequester(primaryActionFocusRequester),
+                                    modifier = primaryActionModifier,
                                 ) {
                                     Icon(Icons.Rounded.Download, contentDescription = null, modifier = Modifier.size(16.dp))
                                     Text("Install game", modifier = Modifier.padding(start = 6.dp), fontSize = 10.sp)

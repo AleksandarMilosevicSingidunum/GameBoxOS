@@ -1471,3 +1471,13 @@ authoritative UI hierarchy to a GameBox root at `[0,0][1920,1080]` with no
 `androidhnext:id/hw_caption`. This proves the app is capable of the requested
 borderless full-display surface, while the initial automatic transition remains an
 Honor Desktop Mode policy boundary and not an app-rendering defect.
+
+TV Details primary-action focus checkpoint (2026-09-28): the wide Details root no longer
+keeps the global GameBox root focusable while a game is selected, and the primary
+Play/Install action requests focus after the Details transition has attached it. On the
+installed build, an HDMI-targeted D-pad traversal reached the `Play Now` parent with
+`clickable=true`, `focusable=true`, `focused=true`, and measurable bounds
+`[1511,263][1822,335]`; the nested Play Now text was also measurable. A shell tap into
+Details can leave the hierarchy temporarily without a focused node on Honor, so this
+checkpoint claims the reproducible directional-TV path and not an automatic pointer-tap
+focus result.
