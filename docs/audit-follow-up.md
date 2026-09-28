@@ -1081,3 +1081,10 @@ connected Honor Magic6 Pro at `/sdcard/Download/GameBoxOS-Legal/brickster.gbc`. 
 legal-fixture provenance and device transfer evidence only; the file was not copied into
 the user's `D:\GameBoxOS\games` directory, and the Store UI import completion plus
 Game Boy Color emulator gameplay/save evidence remain open.
+
+Physical DocumentsUI boundary checkpoint (2026-09-28): the focused
+`SystemDocumentPickerReimportTest.productionReimportCompletesThroughAndroidDocumentsUi`
+completed on the connected Honor Magic6 Pro with `OK (1 test)`. This validates the
+production Android picker/reimport path on physical hardware using the test's isolated
+fixture; it does not promote the staged Brickster file to a completed Game Boy Color
+import or gameplay result.
