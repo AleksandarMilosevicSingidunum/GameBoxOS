@@ -26,6 +26,12 @@ the APK did not clear that device precondition. This is an external-device test-
 failure requiring the user to unlock the phone before rerunning, not evidence of a
 production Compose assertion failure.
 
+Cross-platform post-save-hardening checkpoint (28 September 2026): the complete
+Android JVM suite passed 558 tests with zero failures, zero errors, and one explicit
+skip after the reversible SAF replacement change. The Windows `GameBox.Windows.Core.Tests`
+Release harness also passed. These are software regression gates; the locked-Honor
+UI result and live provider/emulator endpoint validation remain separate evidence.
+
 Release metadata checkpoint (28 September 2026): the repository's Android version-code
 and APK manifest regression suite ran 8 tests with zero failures. This validates the
 pre-signing metadata gate; it is not evidence that protected signing secrets or the
