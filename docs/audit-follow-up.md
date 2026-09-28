@@ -1832,3 +1832,11 @@ the edge-to-edge fallback on older releases. The APK compiled and the complete
 JVM suite passed. On the Honor HDMI probe, Desktop Mode still kept the external
 task under its own window manager and exposed the Honor desktop after the
 caption interaction; no caption-free physical-TV pass is claimed.
+
+Fullscreen experiment correction (2026-09-29): the requestFullscreenMode and
+transparent-caption experiment was removed from the shipped host implementation
+after Android's test window lifecycle produced a platform NPE. The product now
+relies on the stable external-display launch bundle, fullscreen window flags,
+and edge-to-edge system-bar policy. Emulator TV evidence must be re-run against
+this corrected implementation; the Honor Desktop Mode freeform/caption result
+remains a separate firmware limitation and is not claimed as an app pass.

@@ -61,7 +61,9 @@ class TvActivity : GameBoxHostActivity() {
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {
         super.onWindowFocusChanged(hasFocus)
-        if (hasFocus) hideSystemBars()
+        if (hasFocus) {
+            hideSystemBars()
+        }
     }
 
     override fun onResume() {
@@ -95,7 +97,6 @@ class TvActivity : GameBoxHostActivity() {
     }
 
     private fun applyBorderlessFullscreenWindow() {
-        requestGameBoxFullscreenMode()
         WindowCompat.setDecorFitsSystemWindows(window, false)
         window.addFlags(
             WindowManager.LayoutParams.FLAG_FULLSCREEN or

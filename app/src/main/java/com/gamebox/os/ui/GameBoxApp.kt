@@ -243,6 +243,7 @@ fun GameBoxApp(
         if (destination != Destination.SETTINGS &&
             destination != Destination.STORE &&
             destination != Destination.DOWNLOADS &&
+            destination != Destination.PC &&
             selectedGameId == null
         ) {
             rootFocusRequester.requestFocus()
