@@ -1264,3 +1264,10 @@ R1/L1 could reach the app. GameBox was restored to the HDMI task afterward. This
 firmware/controller-boundary evidence, not a failure of the shared TV key-dispatch code;
 the dedicated `TvActivityTest` remains the automated controller-path evidence, while a
 physical controller and final Desktop Mode handoff remain hardware gates.
+
+Executed TV-host instrumentation checkpoint (2026-09-28): the isolated API-35 emulator
+ran the complete `TvActivityTest` class directly from the installed debug/test APKs and
+finished `OK (3 tests)`. This includes Blueprint Home rendering, R1/L1 Home-to-Library-
+and-back selection, and Start/B quick-actions overlay behavior. It is automated Android
+host evidence only; it does not override the Honor Desktop Mode `SecondLauncher` input
+interception or claim physical HDMI-controller acceptance.
