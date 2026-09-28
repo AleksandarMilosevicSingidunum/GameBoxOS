@@ -40,8 +40,11 @@ for adapters that can stream emulator-owned bytes into atomic GameBox snapshots 
 restore verified snapshots back through the adapter. `DirectorySaveAdapter` and the
 existing `SaveRestoreCoordinator` exercise this contract in JVM coverage, including
 backup, mutation, and restore. The SAF-backed emulator adapter, user-selected save-root
-configuration, launch-time restore, and real emulator save validation remain the next
-integration work; managed app-private saves are not being relabeled as emulator saves.
+implementation now enforces the `<selected-root>/<game-id>/<save files>` convention,
+bounded discovery, staged restore, and destination digest verification; its path-policy
+tests pass. User-selected save-root configuration, launch-time wiring, and real emulator
+save validation remain the next integration work. Managed app-private saves are not being
+relabeled as emulator saves.
 
 The same focused Settings test passed on API-35 but the connected Honor run did not
 produce a valid test result: the instrumentation process crashed and the device then
