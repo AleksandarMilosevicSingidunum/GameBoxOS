@@ -332,6 +332,13 @@ instrumentation run finished 71 tests with one expected SAF skip and zero failur
 while HDMI remained connected. The run validates Android integration; it does not
 replace physical controller, overscan, reconnect, or Desktop Mode handoff evidence.
 
+TV accessory-status correction (28 September 2026): the connected Honor exposed the
+USB optical mouse as `KEYBOARD | DPAD | JOYSTICK`. Runtime status classification now
+rejects joystick sources that also identify as mouse/keyboard, preventing the TV
+status panel from falsely reporting that accessory as a game controller. Unit tests
+cover genuine gamepad/joystick sources and the mixed desktop-accessory case; no
+physical game controller was connected during this observation.
+
 Authenticated catalog transport checkpoint: the shared HTTPS/WebDAV/S3 client now
 rejects credential types that do not match the selected transport before opening a
 network connection. S3 requires access-key/secret-key credentials, while HTTPS and

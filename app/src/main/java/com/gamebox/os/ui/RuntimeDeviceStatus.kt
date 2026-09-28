@@ -156,10 +156,7 @@ internal fun rememberRuntimeDeviceStatus(): RuntimeDeviceStatus {
 private fun readRuntimeDeviceStatus(context: Context): RuntimeDeviceStatus {
     val controllers = InputDevice.getDeviceIds().asSequence()
         .mapNotNull(InputDevice::getDevice)
-        .filter { device ->
-            device.sources and InputDevice.SOURCE_GAMEPAD == InputDevice.SOURCE_GAMEPAD ||
-                device.sources and InputDevice.SOURCE_JOYSTICK == InputDevice.SOURCE_JOYSTICK
-        }
+        .filter { isGameControllerSources(it.sources) }
         .map { it.name.takeIf(String::isNotBlank) ?: "Game controller" }
         .distinct()
         .sorted()
@@ -237,6 +234,20 @@ private fun readRuntimeDeviceStatus(context: Context): RuntimeDeviceStatus {
         charging = charging,
         powerSource = powerSource,
     )
+}
+
+/**
+ * Desktop accessories can advertise a joystick source alongside keyboard/mouse
+ * sources. They must not be shown as game controllers in the TV status panel.
+ */
+internal fun isGameControllerSources(sources: Int): Boolean {
+    val gamepadOrJoystick =
+        sources and InputDevice.SOURCE_GAMEPAD == InputDevice.SOURCE_GAMEPAD ||
+            sources and InputDevice.SOURCE_JOYSTICK == InputDevice.SOURCE_JOYSTICK
+    val keyboardOrMouse =
+        sources and InputDevice.SOURCE_KEYBOARD == InputDevice.SOURCE_KEYBOARD ||
+            sources and InputDevice.SOURCE_MOUSE == InputDevice.SOURCE_MOUSE
+    return gamepadOrJoystick && !keyboardOrMouse
 }
 
 internal fun networkTransport(capabilities: NetworkCapabilities?): GameBoxNetworkTransport = when {

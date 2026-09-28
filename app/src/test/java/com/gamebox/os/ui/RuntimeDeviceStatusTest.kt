@@ -1,6 +1,9 @@
 package com.gamebox.os.ui
 
+import android.view.InputDevice
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class RuntimeDeviceStatusTest {
@@ -68,5 +71,13 @@ class RuntimeDeviceStatusTest {
                 powerSource = GameBoxPowerSource.BATTERY,
             ).powerLabel,
         )
+    }
+
+    @Test
+    fun desktopMouseJoystickSourceIsNotMisreportedAsController() {
+        assertTrue(isGameControllerSources(InputDevice.SOURCE_GAMEPAD))
+        assertTrue(isGameControllerSources(InputDevice.SOURCE_JOYSTICK))
+        assertFalse(isGameControllerSources(InputDevice.SOURCE_JOYSTICK or InputDevice.SOURCE_MOUSE))
+        assertFalse(isGameControllerSources(InputDevice.SOURCE_KEYBOARD))
     }
 }
