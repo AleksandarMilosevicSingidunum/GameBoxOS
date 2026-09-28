@@ -7,13 +7,23 @@ import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import com.gamebox.os.display.shouldFinishTvActivityForRemovedDisplay
+import com.gamebox.os.display.shouldReapplyTvWindowPolicyForChangedDisplay
 
 /** Dedicated standard activity instance for the Android presentation display. */
 class TvActivity : GameBoxHostActivity() {
     private val displayListener = object : DisplayManager.DisplayListener {
         override fun onDisplayAdded(displayId: Int) = Unit
 
-        override fun onDisplayChanged(displayId: Int) = Unit
+        override fun onDisplayChanged(displayId: Int) {
+            if (shouldReapplyTvWindowPolicyForChangedDisplay(this@TvActivity.display?.displayId ?: -1, displayId)) {
+                runOnUiThread {
+                    if (!isFinishing) {
+                        requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+                        hideSystemBars()
+                    }
+                }
+            }
+        }
 
         override fun onDisplayRemoved(displayId: Int) {
             if (shouldFinishTvActivityForRemovedDisplay(this@TvActivity.display?.displayId ?: -1, displayId)) {

@@ -594,6 +594,13 @@ the first physical proof of companion-imported content reaching real gameplay an
 save-safe cleanup boundary; it remains separate from cloud-provider and external-hardware
 acceptance.
 
+TV display-change policy checkpoint (2026-09-28): `TvActivity` now reapplies its
+landscape and system-bar policy when its own external display reports a configuration or
+mode change, while ignoring changes on the default or an unrelated display. JVM coverage
+protects the targeting rule; the rebuilt API-35 `TvActivityTest` class passed `OK (4
+tests)`. This strengthens 1080p/4K and Desktop Mode transitions without claiming a
+physical cable reconnect or controller soak.
+
 The current debug APK was also installed on `GameBox_API35` and launched through the
 real `com.gamebox.os/.MainActivity` entry point. The process remained alive, the
 activity stayed resumed, and the crash buffer was empty after startup. The later live

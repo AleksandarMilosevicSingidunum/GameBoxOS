@@ -38,6 +38,12 @@ internal fun shouldFinishTvActivityForRemovedDisplay(
 ): Boolean =
     currentDisplayId != Display.DEFAULT_DISPLAY && currentDisplayId == removedDisplayId
 
+internal fun shouldReapplyTvWindowPolicyForChangedDisplay(
+    currentDisplayId: Int,
+    changedDisplayId: Int,
+): Boolean =
+    currentDisplayId != Display.DEFAULT_DISPLAY && currentDisplayId == changedDisplayId
+
 internal fun presentationDisplayTargets(context: Context): List<ExternalDisplayTarget> =
     context.getSystemService(DisplayManager::class.java)
         ?.getDisplays(DisplayManager.DISPLAY_CATEGORY_PRESENTATION)

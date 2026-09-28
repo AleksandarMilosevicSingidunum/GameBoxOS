@@ -56,4 +56,11 @@ class ExternalDisplayLauncherTest {
         assertEquals(false, shouldFinishTvActivityForRemovedDisplay(23, 24))
         assertEquals(false, shouldFinishTvActivityForRemovedDisplay(0, 0))
     }
+
+    @Test
+    fun onlyTheChangedExternalDisplayReappliesTvWindowPolicy() {
+        assertEquals(true, shouldReapplyTvWindowPolicyForChangedDisplay(23, 23))
+        assertEquals(false, shouldReapplyTvWindowPolicyForChangedDisplay(23, 24))
+        assertEquals(false, shouldReapplyTvWindowPolicyForChangedDisplay(0, 0))
+    }
 }
