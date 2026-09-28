@@ -1410,3 +1410,13 @@ This makes the first Store filter reachable by remote/D-pad without phone-screen
 The direct Right probe still exposed a zero-bounds Compose semantics target on this Honor
 Desktop Mode presentation surface, so horizontal rail-to-content navigation remains an
 identified follow-up rather than a claimed fix.
+
+TV borderless-window increment (2026-09-28): both external-display hosts now request
+fullscreen/no-limit window flags, landscape, cutout-safe fullscreen, and a match-parent
+window; the manifest marks them fullscreen, borderless, landscape, and non-resizable. The
+supported external-display launcher also supplies the platform fullscreen windowing-mode
+hint when starting the dedicated TV host. JVM tests and the debug APK build pass. A direct
+ADB launch of MainActivity on the Honor HDMI display still reports `hw-pc-freeform`, a
+`[192,103][1312,794]` task with a `[192,103][1312,139]` system caption; this is an Honor
+Desktop Mode window-manager limitation for that launch path, not a claimed borderless
+acceptance. The in-app Show on TV route remains the authoritative handoff to verify next.

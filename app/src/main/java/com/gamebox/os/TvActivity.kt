@@ -2,7 +2,9 @@ package com.gamebox.os
 
 import android.content.pm.ActivityInfo
 import android.hardware.display.DisplayManager
+import android.os.Build
 import android.os.Bundle
+import android.view.WindowManager
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
@@ -19,6 +21,7 @@ class TvActivity : GameBoxHostActivity() {
                 runOnUiThread {
                     if (!isFinishing) {
                         requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+                        applyBorderlessFullscreenWindow()
                         hideSystemBars()
                     }
                 }
@@ -40,6 +43,7 @@ class TvActivity : GameBoxHostActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+        applyBorderlessFullscreenWindow()
         WindowCompat.setDecorFitsSystemWindows(window, false)
         super.onCreate(savedInstanceState)
         hideSystemBars()
@@ -61,9 +65,28 @@ class TvActivity : GameBoxHostActivity() {
     }
 
     private fun hideSystemBars() {
+        applyBorderlessFullscreenWindow()
         WindowCompat.getInsetsController(window, window.decorView).apply {
             systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
             hide(WindowInsetsCompat.Type.systemBars())
         }
+    }
+
+    private fun applyBorderlessFullscreenWindow() {
+        window.addFlags(
+            WindowManager.LayoutParams.FLAG_FULLSCREEN or
+                WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
+        )
+        window.clearFlags(WindowManager.LayoutParams.FLAG_FORCE_NOT_FULLSCREEN)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            window.attributes = window.attributes.apply {
+                layoutInDisplayCutoutMode =
+                    WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS
+            }
+        }
+        window.setLayout(
+            WindowManager.LayoutParams.MATCH_PARENT,
+            WindowManager.LayoutParams.MATCH_PARENT,
+        )
     }
 }

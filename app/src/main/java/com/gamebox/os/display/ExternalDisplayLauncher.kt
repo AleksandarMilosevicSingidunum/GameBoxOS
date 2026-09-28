@@ -20,6 +20,12 @@ internal data class ExternalDisplayTarget(
 
 internal val externalDisplayActivityClass = TvActivity::class.java
 
+// ActivityOptions exposes this through a hidden setter on some Android builds. The
+// bundle key is understood by the platform window manager and is safely ignored by
+// builds that do not support launch-windowing hints.
+private const val fullscreenWindowingMode = 1
+private const val launchWindowingModeKey = "android.activity.windowingMode"
+
 internal fun firstPresentationDisplayTarget(targets: List<ExternalDisplayTarget>): ExternalDisplayTarget? =
     targets.firstOrNull { !it.isVirtual } ?: targets.firstOrNull()
 
@@ -72,6 +78,9 @@ internal fun launchGameBoxOnExternalDisplay(activity: Activity): String {
                 launchBounds = Rect(0, 0, target.width, target.height)
             }
         }
+        val launchOptions = options.toBundle().apply {
+            putInt(launchWindowingModeKey, fullscreenWindowingMode)
+        }
         activity.startActivity(
             Intent(activity, externalDisplayActivityClass)
                 .addFlags(
@@ -79,7 +88,7 @@ internal fun launchGameBoxOnExternalDisplay(activity: Activity): String {
                         Intent.FLAG_ACTIVITY_MULTIPLE_TASK or
                         Intent.FLAG_ACTIVITY_NEW_DOCUMENT,
                 ),
-            options.toBundle(),
+            launchOptions,
         )
         externalDisplayLaunchRequestedMessage(target)
     }.getOrElse { error ->
