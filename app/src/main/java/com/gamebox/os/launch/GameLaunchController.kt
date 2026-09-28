@@ -390,17 +390,13 @@ class AndroidPackageGateway(
         }
         val intent = (when (plan.style) {
             EmulatorIntentStyle.ACTION_VIEW -> Intent(Intent.ACTION_VIEW)
-                // PPSSPP accepts scoped ACTION_VIEW URIs, but some Android
-                // builds do not advertise GameBox's custom PSP MIME types in
-                // their intent filter. Keep the URI and grant intact while
-                // using a broadly compatible type for the package-specific
-                // handoff.
+                // PPSSPP accepts scoped ACTION_VIEW URIs, but its Android
+                // resolver rejects a wildcard MIME for a content URI even
+                // though its manifest advertises */*. Preserve the verified
+                // game MIME so ISO/CSO/PBP paths resolve on real builds.
                 .setDataAndType(
                     uri,
-                    if (resolvedPackage == EmulatorIntentPolicy.PPSSPP_PACKAGE ||
-                        resolvedPackage == EmulatorIntentPolicy.PPSSPP_GOLD_PACKAGE ||
-                        resolvedPackage == EmulatorIntentPolicy.PPSSPP_LEGACY_PACKAGE
-                    ) "*/*" else capability.mimeType,
+                    capability.mimeType,
                 )
                 .setPackage(resolvedPackage)
             EmulatorIntentStyle.LAUNCHER_EXTRAS -> {

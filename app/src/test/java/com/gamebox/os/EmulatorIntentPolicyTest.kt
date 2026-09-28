@@ -67,6 +67,17 @@ class EmulatorIntentPolicyTest {
     }
 
     @Test
+    fun pspContentMimeMustRemainSpecificForAndroidResolver() {
+        val isoMime = com.gamebox.os.importer.RomImportPolicy.mimeType("game.iso")
+        val csoMime = com.gamebox.os.importer.RomImportPolicy.mimeType("game.cso")
+
+        assertEquals("application/x-iso9660-image", isoMime)
+        assertEquals("application/x-compressed-iso", csoMime)
+        assertTrue(isoMime != "*/*")
+        assertTrue(csoMime != "*/*")
+    }
+
+    @Test
     fun dolphinUsesOfficialAutoStartFilesContract() {
         val plan = EmulatorIntentPolicy.plan(EmulatorIntentPolicy.DOLPHIN_PACKAGE, uri, "Performance")
 

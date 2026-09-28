@@ -1646,3 +1646,13 @@ and safety coverage; the current checkout could not start Gradle because both
 cached Windows distributions failed to load `native-platform.dll`, so the test
 must still be rerun in Android CI before treating it as a passing execution
 result.
+
+PSP handoff rejection correction (2026-09-28): read-only intent resolution on
+the connected Honor showed that installed PPSSPP resolves a scoped ISO URI with
+`application/x-iso9660-image` (and CSO with `application/x-compressed-iso`) but
+returns `No activity found` when GameBox supplies `*/*`. The launch gateway now
+preserves the verified content MIME for PPSSPP instead of sending the wildcard;
+this directly fixes the reported `handover rejected` path while retaining the
+scoped URI and read grant. The device resolver check is live Honor evidence;
+the focused JVM regression and rebuilt APK still require the Gradle/CI runner
+because the local Windows Gradle native library could not initialize.
