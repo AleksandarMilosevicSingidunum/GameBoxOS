@@ -51,6 +51,59 @@ class SaveBackupService(
         return BackupResult.SUCCESS
     }
 
+    /** Snapshot bytes supplied by an adapter whose source is not an app-private File. */
+    internal fun createBackupFrom(
+        destinationRelativePath: String,
+        source: InputStream,
+    ): BackupResult {
+        val backup = resolveContained(backupsRoot, destinationRelativePath)
+        validateBackupDestination(backup)
+        return try {
+            AtomicSaveSnapshot.write(backup, source, maxBackupBytes)
+            BackupResult.SUCCESS
+        } catch (error: IllegalArgumentException) {
+            when {
+                error.message?.contains("size limit", ignoreCase = true) == true ->
+                    BackupResult.SIZE_LIMIT_EXCEEDED
+                else -> BackupResult.CHECKSUM_MISMATCH
+            }
+        }
+    }
+
+    /** Validates adapter-provided bytes without assuming they have a local filesystem path. */
+    internal fun inspectSource(source: InputStream): BackupResult {
+        var size = 0L
+        val buffer = ByteArray(64 * 1024)
+        return try {
+            while (true) {
+                val count = source.read(buffer)
+                if (count < 0) break
+                if (count == 0) continue
+                size += count
+                if (size > maxBackupBytes) return BackupResult.SIZE_LIMIT_EXCEEDED
+            }
+            if (size == 0L) BackupResult.CHECKSUM_MISMATCH else BackupResult.SUCCESS
+        } catch (_: Exception) {
+            BackupResult.SOURCE_MISSING
+        }
+    }
+
+    /** Restores a verified snapshot directly into an adapter-owned destination. */
+    internal fun restoreTo(
+        relativePath: String,
+        write: (InputStream) -> Unit,
+    ): BackupResult {
+        val backup = resolveContained(backupsRoot, relativePath)
+        if (!AtomicSaveSnapshot.hasHeader(backup) && backup.isFile && backup.length() > maxBackupBytes) {
+            return BackupResult.SIZE_LIMIT_EXCEEDED
+        }
+        val payload = readBackup(backup) ?: return if (backup.exists()) {
+            BackupResult.CHECKSUM_MISMATCH
+        } else BackupResult.BACKUP_MISSING
+        payload.inputStream().use(write)
+        return BackupResult.SUCCESS
+    }
+
     /** Removes a newly-created snapshot generation after an incomplete publication. */
     internal fun discardGeneration(generation: String) {
         require(generation.matches(Regex("[A-Za-z0-9._-]+"))) { "Snapshot generation is invalid" }

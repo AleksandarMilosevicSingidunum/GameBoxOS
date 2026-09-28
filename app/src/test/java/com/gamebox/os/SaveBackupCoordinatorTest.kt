@@ -5,6 +5,8 @@ import com.gamebox.os.storage.DirectorySaveAdapter
 import com.gamebox.os.storage.SaveAdapterRegistry
 import com.gamebox.os.storage.SaveBackupCoordinator
 import com.gamebox.os.storage.SaveBackupService
+import com.gamebox.os.storage.SaveRestoreCoordinator
+import com.gamebox.os.storage.SaveSnapshotManifestStore
 import java.io.File
 import kotlin.io.path.createTempDirectory
 import org.junit.Assert.assertEquals
@@ -34,6 +36,40 @@ class SaveBackupCoordinatorTest {
             assertTrue(result.artifacts.all { it.result == BackupResult.SUCCESS })
             assertTrue(File(backups, "game-a/slot1.sav").isFile)
             assertTrue(File(backups, "game-a/slot2.sav").isFile)
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun restoresThePublishedSnapshotThroughTheBidirectionalAdapter() {
+        val root = createTempDirectory("gamebox-save-restore-").toFile()
+        val saves = File(root, "saves")
+        val backups = File(root, "backups")
+        val manifests = File(root, "manifests")
+        try {
+            val source = File(saves, "game-a/slot1.sav").apply {
+                parentFile.mkdirs()
+                writeText("before")
+            }
+            val coordinator = SaveBackupCoordinator(
+                SaveAdapterRegistry(mapOf("PPSSPP" to DirectorySaveAdapter(saves))),
+                SaveBackupService(saves, backups),
+                SaveSnapshotManifestStore(manifests),
+            )
+
+            assertEquals(1, coordinator.backup("ppsspp", "game-a").successfulCount)
+            source.writeText("changed")
+
+            val restored = SaveRestoreCoordinator(
+                SaveBackupService(saves, backups),
+                SaveSnapshotManifestStore(manifests),
+                DirectorySaveAdapter(saves),
+            ).restoreLatest("game-a")
+
+            assertEquals(1, restored.successfulCount)
+            assertEquals(0, restored.failedCount)
+            assertEquals("before", source.readText())
         } finally {
             root.deleteRecursively()
         }

@@ -35,6 +35,14 @@ on API-35 after this change, including `compactSettingsKeepsExternalLibraryActio
 This is emulator UI evidence; physical TV overscan and controller-only acceptance remain
 separate.
 
+Save adapter foundation checkpoint: `SaveAdapter` now has a tested bidirectional contract
+for adapters that can stream emulator-owned bytes into atomic GameBox snapshots and
+restore verified snapshots back through the adapter. `DirectorySaveAdapter` and the
+existing `SaveRestoreCoordinator` exercise this contract in JVM coverage, including
+backup, mutation, and restore. The SAF-backed emulator adapter, user-selected save-root
+configuration, launch-time restore, and real emulator save validation remain the next
+integration work; managed app-private saves are not being relabeled as emulator saves.
+
 The same focused Settings test passed on API-35 but the connected Honor run did not
 produce a valid test result: the instrumentation process crashed and the device then
 reported `com.gamebox.os` missing from package-manager queries. This is recorded as a

@@ -17,6 +17,7 @@ data class GameSaveRestoreResult(
 class SaveRestoreCoordinator(
     private val backupService: SaveBackupService,
     private val manifestStore: SaveSnapshotManifestStore? = null,
+    private val adapter: BidirectionalSaveAdapter? = null,
 ) {
     fun restoreLatest(gameId: String): GameSaveRestoreResult {
         val store = manifestStore
@@ -45,7 +46,14 @@ class SaveRestoreCoordinator(
                     path,
                     if (safeForGame) {
                         val backupPath = generation?.let { ".snapshots/$it/$normalized" } ?: normalized
-                        backupService.restore(backupPath, normalized)
+                        if (adapter != null) {
+                            val artifact = SaveArtifact(gameId, normalized, 0L, 0L)
+                            backupService.restoreTo(backupPath) { source ->
+                                adapter.restoreArtifact(artifact, source)
+                            }
+                        } else {
+                            backupService.restore(backupPath, normalized)
+                        }
                     } else BackupResult.CROSS_GAME_PATH
                 )
             },

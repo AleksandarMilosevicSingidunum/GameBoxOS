@@ -34,7 +34,11 @@ class SaveBackupCoordinator(
             onSuccess = { artifacts ->
                 val inspections = artifacts.map { artifact ->
                     artifact to runCatching {
-                        backupService.inspectSource(artifact.relativePath)
+                        if (adapter is BidirectionalSaveAdapter) {
+                            adapter.openArtifact(artifact).use(backupService::inspectSource)
+                        } else {
+                            backupService.inspectSource(artifact.relativePath)
+                        }
                     }.getOrDefault(BackupResult.CHECKSUM_MISMATCH)
                 }
                 if (inspections.any { it.second != BackupResult.SUCCESS }) {
@@ -57,7 +61,16 @@ class SaveBackupCoordinator(
                         artifact = artifact,
                         result = runCatching {
                             val destination = generation?.let { ".snapshots/$it/${artifact.relativePath}" }
-                            backupService.createBackup(artifact.relativePath, destination ?: artifact.relativePath)
+                            if (adapter is BidirectionalSaveAdapter) {
+                                adapter.openArtifact(artifact).use { source ->
+                                    backupService.createBackupFrom(
+                                        destination ?: artifact.relativePath,
+                                        source,
+                                    )
+                                }
+                            } else {
+                                backupService.createBackup(artifact.relativePath, destination ?: artifact.relativePath)
+                            }
                         }.getOrDefault(BackupResult.CHECKSUM_MISMATCH),
                     )
                 }
@@ -98,4 +111,5 @@ class SaveBackupCoordinator(
             },
         )
     }
+
 }
