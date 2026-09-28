@@ -1577,9 +1577,8 @@ app and instrumentation APKs.
 High-density TV viewport fit increment (2026-09-28): wide layouts now scale to
 the available height without an artificial 0.85 minimum. This preserves the
 intended 1080p/160-dpi TV scale while allowing high-density landscape surfaces
-such as the API-35 emulator's 914dp × 411dp viewport to keep the collection and
-recent-game rails inside the visible frame instead of clipping them. The new
-policy case, Android JVM suite, Blueprint screenshot gate (`OK (4 tests)`), and
-dedicated TV host instrumentation (`OK (4 tests)`) all pass. This is emulator
-TV-dimension evidence; it does not replace physical overscan or Desktop Mode
-acceptance.
+such as the API-35 emulator's 914dp × 411dp viewport to request a mathematically
+fitting scale rather than a fixed floor. The new policy case, Android JVM suite,
+Blueprint screenshot gate (`OK (4 tests)`), and dedicated TV host
+instrumentation (`OK (4 tests)`) all pass. This is emulator TV-dimension
+evidence; it does not replace physical overscan or Desktop Mode acceptance.
