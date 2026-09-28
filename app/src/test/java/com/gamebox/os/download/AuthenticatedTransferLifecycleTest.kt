@@ -100,6 +100,65 @@ class AuthenticatedTransferLifecycleTest {
         }
     }
 
+    @Test fun s3AuthenticatedLoopbackDownloadCommitsChecksumVerifiedContent() {
+        val s3Config = CatalogProviderConfig(
+            CatalogTransport.S3(
+                endpoint = "https://objects.test",
+                bucket = "games",
+                prefix = "authorized",
+                region = "eu-central-1",
+            ),
+            "s3",
+        )
+        val s3Auth = CatalogDownloadAuthorization(
+            s3Config,
+            CatalogCredentials(accessKey = "access-key", secretKey = "secret-key"),
+        )
+        val sourceUrl = "https://objects.test/games/authorized/demo.nes"
+        val target = FileStagingTarget(temporary.newFolder(), "game/content.nes")
+        val server = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0)
+        val executor = Executors.newSingleThreadExecutor()
+        server.executor = executor
+        server.createContext("/games/authorized/demo.nes") { exchange ->
+            val authorization = exchange.requestHeaders.getFirst("Authorization").orEmpty()
+            val amzDate = exchange.requestHeaders.getFirst("x-amz-date").orEmpty()
+            val payloadHash = exchange.requestHeaders.getFirst("x-amz-content-sha256").orEmpty()
+            if (!authorization.startsWith("AWS4-HMAC-SHA256 ") ||
+                !amzDate.matches(Regex("\\d{8}T\\d{6}Z")) || payloadHash.length != 64
+            ) {
+                exchange.sendResponseHeaders(403, -1)
+                exchange.close()
+                return@createContext
+            }
+            exchange.sendResponseHeaders(200, payload.size.toLong())
+            exchange.responseBody.use { it.write(payload) }
+            exchange.close()
+        }
+        server.start()
+
+        try {
+            val source = HttpsTransferSource(
+                sourceUrl = sourceUrl,
+                totalBytes = payload.size.toLong(),
+                expectedSha256 = hash,
+                requestHeaders = s3Auth::headers,
+                connectionFactory = {
+                    URL("http://127.0.0.1:${server.address.port}/games/authorized/demo.nes")
+                        .openConnection() as HttpURLConnection
+                },
+            )
+
+            val result = ResumableTransferEngine().transfer(source, target, 1024, { false }, {})
+
+            assertEquals(ResumableTransferResult.Success(payload.size.toLong()), result)
+            assertArrayEquals(payload, target.finalFile.readBytes())
+            assertFalse(target.stagingFile.exists())
+        } finally {
+            server.stop(0)
+            executor.shutdownNow()
+        }
+    }
+
     @Test fun rejectedCredentialsKeepPartialFileWithoutInstalling() {
         val target = FileStagingTarget(temporary.newFolder(), "game/content.nes")
         target.openOutput().use { it.write(payload, 0, 7) }

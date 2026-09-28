@@ -39,11 +39,11 @@ catalog credentials, WebDAV/S3 permissions, and production endpoint behavior rem
 separate gates.
 
 Authorized download loopback checkpoint (28 September 2026): the resumable download
-engine now has a real local-socket integration test covering configured Basic auth,
-HTTP range resume, `Content-Range` validation, checksum verification, and promotion
-from staging to the final content path. The fixture is synthetic/legal test data;
-this proves the local download lifecycle only, not availability or authorization of
-any external game source.
+engine now has real local-socket integration tests covering configured Basic and
+S3/SigV4 auth, HTTP range resume, `Content-Range` validation, checksum verification,
+and promotion from staging to the final content path. The fixtures are synthetic/legal
+test data; this proves the local download lifecycle only, not availability or
+authorization of any external game source.
 
 ## Current implementation checkpoint (28 September 2026)
 
