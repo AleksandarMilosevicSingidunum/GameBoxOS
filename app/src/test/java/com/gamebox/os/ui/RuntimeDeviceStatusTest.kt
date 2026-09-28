@@ -49,7 +49,16 @@ class RuntimeDeviceStatusTest {
         )
         assertEquals(
             "2 external displays",
-            RuntimeDeviceStatus(externalDisplayNames = listOf("TV", "Capture")).externalDisplayLabel,
+            RuntimeDeviceStatus(externalDisplayNames = listOf("TV", "Projector")).externalDisplayLabel,
+        )
+        assertEquals(
+            "HDMI Screen · 1920×1080 · 1 virtual display",
+            RuntimeDeviceStatus(
+                externalDisplayNames = listOf(
+                    "HDMI Screen · 1920×1080",
+                    "studio.screen.sharing:8 · 1920×1080",
+                ),
+            ).externalDisplayLabel,
         )
     }
 

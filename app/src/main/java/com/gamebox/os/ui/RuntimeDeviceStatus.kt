@@ -25,6 +25,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.platform.LocalContext
+import com.gamebox.os.display.isLikelyVirtualPresentationDisplay
 
 internal enum class GameBoxNetworkState {
     OFFLINE, LOCAL, INTERNET
@@ -75,11 +76,7 @@ internal data class RuntimeDeviceStatus(
         }
 
     val externalDisplayLabel: String
-        get() = when (externalDisplayNames.size) {
-            0 -> "No secondary display detected"
-            1 -> externalDisplayNames.single()
-            else -> externalDisplayNames.size.toString() + " external displays"
-        }
+        get() = externalDisplayStatusLabel(externalDisplayNames)
 
     val powerLabel: String
         get() {
@@ -234,6 +231,19 @@ private fun readRuntimeDeviceStatus(context: Context): RuntimeDeviceStatus {
         charging = charging,
         powerSource = powerSource,
     )
+}
+
+internal fun externalDisplayStatusLabel(names: List<String>): String {
+    if (names.isEmpty()) return "No secondary display detected"
+    if (names.size == 1) return names.single()
+
+    val physical = names.filterNot(::isLikelyVirtualPresentationDisplay)
+    val virtualCount = names.size - physical.size
+    if (physical.isNotEmpty() && virtualCount > 0) {
+        val virtualLabel = if (virtualCount == 1) "1 virtual display" else "$virtualCount virtual displays"
+        return physical.first() + " · " + virtualLabel
+    }
+    return names.size.toString() + " external displays"
 }
 
 /**

@@ -594,6 +594,13 @@ the first physical proof of companion-imported content reaching real gameplay an
 save-safe cleanup boundary; it remains separate from cloud-provider and external-hardware
 acceptance.
 
+TV display-status clarity checkpoint (2026-09-28): runtime status now distinguishes a
+physical display from virtual capture surfaces when both are present. For example, the
+connected setup reports `HDMI Screen · 1920×1080 · 1 virtual display` instead of the
+ambiguous `2 external displays`; single-display and all-physical fallbacks remain
+unchanged and are JVM-tested. The rebuilt APK installed successfully and the real HDMI
+hierarchy still confirmed the GameBox package, Home, and logo.
+
 TV display-change policy checkpoint (2026-09-28): `TvActivity` now reapplies its
 landscape and system-bar policy when its own external display reports a configuration or
 mode change, while ignoring changes on the default or an unrelated display. JVM coverage
