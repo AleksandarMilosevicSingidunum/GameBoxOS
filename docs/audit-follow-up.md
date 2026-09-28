@@ -1271,3 +1271,11 @@ finished `OK (3 tests)`. This includes Blueprint Home rendering, R1/L1 Home-to-L
 and-back selection, and Start/B quick-actions overlay behavior. It is automated Android
 host evidence only; it does not override the Honor Desktop Mode `SecondLauncher` input
 interception or claim physical HDMI-controller acceptance.
+
+TV manifest-boundary instrumentation checkpoint (2026-09-28): after rebuilding the
+current APK and Android test APK, the isolated API-35 emulator ran `TvActivityTest` and
+finished `OK (4 tests)`. The added test confirms the dedicated TV activity is not
+exported; the manifest/build contract continues to declare it resizeable and fullscreen.
+This protects the external-display entry boundary without weakening the non-exported
+security boundary, and remains separate from Honor firmware and physical-controller
+acceptance.

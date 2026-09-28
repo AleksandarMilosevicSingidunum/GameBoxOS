@@ -1,10 +1,12 @@
 package com.gamebox.os
 
 import android.content.pm.ActivityInfo
+import android.content.ComponentName
 import android.view.KeyEvent
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -47,6 +49,15 @@ class TvActivityTest {
         rule.onNodeWithContentDescription("Library tab").assertIsSelected()
         sendButton(KeyEvent.KEYCODE_BUTTON_L1)
         rule.onNodeWithContentDescription("Home tab").assertIsSelected()
+    }
+
+    @Test
+    fun tvActivityKeepsNonExportedHostBoundary() {
+        val info = rule.activity.packageManager.getActivityInfo(
+            ComponentName(rule.activity, TvActivity::class.java),
+            0,
+        )
+        assertFalse(info.exported)
     }
 
     private fun sendButton(keyCode: Int) {
