@@ -868,7 +868,7 @@ private fun HomeScreen(
         ) {
             if (!defaultHome) {
                 DefaultHomeSetupBanner {
-                    defaultHomeLauncher.launch(defaultHomeSettingsIntent())
+                    defaultHomeLauncher.launch(defaultHomeSelectionIntent(context))
                 }
             }
             BlueprintPanel(Modifier.fillMaxWidth()) {
@@ -893,7 +893,7 @@ private fun HomeScreen(
     Column(Modifier.fillMaxWidth().verticalScroll(restoredScrollState("home")), verticalArrangement = Arrangement.spacedBy(14.dp)) {
         if (!defaultHome) {
             DefaultHomeSetupBanner {
-                defaultHomeLauncher.launch(defaultHomeSettingsIntent())
+                defaultHomeLauncher.launch(defaultHomeSelectionIntent(context))
             }
         }
         Text(if (history.isEmpty()) "Ready to play" else "Continue Playing",

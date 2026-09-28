@@ -1438,3 +1438,11 @@ to the visible Galaxy Patrol card at `[250,325][1104,509]`, whose hierarchy incl
 `Galaxy Patrol, Retro, installed, continue playing`. This closes the previously observed
 zero-bounds Right handoff for the Store TV flow; phone-screen rendering was not used for
 this acceptance.
+
+TV launcher-role increment (2026-09-28): the Home setup action now prefers Android's
+direct `RoleManager.ROLE_HOME` request on API 29+ and falls back to Home Settings on older
+or unavailable builds. This gives the user a direct, explicit way to make GameBox the
+system HOME surface—the mode that can cover the external desktop as a launcher—rather
+than silently changing the current launcher. The rebuilt APK installed successfully on
+the Honor; the authoritative current HOME holder remains `com.hihonor.android.launcher`,
+so launcher takeover is intentionally pending user confirmation.
