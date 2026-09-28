@@ -1679,3 +1679,12 @@ foreground, so the TV hierarchy did not expose GameBox controls. This confirms
 external task routing only; it is not counted as a physical-TV render, borderless
 acceptance, or controller-flow pass until the device is unlocked and the TV
 surface is foregrounded.
+
+External gameplay-window consistency fix (2026-09-28): emulator/gameplay
+handoffs now omit explicit `launchBounds` just like the dedicated TV launcher.
+Desktop shells can classify even display-sized bounds as a freeform/captioned
+window; both paths now rely on the display target, activity MATCH_PARENT policy,
+and fullscreen launch hint. The rebuilt artifact compiled successfully, the
+complete JVM suite remained green, and the dedicated TV host suite passed
+`OK (5 tests)` at 1920×1080/160 dpi. This is software TV-dimension evidence;
+Honor firmware windowing still requires an unlocked physical-TV acceptance run.
