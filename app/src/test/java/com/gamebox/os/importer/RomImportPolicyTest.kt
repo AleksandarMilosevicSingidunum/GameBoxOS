@@ -24,4 +24,10 @@ class RomImportPolicyTest {
     fun ambiguousArchiveKeepsGenericCatalogPlatform() {
         assertEquals("Retro", RomImportPolicy.resolvedPlatform("Retro", "game.zip"))
     }
+
+    @Test
+    fun pspAuthorizedCopyAcceptsSevenZipArchive() {
+        assertEquals(true, "7z" in RomImportPolicy.supportedExtensions("PSP"))
+        assertEquals("application/x-7z-compressed", RomImportPolicy.mimeType("game.7z"))
+    }
 }

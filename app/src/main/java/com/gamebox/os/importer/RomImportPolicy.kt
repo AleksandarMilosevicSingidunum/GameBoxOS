@@ -28,7 +28,7 @@ object RomImportPolicy {
         profile("PlayStation", setOf("PS1", "PSX", "PlayStation", "Sony PlayStation"), "cue", "bin", "chd", "pbp", "ccd", "img", "sub", "wav", "mdf", "mds"),
         profile("PlayStation 2", setOf("PS2", "PlayStation 2", "Sony PlayStation 2"), "iso", "chd", "cso", "bin", "cue", "wav", "mdf", "mds", "nrg"),
         profile("PlayStation 3", setOf("PS3", "PlayStation 3", "Sony PlayStation 3"), "iso", "pkg"),
-        profile("PSP", setOf("PSP", "PlayStation Portable", "Sony PlayStation Portable"), "iso", "cso", "pbp"),
+        profile("PSP", setOf("PSP", "PlayStation Portable", "Sony PlayStation Portable"), "iso", "cso", "pbp", "7z"),
         profile("PlayStation Vita", setOf("PS Vita", "PlayStation Vita", "Sony PlayStation Vita"), "vpk", "pkg"),
         profile("Sega Master System", setOf("Master System", "Sega Master System"), "sms", "zip", "7z"),
         profile("Sega Game Gear", setOf("Game Gear", "Sega Game Gear"), "gg", "zip", "7z"),

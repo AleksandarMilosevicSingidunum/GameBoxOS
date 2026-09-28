@@ -87,7 +87,7 @@ class RomImporterTest {
         }
 
         assertEquals(
-            ".xci is not supported for PSP. Supported formats: .CSO, .ISO, .PBP",
+            ".xci is not supported for PSP. Supported formats: .7Z, .CSO, .ISO, .PBP",
             error.message,
         )
     }

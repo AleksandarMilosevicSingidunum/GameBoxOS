@@ -78,6 +78,7 @@ import com.gamebox.os.data.DiscoveryGame
 import com.gamebox.os.data.ImportedGameRegistration
 import com.gamebox.os.content.GameMutationGate
 import com.gamebox.os.importer.AuthorizedRomImporter
+import com.gamebox.os.importer.BrowserDownloadTracker
 import com.gamebox.os.importer.RomImportPolicy
 import com.gamebox.os.importer.RomImportResult
 import com.gamebox.os.importer.RomImportSetResult
@@ -1145,6 +1146,7 @@ val allDiscoveryGames by discoveryRepository.observeGames(null, "", 250).collect
                 sourceId = result.sourceId,
                 label = source?.name ?: "Configured source",
                 url = url,
+                tracksBrowserDownload = source?.type == GameSourceProviderType.VIMM_LAIR,
             )
         }
         DiscoveryDetailsScreen(
@@ -2656,18 +2658,25 @@ private fun DiscoveryDetailsScreen(
             if (index >= 0 && cursor.moveToFirst()) cursor.getString(index) else null
         }
     }.getOrNull() ?: uri.lastPathSegment ?: "game.rom"
-    val importLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.OpenDocument()
-    ) { uri ->
-        if (uri == null) {
-            importMessage = "No file selected"
+
+    fun removeTrackedDownload(uri: Uri): Boolean = runCatching {
+        if (uri.scheme == "file") {
+            uri.path?.let { java.io.File(it).delete() } == true
         } else {
-            val displayName = queryDisplayName(uri)
-            val resolvedImportPlatform = RomImportPolicy.resolvedPlatform(platformName, displayName)
-            importing = true
-            importMessage = "Importing and verifying " + displayName + "…"
-            scope.launch {
-                GameMutationGate.withGameLock(game.id.value) {
+            context.contentResolver.delete(uri, null, null) > 0
+        }
+    }.getOrDefault(false)
+
+    fun importAuthorizedUri(
+        uri: Uri,
+        displayName: String,
+        removeSourceAfterSuccess: Boolean = false,
+    ) {
+        val resolvedImportPlatform = RomImportPolicy.resolvedPlatform(platformName, displayName)
+        importing = true
+        importMessage = "Importing and verifying " + displayName + "…"
+        scope.launch {
+            GameMutationGate.withGameLock(game.id.value) {
                 importMessage = when (val result = importer.import(game.id, uri, displayName, platformName)) {
                     is RomImportResult.Imported -> runCatching {
                         repository.registerImportedGame(
@@ -2692,11 +2701,21 @@ private fun DiscoveryDetailsScreen(
                         val cleanupDeferred = runCatching {
                             importer.confirmRegistration(game.id, result.transactionId)
                         }.isFailure
-                        if (cleanupDeferred) {
-                            "$resolvedImportPlatform copy verified and added to Library. Transaction cleanup will finish after restart."
-                        } else {
-                            "$resolvedImportPlatform copy verified and added to Library. SHA-256 " +
-                                result.hashes.sha256.take(12) + "…"
+                        val sourceRemoved = removeSourceAfterSuccess && removeTrackedDownload(uri)
+                        when {
+                            cleanupDeferred && sourceRemoved ->
+                                "$resolvedImportPlatform download verified, moved to Library, and source removed. Transaction cleanup will finish after restart."
+                            cleanupDeferred ->
+                                "$resolvedImportPlatform copy verified and added to Library. The browser source was retained because Android denied deletion."
+                            sourceRemoved ->
+                                "$resolvedImportPlatform download verified, moved to Library, and source removed. SHA-256 " +
+                                    result.hashes.sha256.take(12) + "…"
+                            removeSourceAfterSuccess ->
+                                "$resolvedImportPlatform copy verified and added to Library, but Android denied deletion of the browser source. SHA-256 " +
+                                    result.hashes.sha256.take(12) + "…"
+                            else ->
+                                "$resolvedImportPlatform copy verified and added to Library. SHA-256 " +
+                                    result.hashes.sha256.take(12) + "…"
                         }
                     }.getOrElse { error ->
                         val rolledBack = runCatching {
@@ -2710,16 +2729,22 @@ private fun DiscoveryDetailsScreen(
                                 (error.message?.take(140) ?: "unknown error")
                         }
                     }
-                    RomImportResult.SourceUnavailable ->
-                        "The selected file could not be opened"
-                    is RomImportResult.Rejected ->
-                        "Import rejected: " + result.reason
-                    is RomImportResult.Failed ->
-                        "Import failed: " + result.reason
+                    RomImportResult.SourceUnavailable -> "The selected file could not be opened"
+                    is RomImportResult.Rejected -> "Import rejected: " + result.reason
+                    is RomImportResult.Failed -> "Import failed: " + result.reason
                 }
-                }
-                importing = false
             }
+            importing = false
+        }
+    }
+
+    val importLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        if (uri == null) {
+            importMessage = "No file selected"
+        } else {
+            importAuthorizedUri(uri, queryDisplayName(uri))
         }
     }
     val importSetLauncher = rememberLauncherForActivityResult(
@@ -2799,6 +2824,39 @@ private fun DiscoveryDetailsScreen(
                 }
                 }
                 importing = false
+            }
+        }
+    }
+
+    val browserDownloadTracker = remember(context) { BrowserDownloadTracker(context) }
+    var trackingBrowserDownload by remember(game.id) { mutableStateOf(false) }
+    fun openAndTrackBrowserDownload() {
+        val source = directSource ?: return
+        val startedAt = System.currentTimeMillis()
+        trackingBrowserDownload = true
+        importMessage = "Waiting for the browser download to finish… Keep this title open or return to GameBox."
+        try {
+            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(source.url)))
+        } catch (_: ActivityNotFoundException) {
+            trackingBrowserDownload = false
+            importMessage = "No browser is available to open " + source.label
+            return
+        }
+        scope.launch {
+            val candidate = browserDownloadTracker.awaitCompletedDownload(
+                title = game.title,
+                platform = platformName,
+                startedAtMillis = startedAt,
+            )
+            trackingBrowserDownload = false
+            if (candidate == null) {
+                importMessage = "No completed matching download was found. Use Import your copy to select it manually."
+            } else {
+                importAuthorizedUri(
+                    uri = candidate.uri,
+                    displayName = candidate.displayName,
+                    removeSourceAfterSuccess = true,
+                )
             }
         }
     }
@@ -2893,10 +2951,33 @@ private fun DiscoveryDetailsScreen(
             if (configuredSources.isNotEmpty()) {
                 Text("Configured sources", fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
                 Text(
-                    "These are discovery links only. Installing content still requires an imported copy or a verified trusted catalog source.",
+                    if (directSource?.tracksBrowserDownload == true)
+                        "Open the source, start an authorized download, and GameBox will watch Android Downloads and import the completed file."
+                    else
+                        "These are discovery links only. Installing content still requires an imported copy or a verified trusted catalog source.",
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontSize = 11.sp,
                 )
+                if (directSource?.tracksBrowserDownload == true) {
+                    Button(
+                        enabled = !importing && !trackingBrowserDownload,
+                        onClick = ::openAndTrackBrowserDownload,
+                        modifier = Modifier.semantics {
+                            contentDescription = if (trackingBrowserDownload)
+                                "Waiting for browser download of ${game.title}"
+                            else
+                                "Open Vimm's Lair and track download of ${game.title}"
+                        },
+                    ) {
+                        Icon(Icons.Rounded.Download, null, Modifier.size(15.dp))
+                        Text(
+                            if (trackingBrowserDownload) "Waiting for browser download…"
+                            else "Open ${directSource.label} & track download",
+                            Modifier.padding(start = 7.dp),
+                            fontSize = 11.sp,
+                        )
+                    }
+                }
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(9.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     configuredSources.forEach { (label, url) ->
                         OutlinedButton(onClick = {

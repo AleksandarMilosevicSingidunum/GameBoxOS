@@ -1515,3 +1515,15 @@ controller/accessibility activation when an unmerged TV hierarchy is used. The J
 unit suite, debug APK assembly, and `TvActivityTest` passed on the connected Android
 test target. The catalog fallback instrumentation still has a separate provider-
 simulation gate issue on that target; it is not counted as TV launcher acceptance.
+
+Browser-download import increment (2026-09-28): Vimm discovery details now expose an
+explicit user-initiated `Open Vimm's Lair & track download` action. GameBox does not
+request or resolve Vimm binary URLs. It watches successful Android `DownloadManager`
+entries created after the handoff, matches the title and platform-supported extension,
+passes the local URI through the existing verified importer, registers the game under
+`files/imports/<game-id>/`, and removes the browser download only after registration
+and transaction confirmation succeed. If Android denies deletion, the source is
+retained and the UI reports that outcome. PSP authorized-copy import now accepts `.7z`
+with MIME `application/x-7z-compressed`; the archive is moved as a verified content
+file, not silently extracted or treated as an emulator binary source. JVM tests,
+debug assembly, and the TV instrumentation target passed after this increment.

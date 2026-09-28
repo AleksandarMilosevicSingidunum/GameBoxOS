@@ -11,6 +11,7 @@ internal data class ConfiguredSourceLink(
     val sourceId: String,
     val label: String,
     val url: String,
+    val tracksBrowserDownload: Boolean = false,
 )
 
 internal fun cachedMetadataForConfiguredSourceResult(
