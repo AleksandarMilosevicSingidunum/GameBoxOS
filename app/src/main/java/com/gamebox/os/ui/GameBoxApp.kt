@@ -3158,6 +3158,13 @@ internal fun detailControllerActionPlan(
     )
 }
 
+internal fun shouldShowAuthorizedImportCard(state: InstallState, authorizedFixture: Boolean): Boolean =
+    !authorizedFixture && state in setOf(
+        InstallState.NOT_INSTALLED,
+        InstallState.MISSING_FILES,
+        InstallState.FAILED,
+    )
+
 @Composable
 private fun DetailsScreen(
     game: Game,
@@ -3211,6 +3218,69 @@ private fun DetailsScreen(
     val workerActive = authorizedState.status == AuthorizedDownloadState.Status.QUEUED ||
         authorizedState.status == AuthorizedDownloadState.Status.RUNNING
     val hasRemoteSource = game.sourceUrl != null && game.expectedSha256 != null
+    val context = LocalContext.current
+    val importScope = rememberCoroutineScope()
+    var importingAuthorizedCopy by remember(game.id) { mutableStateOf(false) }
+    var authorizedImportMessage by remember(game.id) { mutableStateOf<String?>(null) }
+    fun queryImportDisplayName(uri: Uri): String = runCatching {
+        context.contentResolver.query(
+            uri,
+            arrayOf(OpenableColumns.DISPLAY_NAME),
+            null,
+            null,
+            null,
+        )?.use { cursor ->
+            val index = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+            if (index >= 0 && cursor.moveToFirst()) cursor.getString(index) else null
+        }
+    }.getOrNull() ?: uri.lastPathSegment ?: "game.rom"
+    val authorizedImportLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        if (uri == null) {
+            authorizedImportMessage = "No file selected"
+        } else {
+            val displayName = queryImportDisplayName(uri)
+            importingAuthorizedCopy = true
+            authorizedImportMessage = "Importing and verifying $displayName…"
+            importScope.launch {
+                GameMutationGate.withGameLock(game.id.value) {
+                    authorizedImportMessage = when (val result = importer.import(game.id, uri, displayName, game.platform)) {
+                        is RomImportResult.Imported -> runCatching {
+                            repository.registerImportedGame(
+                                ImportedGameRegistration(
+                                    id = game.id,
+                                    title = game.title,
+                                    platform = RomImportPolicy.profileLabel(game.platform),
+                                    year = game.year,
+                                    sizeBytes = result.hashes.sizeBytes,
+                                    relativePath = RomImportPolicy.importRootRelativePath(game.id, result.relativePath),
+                                    sha256 = result.hashes.sha256,
+                                    mimeType = RomImportPolicy.mimeType(displayName),
+                                    favorite = game.favorite,
+                                    artworkUrl = game.artworkUrl,
+                                    description = game.description,
+                                    players = game.players,
+                                    region = game.region,
+                                )
+                            )
+                            importer.confirmRegistration(game.id, result.transactionId)
+                            "${RomImportPolicy.profileLabel(game.platform)} copy verified and added to Library. SHA-256 " +
+                                result.hashes.sha256.take(12) + "…"
+                        }.getOrElse { error ->
+                            runCatching { importer.rollbackRegistration(game.id, result.transactionId) }
+                            "Library registration failed; imported files were rolled back safely: " +
+                                (error.message?.take(140) ?: "unknown error")
+                        }
+                        RomImportResult.SourceUnavailable -> "The selected file could not be opened"
+                        is RomImportResult.Rejected -> "Import rejected: ${result.reason}"
+                        is RomImportResult.Failed -> "Import failed: ${result.reason}"
+                    }
+                }
+                importingAuthorizedCopy = false
+            }
+        }
+    }
     fun performPrimaryAction() {
         if (isAuthorizedFixture) {
             authorizedDownloadController.install()
@@ -3260,6 +3330,37 @@ private fun DetailsScreen(
         GameMetadataEditorDialog(game, repository, settingsRepository) { showMetadataEditor = false }
     }
     Column(Modifier.fillMaxSize().verticalScroll(restoredScrollState("details." + game.id.value))) {
+        if (shouldShowAuthorizedImportCard(game.state, isAuthorizedFixture)) {
+            BlueprintPanel(Modifier.fillMaxWidth()) {
+                Text("Import your authorized copy", fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                Text(
+                    "GameBox copies and verifies your local ${RomImportPolicy.profileLabel(game.platform)} file into the Library. " +
+                        "Supported formats: ${RomImportPolicy.supportedExtensionsLabel(game.platform)}.",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontSize = 11.sp,
+                )
+                Button(
+                    enabled = !importingAuthorizedCopy,
+                    onClick = { authorizedImportLauncher.launch(arrayOf("*/*")) },
+                    modifier = Modifier.padding(top = 10.dp),
+                ) {
+                    Icon(Icons.Rounded.FileOpen, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Text(if (importingAuthorizedCopy) "Importing…" else "Import your copy", Modifier.padding(start = 6.dp), fontSize = 12.sp)
+                }
+                authorizedImportMessage?.let { message ->
+                    Text(
+                        message,
+                        color = if (message.startsWith("Import failed") || message.startsWith("Import rejected"))
+                            MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(top = 8.dp).semantics {
+                            contentDescription = message
+                            liveRegion = LiveRegionMode.Polite
+                        },
+                        fontSize = 11.sp,
+                    )
+                }
+            }
+        }
         ImportedGameReimportCard(game, importer, repository,
             enabled = launchState.status !in setOf(LaunchUiState.Status.PREPARING,
                 LaunchUiState.Status.LAUNCHED, LaunchUiState.Status.SESSION_ERROR))

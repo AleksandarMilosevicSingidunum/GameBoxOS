@@ -1088,3 +1088,13 @@ completed on the connected Honor Magic6 Pro with `OK (1 test)`. This validates t
 production Android picker/reimport path on physical hardware using the test's isolated
 fixture; it does not promote the staged Brickster file to a completed Game Boy Color
 import or gameplay result.
+
+Physical authorized-copy import checkpoint (2026-09-28): the Store → Cave Story details
+route now exposes an authorized-copy importer for unavailable catalog states. On the
+connected Honor Magic6 Pro, `Import your copy` opened the real Android DocumentsUI; the
+`Downloads/GameBoxOS-Legal/brickster.gbc` fixture was selected and returned to GameBox.
+App-private inspection confirmed `files/imports/cave-story/brickster.gbc`, 32,768 bytes,
+with SHA-256 `24e44e274f8ee77a838d0fc58a607521021b3de122a968f359994c6f7c773a45`, and the
+Library then displayed Cave Story as installed. This is physical discovery/details/import
+and registration evidence only; GBC emulator detection, gameplay, save, uninstall, and
+reinstall/restore remain separate gates.
