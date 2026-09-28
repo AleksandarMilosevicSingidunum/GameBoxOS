@@ -151,6 +151,10 @@ jobs:
             adb pull /sdcard/Android/data/com.gamebox.os/files/ui-captures ui-captures || true
             cat instrumentation.txt
             grep -Eq 'OK \([0-9]+ tests?\)' instrumentation.txt
+            if [ "${{ matrix.profile }}" = "dex" ]; then
+              adb shell am instrument -w -e class com.gamebox.os.TvActivityTest com.gamebox.os.test/androidx.test.runner.AndroidJUnitRunner 2>&1 | tee tv-host-instrumentation.txt
+              grep -Eq 'OK \([0-9]+ tests?\)' tv-host-instrumentation.txt
+            fi
       - name: Upload UI evidence
         if: always()
         uses: actions/upload-artifact@v7
@@ -159,6 +163,7 @@ jobs:
           path: |
             ui-captures/
             instrumentation.txt
+            tv-host-instrumentation.txt
             logcat.txt
           if-no-files-found: warn
           retention-days: 14

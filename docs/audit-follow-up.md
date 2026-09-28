@@ -1611,3 +1611,10 @@ control. This protects the user-facing overscan configuration on the TV-sized
 layout; safe-area chips now request bring-into-view when controller focus lands
 on them. The 1920×1080/160-dpi emulator run remains green with the stronger
 visible-focus assertion, and the dedicated TV host suite remains `OK (4 tests)`.
+
+TV CI profile integration (2026-09-28): the Android visual-QA `dex` matrix
+profile (1920×1080 at 160 dpi) now runs both `BlueprintScreenshotsTest` and the
+dedicated `TvActivityTest`. This keeps fullscreen flags, landscape orientation,
+controller tab/overlay behavior, and the non-exported host boundary gated at
+the same dimensions used for the TV screenshots, while phone and large-text
+profiles retain their existing screenshot coverage.
