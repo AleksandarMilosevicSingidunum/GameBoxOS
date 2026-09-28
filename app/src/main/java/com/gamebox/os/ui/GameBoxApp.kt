@@ -3986,7 +3986,9 @@ internal fun DownloadsScreen(
     val controllerActions = LocalControllerActions.current
     val focusManager = androidx.compose.ui.platform.LocalFocusManager.current
     val emptyDownloadsFocusRequester = remember { FocusRequester() }
+    val activeDownloadsFocusRequester = remember { FocusRequester() }
     var emptyDownloadsFocusClaimed by remember { mutableStateOf(false) }
+    var activeDownloadsFocusClaimed by remember { mutableStateOf(false) }
     LaunchedEffect(jobs.isEmpty()) {
         if (jobs.isEmpty()) {
             repeat(8) {
@@ -4004,6 +4006,21 @@ internal fun DownloadsScreen(
         repository.game(job.gameId)
             ?.takeIf { it.sourceUrl != null && it.expectedSha256 != null }
             ?.let { game -> job to game }
+    }
+    val firstActionableJob = actionable.firstOrNull { (job, _) ->
+        job.status in setOf(
+            DownloadStatus.DOWNLOADING,
+            DownloadStatus.PAUSED,
+            DownloadStatus.FAILED,
+            DownloadStatus.CANCELLED,
+        )
+    }?.first
+    LaunchedEffect(firstActionableJob?.id, firstActionableJob?.status) {
+        if (firstActionableJob != null) {
+            kotlinx.coroutines.delay(300)
+            focusManager.clearFocus(force = true)
+            runCatching { activeDownloadsFocusRequester.requestFocus() }
+        }
     }
     val actionPlan = downloadControllerActionPlan(actionable.map { it.first.status })
     DisposableEffect(controllerActions, actionPlan, actionable) {
@@ -4105,6 +4122,22 @@ internal fun DownloadsScreen(
                         if (job.status == DownloadStatus.FAILED) liveRegion = LiveRegionMode.Assertive
                     }
             ) {
+                val primaryActionModifier = if (job.id == firstActionableJob?.id) {
+                    Modifier
+                        .focusRequester(activeDownloadsFocusRequester)
+                        .bringFocusedControlIntoView()
+                        .onGloballyPositioned {
+                            if (!activeDownloadsFocusClaimed) {
+                                val focused = runCatching {
+                                    focusManager.clearFocus(force = true)
+                                    activeDownloadsFocusRequester.requestFocus()
+                                }.getOrDefault(false)
+                                if (focused) activeDownloadsFocusClaimed = true
+                            }
+                        }
+                } else {
+                    Modifier
+                }
                 Column(Modifier.padding(16.dp)) {
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                         Text(job.title, fontWeight = FontWeight.Bold)
@@ -4149,17 +4182,26 @@ internal fun DownloadsScreen(
                     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         if (remoteGame != null) {
                             if (job.status == DownloadStatus.DOWNLOADING) {
-                                OutlinedButton(onClick = { remoteDownloadController.pause(remoteGame) }) {
+                                OutlinedButton(
+                                    onClick = { remoteDownloadController.pause(remoteGame) },
+                                    modifier = primaryActionModifier,
+                                ) {
                                     Text("Pause")
                                 }
                             }
                             if (job.status == DownloadStatus.PAUSED) {
-                                Button(onClick = { remoteDownloadController.resume(remoteGame) }) {
+                                Button(
+                                    onClick = { remoteDownloadController.resume(remoteGame) },
+                                    modifier = primaryActionModifier,
+                                ) {
                                     Text("Resume")
                                 }
                             }
                             if (job.status in setOf(DownloadStatus.FAILED, DownloadStatus.CANCELLED)) {
-                                Button(onClick = { remoteDownloadController.install(remoteGame) }) {
+                                Button(
+                                    onClick = { remoteDownloadController.install(remoteGame) },
+                                    modifier = primaryActionModifier,
+                                ) {
                                     Text("Retry")
                                 }
                             }

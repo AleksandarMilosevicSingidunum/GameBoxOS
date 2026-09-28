@@ -104,7 +104,11 @@ class DownloadsScreenStateTest {
             jobs.value = listOf(current)
             compose.waitForIdle()
             compose.onNodeWithContentDescription(GameBoxSemantics.downloadDescription(current)).assertIsDisplayed()
-            action?.let { compose.onNodeWithText(it).assertIsDisplayed() }
+            action?.let {
+                compose.onNodeWithText(it)
+                    .assertIsDisplayed()
+                    .assert(hasRequestFocusAction())
+            }
             if (status == DownloadStatus.COMPLETED) {
                 compose.onNodeWithText("Pause").assertDoesNotExist()
                 compose.onNodeWithText("Resume").assertDoesNotExist()

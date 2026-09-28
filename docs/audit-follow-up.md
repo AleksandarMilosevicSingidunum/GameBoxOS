@@ -1776,3 +1776,12 @@ steal focus from its empty-state action. Kotlin compilation passed, and the
 production wide Blueprint flow completed `OK (1 test)` after waiting for the
 animated destination content; the new empty-Library path remains a separate
 runtime evidence gate.
+
+TV active-download focus increment (2026-09-28): when Downloads contains an
+actionable remote transfer, the first active/paused/failed/cancelled job now
+claims TV focus on its primary Pause, Resume, or Retry action after the
+destination transition settles. The focused state test covers those controls as
+focus-capable, the full JVM suite passed, the Android Downloads state run passed
+`OK (2 tests)`, and the production wide Blueprint flow passed `OK (1 test)`.
+Automatic focus on a real populated transfer remains separately documented from
+the isolated Compose semantics evidence.
