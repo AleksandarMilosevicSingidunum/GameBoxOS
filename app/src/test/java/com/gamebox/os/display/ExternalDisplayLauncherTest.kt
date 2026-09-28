@@ -5,6 +5,11 @@ import org.junit.Test
 
 class ExternalDisplayLauncherTest {
     @Test
+    fun externalDisplayUsesASeparateStandardHost() {
+        assertEquals("com.gamebox.os.TvActivity", externalDisplayActivityClass.name)
+    }
+
+    @Test
     fun firstPresentationTargetPrefersFirstDisplayAndHandlesNone() {
         val first = ExternalDisplayTarget(23, "SMART TV")
         val second = ExternalDisplayTarget(24, "Capture")

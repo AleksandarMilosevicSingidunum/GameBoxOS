@@ -53,5 +53,7 @@
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
+        <activity android:name=".TvActivity" android:exported="false" android:resizeableActivity="true" android:launchMode="standard" android:windowSoftInputMode="adjustResize" android:enableOnBackInvokedCallback="true"
+            android:configChanges="keyboard|keyboardHidden|navigation|orientation|screenLayout|screenSize|smallestScreenSize|uiMode" />
     </application>
 </manifest>

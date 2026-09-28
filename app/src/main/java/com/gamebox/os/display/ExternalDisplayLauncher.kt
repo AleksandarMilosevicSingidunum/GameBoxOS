@@ -6,12 +6,14 @@ import android.content.Context
 import android.content.Intent
 import android.hardware.display.DisplayManager
 import android.view.Display
-import com.gamebox.os.MainActivity
+import com.gamebox.os.TvActivity
 
 internal data class ExternalDisplayTarget(
     val displayId: Int,
     val name: String,
 )
+
+internal val externalDisplayActivityClass = TvActivity::class.java
 
 internal fun firstPresentationDisplayTarget(targets: List<ExternalDisplayTarget>): ExternalDisplayTarget? =
     targets.firstOrNull()
@@ -31,7 +33,7 @@ internal fun launchGameBoxOnExternalDisplay(activity: Activity): String {
             launchDisplayId = target.displayId
         }
         activity.startActivity(
-            Intent(activity, MainActivity::class.java)
+            Intent(activity, externalDisplayActivityClass)
                 .addFlags(
                     Intent.FLAG_ACTIVITY_NEW_TASK or
                         Intent.FLAG_ACTIVITY_MULTIPLE_TASK or

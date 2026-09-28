@@ -117,6 +117,14 @@ the wide GameBox Home surface on the SMART TV. Honor Desktop Mode presented that
 a movable window; automatic firmware maximization and physical display/controller soak
 remain hardware-specific acceptance items.
 
+External-display host hardening (28 September 2026): the normal `MainActivity` remains
+the `singleTask` Android Home host, while the presentation-display route now targets a
+separate standard `TvActivity` with the same shared GameBox content and analog-controller
+handling. This prevents the Home task contract from colliding with a second display task.
+The host split compiles and its launcher regression passes in JVM coverage; the current
+Honor Desktop Mode session still requires firmware-level TV confirmation before this
+change can be counted as a fresh physical-TV pass.
+
 Per-game managed-save controls are now used by every Details screen, not only the
 bundled Galaxy Patrol fixture. The selected game's save controller is also used for
 content-removal preflight, so imported PSP/other-console titles no longer risk reading
