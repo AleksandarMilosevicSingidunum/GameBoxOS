@@ -1420,3 +1420,12 @@ ADB launch of MainActivity on the Honor HDMI display still reports `hw-pc-freefo
 `[192,103][1312,794]` task with a `[192,103][1312,139]` system caption; this is an Honor
 Desktop Mode window-manager limitation for that launch path, not a claimed borderless
 acceptance. The in-app Show on TV route remains the authoritative handoff to verify next.
+
+Honor fullscreen windowing probe (2026-09-28): after installing the borderless build, a
+display-targeted platform launch with explicit `windowingMode=fullscreen` was also tried.
+Honor Desktop Mode still materialized GameBox as `hw-pc-freeform` with a centered task and
+system caption (`[192,103][1344,794]`, caption present). This confirms the remaining border
+is outside Compose and outside the app window flags; it is controlled by the Honor desktop
+window manager. The APK remains fullscreen at the Android window-policy level, but a true
+caption-free HDMI result requires the firmware's maximize/fullscreen desktop action or a
+different mirroring/presentation mode.
