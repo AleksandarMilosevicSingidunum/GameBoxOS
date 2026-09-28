@@ -53,6 +53,13 @@ populated Store composition and TV navigation on the real presentation surface;
 provider-key availability, controller input, and long-duration TV soak remain separate
 acceptance gates.
 
+The same session then navigated to Settings on the TV. The captured wide frame shows
+the section rail (Storage, Controllers, Downloads, Emulators, Display, Audio, Network,
+Saves & Cloud Sync, and System), the App storage summary, interface/app controls, and
+the controller footer. This confirms the large-screen Settings composition and section
+navigation on the real presentation surface; scroll-depth, external-controller input,
+and long-duration DeX/TV recovery remain separate acceptance gates.
+
 Cross-platform post-save-hardening checkpoint (28 September 2026): the complete
 Android JVM suite passed 558 tests with zero failures, zero errors, and one explicit
 skip after the reversible SAF replacement change. The Windows `GameBox.Windows.Core.Tests`
