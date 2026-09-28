@@ -111,8 +111,9 @@ run `connectedDebugAndroidTest` with `ANDROID_SERIAL=emulator-5554`. The current
 68-test suite passes with zero failures and zero errors on the API-35 emulator, with
 two explicit environment-gated skips for clean-emulator content/SAF setup. The suite
 validates Android UI and lifecycle behavior. Honor instrumentation remains a separate
-physical-device gate and must be run after the phone is unlocked; the latest read-only
-check found the connected phone secure-locked at AOD. Separate live Honor and API-35 runs verify the bundled Galaxy Patrol
+physical-device gate and must be run after the phone is unlocked. The latest unlocked
+Honor run completed 68 tests with zero failures and one explicit SAF-root skip; no
+active HDMI/DeX display was present during that run. Separate live Honor and API-35 runs verify the bundled Galaxy Patrol
 install → RetroArch/FCEUmm gameplay → controller-key dispatch → emulator save-state
 restore → return → uninstall/reinstall → relaunch path; this does not cover physical
 external-controller hardware or every production adapter.
