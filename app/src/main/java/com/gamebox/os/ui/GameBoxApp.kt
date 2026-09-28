@@ -224,8 +224,10 @@ fun GameBoxApp(
         }
     }
 
-    LaunchedEffect(Unit) {
-        rootFocusRequester.requestFocus()
+    LaunchedEffect(destination) {
+        if (destination != Destination.SETTINGS) {
+            rootFocusRequester.requestFocus()
+        }
     }
 
     fun moveTab(offset: Int) {
@@ -245,7 +247,7 @@ fun GameBoxApp(
     BoxWithConstraints(
         Modifier.fillMaxSize()
             .focusRequester(rootFocusRequester)
-            .focusable()
+            .focusable(enabled = destination != Destination.SETTINGS)
             .onPreviewKeyEvent { event ->
                 if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
                 when (event.nativeKeyEvent.keyCode) {

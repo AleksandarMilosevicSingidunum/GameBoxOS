@@ -1376,3 +1376,10 @@ focusability. On HDMI display 8, the hierarchy exposed the `TV safe area 4%` opt
 as `checkable=true`, `clickable=true`, and `focusable=true`; its nested content-description
 child is intentionally non-focusable Compose semantics. This makes the TV dimension controls
 reachable by D-pad/remote focus while preserving the existing persisted setting behavior.
+
+TV Settings focus traversal checkpoint (2026-09-28): the wide TV Settings root no longer
+captures focus while Settings is active; Home/Library/etc. retain their root controller
+handling. On HDMI display 8, a display-targeted D-pad probe moved focus from the Settings
+surface into real checkable/clickable controls and scrolled the settings rail instead of
+remaining on the root view. The safe-area chip parents remain explicit focus targets; the
+current directional order reaches the Settings section rail before the Display content rail.
