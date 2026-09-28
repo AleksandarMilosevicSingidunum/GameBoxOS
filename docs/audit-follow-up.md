@@ -286,6 +286,14 @@ enables the same authorized-download/import validation harness to be used with a
 properly licensed homebrew fixture for each adapter; it does not approve or fetch any
 ROM, and source leads remain separate from per-artifact license/checksum evidence.
 
+Wired-TV fullscreen launch checkpoint (28 September 2026): the presentation-display
+launcher now carries the external display's real pixel bounds into `ActivityOptions`
+and marks the dedicated `TvActivity` fullscreen. The connected Honor reported HDMI
+display 8 at 1920×1080 and hosted GameBox's `TvActivity`; before this change the task
+was visible but remained a 1312×1037 freeform desktop window. Automated launcher tests
+cover the bounds contract. Fresh visual TV acceptance still depends on Honor Desktop
+Mode's firmware window manager and must be checked on the actual TV surface.
+
 Authenticated catalog transport checkpoint: the shared HTTPS/WebDAV/S3 client now
 rejects credential types that do not match the selected transport before opening a
 network connection. S3 requires access-key/secret-key credentials, while HTTPS and

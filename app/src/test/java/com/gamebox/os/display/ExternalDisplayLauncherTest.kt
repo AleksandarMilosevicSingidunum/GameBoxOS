@@ -11,13 +11,20 @@ class ExternalDisplayLauncherTest {
 
     @Test
     fun firstPresentationTargetPrefersFirstDisplayAndHandlesNone() {
-        val first = ExternalDisplayTarget(23, "SMART TV")
+        val first = ExternalDisplayTarget(23, "SMART TV", width = 1920, height = 1080)
         val second = ExternalDisplayTarget(24, "Capture")
         assertEquals(
             first,
             firstPresentationDisplayTarget(listOf(first, second)),
         )
         assertEquals(null, firstPresentationDisplayTarget(emptyList()))
+    }
+
+    @Test
+    fun externalTargetCanCarryFullDisplayLaunchBounds() {
+        val target = ExternalDisplayTarget(23, "SMART TV", width = 1920, height = 1080)
+        assertEquals(1920, target.width)
+        assertEquals(1080, target.height)
     }
 
     @Test

@@ -4,6 +4,7 @@ import android.app.Activity
 import android.app.ActivityOptions
 import android.content.Context
 import android.content.Intent
+import android.graphics.Rect
 import android.hardware.display.DisplayManager
 import android.view.Display
 import com.gamebox.os.TvActivity
@@ -11,6 +12,8 @@ import com.gamebox.os.TvActivity
 internal data class ExternalDisplayTarget(
     val displayId: Int,
     val name: String,
+    val width: Int = 0,
+    val height: Int = 0,
 )
 
 internal val externalDisplayActivityClass = TvActivity::class.java
@@ -26,7 +29,15 @@ internal fun presentationDisplayTargets(context: Context): List<ExternalDisplayT
         ?.getDisplays(DisplayManager.DISPLAY_CATEGORY_PRESENTATION)
         .orEmpty()
         .filter { it.displayId != Display.DEFAULT_DISPLAY }
-        .map { ExternalDisplayTarget(it.displayId, it.name.ifBlank { "External display" }) }
+        .map { display ->
+            val mode = display.mode
+            ExternalDisplayTarget(
+                displayId = display.displayId,
+                name = display.name.ifBlank { "External display" },
+                width = mode.physicalWidth,
+                height = mode.physicalHeight,
+            )
+        }
 
 internal fun launchGameBoxOnExternalDisplay(activity: Activity): String {
     val target = firstPresentationDisplayTarget(presentationDisplayTargets(activity))
@@ -34,6 +45,9 @@ internal fun launchGameBoxOnExternalDisplay(activity: Activity): String {
     return runCatching {
         val options = ActivityOptions.makeBasic().apply {
             launchDisplayId = target.displayId
+            if (target.width > 0 && target.height > 0) {
+                launchBounds = Rect(0, 0, target.width, target.height)
+            }
         }
         activity.startActivity(
             Intent(activity, externalDisplayActivityClass)
