@@ -45,6 +45,14 @@ the Blueprint Home composition. The screenshot flow also opens Downloads through
 the header utility action, proving the non-primary route remains reachable. This is Android UI/instrumentation evidence, not
 physical DeX, external-controller, hover/motion, or complete state-matrix acceptance.
 
+Fresh API-35 visual check (28 September 2026): after reinstalling the current debug
+APK and launching the real `MainActivity`, a 1080x2400 emulator capture showed the
+Blueprint-style Home composition with the GameBox mark, primary navigation, hero card,
+library summary, quick-launch tiles, and discovery cards. The six primary tab bounds,
+including Settings, were fully within the compact viewport; no navigation resizing
+change was required. This is emulator visual evidence, not a claim of pixel identity
+or physical TV/controller acceptance.
+
 Compact Settings follow-up: external-library Choose/Change folder and Forget actions now
 stack full-width on compact layouts, preventing narrow-width and enlarged-text crowding
 while preserving the wide TV/Desktop row. The focused production screenshot flow passed
