@@ -1716,3 +1716,10 @@ condition is now expressed as a small unit-tested policy, covering empty versus
 populated libraries and both Home-role states. The final rebuilt artifact passed
 the complete JVM suite and the TV-host instrumentation run (`OK (5 tests)` at
 1920×1080/160 dpi); the emulator was restored afterward.
+
+Final first-run TV gate (2026-09-28): the final artifact containing the
+unit-tested setup-focus policy completed the combined production Blueprint flow
+and dedicated TV-host suite at 1920×1080/160 dpi with `OK (9 tests)`. The
+emulator was restored to 1080×2400/420. This closes the software TV-dimension
+regression for the increment; physical Honor/AOD and firmware windowing remain
+separate hardware evidence.
