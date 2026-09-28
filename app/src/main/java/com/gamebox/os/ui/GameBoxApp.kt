@@ -5110,7 +5110,7 @@ private fun SettingsScreen(
                     label = { Text(label) },
                     modifier = Modifier.semantics {
                         contentDescription = "TV safe area $label"
-                    },
+                    }.focusable(),
                 )
             }
         }

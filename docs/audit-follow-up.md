@@ -1370,3 +1370,9 @@ with a constrained 220dp rail container. The debug APK and JVM suite pass and th
 APK was installed on HDMI display 8. The hierarchy still reports the inner hero labels at
 zero bounds on this Honor presentation surface, so this increment improves the layout
 contract but does not claim the external semantics-bounds issue is resolved.
+
+TV safe-area focus checkpoint (2026-09-28): the safe-area chips now explicitly request
+focusability. On HDMI display 8, the hierarchy exposed the `TV safe area 4%` option's parent
+as `checkable=true`, `clickable=true`, and `focusable=true`; its nested content-description
+child is intentionally non-focusable Compose semantics. This makes the TV dimension controls
+reachable by D-pad/remote focus while preserving the existing persisted setting behavior.
