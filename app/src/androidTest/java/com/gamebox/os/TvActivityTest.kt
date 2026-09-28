@@ -3,10 +3,12 @@ package com.gamebox.os
 import android.content.pm.ActivityInfo
 import android.content.ComponentName
 import android.view.KeyEvent
+import android.view.WindowManager
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -21,6 +23,9 @@ class TvActivityTest {
     @Test
     fun tvActivityRequestsLandscapeAndRendersBlueprintHome() {
         assertEquals(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE, rule.activity.requestedOrientation)
+        val flags = rule.activity.window.attributes.flags
+        assertTrue(flags and WindowManager.LayoutParams.FLAG_FULLSCREEN != 0)
+        assertTrue(flags and WindowManager.LayoutParams.FLAG_FORCE_NOT_FULLSCREEN == 0)
         rule.waitUntil(15_000) {
             rule.onAllNodesWithContentDescription("Home tab").fetchSemanticsNodes().isNotEmpty()
         }

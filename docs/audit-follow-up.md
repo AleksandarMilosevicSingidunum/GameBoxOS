@@ -1559,3 +1559,9 @@ longer supplies an explicit `launchBounds` rectangle. That rectangle could
 cause desktop shells to classify an otherwise fullscreen TV task as freeform;
 the launch now supplies only the selected display and fullscreen windowing hint,
 leaving the activity's MATCH_PARENT policy to size the surface.
+
+TV window regression coverage (2026-09-28): `TvActivityTest` now asserts the
+runtime fullscreen flag and absence of the force-not-fullscreen flag in addition
+to landscape, Blueprint rendering, controller shoulder navigation, and the
+non-exported host boundary. The isolated API-35 emulator run remains green with
+all four tests passing.
