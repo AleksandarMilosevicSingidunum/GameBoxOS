@@ -1670,3 +1670,12 @@ Full Android JVM regression checkpoint (2026-09-28): after the PSP MIME and
 7z codec changes, the complete `testDebugUnitTest` suite passed 599 tests with
 zero failures and zero errors. This validates the tracked software contracts;
 it does not replace live PPSSPP gameplay or physical-TV acceptance.
+
+Physical HDMI routing recheck (2026-09-28): after waking the connected Honor,
+the rebuilt APK's exported `MainActivity` was delivered to the active external
+display (logical display 157) and Android reported a visible GameBox task with a
+1920×1037 snapshot. The device then kept Honor AOD/lock UI as the accessibility
+foreground, so the TV hierarchy did not expose GameBox controls. This confirms
+external task routing only; it is not counted as a physical-TV render, borderless
+acceptance, or controller-flow pass until the device is unlocked and the TV
+surface is foregrounded.
