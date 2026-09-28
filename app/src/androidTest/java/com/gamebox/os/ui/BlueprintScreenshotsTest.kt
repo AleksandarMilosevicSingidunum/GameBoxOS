@@ -132,6 +132,8 @@ class BlueprintScreenshotsTest {
         rule.waitForIdle()
         rule.onNodeWithText("External game library").performScrollTo().assertIsDisplayed()
         rule.onNodeWithText("Choose folder").performScrollTo().assertIsDisplayed()
+        rule.onNodeWithText("Emulator save root").performScrollTo().assertIsDisplayed()
+        rule.onNodeWithText("Choose save folder").performScrollTo().assertIsDisplayed()
     }
 
     private fun sendButton(keyCode: Int) {

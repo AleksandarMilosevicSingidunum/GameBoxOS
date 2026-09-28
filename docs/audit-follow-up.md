@@ -43,8 +43,12 @@ backup, mutation, and restore. The SAF-backed emulator adapter, user-selected sa
 implementation now enforces the `<selected-root>/<game-id>/<save files>` convention,
 bounded discovery, staged restore, and destination digest verification; its path-policy
 tests pass. User-selected save-root configuration, launch-time wiring, and real emulator
-save validation remain the next integration work. Managed app-private saves are not being
-relabeled as emulator saves.
+save validation are now separated: Settings persists an independent emulator-save SAF
+permission, the production launch controller restores a verified snapshot before dispatch,
+and the return path snapshots emulator-owned files alongside managed saves. JVM coverage
+blocks dispatch on failed configured restore. A real SAF/provider round-trip and emulator
+save validation remain open. Managed app-private saves are not being relabeled as emulator
+saves.
 
 The same focused Settings test passed on API-35 but the connected Honor run did not
 produce a valid test result: the instrumentation process crashed and the device then

@@ -436,6 +436,7 @@ class DefaultGameLaunchController(
     private val sessionJournal: LaunchSessionJournal? = null,
     private val platformEmulatorDefault: suspend (String) -> String? = { null },
     private val backupAfterSession: suspend (GameId) -> com.gamebox.os.storage.GameSaveBackupResult? = { null },
+    private val restoreBeforeSession: suspend (GameId) -> com.gamebox.os.storage.GameSaveRestoreResult? = { null },
 ) : GameLaunchController {
     private val state = MutableStateFlow(LaunchUiState())
     private val preparing = AtomicBoolean(false)
@@ -487,6 +488,15 @@ class DefaultGameLaunchController(
         val capability = registry.forGame(game, platformEmulatorDefault(game.platform))
         if (capability == null) {
             update(game.id, LaunchUiState.Status.UNSUPPORTED, "No approved adapter for this title")
+            return
+        }
+        val restored = restoreBeforeSession(game.id)
+        if (restored != null && restored.failedCount > 0) {
+            update(
+                game.id,
+                LaunchUiState.Status.HANDOFF_REJECTED,
+                restored.message ?: "A configured emulator save could not be restored; launch was stopped",
+            )
             return
         }
         var ticket: String? = null

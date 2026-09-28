@@ -48,6 +48,8 @@ import com.gamebox.os.storage.SaveAdapterRegistry
 import com.gamebox.os.storage.SaveBackupCoordinator
 import com.gamebox.os.storage.SaveBackupService
 import com.gamebox.os.storage.SaveSnapshotManifestStore
+import com.gamebox.os.storage.SaveRestoreCoordinator
+import com.gamebox.os.storage.SafSaveAdapter
 import com.gamebox.os.storage.ExternalLibraryContentStore
 import com.gamebox.os.importer.AuthorizedRomImporter
 import kotlinx.coroutines.CoroutineScope
@@ -201,6 +203,33 @@ class DefaultAppContainer(context: Context) : AppContainer {
         ),
     )
 
+    private val emulatorSaveAdapter = SafSaveAdapter(
+        context = applicationContext,
+        treeUri = { settingsState.value.emulatorSaveRootUri },
+    )
+
+    private val emulatorSaveBackup = SaveBackupCoordinator(
+        registry = SaveAdapterRegistry(mapOf("*" to emulatorSaveAdapter)),
+        backupService = SaveBackupService(
+            applicationContext.filesDir.resolve("emulator-saves"),
+            applicationContext.filesDir.resolve("emulator-save-backups"),
+        ),
+        manifestStore = SaveSnapshotManifestStore(
+            applicationContext.filesDir.resolve("emulator-save-backup-manifests")
+        ),
+    )
+
+    private val emulatorSaveRestore = SaveRestoreCoordinator(
+        backupService = SaveBackupService(
+            applicationContext.filesDir.resolve("emulator-saves"),
+            applicationContext.filesDir.resolve("emulator-save-backups"),
+        ),
+        manifestStore = SaveSnapshotManifestStore(
+            applicationContext.filesDir.resolve("emulator-save-backup-manifests")
+        ),
+        adapter = emulatorSaveAdapter,
+    )
+
     override val gameLaunchController: GameLaunchController = DefaultGameLaunchController(
         EmulatorCapabilityRegistry(),
         AndroidPackageGateway(applicationContext, externalContent = externalLibraryContent),
@@ -210,8 +239,21 @@ class DefaultAppContainer(context: Context) : AppContainer {
         backupAfterSession = { gameId ->
             gameRepository.game(gameId)?.let { game ->
                 kotlinx.coroutines.withContext(Dispatchers.IO) {
-                    automaticSaveBackup.backup(game.platform, game.id.value)
+                    val managed = automaticSaveBackup.backup(game.platform, game.id.value)
+                    val emulator = emulatorSaveBackup.backup(game.platform, game.id.value)
+                    com.gamebox.os.storage.GameSaveBackupResult(
+                        gameId = game.id.value,
+                        artifacts = managed.artifacts + emulator.artifacts,
+                        message = listOfNotNull(managed.message, emulator.message)
+                            .takeIf { it.isNotEmpty() }
+                            ?.joinToString(" "),
+                    )
                 }
+            }
+        },
+        restoreBeforeSession = { gameId ->
+            kotlinx.coroutines.withContext(Dispatchers.IO) {
+                emulatorSaveRestore.restoreLatest(gameId.value)
             }
         },
     )

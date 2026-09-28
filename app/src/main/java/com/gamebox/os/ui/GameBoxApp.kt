@@ -106,6 +106,7 @@ import com.gamebox.os.launch.LaunchUiState
 import com.gamebox.os.storage.SaveSafetyController
 import com.gamebox.os.storage.ExternalStorageController
 import com.gamebox.os.storage.ExternalStorageState
+import com.gamebox.os.storage.EmulatorSaveStorageController
 import com.gamebox.os.settings.SettingsRepository
 import com.gamebox.os.settings.DeveloperLayoutMode
 import com.gamebox.os.settings.CatalogFailureSimulation
@@ -4434,6 +4435,9 @@ private fun SettingsScreen(
     val externalStorageController = remember(context, settingsRepository) {
         ExternalStorageController(context, settingsRepository)
     }
+    val emulatorSaveStorageController = remember(context, settingsRepository) {
+        EmulatorSaveStorageController(context, settingsRepository)
+    }
     var catalogUrl by remember(currentSettings.catalogUrl) { mutableStateOf(currentSettings.catalogUrl) }
     var catalogMessage by remember { mutableStateOf<String?>(null) }
     var catalogTesting by remember { mutableStateOf(false) }
@@ -4478,6 +4482,7 @@ private fun SettingsScreen(
     }
     LaunchedEffect(settingsRepository) { companionSecret = settingsRepository.companionPairingSecret() }
     val externalStorageStatus = externalStorageController.inspect(currentSettings.externalLibraryUri)
+    val emulatorSaveStorageStatus = emulatorSaveStorageController.inspect(currentSettings.emulatorSaveRootUri)
     val installedMigration = remember(context) { com.gamebox.os.storage.InstalledContentMigration(context.filesDir.resolve("installed")) }
     val migrationPlan = remember(diagnosticGames) { installedMigration.plan() }
     var showMigrationDialog by remember { mutableStateOf(false) }
@@ -4491,6 +4496,19 @@ private fun SettingsScreen(
                 catalogMessage = result.fold(
                     onSuccess = { it.message },
                     onFailure = { it.message ?: "External library could not be selected" }
+                )
+            }
+        }
+    }
+    val emulatorSaveTreeLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocumentTree()
+    ) { uri ->
+        if (uri != null) {
+            scope.launch {
+                val result = runCatching { emulatorSaveStorageController.adoptTree(uri) }
+                catalogMessage = result.fold(
+                    onSuccess = { it.message },
+                    onFailure = { it.message ?: "Emulator save root could not be selected" },
                 )
             }
         }
@@ -4772,6 +4790,60 @@ private fun SettingsScreen(
             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.62f),
             fontSize = 12.sp
         )
+        Spacer(Modifier.height(14.dp))
+        Text("Emulator save root", fontWeight = FontWeight.Bold)
+        Text(
+            emulatorSaveStorageStatus.displayName ?: emulatorSaveStorageStatus.message,
+            modifier = Modifier.semantics {
+                contentDescription = "Emulator save root: " +
+                    (emulatorSaveStorageStatus.displayName ?: emulatorSaveStorageStatus.message)
+            },
+            color = when (emulatorSaveStorageStatus.state) {
+                ExternalStorageState.AVAILABLE_READ_WRITE -> MaterialTheme.colorScheme.primary
+                ExternalStorageState.NOT_CONFIGURED -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.62f)
+                else -> MaterialTheme.colorScheme.error
+            },
+        )
+        Text(
+            "Select the emulator's writable save folder. GameBox uses <root>/<game-id> and keeps this permission separate from the game library.",
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.62f),
+            fontSize = 12.sp,
+        )
+        if (compact) {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(
+                    onClick = { emulatorSaveTreeLauncher.launch(null) },
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(if (currentSettings.emulatorSaveRootUri.isBlank()) "Choose save folder" else "Change save folder")
+                }
+                if (currentSettings.emulatorSaveRootUri.isNotBlank()) {
+                    OutlinedButton(
+                        onClick = {
+                            scope.launch {
+                                emulatorSaveStorageController.forgetTree(currentSettings.emulatorSaveRootUri)
+                                catalogMessage = "Emulator save permission removed"
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) { Text("Forget save root") }
+                }
+            }
+        } else {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(onClick = { emulatorSaveTreeLauncher.launch(null) }) {
+                    Text(if (currentSettings.emulatorSaveRootUri.isBlank()) "Choose save folder" else "Change save folder")
+                }
+                if (currentSettings.emulatorSaveRootUri.isNotBlank()) {
+                    OutlinedButton(onClick = {
+                        scope.launch {
+                            emulatorSaveStorageController.forgetTree(currentSettings.emulatorSaveRootUri)
+                            catalogMessage = "Emulator save permission removed"
+                        }
+                    }) { Text("Forget save root") }
+                }
+            }
+        }
         Spacer(Modifier.height(18.dp))
         SettingsSectionHeader("Controllers", sectionAnchor(SettingsSection.CONTROLLERS))
         SettingsStatusCard(

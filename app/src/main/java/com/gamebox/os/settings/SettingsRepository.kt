@@ -46,6 +46,7 @@ data class GameBoxSettings(
     val catalogRegion: String = "us-east-1",
     val gameSources: List<GameSourceConfig> = emptyList(),
     val externalLibraryUri: String = "",
+    val emulatorSaveRootUri: String = "",
     val cloudSaveProvider: String = "WEBDAV",
     val cloudSaveEndpoint: String = "",
     val cloudSaveRegion: String = "us-east-1",
@@ -92,6 +93,7 @@ class SettingsRepository(private val context: Context) {
             catalogRegion = preferences[CATALOG_REGION] ?: "us-east-1",
             gameSources = decodeGameSourceConfigs(preferences[GAME_SOURCES]),
             externalLibraryUri = preferences[EXTERNAL_LIBRARY_URI] ?: "",
+            emulatorSaveRootUri = preferences[EMULATOR_SAVE_ROOT_URI] ?: "",
             cloudSaveProvider = preferences[CLOUD_SAVE_PROVIDER] ?: "WEBDAV",
             cloudSaveEndpoint = preferences[CLOUD_SAVE_ENDPOINT] ?: "",
             cloudSaveRegion = preferences[CLOUD_SAVE_REGION] ?: "us-east-1",
@@ -258,6 +260,13 @@ class SettingsRepository(private val context: Context) {
         context.gameBoxDataStore.edit { preferences ->
             if (value.isBlank()) preferences.remove(EXTERNAL_LIBRARY_URI)
             else preferences[EXTERNAL_LIBRARY_URI] = value
+        }
+    }
+
+    suspend fun setEmulatorSaveRootUri(value: String) {
+        context.gameBoxDataStore.edit { preferences ->
+            if (value.isBlank()) preferences.remove(EMULATOR_SAVE_ROOT_URI)
+            else preferences[EMULATOR_SAVE_ROOT_URI] = value
         }
     }
 
@@ -477,6 +486,7 @@ class SettingsRepository(private val context: Context) {
         val CATALOG_REGION = stringPreferencesKey("catalog_region")
         val GAME_SOURCES = stringPreferencesKey("game_sources")
         val EXTERNAL_LIBRARY_URI = stringPreferencesKey("external_library_uri")
+        val EMULATOR_SAVE_ROOT_URI = stringPreferencesKey("emulator_save_root_uri")
         val CLOUD_SAVE_PROVIDER = stringPreferencesKey("cloud_save_provider")
         val CLOUD_SAVE_ENDPOINT = stringPreferencesKey("cloud_save_endpoint")
         val CLOUD_SAVE_REGION = stringPreferencesKey("cloud_save_region")

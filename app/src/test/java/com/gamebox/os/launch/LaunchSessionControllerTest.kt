@@ -7,6 +7,8 @@ import com.gamebox.os.storage.BackupResult
 import com.gamebox.os.storage.GameSaveBackupResult
 import com.gamebox.os.storage.SaveArtifact
 import com.gamebox.os.storage.SaveArtifactBackupResult
+import com.gamebox.os.storage.GameSaveRestoreResult
+import com.gamebox.os.storage.SaveArtifactRestoreResult
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.runBlocking
@@ -231,6 +233,41 @@ class LaunchSessionControllerTest {
 
         assertEquals(listOf(game.id), backedUp)
         assertTrue(returned.message!!.contains("Backed up 1 save artifact"))
+    }
+
+    @Test fun failedConfiguredEmulatorRestoreBlocksDispatch(): Unit = runBlocking {
+        val repository = FakeGameRepository()
+        val game = repository.observeGames().value.first().copy(state = InstallState.INSTALLED)
+        var dispatches = 0
+        val controller = DefaultGameLaunchController(
+            EmulatorCapabilityRegistry(listOf(capability.copy(gameId = game.id))),
+            object : PackageGateway {
+                override fun launch(capability: EmulatorCapability, preparation: LaunchPreparation) =
+                    preparation.dispatch {
+                        dispatches++
+                        GatewayResult.LAUNCHED
+                    }
+            },
+            repository,
+            scope = this,
+            restoreBeforeSession = {
+                GameSaveRestoreResult(
+                    gameId = game.id.value,
+                    artifacts = listOf(
+                        SaveArtifactRestoreResult("${game.id.value}/progress.sav", BackupResult.BACKUP_MISSING)
+                    ),
+                    message = "Configured emulator save could not be restored",
+                )
+            },
+        )
+
+        controller.launch(game)
+        val state = withTimeout(5_000) {
+            controller.observeState().first { it.status == LaunchUiState.Status.HANDOFF_REJECTED }
+        }
+
+        assertEquals(0, dispatches)
+        assertEquals("Configured emulator save could not be restored", state.message)
     }
 
     @Test fun interruptedUnconfirmedHandoffDoesNotBackUpSaves(): Unit = runBlocking {

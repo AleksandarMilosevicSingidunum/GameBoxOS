@@ -25,4 +25,9 @@ by this action. Use deliberate backup/restore operations for replacement.
 The same flow is available for imported and catalog titles, including PSP titles.
 The controller is bound to the selected game ID, so a save record cannot be used
 by another title. General emulator-private save discovery and synchronization
-remain separate implementation/validation work.
+are configured separately in Settings through **Emulator save root**. The selected
+SAF tree must be the writable root used by the emulator and must contain one child
+directory per GameBox game ID. GameBox uses that permission for bounded discovery,
+verified snapshot backup on return, and restore before launch; it never assumes that
+the external game-library tree is an emulator save location. Real emulator/provider
+round-trip validation remains a separate acceptance gate.
