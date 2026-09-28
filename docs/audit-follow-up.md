@@ -1446,3 +1446,11 @@ system HOME surface—the mode that can cover the external desktop as a launcher
 than silently changing the current launcher. The rebuilt APK installed successfully on
 the Honor; the authoritative current HOME holder remains `com.hihonor.android.launcher`,
 so launcher takeover is intentionally pending user confirmation.
+
+TV HOME-surface handoff increment (2026-09-28): `Show on TV` now branches on the actual
+default HOME holder. When GameBox owns HOME, it launches an Android HOME intent on the
+physical presentation display so the system treats GameBox as the launcher surface;
+when Honor remains the HOME holder, it preserves the dedicated TV-host fallback and
+reports that GameBox must first be selected as default Home for launcher mode. The APK
+build and JVM suite pass, and the live Honor role check still reports
+`com.hihonor.android.launcher`; no launcher role was changed automatically.

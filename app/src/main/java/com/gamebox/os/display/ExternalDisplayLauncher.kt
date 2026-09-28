@@ -6,6 +6,8 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.Rect
 import android.hardware.display.DisplayManager
+import android.os.Bundle
+import android.content.pm.PackageManager
 import android.view.Display
 import java.util.Locale
 import com.gamebox.os.TvActivity
@@ -25,6 +27,9 @@ internal val externalDisplayActivityClass = TvActivity::class.java
 // builds that do not support launch-windowing hints.
 private const val fullscreenWindowingMode = 1
 private const val launchWindowingModeKey = "android.activity.windowingMode"
+
+internal fun ActivityOptions.toGameBoxFullscreenLaunchBundle(): Bundle =
+    toBundle().apply { putInt(launchWindowingModeKey, fullscreenWindowingMode) }
 
 internal fun firstPresentationDisplayTarget(targets: List<ExternalDisplayTarget>): ExternalDisplayTarget? =
     targets.firstOrNull { !it.isVirtual } ?: targets.firstOrNull()
@@ -78,20 +83,38 @@ internal fun launchGameBoxOnExternalDisplay(activity: Activity): String {
                 launchBounds = Rect(0, 0, target.width, target.height)
             }
         }
-        val launchOptions = options.toBundle().apply {
-            putInt(launchWindowingModeKey, fullscreenWindowingMode)
-        }
-        activity.startActivity(
+        val launchOptions = options.toGameBoxFullscreenLaunchBundle()
+        val launchIntent = if (isDefaultHomeApp(activity)) {
+            // When GameBox owns HOME, let the system launch it as the actual
+            // launcher task on the TV. This produces a HOME surface instead of
+            // a normal desktop/freeform activity window.
+            Intent(Intent.ACTION_MAIN)
+                .addCategory(Intent.CATEGORY_HOME)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+        } else {
             Intent(activity, externalDisplayActivityClass)
                 .addFlags(
                     Intent.FLAG_ACTIVITY_NEW_TASK or
                         Intent.FLAG_ACTIVITY_MULTIPLE_TASK or
                         Intent.FLAG_ACTIVITY_NEW_DOCUMENT,
-                ),
-            launchOptions,
-        )
-        externalDisplayLaunchRequestedMessage(target)
+                )
+        }
+        activity.startActivity(launchIntent, launchOptions)
+        if (isDefaultHomeApp(activity)) {
+            "GameBox launcher requested on ${target.name}"
+        } else {
+            externalDisplayLaunchRequestedMessage(target) + "; choose GameBox as the default Home app for launcher mode"
+        }
     }.getOrElse { error ->
         "Could not open GameBox on ${target.name}: ${error.message ?: "display launch failed"}"
     }
+}
+
+private fun isDefaultHomeApp(context: Context): Boolean {
+    val homeIntent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME)
+    val packageName = context.packageManager
+        .resolveActivity(homeIntent, PackageManager.MATCH_DEFAULT_ONLY)
+        ?.activityInfo
+        ?.packageName
+    return packageName == context.packageName
 }
