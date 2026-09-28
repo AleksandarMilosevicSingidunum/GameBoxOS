@@ -1034,3 +1034,14 @@ implemented and exercised by automated CI. They remain prerequisites for the sig
 upgrade/rollback rehearsal rather than open implementation gaps.
 
 Physical hardware gates stay pending and do not prevent independent software work.
+
+Fresh end-to-end user-flow checkpoint (2026-09-28): while the Honor Magic6 Pro was
+connected to the active `SMART TV` presentation display, the `AuthorizedInstallLifecycleTest`
+instrumentation journey completed on the physical PGT-N19 device. The journey exercised
+authorized content installation, durable install-state observation, content-only uninstall,
+retained managed save/backup state, reinstall through restored work, and verified save
+restore. This is product lifecycle evidence on the Honor, not proof of a second emulator
+family, real remote-provider bytes, signed release installation, or physical controller
+input. Direct TV screenshot capture was unavailable through the device's current ADB
+presentation-display screencap interface, so the TV claim remains based on the previously
+captured live GameBox surface and the physical-device instrumentation result above.
