@@ -1591,3 +1591,10 @@ shows the full wide composition—hero, collection area, quick launch, Explore
 games rail, and controller footer—without vertical clipping. Emulator size and
 density were restored afterward; this remains software TV-dimension evidence,
 not physical Honor/HDMI acceptance.
+
+TV Details install-flow coverage (2026-09-28): the wide production screenshot
+flow now explicitly asserts that opening the Home hero exposes the authorized
+`Install game` action in the TV installation panel before capturing Details.
+The check passed on the 1920×1080/160-dpi emulator profile, alongside the
+visible controller-footer `Install game` action; it does not claim a real
+emulator launch or physical-controller acceptance.

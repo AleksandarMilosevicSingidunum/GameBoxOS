@@ -36,6 +36,11 @@ class BlueprintScreenshotsTest {
         }
         capture("01-home")
         hero.onFirst().performClick()
+        if (rule.activity.resources.configuration.screenWidthDp >= 900) {
+            // The TV Details hero keeps the primary authorized-install action in
+            // the right-side installation panel instead of below the fold.
+            rule.onAllNodesWithText("Install game").onLast().assertIsDisplayed()
+        }
         capture("02-game-details")
         listOf("Library", "Store", "Media", "PC", "Settings").forEachIndexed { index, title ->
             val tab = rule.onNodeWithContentDescription("$title tab")
