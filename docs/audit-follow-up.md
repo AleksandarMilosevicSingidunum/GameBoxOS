@@ -45,6 +45,14 @@ and controller footer. This proves the current wide render on the active TV; it 
 not a claim that the shell command launched the non-exported `TvActivity` or that
 physical controller/DeX soak is complete.
 
+The same live TV session then navigated to Store through the wide navigation bar.
+The captured 1920×1080 frame shows the Blueprint console rail, Featured hero, All /
+Installed controls, search panel, source cards, TheGamesDB API-key state, Sync all
+consoles, Refresh authorized catalog, and controller footer. This confirms the
+populated Store composition and TV navigation on the real presentation surface;
+provider-key availability, controller input, and long-duration TV soak remain separate
+acceptance gates.
+
 Cross-platform post-save-hardening checkpoint (28 September 2026): the complete
 Android JVM suite passed 558 tests with zero failures, zero errors, and one explicit
 skip after the reversible SAF replacement change. The Windows `GameBox.Windows.Core.Tests`
