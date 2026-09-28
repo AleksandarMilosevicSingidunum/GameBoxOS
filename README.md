@@ -147,6 +147,12 @@ GameBox wires the optional TheGamesDB metadata adapter (`TheGamesDbMetadataClien
 
 ### Importing authorized local copies
 
+New legal local or browser-tracked imports use a console-scoped tree such as
+`files/imports/psp/<game-id>/`. ZIP and 7Z archives are extracted into that
+tree; only supported files are registered, and the source archive is removed
+after successful registration. Content-only uninstall removes every
+registered extracted file while retaining saves, metadata, and history.
+
 Open a title in Store discovery and select **Import authorized copy**. The Android picker displays every document MIME type because console images such as `.xci`, `.nsp`, `.rvz`, `.wbfs`, `.chd`, and `.cia` are often exposed as generic binary files. GameBox then applies a strict format allowlist for the selected console before it reads, hashes, and copies the file into app-private storage. A successful copy is promoted into the persistent Library with its artwork and metadata, and supported emulator adapters receive a temporary read-only URI only after launch-time SHA-256 verification. Current profiles cover Nintendo handheld and home consoles, PlayStation families, Sega families, Xbox, Atari, Neo Geo, PC Engine, WonderSwan, arcade, retro, and homebrew formats. Unknown catalog platforms use the recognized console-format union while executable and script types remain rejected.
 
 Import support means safe file acceptance, persistent Library registration, and launch handoff where an approved adapter exists; it does not decrypt protected content, provide firmware or console keys, or bundle an emulator. A Switch `.xci`/`.nsp` copy can be imported and retained in Library, but Play requires a compatible, legally configured emulator adapter, which is not yet implemented for Switch. For disc-based systems, choose **Import multi-file disc set** and select the descriptor plus every referenced track together. GameBox validates `.cue`, `.gdi`, `.mds`/`.mdf`, and `.ccd`/`.img` dependencies, commits the replacement atomically, retains checksums for every file, and grants the approved emulator temporary read-only access to the complete set.
