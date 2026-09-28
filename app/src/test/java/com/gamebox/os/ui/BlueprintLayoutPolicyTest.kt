@@ -1,6 +1,7 @@
 package com.gamebox.os.ui
 
 import com.gamebox.os.settings.DeveloperLayoutMode
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -23,5 +24,17 @@ class BlueprintLayoutPolicyTest {
     fun explicitModesAlwaysWin() {
         assertFalse(shouldUseCompactLayout(DeveloperLayoutMode.WIDE, 320f, 640f))
         assertTrue(shouldUseCompactLayout(DeveloperLayoutMode.COMPACT, 1920f, 1080f))
+    }
+
+    @Test
+    fun tvViewportFits1080pDesignSurfaceAt160Dpi() {
+        assertEquals(0.9375f, blueprintViewportScale(1200f, 675f), 0.0001f)
+        assertEquals(1.875f, blueprintViewportScale(2400f, 1350f), 0.0001f)
+    }
+
+    @Test
+    fun phoneViewportDoesNotShrinkForWideDesignMath() {
+        assertEquals(1f, blueprintViewportScale(412f, 915f), 0.0001f)
+        assertEquals(1f, blueprintViewportScale(Float.NaN, 675f), 0.0001f)
     }
 }

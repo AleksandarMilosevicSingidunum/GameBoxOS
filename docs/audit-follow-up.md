@@ -314,6 +314,12 @@ request, and asserts the Blueprint Home tab and GameBox mark are rendered. This 
 the automated activity-host coverage gap; it remains distinct from physical HDMI
 fullscreen, overscan, controller, and Desktop Mode handoff acceptance.
 
+TV viewport-dimension checkpoint (28 September 2026): the wide Blueprint viewport now
+allows a bounded downscale on 16:9 living-room surfaces. At the connected HDMI's
+1920×1080/160-dpi geometry (1200×675 dp), the design surface scales to 0.9375 so its
+1280×720 composition fits the full TV-safe viewport; compact phone layouts retain a
+minimum scale of 1.0. Unit coverage also exercises a 4K-style 2400×1350-dp surface.
+
 Authenticated catalog transport checkpoint: the shared HTTPS/WebDAV/S3 client now
 rejects credential types that do not match the selected transport before opening a
 network connection. S3 requires access-key/secret-key credentials, while HTTPS and
