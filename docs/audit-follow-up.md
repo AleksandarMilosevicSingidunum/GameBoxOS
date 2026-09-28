@@ -326,6 +326,12 @@ opens and closes the shared controller quick-actions overlay. This is runtime An
 input evidence on the Honor; a paired physical controller and HDMI focus/reconnect
 soak remain hardware acceptance gates.
 
+Full-suite TV regression checkpoint (28 September 2026): after adding the dedicated
+activity/controller tests and the wide viewport scaling policy, the complete Honor
+instrumentation run finished 71 tests with one expected SAF skip and zero failures
+while HDMI remained connected. The run validates Android integration; it does not
+replace physical controller, overscan, reconnect, or Desktop Mode handoff evidence.
+
 Authenticated catalog transport checkpoint: the shared HTTPS/WebDAV/S3 client now
 rejects credential types that do not match the selected transport before opening a
 network connection. S3 requires access-key/secret-key credentials, while HTTPS and
