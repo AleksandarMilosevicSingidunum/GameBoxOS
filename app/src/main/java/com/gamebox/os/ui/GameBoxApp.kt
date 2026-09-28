@@ -66,6 +66,7 @@ import androidx.compose.ui.input.key.type
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
@@ -970,7 +971,15 @@ internal fun HomeQuickLaunchRow(openPc: () -> Unit, compact: Boolean = true) {
                 ) {
                     AppBrandMark(label, Modifier.size(32.dp))
                     Spacer(Modifier.height(if (compact) 18.dp else 8.dp))
-                    Text(label, maxLines = 1, overflow = TextOverflow.Ellipsis, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                    Text(
+                        label,
+                        modifier = Modifier.fillMaxWidth(),
+                        maxLines = 2,
+                        overflow = TextOverflow.Clip,
+                        textAlign = TextAlign.Center,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.SemiBold,
+                    )
                     Text("PC Hub", color = Color.White.copy(alpha = .7f), fontSize = 9.sp)
                 }
             }

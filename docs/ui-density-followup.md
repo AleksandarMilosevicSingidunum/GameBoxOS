@@ -45,3 +45,8 @@ wide TV/Desktop row. The production screenshot flow passed on API-35 after the c
 the focused `compactSettingsKeepsExternalLibraryActionReachable` instrumentation test
 also passed. This is UI/instrumentation evidence, not physical TV overscan or controller
 acceptance.
+
+The compact Home quick-launch titles now wrap to two lines instead of ellipsizing when
+large text leaves a narrow tile, so **Epic Games** remains legible at the documented
+130% font-scale profile. The focused enlarged-text instrumentation test passed, and a
+fresh 130% production capture visually confirmed the wrapped title and grown tile.
