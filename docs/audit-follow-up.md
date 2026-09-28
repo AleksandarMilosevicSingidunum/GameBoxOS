@@ -1703,3 +1703,10 @@ that the fullscreen external-display launch bundle contains the platform
 fullscreen hint and no `launchBounds` rectangle. The assertion passed in the
 1920×1080/160-dpi TV-host run (`OK (5 tests)`), protecting the window-policy
 contract from reintroducing desktop freeform sizing.
+
+TV first-run focus increment (2026-09-28): when the Home library is empty and
+GameBox is not yet Android's default Home app, the only setup action (`Choose
+Home`) now receives the initial TV focus after composition. Populated Home keeps
+its existing remembered-game focus behavior. The rebuilt APK and instrumentation
+APK compiled successfully, the complete JVM suite passed, and `TvActivityTest`
+remained green with `OK (5 tests)` at 1920×1080/160 dpi.

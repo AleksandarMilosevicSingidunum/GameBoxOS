@@ -826,7 +826,10 @@ private fun ControllerHint(letter: String, label: String, color: Color) {
 }
 
 @Composable
-private fun DefaultHomeSetupBanner(onChooseHome: () -> Unit) {
+private fun DefaultHomeSetupBanner(
+    onChooseHome: () -> Unit,
+    focusRequester: FocusRequester? = null,
+) {
     Surface(
         modifier = Modifier.fillMaxWidth().semantics {
             contentDescription = "GameBox is not the default Home app"
@@ -849,7 +852,10 @@ private fun DefaultHomeSetupBanner(onChooseHome: () -> Unit) {
                     fontSize = 11.sp,
                 )
             }
-            Button(onClick = onChooseHome) {
+            Button(
+                modifier = focusRequester?.let(Modifier::focusRequester) ?: Modifier,
+                onClick = onChooseHome,
+            ) {
                 Text("Choose Home")
             }
         }
@@ -869,6 +875,7 @@ private fun HomeScreen(
 ) {
     val context = LocalContext.current
     var defaultHome by remember(context) { mutableStateOf(isGameBoxDefaultHome(context)) }
+    val emptyHomeSetupFocusRequester = remember { FocusRequester() }
     val defaultHomeLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.StartActivityForResult()
     ) {
@@ -884,15 +891,24 @@ private fun HomeScreen(
         )
         onDispose { controllerActions?.clear() }
     }
+    LaunchedEffect(defaultHome, games.isEmpty()) {
+        if (!defaultHome && games.isEmpty()) {
+            androidx.compose.runtime.withFrameNanos { }
+            runCatching { emptyHomeSetupFocusRequester.requestFocus() }
+        }
+    }
     if (games.isEmpty()) {
         Column(
             Modifier.fillMaxWidth().verticalScroll(restoredScrollState("home-empty")),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             if (!defaultHome) {
-                DefaultHomeSetupBanner {
+                DefaultHomeSetupBanner(
+                    onChooseHome = {
                     defaultHomeLauncher.launch(defaultHomeSelectionIntent(context))
-                }
+                    },
+                    focusRequester = emptyHomeSetupFocusRequester,
+                )
             }
             BlueprintPanel(Modifier.fillMaxWidth()) {
                 Text("Welcome to GameBox", fontWeight = FontWeight.Bold)
@@ -915,9 +931,11 @@ private fun HomeScreen(
 
     Column(Modifier.fillMaxWidth().verticalScroll(restoredScrollState("home")), verticalArrangement = Arrangement.spacedBy(14.dp)) {
         if (!defaultHome) {
-            DefaultHomeSetupBanner {
-                defaultHomeLauncher.launch(defaultHomeSelectionIntent(context))
-            }
+            DefaultHomeSetupBanner(
+                onChooseHome = {
+                    defaultHomeLauncher.launch(defaultHomeSelectionIntent(context))
+                },
+            )
         }
         Text(if (history.isEmpty()) "Ready to play" else "Continue Playing",
             fontSize = if (compact) 22.sp else 16.sp, fontWeight = FontWeight.SemiBold)
