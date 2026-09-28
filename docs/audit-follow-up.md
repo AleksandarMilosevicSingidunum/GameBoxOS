@@ -1888,3 +1888,13 @@ previous value. The complete Blueprint plus dedicated TV-host profile passed
 `OK (14 tests)` at 1920×1080/160, and the emulator returned to 1080×2400/420.
 This is software TV-dimension evidence; physical overscan and Honor Desktop
 Mode behavior remain separate hardware gates.
+
+TV controller-confirmation increment (2026-09-29): a focused TV test exposed
+that a focused safe-area chip did not react to a gamepad `BUTTON_A` event. The
+shared host now translates `BUTTON_A` to the Android TV confirmation key, and
+the safe-area chips explicitly handle A/DPAD-center/Enter while focused. The
+dedicated TV test now activates 8% with `BUTTON_A`, verifies the visible active
+inset, and restores the prior preference. The combined Blueprint plus TV-host
+profile passed `OK (15 tests)` at 1920×1080/160; the emulator was restored to
+1080×2400/420. This is controller/UI software evidence, separate from physical
+controller hardware acceptance and Honor Desktop Mode behavior.

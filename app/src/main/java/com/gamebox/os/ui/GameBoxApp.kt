@@ -5458,7 +5458,22 @@ private fun SettingsScreen(
                     label = { Text(label) },
                     modifier = Modifier.semantics {
                         contentDescription = "TV safe area $label"
-                    }.bringFocusedControlIntoView().focusable(),
+                    }.bringFocusedControlIntoView().focusable()
+                        .onPreviewKeyEvent { event ->
+                            if (event.type != KeyEventType.KeyDown) {
+                                false
+                            } else {
+                                when (event.nativeKeyEvent.keyCode) {
+                                    AndroidKeyEvent.KEYCODE_BUTTON_A,
+                                    AndroidKeyEvent.KEYCODE_DPAD_CENTER,
+                                    AndroidKeyEvent.KEYCODE_ENTER -> {
+                                        scope.launch { settingsRepository.setSafeAreaPercent(percent) }
+                                        true
+                                    }
+                                    else -> false
+                                }
+                            }
+                        },
                 )
             }
         }

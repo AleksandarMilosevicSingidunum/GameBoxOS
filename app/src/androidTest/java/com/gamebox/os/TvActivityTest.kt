@@ -8,6 +8,7 @@ import android.view.KeyEvent
 import android.view.WindowManager
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
+import androidx.compose.ui.semantics.SemanticsActions
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -15,6 +16,11 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.platform.app.InstrumentationRegistry
+import com.gamebox.os.GameBoxApplication
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
 import com.gamebox.os.display.toGameBoxFullscreenLaunchBundle
 
 /** Exercises the dedicated external-display activity contract on a real Android runtime. */
@@ -82,6 +88,39 @@ class TvActivityTest {
             rule.onAllNodesWithText("Download Manager").fetchSemanticsNodes().isNotEmpty()
         }
         rule.onNodeWithText("Download Manager").assertIsDisplayed()
+    }
+
+    @Test
+    fun tvControllerActivatesSafeAreaSetting() {
+        rule.waitUntil(15_000) {
+            rule.onAllNodesWithContentDescription("Home tab").fetchSemanticsNodes().isNotEmpty()
+        }
+        val app = InstrumentationRegistry.getInstrumentation().targetContext.applicationContext as GameBoxApplication
+        val settings = app.container.settingsRepository
+        val originalPercent = runBlocking { settings.settings.first().safeAreaPercent }
+        try {
+            rule.onNodeWithContentDescription("Settings tab").performClick()
+            rule.waitForIdle()
+            rule.onNodeWithText("Display").performScrollTo().assertIsDisplayed()
+            rule.onNodeWithContentDescription("TV safe area 8%")
+                .performSemanticsAction(SemanticsActions.RequestFocus)
+                .assertIsFocused()
+            sendButton(KeyEvent.KEYCODE_BUTTON_A)
+            rule.waitUntil(5_000) {
+                rule.onAllNodesWithText("Active inset: 8% on every edge.")
+                    .fetchSemanticsNodes().isNotEmpty()
+            }
+            rule.onNodeWithText("Active inset: 8% on every edge.")
+                .performScrollTo()
+                .assertIsDisplayed()
+            runBlocking {
+                withTimeout(5_000) {
+                    settings.settings.first { current -> kotlin.math.abs(current.safeAreaPercent - 0.08f) < 0.001f }
+                }
+            }
+        } finally {
+            runBlocking { settings.setSafeAreaPercent(originalPercent) }
+        }
     }
 
     @Test

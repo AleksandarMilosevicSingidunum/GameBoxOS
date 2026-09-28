@@ -74,6 +74,29 @@ abstract class GameBoxHostActivity : ComponentActivity() {
         }
     }
 
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        // Compose's clickable/focusable controls understand D-pad center,
+        // while Android gamepads report their confirm button as BUTTON_A. Keep
+        // controller confirmation consistent across the normal and TV hosts by
+        // translating only that confirm key before it reaches the view tree.
+        if (event.keyCode == KeyEvent.KEYCODE_BUTTON_A) {
+            val translated = KeyEvent(
+                event.downTime,
+                event.eventTime,
+                event.action,
+                KeyEvent.KEYCODE_DPAD_CENTER,
+                event.repeatCount,
+                event.metaState,
+                event.deviceId,
+                event.scanCode,
+                event.flags,
+                event.source,
+            )
+            return super.dispatchKeyEvent(translated)
+        }
+        return super.dispatchKeyEvent(event)
+    }
+
     override fun dispatchGenericMotionEvent(event: MotionEvent): Boolean {
         val joystick = event.source and InputDevice.SOURCE_JOYSTICK == InputDevice.SOURCE_JOYSTICK
         if (joystick && event.action == MotionEvent.ACTION_MOVE) {
