@@ -320,6 +320,12 @@ allows a bounded downscale on 16:9 living-room surfaces. At the connected HDMI's
 1280×720 composition fits the full TV-safe viewport; compact phone layouts retain a
 minimum scale of 1.0. Unit coverage also exercises a 4K-style 2400×1350-dp surface.
 
+TV controller-host checkpoint (28 September 2026): the dedicated `TvActivity` device
+test now also sends the controller Start and B actions, confirming that the TV host
+opens and closes the shared controller quick-actions overlay. This is runtime Android
+input evidence on the Honor; a paired physical controller and HDMI focus/reconnect
+soak remain hardware acceptance gates.
+
 Authenticated catalog transport checkpoint: the shared HTTPS/WebDAV/S3 client now
 rejects credential types that do not match the selected transport before opening a
 network connection. S3 requires access-key/secret-key credentials, while HTTPS and
