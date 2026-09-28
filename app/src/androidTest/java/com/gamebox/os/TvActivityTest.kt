@@ -1,5 +1,6 @@
 package com.gamebox.os
 
+import android.app.ActivityOptions
 import android.content.pm.ActivityInfo
 import android.content.ComponentName
 import android.view.KeyEvent
@@ -13,6 +14,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.gamebox.os.display.toGameBoxFullscreenLaunchBundle
 
 /** Exercises the dedicated external-display activity contract on a real Android runtime. */
 @RunWith(AndroidJUnit4::class)
@@ -63,6 +65,12 @@ class TvActivityTest {
             0,
         )
         assertFalse(info.exported)
+    }
+
+    @Test
+    fun externalDisplayLaunchBundleRequestsFullscreenWindowingMode() {
+        val launchBundle = ActivityOptions.makeBasic().toGameBoxFullscreenLaunchBundle()
+        assertEquals(1, launchBundle.getInt("android.activity.windowingMode", -1))
     }
 
     private fun sendButton(keyCode: Int) {

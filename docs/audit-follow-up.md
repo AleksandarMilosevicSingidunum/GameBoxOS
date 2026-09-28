@@ -1628,3 +1628,9 @@ not evidence for the supported in-product Show on TV route or borderless
 acceptance. The emulator/CI TV evidence remains authoritative for software;
 physical confirmation still requires the supported handoff to be accepted by
 Honor Desktop Mode.
+
+Fullscreen launch-contract coverage (2026-09-28): `TvActivityTest` now also
+verifies at runtime that the external-display `ActivityOptions` bundle carries
+the platform fullscreen windowing hint. Android 36 exposes no public setter for
+this option, so the existing guarded bundle key remains the software fallback;
+Honor firmware may still classify the task as freeform, as recorded above.
