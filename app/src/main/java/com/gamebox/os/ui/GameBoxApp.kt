@@ -4684,6 +4684,7 @@ private fun BlueprintAppHubScreen(
                     onClick = onExternalDisplay,
                     modifier = Modifier
                         .fillMaxWidth()
+                        .focusable()
                         .semantics { contentDescription = "Show GameBox on external display" },
                 ) {
                     Icon(Icons.Rounded.Cast, null, Modifier.size(16.dp))

@@ -1840,3 +1840,10 @@ relies on the stable external-display launch bundle, fullscreen window flags,
 and edge-to-edge system-bar policy. Emulator TV evidence must be re-run against
 this corrected implementation; the Honor Desktop Mode freeform/caption result
 remains a separate firmware limitation and is not claimed as an app pass.
+
+TV PC Hub focus increment (2026-09-29): the visible wide-layout `Show on TV`
+action is now an explicit Compose focus target, while the global root fallback
+does not compete for focus on the PC destination. The production Blueprint flow
+requested and verified focus on that action at 1920×1080/160 dpi; this is
+controller-focusability evidence, separate from the Honor firmware's physical
+Desktop Mode window/caption behavior.

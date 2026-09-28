@@ -62,6 +62,8 @@ class BlueprintScreenshotsTest {
                     }
                     "PC" -> rule.onNodeWithContentDescription("Show GameBox on external display")
                         .assertIsDisplayed()
+                        .performSemanticsAction(SemanticsActions.RequestFocus)
+                        .assertIsFocused()
                     "Settings" -> {
                         rule.onNodeWithText("Display").performScrollTo().assertIsDisplayed()
                         rule.onAllNodes(hasContentDescription("TV safe area", substring = true))
