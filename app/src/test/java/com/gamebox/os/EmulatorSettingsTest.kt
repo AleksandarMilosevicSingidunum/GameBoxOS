@@ -105,7 +105,14 @@ class EmulatorSettingsTest {
             Triple("SNES", "Nintendo - SNES / SFC (Snes9x)", "snes9x_libretro_android.so"),
             Triple("GBA", "Nintendo - Game Boy Advance (mGBA)", "mgba_libretro_android.so"),
             Triple("Genesis", "Sega - MS/GG/MD/CD (Genesis Plus GX)", "genesis_plus_gx_libretro_android.so"),
-            Triple("N64", "Nintendo - Nintendo 64 (Mupen64Plus-Next)", "mupen64plus_next_libretro_android.so"),
+            Triple("N64", "Nintendo - Nintendo 64 (Mupen64Plus-Next)", "mupen64plus_next_gles3_libretro_android.so"),
+            Triple("NDS", "Nintendo - Nintendo DS (melonDS)", "melonds_libretro_android.so"),
+            Triple("PS1", "Sony - PlayStation (PCSX-ReARMed)", "pcsx_rearmed_libretro_android.so"),
+            Triple("Dreamcast", "Sega - Dreamcast (Flycast)", "flycast_libretro_android.so"),
+            Triple("Master System", "Sega - MS/GG/MD/CD (Genesis Plus GX)", "genesis_plus_gx_libretro_android.so"),
+            Triple("PC Engine", "NEC - PC Engine / SuperGrafx / CD (Beetle PCE FAST)", "mednafen_pce_fast_libretro_android.so"),
+            Triple("WonderSwan", "Bandai - WonderSwan / Color (Beetle Cygne)", "mednafen_wswan_libretro_android.so"),
+            Triple("Atari 2600", "Atari - 2600 (Stella)", "stella_libretro_android.so"),
         )
 
         cases.forEachIndexed { index, (platform, core, fileName) ->

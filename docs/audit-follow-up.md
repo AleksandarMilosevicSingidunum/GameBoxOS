@@ -1141,3 +1141,13 @@ Genesis, N64, and the existing NES title each present their own core guidance; g
 no approved adapter omit the guidance. JVM coverage verifies both a GBC core description
 and the unsupported-platform omission. This is Android UI/presentation evidence, separate
 from live emulator gameplay and physical accessibility acceptance.
+
+RetroArch adapter coverage checkpoint (2026-09-28): the profile registry now also
+provides verified Android core filenames for Nintendo DS/melonDS, PlayStation/PCSX-
+ReARMed, Dreamcast/Flycast, Master System and Game Gear/Genesis Plus GX, PC Engine/
+Beetle PCE FAST, WonderSwan/Beetle Cygne, and Atari 2600/Stella. The Nintendo 64
+contract was corrected to the Android GLES3 build filename
+`mupen64plus_next_gles3_libretro_android.so`. The complete JVM suite covers these
+contracts. This is deterministic adapter configuration evidence only; it does not
+claim live core installation, BIOS availability, gameplay, or save compatibility for
+these additional families.

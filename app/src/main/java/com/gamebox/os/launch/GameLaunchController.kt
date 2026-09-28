@@ -103,7 +103,36 @@ class EmulatorCapabilityRegistry(
             )
             "n64", "nintendo64" -> RetroArchPlatformProfile(
                 requiredCore = "Nintendo - Nintendo 64 (Mupen64Plus-Next)",
-                coreFileName = "mupen64plus_next_libretro_android.so",
+                coreFileName = "mupen64plus_next_gles3_libretro_android.so",
+            )
+            "nds", "nintendods", "dsi" -> RetroArchPlatformProfile(
+                requiredCore = "Nintendo - Nintendo DS (melonDS)",
+                coreFileName = "melonds_libretro_android.so",
+            )
+            "ps1", "psx", "playstation", "sonyplaystation" -> RetroArchPlatformProfile(
+                requiredCore = "Sony - PlayStation (PCSX-ReARMed)",
+                coreFileName = "pcsx_rearmed_libretro_android.so",
+            )
+            "dreamcast", "segadreamcast" -> RetroArchPlatformProfile(
+                requiredCore = "Sega - Dreamcast (Flycast)",
+                coreFileName = "flycast_libretro_android.so",
+            )
+            "mastersystem", "segamastersystem", "gamegear", "segagamegear" ->
+                RetroArchPlatformProfile(
+                    requiredCore = "Sega - MS/GG/MD/CD (Genesis Plus GX)",
+                    coreFileName = "genesis_plus_gx_libretro_android.so",
+                )
+            "pcengine", "turbografx16" -> RetroArchPlatformProfile(
+                requiredCore = "NEC - PC Engine / SuperGrafx / CD (Beetle PCE FAST)",
+                coreFileName = "mednafen_pce_fast_libretro_android.so",
+            )
+            "wonderswan", "wonderswancolor" -> RetroArchPlatformProfile(
+                requiredCore = "Bandai - WonderSwan / Color (Beetle Cygne)",
+                coreFileName = "mednafen_wswan_libretro_android.so",
+            )
+            "atari2600" -> RetroArchPlatformProfile(
+                requiredCore = "Atari - 2600 (Stella)",
+                coreFileName = "stella_libretro_android.so",
             )
             else -> null
         }
