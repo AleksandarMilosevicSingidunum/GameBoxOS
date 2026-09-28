@@ -42,6 +42,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
@@ -51,6 +53,7 @@ import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.composed
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -143,6 +146,17 @@ import com.gamebox.os.source.searchVimmLairAcrossPlatforms
 import com.gamebox.os.source.vimmLairSearchPlatforms
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
+
+/** Keeps controller-focused TV settings controls inside the visible scroll viewport. */
+private fun Modifier.bringFocusedControlIntoView(): Modifier = composed {
+    val requester = remember { BringIntoViewRequester() }
+    val scope = rememberCoroutineScope()
+    bringIntoViewRequester(requester).onFocusChanged { state ->
+        if (state.isFocused) {
+            scope.launch { requester.bringIntoView() }
+        }
+    }
+}
 
 internal enum class Destination(val title: String) {
     HOME("Home"), LIBRARY("Library"), STORE("Store"), DOWNLOADS("Downloads"),
@@ -5264,7 +5278,7 @@ private fun SettingsScreen(
                     label = { Text(label) },
                     modifier = Modifier.semantics {
                         contentDescription = "TV safe area $label"
-                    }.focusable(),
+                    }.bringFocusedControlIntoView().focusable(),
                 )
             }
         }

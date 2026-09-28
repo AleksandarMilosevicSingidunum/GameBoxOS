@@ -69,6 +69,7 @@ class BlueprintScreenshotsTest {
                             .assertExists()
                             .performSemanticsAction(SemanticsActions.RequestFocus)
                             .assertIsFocused()
+                            .assertIsDisplayed()
                     }
                 }
             }

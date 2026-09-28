@@ -1608,4 +1608,6 @@ game/details actions into the download state surface; the check passed on the
 TV Display-settings coverage (2026-09-28): the wide screenshot flow now also
 asserts that Settings exposes the Display section and a focusable TV safe-area
 control. This protects the user-facing overscan configuration on the TV-sized
-layout; the 1920×1080/160-dpi emulator run remains green.
+layout; safe-area chips now request bring-into-view when controller focus lands
+on them. The 1920×1080/160-dpi emulator run remains green with the stronger
+visible-focus assertion, and the dedicated TV host suite remains `OK (4 tests)`.
