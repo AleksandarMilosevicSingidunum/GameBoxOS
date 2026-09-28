@@ -1856,3 +1856,16 @@ without stealing per-screen focus. The dedicated TV suite passed `OK (8 tests)`
 and the combined Blueprint + TV profile passed `OK (12 tests)` at 1920×1080/160;
 physical controller and Honor Desktop Mode behavior remain separate hardware
 evidence.
+
+7z import crash correction (2026-09-29): the Honor crash buffer recorded a
+`NoClassDefFoundError` for `org.tukaani.xz.LZMA2Options` while importing a 7z
+archive through `SevenZFile`; the failure occurred before the explicit XZ runtime
+dependency was added in `66bea1c`. The rebuilt APK was installed on Honor at
+00:38, and the new Android instrumentation regression uses a synthetic PSP ISO
+payload to exercise packaged 7z/LZMA2 extraction. This is runtime dependency
+evidence, not a claim of importing or distributing a commercial game binary.
+
+TV 1280×720 dimension gate (2026-09-29): the combined production Blueprint and
+dedicated TV host flow passed `OK (12 tests)` at 1280×720/160, and the emulator
+display override was restored afterward. This complements the 1920×1080/160
+profile; physical HDMI overscan and Honor Desktop Mode windowing remain separate.
