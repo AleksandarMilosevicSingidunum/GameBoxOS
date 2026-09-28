@@ -5,6 +5,13 @@ Keep implementation, production integration, automated validation, live-service/
 validation and hardware acceptance separate. The original audit is a frozen baseline,
 not a claim that subsequent branch work is already on main.
 
+Cross-platform regression checkpoint (28 September 2026): after the dedicated external
+display host and confirmation-state changes, the complete Android JVM suite reported
+551 tests with zero failures, zero errors, and one explicit privilege-based skip. The
+Windows `GameBox.Windows.Core.Tests` Release harness also passed. These are local
+software regression results; they do not replace live-provider, signed-release, or
+physical-display acceptance.
+
 ## Current implementation checkpoint (28 September 2026)
 
 Windows release packaging checkpoint: the self-contained `win-x64` publish completed
