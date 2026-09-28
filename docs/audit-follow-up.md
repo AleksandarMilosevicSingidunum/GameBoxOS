@@ -17,6 +17,11 @@ instrumentation run: 68 tests completed, one explicit real-SAF setup test skippe
 the clean emulator state, and zero failures. This includes the production screenshot
 flow for the PC Hub in the current build.
 
+Release metadata checkpoint (28 September 2026): the repository's Android version-code
+and APK manifest regression suite ran 8 tests with zero failures. This validates the
+pre-signing metadata gate; it is not evidence that protected signing secrets or the
+production update channel have been exercised.
+
 ## Current implementation checkpoint (28 September 2026)
 
 Windows release packaging checkpoint: the self-contained `win-x64` publish completed
