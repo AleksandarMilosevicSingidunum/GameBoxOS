@@ -4,6 +4,7 @@ import android.content.Intent
 import android.os.Build
 import android.os.Bundle
 import android.os.OutcomeReceiver
+import android.view.WindowInsetsController
 import android.view.InputDevice
 import android.view.KeyEvent
 import android.view.MotionEvent
@@ -45,6 +46,12 @@ abstract class GameBoxHostActivity : ComponentActivity() {
                 override fun onError(error: Throwable) = Unit
             },
         )
+        if (Build.VERSION.SDK_INT >= 35) {
+            window.insetsController?.setSystemBarsAppearance(
+                WindowInsetsController.APPEARANCE_TRANSPARENT_CAPTION_BAR_BACKGROUND,
+                WindowInsetsController.APPEARANCE_TRANSPARENT_CAPTION_BAR_BACKGROUND,
+            )
+        }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {

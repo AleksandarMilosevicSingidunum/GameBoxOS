@@ -1825,3 +1825,10 @@ correctly configured with the Android fullscreen request, edge-to-edge flags,
 and 1920x1080 display target; this additional probe confirms that the final
 borderless result depends on the Honor Desktop Mode window manager and cannot
 be claimed from app-side instrumentation alone.
+
+Transparent-caption fallback (2026-09-28): the TV host also applies Android
+15's supported transparent caption-bar appearance when available, preserving
+the edge-to-edge fallback on older releases. The APK compiled and the complete
+JVM suite passed. On the Honor HDMI probe, Desktop Mode still kept the external
+task under its own window manager and exposed the Honor desktop after the
+caption interaction; no caption-free physical-TV pass is claimed.
