@@ -1751,5 +1751,5 @@ landscape, edge-to-edge, fullscreen flags, and hidden system bars from
 multi-window callbacks. This closes the Android configuration path that could
 otherwise restore window decorations while the dedicated TV activity remained
 alive. The rebuilt artifact passed the dedicated TV-host instrumentation suite
-with `OK (5 tests)`; physical firmware windowing and HDMI reconnect behavior remain
+with `OK (6 tests)`; physical firmware windowing and HDMI reconnect behavior remain
 separate hardware evidence.

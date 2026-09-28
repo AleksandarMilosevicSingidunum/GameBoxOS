@@ -3,6 +3,7 @@ package com.gamebox.os
 import android.app.ActivityOptions
 import android.content.pm.ActivityInfo
 import android.content.ComponentName
+import android.content.res.Configuration
 import android.view.KeyEvent
 import android.view.WindowManager
 import androidx.compose.ui.test.*
@@ -65,6 +66,19 @@ class TvActivityTest {
             0,
         )
         assertFalse(info.exported)
+    }
+
+    @Test
+    fun tvActivityReappliesBorderlessPolicyAfterConfigurationChange() {
+        val changed = Configuration(rule.activity.resources.configuration)
+        changed.uiMode = changed.uiMode xor Configuration.UI_MODE_NIGHT_YES
+        rule.runOnUiThread { rule.activity.onConfigurationChanged(changed) }
+        rule.waitForIdle()
+
+        assertEquals(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE, rule.activity.requestedOrientation)
+        val flags = rule.activity.window.attributes.flags
+        assertTrue(flags and WindowManager.LayoutParams.FLAG_FULLSCREEN != 0)
+        assertTrue(flags and WindowManager.LayoutParams.FLAG_FORCE_NOT_FULLSCREEN == 0)
     }
 
     @Test
