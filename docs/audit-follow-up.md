@@ -1341,3 +1341,10 @@ Display reported `HDMI Screen · 1920×1080`, exposed the TV safe-area controls,
 edge`; after force-stopping and reopening GameBox on display 8, the 8% option remained checked.
 The original 4% user setting was restored before ending the session. This validates the TV
 dimension preference and persistence through the real external-display UI, not phone rendering.
+
+TV desktop-caption dimension regression checkpoint (2026-09-28): the connected Honor task
+reported a 1920×1037 app window while the physical HDMI mode remained 1920×1080. The wide
+layout policy now has a focused JVM regression asserting that this caption-reduced profile
+stays non-compact and scales the Blueprint surface to the available 1037dp height. The
+focused test passed; this protects the real TV window profile without treating the desktop
+caption area as usable content.

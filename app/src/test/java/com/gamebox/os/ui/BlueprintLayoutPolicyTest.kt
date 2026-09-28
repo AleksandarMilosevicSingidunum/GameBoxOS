@@ -39,6 +39,12 @@ class BlueprintLayoutPolicyTest {
     }
 
     @Test
+    fun tvDesktopCaptionWindowStaysWideAndFitsAvailableHeight() {
+        assertFalse(shouldUseCompactLayout(DeveloperLayoutMode.AUTO, 1920f, 1037f))
+        assertEquals(1037f / 720f, blueprintViewportScale(1920f, 1037f), 0.0001f)
+    }
+
+    @Test
     fun phoneViewportDoesNotShrinkForWideDesignMath() {
         assertEquals(1f, blueprintViewportScale(412f, 915f), 0.0001f)
         assertEquals(1f, blueprintViewportScale(Float.NaN, 675f), 0.0001f)
