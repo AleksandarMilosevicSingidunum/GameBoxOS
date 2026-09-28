@@ -98,7 +98,13 @@ class BlueprintScreenshotsTest {
         }
         rule.waitForIdle()
         if (rule.activity.resources.configuration.screenWidthDp >= 900) {
-            rule.onNodeWithText("Download Manager").assertIsDisplayed()
+            // The production screen enters through the same animated transition
+            // as every other Blueprint destination; wait for the destination
+            // content rather than only for the previous composition to idle.
+            rule.waitUntil(5_000) {
+                rule.onAllNodesWithText("Download Manager").fetchSemanticsNodes().isNotEmpty()
+            }
+            rule.onNodeWithText("Download Manager").performScrollTo().assertIsDisplayed()
             val browseStore = rule.onAllNodesWithText("Browse Store").filter(hasClickAction())
             browseStore.assertCountEquals(1)
             browseStore.onFirst().assertIsFocused()

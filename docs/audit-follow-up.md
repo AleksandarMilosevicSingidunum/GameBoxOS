@@ -1767,3 +1767,12 @@ focus fallback is suppressed for the Downloads destination. The production wide
 Blueprint flow explicitly verified the clickable `Browse Store` node as focused;
 the final combined TV-profile run remained `OK (10 tests)` at 1920×1080/160 dpi,
 and the isolated Downloads state run remained `OK (2 tests)`.
+
+TV Library empty-state increment (2026-09-28): the Blueprint Library now exposes
+a focusable `Browse Store` action when no installed games are available, with
+copy explaining that authorized metadata and imports start in Store. The shared
+root focus fallback remains suppressed for Downloads so a TV transition cannot
+steal focus from its empty-state action. Kotlin compilation passed, and the
+production wide Blueprint flow completed `OK (1 test)` after waiting for the
+animated destination content; the new empty-Library path remains a separate
+runtime evidence gate.

@@ -395,6 +395,7 @@ fun GameBoxApp(
                             rememberGameFocus,
                             compact,
                             uiState,
+                            onStore = { uiState.openDestination(Destination.STORE.name) },
                         ) { uiState.openGame(it.id.value) }
                         Destination.STORE -> CatalogScreen(
                             repository, catalogDiscoveryRepository, authorizedRomImporter, games, restorableGameId, rememberGameFocus, compact,
@@ -2069,6 +2070,7 @@ private fun CollectionScreen(
     onFocused: (GameId) -> Unit,
     compact: Boolean,
     uiState: GameBoxUiState,
+    onStore: () -> Unit,
     open: (Game) -> Unit
 ) {
     val controllerActions = LocalControllerActions.current
@@ -2117,6 +2119,7 @@ private fun CollectionScreen(
             onFocused = onFocused,
             open = open,
             searchFocusRequester = searchFocusRequester,
+            onStore = onStore,
         )
         return
     }
@@ -2215,6 +2218,7 @@ private fun BlueprintLibraryScreen(
     focusTarget: GameId?,
     onFocused: (GameId) -> Unit,
     open: (Game) -> Unit,
+    onStore: () -> Unit,
     searchFocusRequester: FocusRequester? = null,
 ) {
     val summary = summarizeLibrary(games)
@@ -2224,6 +2228,15 @@ private fun BlueprintLibraryScreen(
     val freeBytes = context.filesDir.usableSpace
     val saveGames = games.filter { it.savePresent }
     var alphabetical by remember { mutableStateOf(false) }
+    val emptyLibraryFocusRequester = remember { FocusRequester() }
+    var emptyLibraryFocusClaimed by remember { mutableStateOf(false) }
+    LaunchedEffect(filtered.isEmpty(), games.isEmpty()) {
+        if (filtered.isEmpty() && games.isEmpty()) {
+            androidx.compose.runtime.withFrameNanos { }
+            kotlinx.coroutines.delay(300)
+            runCatching { emptyLibraryFocusRequester.requestFocus() }
+        }
+    }
     val sortedGames = if (alphabetical) filtered.sortedBy { it.title.lowercase() }
         else filtered.sortedWith(compareByDescending<Game> { it.lastPlayed }.thenBy { it.title.lowercase() })
     val history = filtered.filter { it.lastPlayed != null }.sortedByDescending { it.lastPlayed }
@@ -2291,7 +2304,28 @@ private fun BlueprintLibraryScreen(
             }
             if (filtered.isEmpty()) {
                 BlueprintPanel(Modifier.fillMaxWidth()) {
-                    Text("No games match these filters", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(
+                        if (games.isEmpty()) "Your library is empty" else "No games match these filters",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    if (games.isEmpty()) {
+                        Text(
+                            "Browse the Store to find authorized metadata and import a game.",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontSize = 11.sp,
+                        )
+                        Button(
+                            onClick = onStore,
+                            modifier = Modifier
+                                .focusRequester(emptyLibraryFocusRequester)
+                                .onGloballyPositioned {
+                                    if (!emptyLibraryFocusClaimed) {
+                                        val focused = runCatching { emptyLibraryFocusRequester.requestFocus() }.getOrDefault(false)
+                                        if (focused) emptyLibraryFocusClaimed = true
+                                    }
+                                },
+                        ) { Text("Browse Store") }
+                    }
                 }
             } else {
                 if (history.isNotEmpty()) {
