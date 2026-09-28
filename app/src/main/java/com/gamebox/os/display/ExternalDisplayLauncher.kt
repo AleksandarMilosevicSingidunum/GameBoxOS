@@ -24,6 +24,12 @@ internal fun firstPresentationDisplayTarget(targets: List<ExternalDisplayTarget>
 internal fun externalDisplayLaunchRequestedMessage(target: ExternalDisplayTarget): String =
     "Display switch requested for ${target.name}; confirm it if the system prompts you"
 
+internal fun shouldFinishTvActivityForRemovedDisplay(
+    currentDisplayId: Int,
+    removedDisplayId: Int,
+): Boolean =
+    currentDisplayId != Display.DEFAULT_DISPLAY && currentDisplayId == removedDisplayId
+
 internal fun presentationDisplayTargets(context: Context): List<ExternalDisplayTarget> =
     context.getSystemService(DisplayManager::class.java)
         ?.getDisplays(DisplayManager.DISPLAY_CATEGORY_PRESENTATION)

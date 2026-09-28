@@ -1227,3 +1227,12 @@ dedicated TV activity instrumentation remains separately reported. Direct HDMI
 screencap is unavailable through this device's ADB presentation-display interface;
 authoritative window/configuration and display-targeted hierarchy/input evidence are
 therefore used for this checkpoint.
+
+TV display-loss recovery checkpoint (2026-09-28): `TvActivity` now registers a
+`DisplayManager.DisplayListener` for its started/stopped lifecycle and finishes only when
+the external display hosting that activity is removed. Default-display removal and
+unrelated external-display removal are covered by JVM tests. The debug APK rebuilt
+successfully and was installed on the authorized Honor; the subsequent HDMI route again
+reported a full 1920x1080 @ 160 dpi GameBox window/configuration on the wired display.
+This software recovery guard is unit-verified; physical cable-unplug/reconnect soak
+remains a separate hardware gate.

@@ -34,4 +34,11 @@ class ExternalDisplayLauncherTest {
             externalDisplayLaunchRequestedMessage(ExternalDisplayTarget(23, "SMART TV")),
         )
     }
+
+    @Test
+    fun onlyTheRemovedExternalDisplayFinishesTvActivity() {
+        assertEquals(true, shouldFinishTvActivityForRemovedDisplay(23, 23))
+        assertEquals(false, shouldFinishTvActivityForRemovedDisplay(23, 24))
+        assertEquals(false, shouldFinishTvActivityForRemovedDisplay(0, 0))
+    }
 }
