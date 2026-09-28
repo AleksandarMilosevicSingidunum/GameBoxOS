@@ -987,6 +987,12 @@ The same package-visibility change was installed and exercised on the isolated
 non-screenshot instrumentation suite completed 64 tests with `OK (64 tests)`. The
 Blueprint screenshot class and physical display evidence remain separately tracked.
 
+The isolated API-35 visual gate was then run directly against the current APK and
+completed `BlueprintScreenshotsTest` with `OK (4 tests)`. This covers the production
+Home/Details, Library, Store, Media, PC, Settings, Downloads, and populated-layout
+capture flow used by the CI matrix. It is emulator screenshot evidence, separate from
+the live SMART TV render checkpoints and physical controller/DeX acceptance.
+
 1. Extend real game/save/return/uninstall/reinstall proof across the supported adapter patterns.
 2. Validate managed GameBox save import/backup/cloud behavior against production emulators and real endpoints.
 3. Live provider/download/volume validation against real configured endpoints and storage.
