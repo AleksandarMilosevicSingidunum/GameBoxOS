@@ -1323,9 +1323,10 @@ This protects the external-display entry boundary without weakening the non-expo
 security boundary, and remains separate from Honor firmware and physical-controller
 acceptance.
 
-TV emulator handoff checkpoint (2026-09-28): launching the legal Galaxy Patrol fixture from
-the HDMI Details screen now requests both `ActivityOptions.launchDisplayId` and the physical
-display bounds for external-display emulator handoffs. JVM tests and the debug APK build pass.
+TV emulator handoff checkpoint (historical, 2026-09-28): launching the legal Galaxy Patrol
+fixture from the HDMI Details screen requested `ActivityOptions.launchDisplayId` and an
+explicit physical display-bounds rectangle for external-display emulator handoffs. JVM tests
+and the debug APK build passed at that point.
 On the wired Honor HDMI display, the complete TV flow was exercised: Details -> Install game
 -> Verified asset worker succeeded -> installed -> Play; RetroArch resumed on display 8, with
 `launchedFromPackage=com.gamebox.os` and the HDMI task area recorded by ActivityTaskSupervisor.
@@ -1333,7 +1334,9 @@ Honor Desktop Mode still applies `hw-pc-freeform` to the third-party RetroArch t
 ignored the requested 1920x1080 bounds (`[192,103][1344,794]`), so GameBox cannot claim
 full-screen emulator presentation on this firmware without a platform/window-manager control.
 This proves legal fixture installation and display-aware launch routing, not gameplay or
-physical-controller acceptance.
+physical-controller acceptance. The later external gameplay-window consistency fix removed
+that explicit bounds rectangle from the production handoff path; see the current regression
+checkpoint near the end of this document.
 
 TV safe-area persistence checkpoint (2026-09-28): on the wired HDMI display, Settings →
 Display reported `HDMI Screen · 1920×1080`, exposed the TV safe-area controls, and applied an
