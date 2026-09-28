@@ -939,6 +939,14 @@ truncated length, and over-limit bodies. The full Android JVM suite now passes 5
 tests with zero failures, zero errors, and one explicit skip. This is local discovery
 transport evidence; it does not authorize or download copyrighted binaries.
 
+Visual-QA CI gate hardening (2026-09-28): the Android matrix no longer masks a failed
+`BlueprintScreenshotsTest` instrumentation invocation with `|| true`, and the assertion
+now accepts the complete successful suite rather than the stale one-test count. The
+runner still uploads captures and logs on failure, while the instrumentation exit status
+and a successful `OK (...)` result are now required for the visual-QA job to pass. This
+keeps phone, Desktop/TV-sized, and large-text Blueprint coverage enforceable in CI;
+physical external-display and controller soak evidence remains separate.
+
 1. Extend real game/save/return/uninstall/reinstall proof across the supported adapter patterns.
 2. Validate managed GameBox save import/backup/cloud behavior against production emulators and real endpoints.
 3. Live provider/download/volume validation against real configured endpoints and storage.
