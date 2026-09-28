@@ -982,6 +982,11 @@ the Android JVM suite remains at 568 tests with zero failures, zero errors, and 
 explicit skip. This fixes package visibility only; it does not claim live gameplay for
 those adapter families.
 
+The same package-visibility change was installed and exercised on the isolated
+`GameBox_API35` emulator without touching the connected Honor/SMART TV session. The
+non-screenshot instrumentation suite completed 64 tests with `OK (64 tests)`. The
+Blueprint screenshot class and physical display evidence remain separately tracked.
+
 1. Extend real game/save/return/uninstall/reinstall proof across the supported adapter patterns.
 2. Validate managed GameBox save import/backup/cloud behavior against production emulators and real endpoints.
 3. Live provider/download/volume validation against real configured endpoints and storage.
