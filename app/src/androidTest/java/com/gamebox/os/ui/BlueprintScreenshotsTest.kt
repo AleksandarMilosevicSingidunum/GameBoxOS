@@ -118,7 +118,10 @@ class BlueprintScreenshotsTest {
         rule.onNodeWithText("Browse authorized games, metadata, and configured sources").assertIsDisplayed()
         rule.onNodeWithContentDescription("Store console filters").assertIsDisplayed()
         rule.onNodeWithContentDescription("Store console filter: All").assertIsDisplayed()
-        rule.onNodeWithContentDescription("Store console filter: PSP").assertIsDisplayed()
+        val pspFilter = rule.onNodeWithContentDescription("Store console filter: PSP")
+        // The compact Blueprint rail scrolls horizontally on narrow/phone displays.
+        runCatching { pspFilter.performScrollTo() }
+        pspFilter.assertIsDisplayed()
         rule.onNodeWithText("Search games").assertIsDisplayed()
     }
 

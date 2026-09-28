@@ -26,6 +26,15 @@ the APK did not clear that device precondition. This is an external-device test-
 failure requiring the user to unlock the phone before rerunning, not evidence of a
 production Compose assertion failure.
 
+Fresh unlocked Honor instrumentation checkpoint (28 September 2026): after the phone
+was unlocked, the full API-35/physical instrumentation suite completed on `PGT-N19`
+with 68 tests, zero failures, zero errors, and one explicit SAF-root skip. The compact
+Store filter test initially exposed a reachability assertion that did not scroll the
+horizontal Blueprint rail; the corrected test now passes in isolation and in the full
+run. `BlueprintScreenshotsTest` completed all four production screen tests, including
+the compact Store and Settings routes. This is physical phone UI/lifecycle evidence;
+external-TV overscan, controller, and DeX soak remain separate hardware gates.
+
 Cross-platform post-save-hardening checkpoint (28 September 2026): the complete
 Android JVM suite passed 558 tests with zero failures, zero errors, and one explicit
 skip after the reversible SAF replacement change. The Windows `GameBox.Windows.Core.Tests`
