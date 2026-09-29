@@ -2078,3 +2078,10 @@ failures. The focused save test passed `OK (1 test)` and the complete
 `TvActivityTest` suite passed `OK (15 tests)` at 1920×1080/160. This is software
 TV/controller evidence; it does not claim a real save file import, physical
 controller, or Honor Desktop Mode acceptance.
+
+4K TV managed-save recheck (2026-09-30): the complete rebuilt `TvActivityTest`
+suite, including Store install, Details Play Now/uninstall, managed-save focus,
+Downloads routing, overlays, safe-area controls, and fullscreen policy, passed
+`OK (15 tests)` at 3840×2160/160. The emulator was restored to 1080×2400/420;
+this extends controller/focus evidence to the 4K-class viewport without
+claiming physical controller or Honor Desktop Mode acceptance.
