@@ -2035,3 +2035,10 @@ return flow, safe-area controls, Quick Launch, fullscreen window policy, and
 configuration reapplication. The emulator was restored to 1080×2400/420;
 this is software TV-dimension evidence and remains separate from Honor's
 physical Desktop Mode window-manager behavior.
+
+TV handoff guidance increment (2026-09-29): the external-display launch status
+now tells users to use the system fullscreen/maximize control when Desktop Mode
+opens the requested TV task as a window. This is intentionally explicit about
+the OEM boundary instead of claiming that Android window flags can override
+Honor's freeform policy. The message contract test, Android JVM suite, and
+debug APK plus instrumentation APK assembly all passed.

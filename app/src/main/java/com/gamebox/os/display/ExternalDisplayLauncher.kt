@@ -40,7 +40,7 @@ internal fun isLikelyVirtualPresentationDisplay(name: String): Boolean {
 }
 
 internal fun externalDisplayLaunchRequestedMessage(target: ExternalDisplayTarget): String =
-    "Display switch requested for ${target.name}; confirm it if the system prompts you"
+    "Display switch requested for ${target.name}; confirm it if prompted, then use the system fullscreen/maximize control if Desktop Mode opens a window"
 
 internal fun isExternalDisplayId(displayId: Int): Boolean = displayId > Display.DEFAULT_DISPLAY
 
