@@ -2015,3 +2015,14 @@ Blueprint plus TV-host profile passed `OK (19 tests)` at 1920×1080/160,
 1280×720/160, and 3840×2160/160; JVM unit tests also passed and the emulator
 was restored to 1080×2400/420. This is emulator/system-input evidence;
 physical controller and Honor Desktop Mode acceptance remain separate.
+
+Honor HDMI display probe (2026-09-29): the connected Honor exposed a genuine
+external HDMI display, display id `238`, at 1920×1080/160 with state ON and
+trusted/presentation flags. GameBox was installed and its host activity was
+successfully placed and focused on that physical display. Honor Desktop Mode
+then forced the task into `hw-pc-freeform` with bounds `192,103–1344,794`,
+despite the app's fullscreen theme and an explicit fullscreen launch request;
+therefore this run does not pass the borderless/full-viewport acceptance gate.
+The temporary HOME-role probe was reverted to `com.hihonor.android.launcher`.
+This is physical HDMI topology and launch evidence, with the remaining blocker
+identified as Honor Desktop Mode window management rather than Compose layout.
