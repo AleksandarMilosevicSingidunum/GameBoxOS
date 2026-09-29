@@ -1961,3 +1961,12 @@ the existing 1920×1080 and 1280×720 software coverage across a 16:9 4K-class
 viewport; the emulator was restored to 1080×2400/420 afterward. This remains
 emulator layout/focus evidence and does not replace physical TV overscan or
 Honor Desktop Mode acceptance.
+
+TV empty-download controller increment (2026-09-29): the production TV
+quick-actions route now has instrumentation coverage for an empty Download
+Manager. The test focuses the real clickable `Browse Store` action and verifies
+that it opens the Store destination without requiring a remote catalog record.
+The complete Blueprint plus TV-host profile passed `OK (18 tests)` at both
+1920×1080/160 and 1280×720/160; the emulator was restored to 1080×2400/420.
+This is software TV navigation evidence and does not claim physical controller,
+TV overscan, or Honor Desktop Mode acceptance.

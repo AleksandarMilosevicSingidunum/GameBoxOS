@@ -93,6 +93,39 @@ class TvActivityTest {
     }
 
     @Test
+    fun tvControllerLeavesEmptyDownloadsForStore() {
+        rule.waitUntil(15_000) {
+            rule.onAllNodesWithContentDescription("Home tab").fetchSemanticsNodes().isNotEmpty()
+        }
+        sendButton(KeyEvent.KEYCODE_BUTTON_START)
+        rule.onNodeWithContentDescription("Controller quick actions").assertIsDisplayed()
+        rule.onNodeWithContentDescription("Open download activity").performClick()
+        rule.waitUntil(5_000) {
+            rule.onAllNodesWithText("Download Manager").fetchSemanticsNodes().isNotEmpty()
+        }
+        rule.onNodeWithText("No active downloads").assertIsDisplayed()
+        rule.onAllNodesWithText("Browse Store")
+            .filter(hasClickAction())
+            .onFirst()
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .assertIsFocused()
+        // The empty-state action is the same focused production control used
+        // by the TV controller path; invoke its semantics click to keep this
+        // route deterministic across emulator input devices.
+        rule.onAllNodesWithText("Browse Store")
+            .filter(hasClickAction())
+            .onFirst()
+            .performClick()
+        rule.waitUntil(5_000) {
+            runCatching {
+                rule.onNodeWithContentDescription("Store tab").fetchSemanticsNode()
+                    .config[androidx.compose.ui.semantics.SemanticsProperties.Selected] == true
+            }.getOrDefault(false)
+        }
+        rule.onNodeWithContentDescription("Store tab").assertIsSelected()
+    }
+
+    @Test
     fun tvControllerOpensInstalledGameAndShowsPlayNow() {
         rule.waitUntil(15_000) {
             rule.onAllNodesWithContentDescription("Home tab").fetchSemanticsNodes().isNotEmpty()
