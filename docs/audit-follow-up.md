@@ -2144,3 +2144,10 @@ The supported exported `MainActivity` route was then restored on display 238;
 it remained focused and alive but Honor again placed it in
 `hw-pc-freeform` bounds `[192,103][1344,794]`. This distinguishes a correct
 security boundary from the separate OEM fullscreen limitation.
+
+Physical HDMI capture limitation (2026-09-30): while GameBox `MainActivity`
+was focused on the live HDMI display 238, `adb exec-out screencap -d 238 -p`
+returned `Failed to take screenshot. Display Id '238' is not valid.` The
+display remains authoritative through `dumpsys display` and window-manager
+topology, but this firmware/ADB path provides no direct TV frame for visual
+inspection. No screenshot-based TV acceptance claim is made from this probe.
