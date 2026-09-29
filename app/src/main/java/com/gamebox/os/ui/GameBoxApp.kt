@@ -3297,9 +3297,19 @@ internal fun GameCard(
     val emphasized = focused || hovered
     val reducedMotion = LocalReducedMotion.current
     val scale by animateFloatAsState(
-        targetValue = if (reducedMotion) 1f else if (pressed) .975f else if (emphasized) 1.018f else 1f,
+        targetValue = if (reducedMotion) 1f else if (pressed) .975f else if (emphasized) 1.025f else 1f,
         animationSpec = if (reducedMotion) snap() else spring(),
         label = "game-scale",
+    )
+    val borderWidth by animateDpAsState(
+        targetValue = if (emphasized) 2.dp else 1.dp,
+        animationSpec = if (reducedMotion) snap() else spring(),
+        label = "game-border-width",
+    )
+    val shadowElevation by animateDpAsState(
+        targetValue = if (emphasized) 12.dp else 2.dp,
+        animationSpec = if (reducedMotion) snap() else spring(),
+        label = "game-shadow",
     )
     LaunchedEffect(restoreFocus) { if (restoreFocus) focusRequester.requestFocus() }
     Surface(
@@ -3328,9 +3338,9 @@ internal fun GameCard(
             .clickable(interactionSource = source, indication = null, onClick = onClick),
         shape = RoundedCornerShape(8.dp),
         color = MaterialTheme.colorScheme.surface,
-        border = BorderStroke(if (emphasized) 2.dp else 1.dp,
+        border = BorderStroke(borderWidth,
             if (emphasized) blueprintFocusBrush() else Brush.linearGradient(listOf(Color(0xFF283443), Color(0xFF17212C)))),
-        shadowElevation = if (emphasized) 8.dp else 0.dp,
+        shadowElevation = shadowElevation,
     ) {
         BoxWithConstraints(Modifier.fillMaxSize()) {
             val cardWidth = maxWidth
