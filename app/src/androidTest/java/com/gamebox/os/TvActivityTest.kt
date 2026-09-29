@@ -174,6 +174,7 @@ class TvActivityTest {
             rule.onAllNodesWithText("Uninstall content")
                 .filter(hasClickAction())
                 .onFirst()
+                .performScrollTo()
                 .performSemanticsAction(SemanticsActions.RequestFocus)
                 .assertIsFocused()
             sendButton(KeyEvent.KEYCODE_BUTTON_B)
