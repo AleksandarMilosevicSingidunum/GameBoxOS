@@ -2058,3 +2058,12 @@ suite, including the new `Play Now` → `Uninstall content` focus path, passed
 `OK (13 tests)` at 3840×2160/160. The emulator was restored to 1080×2400/420;
 this extends the controller/focus evidence to the 4K-class viewport without
 claiming physical controller or Honor Desktop Mode acceptance.
+
+TV authorized-install flow increment (2026-09-30): the TV regression now
+drives the Store card into Details, focuses the authorized `Install game`
+action, confirms it with `BUTTON_A`, and observes the repository leave
+`NOT_INSTALLED` while the verified asset worker is queued/running. The focused
+test passed `OK (1 test)` and the complete `TvActivityTest` suite passed
+`OK (14 tests)` at 1920×1080/160. This validates the software controller and
+authorized-worker handoff; it does not claim a real network download, physical
+controller, or Honor Desktop Mode acceptance.

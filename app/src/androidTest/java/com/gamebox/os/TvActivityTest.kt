@@ -197,6 +197,57 @@ class TvActivityTest {
     }
 
     @Test
+    fun tvControllerFocusesAndStartsAuthorizedInstallAction() {
+        rule.waitUntil(15_000) {
+            rule.onAllNodesWithContentDescription("Home tab").fetchSemanticsNodes().isNotEmpty()
+        }
+        val app = InstrumentationRegistry.getInstrumentation().targetContext.applicationContext as GameBoxApplication
+        val repository = app.container.gameRepository
+        val target = repository.observeGames().value.firstOrNull { it.id.value == "galaxy-patrol" }
+            ?: error("Authorized fixture is required for TV install coverage")
+        val originalState = target.state
+        try {
+            app.container.authorizedDownloadController.cancel()
+            runBlocking { repository.setInstallStateAndAwait(target.id, InstallState.NOT_INSTALLED) }
+            val notInstalledTarget = runBlocking {
+                withTimeout(5_000) {
+                    repository.observeGames().first { games ->
+                        games.firstOrNull { it.id == target.id }?.state == InstallState.NOT_INSTALLED
+                    }
+                }.first { it.id == target.id }
+            }
+            rule.onNodeWithContentDescription("Store tab").performClick()
+            rule.waitUntil(5_000) {
+                rule.onAllNodesWithContentDescription(
+                    GameBoxSemantics.gameCardDescription(notInstalledTarget, hero = false)
+                ).fetchSemanticsNodes().isNotEmpty()
+            }
+            rule.onNodeWithContentDescription(
+                GameBoxSemantics.gameCardDescription(notInstalledTarget, hero = false)
+            ).performClick()
+            rule.waitUntil(5_000) {
+                rule.onAllNodesWithText("Install game").fetchSemanticsNodes().isNotEmpty()
+            }
+            rule.onAllNodesWithText("Install game")
+                .filter(hasClickAction())
+                .onFirst()
+                .performSemanticsAction(SemanticsActions.RequestFocus)
+                .assertIsFocused()
+            sendButton(KeyEvent.KEYCODE_BUTTON_A)
+            runBlocking {
+                withTimeout(5_000) {
+                    repository.observeGames().first { games ->
+                        games.firstOrNull { it.id == target.id }?.state != InstallState.NOT_INSTALLED
+                    }
+                }
+            }
+        } finally {
+            app.container.authorizedDownloadController.cancel()
+            runBlocking { repository.setInstallStateAndAwait(target.id, originalState) }
+        }
+    }
+
+    @Test
     fun tvControllerActivatesSafeAreaSetting() {
         rule.waitUntil(15_000) {
             rule.onAllNodesWithContentDescription("Home tab").fetchSemanticsNodes().isNotEmpty()
