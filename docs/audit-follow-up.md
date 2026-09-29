@@ -2085,3 +2085,10 @@ Downloads routing, overlays, safe-area controls, and fullscreen policy, passed
 `OK (15 tests)` at 3840×2160/160. The emulator was restored to 1080×2400/420;
 this extends controller/focus evidence to the 4K-class viewport without
 claiming physical controller or Honor Desktop Mode acceptance.
+
+720p TV managed-save recheck (2026-09-30): the same complete `TvActivityTest`
+suite passed `OK (15 tests)` at 1280×720/160, including the installed Details
+save-action path and controller routing. The emulator was restored to
+1080×2400/420; this confirms the wide-layout scaling threshold on a common HD
+TV viewport without claiming physical controller or Honor Desktop Mode
+acceptance.
