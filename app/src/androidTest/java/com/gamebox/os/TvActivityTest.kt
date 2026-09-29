@@ -249,6 +249,53 @@ class TvActivityTest {
     }
 
     @Test
+    fun tvControllerFocusesAuthorizedCopyImportAction() {
+        rule.waitUntil(15_000) {
+            rule.onAllNodesWithContentDescription("Home tab").fetchSemanticsNodes().isNotEmpty()
+        }
+        val app = InstrumentationRegistry.getInstrumentation().targetContext.applicationContext as GameBoxApplication
+        val repository = app.container.gameRepository
+        val target = repository.observeGames().value.firstOrNull { it.id.value != "galaxy-patrol" }
+            ?: error("Non-authorized catalog fixture is required for TV import coverage")
+        val originalState = target.state
+        try {
+            runBlocking { repository.setInstallStateAndAwait(target.id, InstallState.NOT_INSTALLED) }
+            val notInstalledTarget = runBlocking {
+                withTimeout(5_000) {
+                    repository.observeGames().first { games ->
+                        games.firstOrNull { it.id == target.id }?.state == InstallState.NOT_INSTALLED
+                    }
+                }.first { it.id == target.id }
+            }
+            rule.onNodeWithContentDescription("Store tab").performClick()
+            rule.waitUntil(5_000) {
+                rule.onAllNodesWithContentDescription(
+                    GameBoxSemantics.gameCardDescription(notInstalledTarget, hero = false)
+                ).fetchSemanticsNodes().isNotEmpty()
+            }
+            rule.onNodeWithContentDescription(
+                GameBoxSemantics.gameCardDescription(notInstalledTarget, hero = false)
+            ).performClick()
+            rule.waitUntil(5_000) {
+                rule.onAllNodesWithText("Import your copy").fetchSemanticsNodes().isNotEmpty()
+            }
+            rule.onNodeWithText("Import your copy")
+                .performScrollTo()
+                .performSemanticsAction(SemanticsActions.RequestFocus)
+                .assertIsFocused()
+            sendButton(KeyEvent.KEYCODE_BUTTON_B)
+            rule.waitUntil(5_000) {
+                runCatching {
+                    rule.onNodeWithContentDescription("Store tab").fetchSemanticsNode()
+                        .config[androidx.compose.ui.semantics.SemanticsProperties.Selected] == true
+                }.getOrDefault(false)
+            }
+        } finally {
+            runBlocking { repository.setInstallStateAndAwait(target.id, originalState) }
+        }
+    }
+
+    @Test
     fun tvControllerFocusesManagedSaveImportAction() {
         rule.waitUntil(15_000) {
             rule.onAllNodesWithContentDescription("Home tab").fetchSemanticsNodes().isNotEmpty()

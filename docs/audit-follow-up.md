@@ -2102,3 +2102,19 @@ test passed `OK (1 test)`, and the complete production-APK TV suite passed
 `OK (15 tests)` at 1920×1080/160. This is software TV/controller evidence and
 does not claim a real cloud endpoint, physical controller, or Honor Desktop
 Mode acceptance.
+
+TV authorized-copy import focus increment (2026-09-30): the generic Details
+`Import your copy` action for non-authorized catalog entries now uses the same
+Blueprint controller-aware action as the other wide-TV secondary controls;
+compact layouts retain the phone button behavior. The focused non-authorized
+import test passed `OK (1 test)`, and the complete production-APK TV suite
+passed `OK (16 tests)` at 1920×1080/160, covering both the import-card and
+authorized-fixture install paths. This proves TV focus routing only; file
+picker selection, extracted 7z content, physical controller input, and real
+provider downloads remain separate evidence.
+
+TV import-card dimension recheck (2026-09-30): the focused non-authorized
+`Import your copy` controller test also passed `OK (1 test)` at
+3840×2160/160 and 1280×720/160. The emulator was restored to 1080×2400/420;
+this extends the import focus evidence across the validated TV scaling range
+without claiming actual picker import or physical controller acceptance.

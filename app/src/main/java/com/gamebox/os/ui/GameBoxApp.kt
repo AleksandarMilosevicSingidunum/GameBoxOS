@@ -3636,14 +3636,12 @@ private fun DetailsScreen(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontSize = 11.sp,
                 )
-                Button(
+                TvDetailsSecondaryAction(
+                    label = if (importingAuthorizedCopy) "Importing…" else "Import your copy",
+                    compact = compact,
                     enabled = !importingAuthorizedCopy,
                     onClick = { authorizedImportLauncher.launch(arrayOf("*/*")) },
-                    modifier = Modifier.padding(top = 10.dp),
-                ) {
-                    Icon(Icons.Rounded.FileOpen, contentDescription = null, modifier = Modifier.size(16.dp))
-                    Text(if (importingAuthorizedCopy) "Importing…" else "Import your copy", Modifier.padding(start = 6.dp), fontSize = 12.sp)
-                }
+                )
                 authorizedImportMessage?.let { message ->
                     Text(
                         message,
