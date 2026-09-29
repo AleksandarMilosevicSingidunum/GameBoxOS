@@ -107,7 +107,12 @@ class TvActivityTest {
         }
         sendButton(KeyEvent.KEYCODE_BUTTON_START)
         rule.onNodeWithContentDescription("Controller quick actions").assertIsDisplayed()
-        rule.onNodeWithContentDescription("Open download activity").performClick()
+        val downloadsAction = rule.onAllNodesWithText("Downloads")
+            .filter(hasClickAction())
+            .onFirst()
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .assertIsFocused()
+        downloadsAction.performClick()
         rule.waitUntil(5_000) {
             rule.onAllNodesWithText("Download Manager").fetchSemanticsNodes().isNotEmpty()
         }

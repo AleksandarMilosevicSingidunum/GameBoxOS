@@ -6365,10 +6365,9 @@ private fun SettingsActionRow(title: String, icon: ImageVector, onClick: () -> U
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 4.dp)
+            .blueprintClick(onClick)
             .hoverable(interactionSource)
-            .focusDebugTarget()
-            .onFocusChanged { focused = it.isFocused }
-            .clickable(interactionSource = interactionSource, indication = null, onClick = onClick),
+            .onFocusChanged { focused = it.isFocused },
         color = if (emphasized) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.55f)
             else MaterialTheme.colorScheme.surface.copy(alpha = 0.84f),
         shape = RoundedCornerShape(8.dp),
