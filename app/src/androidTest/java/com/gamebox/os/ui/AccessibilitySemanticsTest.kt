@@ -9,9 +9,12 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertHasClickAction
+import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.performSemanticsAction
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.gamebox.os.domain.DownloadJob
@@ -38,6 +41,19 @@ class AccessibilitySemanticsTest {
         composeRule
             .onNodeWithContentDescription("Galaxy Patrol, Retro, installed, favorite, continue playing")
             .assertHasClickAction()
+    }
+
+    @Test
+    fun gameCardCanReceiveControllerFocusForTVNavigation() {
+        val game = Game(GameId("tv-focus"), "TV Focus", "PSP", 2026, "Homebrew", 1,
+            InstallState.INSTALLED)
+        composeRule.setContent {
+            GameCard(game, Modifier.size(320.dp, 180.dp), onClick = {})
+        }
+
+        composeRule.onNodeWithContentDescription("TV Focus, PSP, installed")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .assertIsFocused()
     }
 
     @Test

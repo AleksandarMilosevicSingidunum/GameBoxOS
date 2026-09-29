@@ -2178,6 +2178,14 @@ suite passed `OK (17 tests)` at 1920×1080/160. The test restores the original
 install state; this is software TV/controller evidence and does not claim
 physical controller, HDMI overscan, or Honor Desktop Mode acceptance.
 
+TV game-card focus semantics increment (2026-09-30): `AccessibilitySemanticsTest`
+now covers the Blueprint game-card contract at component level by requesting
+focus on an installed card and asserting focused semantics for TV/controller
+navigation. The Android JVM suite and instrumentation APK compilation passed;
+execution of this new instrumentation case remains pending because the API-35
+emulator runner currently exits with `Process crashed` without a fresh app-side
+exception.
+
 TV uninstall-dismissal return increment (2026-09-30): the controller regression
 now verifies the complete safety-dialog return contract: `BUTTON_A` opens the
 game-specific uninstall confirmation from the real Details focus chain,
