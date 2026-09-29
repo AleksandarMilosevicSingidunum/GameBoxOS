@@ -2127,3 +2127,12 @@ descriptions. JVM tests, debug APK and instrumentation APK builds passed, and
 the complete production-APK TV suite passed `OK (16 tests)` at 1920×1080/160.
 This validates presentation and controller routing; it does not claim a live
 browser download, copyrighted binary, or completed import.
+
+Physical HDMI TV recheck (2026-09-30): the connected Honor exposed HDMI
+display `238` at 1920×1080/160, and the current GameBox `MainActivity` was
+installed, launched directly on that display, focused, and alive. Honor Desktop
+Mode still placed the task in `hw-pc-freeform` with bounds `[192,103][1344,794]`
+inside the 1920×1080 display, despite GameBox fullscreen flags and landscape
+policy. This is fresh physical display-routing evidence and confirms the
+remaining limitation is the OEM window manager; it is not a borderless/full-
+viewport acceptance result and does not replace emulator TV tests.
