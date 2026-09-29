@@ -2052,3 +2052,9 @@ without the initial Details focus claim stealing it. The focused regression and
 the complete `TvActivityTest` suite both passed `OK (1 test)` and `OK (13 tests)`
 at 1920×1080/160; JVM tests and both APK builds also passed. The emulator was
 restored to 1080×2400/420.
+
+4K TV Details focus recheck (2026-09-29): the complete rebuilt `TvActivityTest`
+suite, including the new `Play Now` → `Uninstall content` focus path, passed
+`OK (13 tests)` at 3840×2160/160. The emulator was restored to 1080×2400/420;
+this extends the controller/focus evidence to the 4K-class viewport without
+claiming physical controller or Honor Desktop Mode acceptance.
