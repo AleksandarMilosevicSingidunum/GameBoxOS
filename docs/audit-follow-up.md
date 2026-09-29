@@ -1888,6 +1888,15 @@ and its normal 1080×2400/420 profile was reapplied. This run is not counted as
 TV pass or failure evidence; alternate-dimension acceptance remains unverified
 until the emulator runtime is stable.
 
+Post-reboot TV runner recheck (2026-09-30): after rebooting the API-35
+emulator, waiting for `sys.boot_completed=1`, reinstalling both current APKs,
+and clearing/reinstalling the test package, even the isolated TV startup test
+at 1920×1080/160 returned `INSTRUMENTATION_RESULT: shortMsg=Process crashed`
+with no fresh app-side exception in logcat. The normal 1080×2400/420 profile
+was restored. This confirms the current limitation is the emulator/test-runner
+environment, not a reported TV assertion failure; no alternate-dimension pass
+is claimed.
+
 TV safe-area interaction checkpoint (2026-09-29): the wide production Settings
 flow now selects the `8%` TV safe-area option through its Compose click
 semantics, verifies the rendered `Active inset: 8% on every edge.` status, and
