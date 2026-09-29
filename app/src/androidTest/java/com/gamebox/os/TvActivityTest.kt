@@ -53,6 +53,10 @@ class TvActivityTest {
         rule.onNodeWithContentDescription("Controller quick actions").assertIsDisplayed()
         sendButton(KeyEvent.KEYCODE_BUTTON_B)
         rule.onAllNodesWithContentDescription("Controller quick actions").assertCountEquals(0)
+        sendButton(KeyEvent.KEYCODE_BUTTON_SELECT)
+        rule.onNodeWithContentDescription("System status overlay").assertIsDisplayed()
+        sendButton(KeyEvent.KEYCODE_BUTTON_B)
+        rule.onAllNodesWithContentDescription("System status overlay").assertCountEquals(0)
     }
 
     @Test
