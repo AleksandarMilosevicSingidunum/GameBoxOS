@@ -1970,3 +1970,10 @@ The complete Blueprint plus TV-host profile passed `OK (18 tests)` at both
 1920×1080/160 and 1280×720/160; the emulator was restored to 1080×2400/420.
 This is software TV navigation evidence and does not claim physical controller,
 TV overscan, or Honor Desktop Mode acceptance.
+
+Updated 4K TV dimension gate (2026-09-29): the complete Blueprint plus TV-host
+profile, including the empty-download Store route, passed `OK (18 tests)` at
+3840×2160/160. This confirms the latest TV navigation/test artifact at the
+4K-class viewport; the emulator was restored to 1080×2400/420 afterward. The
+result remains emulator layout/focus evidence and does not replace physical TV
+overscan, controller, or Honor Desktop Mode acceptance.
