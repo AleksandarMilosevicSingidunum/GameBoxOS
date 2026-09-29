@@ -2009,9 +2009,9 @@ TV Quick Actions Downloads focus increment (2026-09-29): the shared
 `SettingsActionRow` now uses the focusable/confirmation-aware Blueprint action
 behavior, so the actual Downloads row inside the controller Quick Actions
 dialog participates in the TV focus tree. The regression focuses that row and
-invokes its production action, then verifies Download Manager and the empty
-state route. The complete Blueprint plus TV-host profile passed `OK (19 tests)`
-at 1920×1080/160, 1280×720/160, and 3840×2160/160; JVM unit tests also passed
-and the emulator was restored to 1080×2400/420. Dialog-window synthetic
-`BUTTON_A` delivery is not claimed by this evidence; physical controller and
-Honor Desktop Mode acceptance remain separate.
+uses system-level `UiDevice.pressDPadCenter()` to confirm it through the dialog
+window, then verifies Download Manager and the empty-state route. The complete
+Blueprint plus TV-host profile passed `OK (19 tests)` at 1920×1080/160,
+1280×720/160, and 3840×2160/160; JVM unit tests also passed and the emulator
+was restored to 1080×2400/420. This is emulator/system-input evidence;
+physical controller and Honor Desktop Mode acceptance remain separate.

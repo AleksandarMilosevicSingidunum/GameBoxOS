@@ -17,6 +17,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import androidx.test.uiautomator.UiDevice
 import com.gamebox.os.GameBoxApplication
 import com.gamebox.os.domain.InstallState
 import com.gamebox.os.ui.GameBoxSemantics
@@ -122,7 +123,8 @@ class TvActivityTest {
             .onFirst()
             .performSemanticsAction(SemanticsActions.RequestFocus)
             .assertIsFocused()
-        sendButton(KeyEvent.KEYCODE_BUTTON_A)
+        UiDevice.getInstance(InstrumentationRegistry.getInstrumentation()).pressDPadCenter()
+        rule.waitForIdle()
         rule.waitUntil(5_000) {
             runCatching {
                 rule.onNodeWithContentDescription("Store tab").fetchSemanticsNode()
