@@ -1986,3 +1986,12 @@ test)`, and the complete Blueprint plus TV-host profile passed `OK (18 tests)`
 at 1920×1080/160, 1280×720/160, and 3840×2160/160. The emulator was restored
 to 1080×2400/420. This is software controller/focus evidence and does not claim
 physical controller, TV overscan, or Honor Desktop Mode acceptance.
+
+TV safe-area Off controller increment (2026-09-29): the dedicated TV host now
+has instrumentation coverage that focuses `TV safe area Off`, confirms it with
+`BUTTON_A`, verifies the persisted `0%` inset, and restores the prior setting.
+The focused test passed `OK (1 test)`, and the complete Blueprint plus TV-host
+profile passed `OK (19 tests)` at 1920×1080/160, 1280×720/160, and
+3840×2160/160. The emulator was restored to 1080×2400/420. This verifies the
+software full-viewport configuration path; physical overscan and Honor Desktop
+Mode behavior remain separate hardware evidence.

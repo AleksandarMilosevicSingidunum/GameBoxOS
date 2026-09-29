@@ -207,6 +207,39 @@ class TvActivityTest {
     }
 
     @Test
+    fun tvControllerDisablesSafeAreaInset() {
+        rule.waitUntil(15_000) {
+            rule.onAllNodesWithContentDescription("Home tab").fetchSemanticsNodes().isNotEmpty()
+        }
+        val app = InstrumentationRegistry.getInstrumentation().targetContext.applicationContext as GameBoxApplication
+        val settings = app.container.settingsRepository
+        val originalPercent = runBlocking { settings.settings.first().safeAreaPercent }
+        try {
+            runBlocking { settings.setSafeAreaPercent(0.06f) }
+            rule.onNodeWithContentDescription("Settings tab").performClick()
+            rule.waitForIdle()
+            rule.onNodeWithContentDescription("TV safe area Off")
+                .performSemanticsAction(SemanticsActions.RequestFocus)
+                .assertIsFocused()
+            sendButton(KeyEvent.KEYCODE_BUTTON_A)
+            rule.waitUntil(5_000) {
+                rule.onAllNodesWithText("Active inset: 0% on every edge.")
+                    .fetchSemanticsNodes().isNotEmpty()
+            }
+            rule.onNodeWithText("Active inset: 0% on every edge.")
+                .performScrollTo()
+                .assertIsDisplayed()
+            runBlocking {
+                withTimeout(5_000) {
+                    settings.settings.first { kotlin.math.abs(it.safeAreaPercent) < 0.001f }
+                }
+            }
+        } finally {
+            runBlocking { settings.setSafeAreaPercent(originalPercent) }
+        }
+    }
+
+    @Test
     fun tvControllerConfirmsFocusedBlueprintQuickLaunchCard() {
         rule.waitUntil(15_000) {
             rule.onAllNodesWithContentDescription("Home tab").fetchSemanticsNodes().isNotEmpty()
