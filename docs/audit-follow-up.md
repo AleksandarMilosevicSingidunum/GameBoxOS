@@ -1999,7 +1999,8 @@ Mode behavior remain separate hardware evidence.
 TV system-status overlay controller increment (2026-09-29): the dedicated TV
 overlay regression now covers both controller utility surfaces: `BUTTON_START`
 opens Quick Actions, `BUTTON_SELECT` opens System Status, and `BUTTON_B`
-dismisses each overlay cleanly. The complete Blueprint plus TV-host profile
+dismisses each overlay cleanly; `BUTTON_Y` opens the Switch Profile dialog and
+`BUTTON_B` dismisses it as well. The complete Blueprint plus TV-host profile
 passed `OK (19 tests)` at 1920×1080/160, 1280×720/160, and 3840×2160/160.
 The emulator was restored to 1080×2400/420. This remains software controller
 evidence, separate from physical controller and Honor Desktop Mode acceptance.

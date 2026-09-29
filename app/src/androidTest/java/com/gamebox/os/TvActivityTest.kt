@@ -57,6 +57,10 @@ class TvActivityTest {
         rule.onNodeWithContentDescription("System status overlay").assertIsDisplayed()
         sendButton(KeyEvent.KEYCODE_BUTTON_B)
         rule.onAllNodesWithContentDescription("System status overlay").assertCountEquals(0)
+        sendButton(KeyEvent.KEYCODE_BUTTON_Y)
+        rule.onNodeWithText("Switch profile").assertIsDisplayed()
+        sendButton(KeyEvent.KEYCODE_BUTTON_B)
+        rule.onAllNodesWithText("Switch profile").assertCountEquals(0)
     }
 
     @Test
