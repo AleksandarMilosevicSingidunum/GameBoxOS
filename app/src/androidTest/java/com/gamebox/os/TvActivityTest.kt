@@ -251,6 +251,16 @@ class TvActivityTest {
                 rule.onAllNodesWithText("Uninstall ${installedTarget.title}?")
                     .fetchSemanticsNodes().isEmpty()
             }
+            rule.waitUntil(5_000) {
+                runCatching {
+                    rule.onNodeWithContentDescription("Library tab").fetchSemanticsNode()
+                        .config[androidx.compose.ui.semantics.SemanticsProperties.Selected] == true
+                }.getOrDefault(false)
+            }
+            rule.onNodeWithContentDescription("Library tab").assertIsSelected()
+            rule.onNodeWithContentDescription(
+                GameBoxSemantics.gameCardDescription(installedTarget, hero = false)
+            ).assertIsFocused()
         } finally {
             runBlocking { repository.setInstallStateAndAwait(target.id, originalState) }
         }

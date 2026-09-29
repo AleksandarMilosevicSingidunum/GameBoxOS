@@ -2161,6 +2161,15 @@ suite passed `OK (17 tests)` at 1920×1080/160. The test restores the original
 install state; this is software TV/controller evidence and does not claim
 physical controller, HDMI overscan, or Honor Desktop Mode acceptance.
 
+TV uninstall-dismissal return increment (2026-09-30): the controller regression
+now verifies the complete safety-dialog return contract: `BUTTON_A` opens the
+game-specific uninstall confirmation from the real Details focus chain,
+`BUTTON_B` dismisses it, and Library reopens with the same game card focused.
+The focused regression passed `OK (1 test)`, and the complete rebuilt TV host
+suite passed `OK (17 tests)` at 1920×1080/160. This remains software
+TV/controller evidence, separate from physical controller, HDMI overscan, and
+Honor Desktop Mode acceptance.
+
 TV uninstall-confirmation controller increment (2026-09-30): the dedicated
 TV regression now follows the real focus chain from `Play Now` to the wide
 `Uninstall content` action, activates it with `BUTTON_A`, verifies the exact
