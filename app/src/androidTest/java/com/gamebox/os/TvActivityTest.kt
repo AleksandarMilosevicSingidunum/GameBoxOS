@@ -167,6 +167,14 @@ class TvActivityTest {
                 rule.onAllNodesWithText("Play Now").fetchSemanticsNodes().isNotEmpty()
             }
             rule.onNodeWithText("Play Now").assertIsDisplayed()
+            rule.onNodeWithText("Play Now")
+                .performSemanticsAction(SemanticsActions.RequestFocus)
+                .assertIsFocused()
+            rule.onAllNodesWithText("Uninstall content")
+                .filter(hasClickAction())
+                .onFirst()
+                .performSemanticsAction(SemanticsActions.RequestFocus)
+                .assertIsFocused()
             sendButton(KeyEvent.KEYCODE_BUTTON_B)
             rule.waitUntil(5_000) {
                 runCatching {

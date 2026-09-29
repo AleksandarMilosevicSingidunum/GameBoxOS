@@ -3497,16 +3497,9 @@ private fun DetailsScreen(
         authorizedState.status == AuthorizedDownloadState.Status.RUNNING
     val hasRemoteSource = game.sourceUrl != null && game.expectedSha256 != null
     val primaryActionFocusRequester = remember(game.id) { FocusRequester() }
-    var primaryActionFocusClaimed by remember(game.id) { mutableStateOf(false) }
     val primaryActionModifier = Modifier
         .fillMaxWidth()
         .focusRequester(primaryActionFocusRequester)
-        .onGloballyPositioned {
-            val focused = runCatching { primaryActionFocusRequester.requestFocus() }.getOrDefault(false)
-            if (!primaryActionFocusClaimed && focused) {
-                primaryActionFocusClaimed = true
-            }
-        }
     LaunchedEffect(game.id, compact) {
         if (!compact) {
             androidx.compose.runtime.withFrameNanos { }
@@ -3895,19 +3888,29 @@ private fun DetailsScreen(
                         Button(onClick = { gameLaunchController.launchOnDisplay(game, hostDisplayId) }) {
                             Text("Play")
                         }
-                        OutlinedButton(onClick = { showUninstallConfirmation = true },
-                            enabled = launchState.status !in setOf(LaunchUiState.Status.PREPARING,
-                                LaunchUiState.Status.LAUNCHED, LaunchUiState.Status.SESSION_ERROR)) {
-                            Text("Uninstall content")
-                        }
+                        TvDetailsSecondaryAction(
+                            label = "Uninstall content",
+                            compact = compact,
+                            enabled = launchState.status !in setOf(
+                                LaunchUiState.Status.PREPARING,
+                                LaunchUiState.Status.LAUNCHED,
+                                LaunchUiState.Status.SESSION_ERROR,
+                            ),
+                            onClick = { showUninstallConfirmation = true },
+                        )
                     }
                     if (!isAuthorizedFixture && game.state in setOf(InstallState.INSTALLED,
                         InstallState.UPDATE_AVAILABLE, InstallState.MISSING_FILES)) {
-                        OutlinedButton(onClick = { showUninstallConfirmation = true },
-                            enabled = launchState.status !in setOf(LaunchUiState.Status.PREPARING,
-                                LaunchUiState.Status.LAUNCHED, LaunchUiState.Status.SESSION_ERROR)) {
-                            Text("Uninstall content")
-                        }
+                        TvDetailsSecondaryAction(
+                            label = "Uninstall content",
+                            compact = compact,
+                            enabled = launchState.status !in setOf(
+                                LaunchUiState.Status.PREPARING,
+                                LaunchUiState.Status.LAUNCHED,
+                                LaunchUiState.Status.SESSION_ERROR,
+                            ),
+                            onClick = { showUninstallConfirmation = true },
+                        )
                     }
                     if (!isAuthorizedFixture && game.state == InstallState.DOWNLOADING &&
                         game.sourceUrl != null && game.expectedSha256 != null
@@ -3987,6 +3990,52 @@ private fun DetailsScreen(
                         Text(metadata.joinToString("  •  "), color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.68f))
                     }
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun TvDetailsSecondaryAction(
+    label: String,
+    compact: Boolean,
+    enabled: Boolean,
+    onClick: () -> Unit,
+) {
+    if (compact) {
+        OutlinedButton(onClick = onClick, enabled = enabled) {
+            Text(label)
+        }
+        return
+    }
+    val actionModifier = if (enabled) {
+        Modifier.blueprintClick(onClick)
+    } else {
+        Modifier.semantics {
+            role = Role.Button
+            disabled()
+        }
+    }
+    Box(
+        modifier = actionModifier
+            .heightIn(min = 40.dp)
+            .semantics { role = Role.Button },
+        contentAlignment = Alignment.Center,
+    ) {
+        Surface(
+            shape = RoundedCornerShape(6.dp),
+            color = Color.Transparent,
+            border = BorderStroke(
+                1.dp,
+                MaterialTheme.colorScheme.outline.copy(alpha = if (enabled) 0.8f else 0.35f),
+            ),
+        ) {
+            Box(Modifier.padding(horizontal = 12.dp, vertical = 9.dp)) {
+                Text(
+                    label,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = if (enabled) 1f else 0.5f),
+                    fontSize = 10.sp,
+                )
             }
         }
     }

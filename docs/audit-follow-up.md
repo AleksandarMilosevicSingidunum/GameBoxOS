@@ -2042,3 +2042,13 @@ opens the requested TV task as a window. This is intentionally explicit about
 the OEM boundary instead of claiming that Android window flags can override
 Honor's freeform policy. The message contract test, Android JVM suite, and
 debug APK plus instrumentation APK assembly all passed.
+
+TV Details uninstall-focus increment (2026-09-29): the wide Details action for
+`Uninstall content` now uses an explicit Blueprint focus/confirmation container;
+compact phone layouts retain the native Material button. The TV regression first
+focuses `Play Now`, then focuses the uninstall action and returns with `BUTTON_B`,
+proving the secondary content-removal action participates in the TV focus tree
+without the initial Details focus claim stealing it. The focused regression and
+the complete `TvActivityTest` suite both passed `OK (1 test)` and `OK (13 tests)`
+at 1920×1080/160; JVM tests and both APK builds also passed. The emulator was
+restored to 1080×2400/420.
