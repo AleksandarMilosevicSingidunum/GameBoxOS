@@ -94,6 +94,12 @@ abstract class GameBoxHostActivity : ComponentActivity() {
             )
             return super.dispatchKeyEvent(translated)
         }
+        if (event.keyCode == KeyEvent.KEYCODE_BUTTON_B) {
+            if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) {
+                onBackPressedDispatcher.onBackPressed()
+            }
+            return true
+        }
         return super.dispatchKeyEvent(event)
     }
 

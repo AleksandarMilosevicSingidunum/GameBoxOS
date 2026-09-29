@@ -125,6 +125,22 @@ class TvActivityTest {
                 rule.onAllNodesWithText("Play Now").fetchSemanticsNodes().isNotEmpty()
             }
             rule.onNodeWithText("Play Now").assertIsDisplayed()
+            sendButton(KeyEvent.KEYCODE_BUTTON_B)
+            rule.waitUntil(5_000) {
+                runCatching {
+                    rule.onNodeWithContentDescription("Library tab").fetchSemanticsNode()
+                        .config[androidx.compose.ui.semantics.SemanticsProperties.Selected] == true
+                }.getOrDefault(false)
+            }
+            rule.onNodeWithContentDescription("Library tab").assertIsSelected()
+            rule.waitUntil(5_000) {
+                rule.onAllNodesWithContentDescription(
+                    GameBoxSemantics.gameCardDescription(installedTarget, hero = false)
+                ).fetchSemanticsNodes().isNotEmpty()
+            }
+            rule.onNodeWithContentDescription(
+                GameBoxSemantics.gameCardDescription(installedTarget, hero = false)
+            ).assertIsFocused()
         } finally {
             runBlocking { repository.setInstallStateAndAwait(target.id, originalState) }
         }

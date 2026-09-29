@@ -1942,3 +1942,14 @@ The full Blueprint plus TV-host profile passed `OK (17 tests)` at both
 1920×1080/160 and 1280×720/160; the emulator was restored to 1080×2400/420.
 This is software TV/controller evidence and does not claim physical controller
 or Honor Desktop Mode acceptance.
+
+TV Details-return controller increment (2026-09-29): `BUTTON_B` now dispatches
+through the host's Android Back dispatcher, and the Compose host owns Back for
+quick actions, system status, profile switching, and selected-game Details.
+This fixes the case where the focused Details control prevented B from reaching
+the navigation handler. The production TV regression now opens an installed
+game with `BUTTON_A`, verifies `Play Now`, sends `BUTTON_B`, and verifies that
+Library returns with the same game card focused. The complete Blueprint plus
+TV-host profile passed `OK (17 tests)` at 1920×1080/160 and 1280×720/160; the
+emulator was restored to 1080×2400/420. This remains software controller/focus
+evidence, separate from physical controller and Honor Desktop Mode acceptance.

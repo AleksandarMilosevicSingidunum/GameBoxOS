@@ -14,6 +14,7 @@ import android.provider.OpenableColumns
 import android.view.KeyEvent as AndroidKeyEvent
 import android.view.InputDevice
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.compose.BackHandler
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.AnimatedVisibility
@@ -225,6 +226,16 @@ fun GameBoxApp(
     val destination = runCatching { Destination.valueOf(uiState.destination) }
         .getOrDefault(Destination.HOME)
     val selectedGameId = uiState.selectedGameId?.let(::GameId)
+    BackHandler(
+        enabled = showQuickActions || showSystemStatus || showProfileSwitcher || selectedGameId != null,
+    ) {
+        when {
+            showQuickActions -> showQuickActions = false
+            showSystemStatus -> showSystemStatus = false
+            showProfileSwitcher -> showProfileSwitcher = false
+            selectedGameId != null -> uiState.clearSelection()
+        }
+    }
     val restorableGameId = uiState.restoreFocus(destination.name, games.map { it.id.value })?.let(::GameId)
     val rememberGameFocus: (GameId) -> Unit = { focused ->
         uiState.rememberFocus(destination.name, focused.value, games.map { it.id.value })
@@ -265,11 +276,13 @@ fun GameBoxApp(
         runtimeDeviceStatus = runtimeDeviceStatus,
     ) {
     BoxWithConstraints(
-        Modifier.fillMaxSize()
+            Modifier.fillMaxSize()
             .focusRequester(rootFocusRequester)
-            .focusable(
-                enabled = selectedGameId == null,
-            )
+            // Keep the host in the focus tree while Details is open so a
+            // controller B/back event can bubble to the shared navigation
+            // handler after the selected card leaves composition. Focus is
+            // still requested only for the root screen below.
+            .focusable()
             .onPreviewKeyEvent { event ->
                 if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
                 when (event.nativeKeyEvent.keyCode) {
