@@ -2067,3 +2067,14 @@ test passed `OK (1 test)` and the complete `TvActivityTest` suite passed
 `OK (14 tests)` at 1920×1080/160. This validates the software controller and
 authorized-worker handoff; it does not claim a real network download, physical
 controller, or Honor Desktop Mode acceptance.
+
+TV managed-save navigation increment (2026-09-30): the TV regression now opens
+an installed game's Details screen, waits for the intentional hero-action focus
+handoff, scrolls to `Managed save data`, focuses `Import save copy`, and returns
+to Library with `BUTTON_B`. The Quick Actions Downloads regression also uses
+system D-pad confirmation and the installed Details assertion scrolls its
+off-screen action before checking visibility, removing two suite-order timing
+failures. The focused save test passed `OK (1 test)` and the complete
+`TvActivityTest` suite passed `OK (15 tests)` at 1920×1080/160. This is software
+TV/controller evidence; it does not claim a real save file import, physical
+controller, or Honor Desktop Mode acceptance.

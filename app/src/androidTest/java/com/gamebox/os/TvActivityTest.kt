@@ -113,7 +113,8 @@ class TvActivityTest {
             .onFirst()
             .performSemanticsAction(SemanticsActions.RequestFocus)
             .assertIsFocused()
-        downloadsAction.performClick()
+        UiDevice.getInstance(InstrumentationRegistry.getInstrumentation()).pressDPadCenter()
+        rule.waitForIdle()
         rule.waitUntil(5_000) {
             rule.onAllNodesWithText("Download Manager").fetchSemanticsNodes().isNotEmpty()
         }
@@ -166,7 +167,7 @@ class TvActivityTest {
             rule.waitUntil(5_000) {
                 rule.onAllNodesWithText("Play Now").fetchSemanticsNodes().isNotEmpty()
             }
-            rule.onNodeWithText("Play Now").assertIsDisplayed()
+            rule.onNodeWithText("Play Now").performScrollTo().assertIsDisplayed()
             rule.onNodeWithText("Play Now")
                 .performSemanticsAction(SemanticsActions.RequestFocus)
                 .assertIsFocused()
@@ -243,6 +244,61 @@ class TvActivityTest {
             }
         } finally {
             app.container.authorizedDownloadController.cancel()
+            runBlocking { repository.setInstallStateAndAwait(target.id, originalState) }
+        }
+    }
+
+    @Test
+    fun tvControllerFocusesManagedSaveImportAction() {
+        rule.waitUntil(15_000) {
+            rule.onAllNodesWithContentDescription("Home tab").fetchSemanticsNodes().isNotEmpty()
+        }
+        val app = InstrumentationRegistry.getInstrumentation().targetContext.applicationContext as GameBoxApplication
+        val repository = app.container.gameRepository
+        val target = repository.observeGames().value.firstOrNull()
+            ?: error("Managed-save TV coverage requires a seeded catalog record")
+        val originalState = target.state
+        try {
+            runBlocking { repository.setInstallStateAndAwait(target.id, InstallState.INSTALLED) }
+            val installedTarget = runBlocking {
+                withTimeout(5_000) {
+                    repository.observeGames().first { games ->
+                        games.any { it.id == target.id && it.state == InstallState.INSTALLED }
+                    }
+                }.first { it.id == target.id }
+            }
+            rule.onNodeWithContentDescription("Library tab").performClick()
+            rule.waitUntil(5_000) {
+                rule.onAllNodesWithContentDescription(
+                    GameBoxSemantics.gameCardDescription(installedTarget, hero = false)
+                ).fetchSemanticsNodes().isNotEmpty()
+            }
+            rule.onNodeWithContentDescription(
+                GameBoxSemantics.gameCardDescription(installedTarget, hero = false)
+            ).performSemanticsAction(SemanticsActions.RequestFocus).assertIsFocused()
+            sendButton(KeyEvent.KEYCODE_BUTTON_A)
+            rule.waitUntil(5_000) {
+                rule.onAllNodesWithText("Managed save data").fetchSemanticsNodes().isNotEmpty()
+            }
+            rule.waitUntil(2_000) {
+                runCatching {
+                    rule.onNodeWithText("Play Now").fetchSemanticsNode()
+                        .config[androidx.compose.ui.semantics.SemanticsProperties.Focused] == true
+                }.getOrDefault(false)
+            }
+            rule.onNodeWithText("Import save copy")
+                .performScrollTo()
+                .performSemanticsAction(SemanticsActions.RequestFocus)
+                .assertIsFocused()
+            sendButton(KeyEvent.KEYCODE_BUTTON_B)
+            rule.waitUntil(5_000) {
+                runCatching {
+                    rule.onNodeWithContentDescription("Library tab").fetchSemanticsNode()
+                        .config[androidx.compose.ui.semantics.SemanticsProperties.Selected] == true
+                }.getOrDefault(false)
+            }
+            rule.onNodeWithContentDescription("Library tab").assertIsSelected()
+        } finally {
             runBlocking { repository.setInstallStateAndAwait(target.id, originalState) }
         }
     }
