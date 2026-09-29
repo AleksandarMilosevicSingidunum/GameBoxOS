@@ -3661,7 +3661,7 @@ private fun DetailsScreen(
         ImportedGameReimportCard(game, importer, repository,
             enabled = launchState.status !in setOf(LaunchUiState.Status.PREPARING,
                 LaunchUiState.Status.LAUNCHED, LaunchUiState.Status.SESSION_ERROR))
-        PerGameSaveCard(game, activeSaveController, enabled = launchState.status !in setOf(
+        PerGameSaveCard(game, activeSaveController, compact = compact, enabled = launchState.status !in setOf(
             LaunchUiState.Status.PREPARING, LaunchUiState.Status.LAUNCHED, LaunchUiState.Status.SESSION_ERROR))
         Surface(
             modifier = Modifier.fillMaxWidth().height(if (compact) 252.dp else 292.dp),

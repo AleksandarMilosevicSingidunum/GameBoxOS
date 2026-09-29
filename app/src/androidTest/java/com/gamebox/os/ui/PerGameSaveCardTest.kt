@@ -28,7 +28,7 @@ class PerGameSaveCardTest {
             override fun observeState() = state
             override fun observeBusy() = busy
         }
-        compose.setContent { MaterialTheme { PerGameSaveCard(game, controller, enabled = true) } }
+        compose.setContent { MaterialTheme { PerGameSaveCard(game, controller, compact = true, enabled = true) } }
         compose.onNodeWithText("Back up save copy").assertIsNotEnabled()
         compose.onNodeWithText("Restore save copy").assertIsNotEnabled()
         compose.onNodeWithText("Export save backup").assertIsNotEnabled()
@@ -49,7 +49,7 @@ class PerGameSaveCardTest {
             override fun observeState() = state
             override fun restoreSave() { restores++ }
         }
-        compose.setContent { MaterialTheme { PerGameSaveCard(game, controller, enabled = true) } }
+        compose.setContent { MaterialTheme { PerGameSaveCard(game, controller, compact = true, enabled = true) } }
         compose.onNodeWithText("Restore save copy").performClick()
         compose.runOnIdle { assertEquals(0, restores) }
         compose.onNodeWithText("Cancel").performClick()
@@ -66,7 +66,7 @@ class PerGameSaveCardTest {
         val controller = object : SaveSafetyController by app.container.saveSafetyController {
             override fun observeState() = state
         }
-        compose.setContent { MaterialTheme { PerGameSaveCard(game, controller, enabled = false) } }
+        compose.setContent { MaterialTheme { PerGameSaveCard(game, controller, compact = true, enabled = false) } }
         compose.onNodeWithText("Back up save copy").assertIsNotEnabled()
         compose.onNodeWithText("Restore save copy").assertIsNotEnabled()
         compose.onNodeWithText("Export save backup").assertIsNotEnabled()
@@ -81,7 +81,7 @@ class PerGameSaveCardTest {
         val controller = object : SaveSafetyController by app.container.saveSafetyController {
             override fun observeState() = state
         }
-        compose.setContent { MaterialTheme { PerGameSaveCard(game, controller, enabled = true) } }
+        compose.setContent { MaterialTheme { PerGameSaveCard(game, controller, compact = true, enabled = true) } }
         compose.onNodeWithText("Import save backup").performClick()
         compose.onNodeWithText("Import a backup for Save UI?").assertIsDisplayed()
         compose.onNodeWithText("Choose backup file").assertIsEnabled()
@@ -98,7 +98,7 @@ class PerGameSaveCardTest {
             override fun uploadCloudSave() { uploads++ }
             override fun downloadCloudSave() { downloads++ }
         }
-        compose.setContent { MaterialTheme { PerGameSaveCard(game, controller, enabled = true) } }
+        compose.setContent { MaterialTheme { PerGameSaveCard(game, controller, compact = true, enabled = true) } }
 
         compose.onNodeWithText("Upload cloud copy").performClick()
         compose.onNodeWithText("Restore cloud copy").performClick()

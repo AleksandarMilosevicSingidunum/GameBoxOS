@@ -2092,3 +2092,13 @@ save-action path and controller routing. The emulator was restored to
 1080×2400/420; this confirms the wide-layout scaling threshold on a common HD
 TV viewport without claiming physical controller or Honor Desktop Mode
 acceptance.
+
+TV managed-save Blueprint action increment (2026-09-30): wide Details layouts
+now render managed-save actions through the shared Blueprint focus/press
+behavior, while compact phone layouts retain Material buttons. Backup, import,
+restore, export, and cloud-copy actions keep their enabled/disabled semantics.
+The managed-save card UI suite passed `OK (5 tests)`, the focused TV save-flow
+test passed `OK (1 test)`, and the complete production-APK TV suite passed
+`OK (15 tests)` at 1920×1080/160. This is software TV/controller evidence and
+does not claim a real cloud endpoint, physical controller, or Honor Desktop
+Mode acceptance.
