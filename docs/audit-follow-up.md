@@ -2026,3 +2026,12 @@ therefore this run does not pass the borderless/full-viewport acceptance gate.
 The temporary HOME-role probe was reverted to `com.hihonor.android.launcher`.
 This is physical HDMI topology and launch evidence, with the remaining blocker
 identified as Honor Desktop Mode window management rather than Compose layout.
+
+Fresh TV-host regression (2026-09-29): the dedicated `TvActivityTest` suite
+passed `OK (13 tests)` at 1920×1080/160 on the API-35 emulator after rebuilding
+and reinstalling both APKs. It covered the current controller overlays, shoulder
+navigation, Downloads-to-Store empty state, installed-game Details/Play Now
+return flow, safe-area controls, Quick Launch, fullscreen window policy, and
+configuration reapplication. The emulator was restored to 1080×2400/420;
+this is software TV-dimension evidence and remains separate from Honor's
+physical Desktop Mode window-manager behavior.
