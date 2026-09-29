@@ -1931,3 +1931,14 @@ installed-game TV screenshot test was also kept on its valid MainActivity
 click path; controller confirmation remains covered by the dedicated
 TvActivity production-host tests rather than an invalid focus assertion in the
 screenshot harness.
+
+TV installed-game controller increment (2026-09-29): the production
+`GameCard` now explicitly participates in Android focus and handles
+A/DPAD-center/Enter confirmation, closing the gap where installed Library cards
+could be clicked but not focused by a TV controller. A dedicated `TvActivity`
+regression marks a seeded game installed, navigates to Library, focuses the
+real card, sends `BUTTON_A`, and verifies the Details panel exposes `Play Now`.
+The full Blueprint plus TV-host profile passed `OK (17 tests)` at both
+1920×1080/160 and 1280×720/160; the emulator was restored to 1080×2400/420.
+This is software TV/controller evidence and does not claim physical controller
+or Honor Desktop Mode acceptance.

@@ -18,6 +18,8 @@ import org.junit.runner.RunWith
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.gamebox.os.GameBoxApplication
+import com.gamebox.os.domain.InstallState
+import com.gamebox.os.ui.GameBoxSemantics
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
@@ -88,6 +90,44 @@ class TvActivityTest {
             rule.onAllNodesWithText("Download Manager").fetchSemanticsNodes().isNotEmpty()
         }
         rule.onNodeWithText("Download Manager").assertIsDisplayed()
+    }
+
+    @Test
+    fun tvControllerOpensInstalledGameAndShowsPlayNow() {
+        rule.waitUntil(15_000) {
+            rule.onAllNodesWithContentDescription("Home tab").fetchSemanticsNodes().isNotEmpty()
+        }
+        val app = InstrumentationRegistry.getInstrumentation().targetContext.applicationContext as GameBoxApplication
+        val repository = app.container.gameRepository
+        val target = repository.observeGames().value.firstOrNull()
+            ?: error("Installed-game TV coverage requires a seeded catalog record")
+        val originalState = target.state
+        try {
+            runBlocking { repository.setInstallStateAndAwait(target.id, InstallState.INSTALLED) }
+            val installedTarget = runBlocking {
+                withTimeout(5_000) {
+                    repository.observeGames().first { games ->
+                        games.any { it.id == target.id && it.state == InstallState.INSTALLED }
+                    }
+                }.first { it.id == target.id }
+            }
+            rule.onNodeWithContentDescription("Library tab").performClick()
+            rule.waitUntil(5_000) {
+                rule.onAllNodesWithContentDescription(
+                    GameBoxSemantics.gameCardDescription(installedTarget, hero = false)
+                ).fetchSemanticsNodes().isNotEmpty()
+            }
+            rule.onNodeWithContentDescription(
+                GameBoxSemantics.gameCardDescription(installedTarget, hero = false)
+            ).performSemanticsAction(SemanticsActions.RequestFocus).assertIsFocused()
+            sendButton(KeyEvent.KEYCODE_BUTTON_A)
+            rule.waitUntil(5_000) {
+                rule.onAllNodesWithText("Play Now").fetchSemanticsNodes().isNotEmpty()
+            }
+            rule.onNodeWithText("Play Now").assertIsDisplayed()
+        } finally {
+            runBlocking { repository.setInstallStateAndAwait(target.id, originalState) }
+        }
     }
 
     @Test

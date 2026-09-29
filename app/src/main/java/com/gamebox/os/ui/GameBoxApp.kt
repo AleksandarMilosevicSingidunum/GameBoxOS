@@ -3303,6 +3303,22 @@ internal fun GameCard(
             .onFocusChanged { focused = it.isFocused; if (it.isFocused) onFocused(game.id) }
             .graphicsLayer { scaleX = scale; scaleY = scale }
             .hoverable(source)
+            .focusable()
+            .onPreviewKeyEvent { event ->
+                if (event.type != KeyEventType.KeyDown) {
+                    false
+                } else {
+                    when (event.nativeKeyEvent.keyCode) {
+                        AndroidKeyEvent.KEYCODE_BUTTON_A,
+                        AndroidKeyEvent.KEYCODE_DPAD_CENTER,
+                        AndroidKeyEvent.KEYCODE_ENTER -> {
+                            onClick()
+                            true
+                        }
+                        else -> false
+                    }
+                }
+            }
             .clickable(interactionSource = source, indication = null, onClick = onClick),
         shape = RoundedCornerShape(8.dp),
         color = MaterialTheme.colorScheme.surface,
