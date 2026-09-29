@@ -109,13 +109,7 @@ class TvActivityTest {
             .onFirst()
             .performSemanticsAction(SemanticsActions.RequestFocus)
             .assertIsFocused()
-        // The empty-state action is the same focused production control used
-        // by the TV controller path; invoke its semantics click to keep this
-        // route deterministic across emulator input devices.
-        rule.onAllNodesWithText("Browse Store")
-            .filter(hasClickAction())
-            .onFirst()
-            .performClick()
+        sendButton(KeyEvent.KEYCODE_BUTTON_A)
         rule.waitUntil(5_000) {
             runCatching {
                 rule.onNodeWithContentDescription("Store tab").fetchSemanticsNode()

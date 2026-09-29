@@ -4169,6 +4169,21 @@ internal fun DownloadsScreen(
                     modifier = Modifier
                         .focusRequester(emptyDownloadsFocusRequester)
                         .focusable()
+                        .onPreviewKeyEvent { event ->
+                            if (event.type != KeyEventType.KeyDown) {
+                                false
+                            } else {
+                                when (event.nativeKeyEvent.keyCode) {
+                                    AndroidKeyEvent.KEYCODE_BUTTON_A,
+                                    AndroidKeyEvent.KEYCODE_DPAD_CENTER,
+                                    AndroidKeyEvent.KEYCODE_ENTER -> {
+                                        onStore()
+                                        true
+                                    }
+                                    else -> false
+                                }
+                            }
+                        }
                         .bringFocusedControlIntoView()
                         .onGloballyPositioned {
                             if (!emptyDownloadsFocusClaimed) {

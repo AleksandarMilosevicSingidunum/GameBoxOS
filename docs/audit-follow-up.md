@@ -1977,3 +1977,12 @@ profile, including the empty-download Store route, passed `OK (18 tests)` at
 4K-class viewport; the emulator was restored to 1080×2400/420 afterward. The
 result remains emulator layout/focus evidence and does not replace physical TV
 overscan, controller, or Honor Desktop Mode acceptance.
+
+TV empty-download BUTTON_A fix (2026-09-29): the focused empty Download
+Manager `Browse Store` action now handles the same Android confirmation keys as
+the other TV controls, including the host-translated `BUTTON_A`, instead of
+depending on a semantics-only click path. The focused regression passed `OK (1
+test)`, and the complete Blueprint plus TV-host profile passed `OK (18 tests)`
+at 1920×1080/160, 1280×720/160, and 3840×2160/160. The emulator was restored
+to 1080×2400/420. This is software controller/focus evidence and does not claim
+physical controller, TV overscan, or Honor Desktop Mode acceptance.
