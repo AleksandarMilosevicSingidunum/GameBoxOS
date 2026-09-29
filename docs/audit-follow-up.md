@@ -1880,6 +1880,14 @@ host profile at 1920×1080/160 with `OK (13 tests)`. The emulator was restored t
 not claim emulator launch success, gameplay, physical controller input, or
 Honor Desktop Mode acceptance.
 
+Alternate TV-dimension probe limitation (2026-09-30): a fresh attempt to run
+the complete `TvActivityTest` suite at 1280×720/160 caused the API-35 emulator
+transport to go offline and return `INSTRUMENTATION_RESULT: shortMsg=Process
+crashed` without a current Java exception. ADB recovery restored the emulator,
+and its normal 1080×2400/420 profile was reapplied. This run is not counted as
+TV pass or failure evidence; alternate-dimension acceptance remains unverified
+until the emulator runtime is stable.
+
 TV safe-area interaction checkpoint (2026-09-29): the wide production Settings
 flow now selects the `8%` TV safe-area option through its Compose click
 semantics, verifies the rendered `Active inset: 8% on every edge.` status, and
