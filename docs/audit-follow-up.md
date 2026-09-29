@@ -2136,3 +2136,11 @@ inside the 1920×1080 display, despite GameBox fullscreen flags and landscape
 policy. This is fresh physical display-routing evidence and confirms the
 remaining limitation is the OEM window manager; it is not a borderless/full-
 viewport acceptance result and does not replace emulator TV tests.
+
+Dedicated-TV host boundary probe (2026-09-30): a direct shell attempt to start
+the non-exported `com.gamebox.os/.TvActivity` on HDMI was rejected by Android
+with `Permission Denial ... not exported`, as required by the host boundary.
+The supported exported `MainActivity` route was then restored on display 238;
+it remained focused and alive but Honor again placed it in
+`hw-pc-freeform` bounds `[192,103][1344,794]`. This distinguishes a correct
+security boundary from the separate OEM fullscreen limitation.
