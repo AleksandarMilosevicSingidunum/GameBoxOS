@@ -2151,3 +2151,12 @@ returned `Failed to take screenshot. Display Id '238' is not valid.` The
 display remains authoritative through `dumpsys display` and window-manager
 topology, but this firmware/ADB path provides no direct TV frame for visual
 inspection. No screenshot-based TV acceptance claim is made from this probe.
+
+TV uninstall-confirmation controller increment (2026-09-30): the dedicated
+TV regression now follows the real focus chain from `Play Now` to the wide
+`Uninstall content` action, activates it with `BUTTON_A`, verifies the exact
+game-specific confirmation dialog, and dismisses it with `BUTTON_B`. The
+focused test passed `OK (1 test)`, and the complete rebuilt `TvActivityTest`
+suite passed `OK (17 tests)` at 1920×1080/160. The test restores the original
+install state; this is software TV/controller evidence and does not claim
+physical controller, HDMI overscan, or Honor Desktop Mode acceptance.

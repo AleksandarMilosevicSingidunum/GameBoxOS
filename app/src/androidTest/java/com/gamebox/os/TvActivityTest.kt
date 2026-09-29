@@ -199,6 +199,64 @@ class TvActivityTest {
     }
 
     @Test
+    fun tvControllerConfirmsAndDismissesUninstallDialog() {
+        rule.waitUntil(15_000) {
+            rule.onAllNodesWithContentDescription("Home tab").fetchSemanticsNodes().isNotEmpty()
+        }
+        val app = InstrumentationRegistry.getInstrumentation().targetContext.applicationContext as GameBoxApplication
+        val repository = app.container.gameRepository
+        val target = repository.observeGames().value.firstOrNull()
+            ?: error("Uninstall-dialog TV coverage requires a seeded catalog record")
+        val originalState = target.state
+        try {
+            runBlocking { repository.setInstallStateAndAwait(target.id, InstallState.INSTALLED) }
+            val installedTarget = runBlocking {
+                withTimeout(5_000) {
+                    repository.observeGames().first { games ->
+                        games.any { it.id == target.id && it.state == InstallState.INSTALLED }
+                    }
+                }.first { it.id == target.id }
+            }
+            rule.onNodeWithContentDescription("Library tab").performClick()
+            rule.waitUntil(5_000) {
+                rule.onAllNodesWithContentDescription(
+                    GameBoxSemantics.gameCardDescription(installedTarget, hero = false)
+                ).fetchSemanticsNodes().isNotEmpty()
+            }
+            rule.onNodeWithContentDescription(
+                GameBoxSemantics.gameCardDescription(installedTarget, hero = false)
+            ).performSemanticsAction(SemanticsActions.RequestFocus).assertIsFocused()
+            sendButton(KeyEvent.KEYCODE_BUTTON_A)
+            rule.waitUntil(5_000) {
+                rule.onAllNodesWithText("Play Now").fetchSemanticsNodes().isNotEmpty()
+            }
+            rule.onNodeWithText("Play Now")
+                .performScrollTo()
+                .performSemanticsAction(SemanticsActions.RequestFocus)
+                .assertIsFocused()
+            rule.onAllNodesWithText("Uninstall content")
+                .filter(hasClickAction())
+                .onFirst()
+                .performScrollTo()
+                .performSemanticsAction(SemanticsActions.RequestFocus)
+                .assertIsFocused()
+            sendButton(KeyEvent.KEYCODE_BUTTON_A)
+            rule.waitUntil(5_000) {
+                rule.onAllNodesWithText("Uninstall ${installedTarget.title}?")
+                    .fetchSemanticsNodes().isNotEmpty()
+            }
+            rule.onNodeWithText("Uninstall ${installedTarget.title}?").assertIsDisplayed()
+            sendButton(KeyEvent.KEYCODE_BUTTON_B)
+            rule.waitUntil(5_000) {
+                rule.onAllNodesWithText("Uninstall ${installedTarget.title}?")
+                    .fetchSemanticsNodes().isEmpty()
+            }
+        } finally {
+            runBlocking { repository.setInstallStateAndAwait(target.id, originalState) }
+        }
+    }
+
+    @Test
     fun tvControllerFocusesAndStartsAuthorizedInstallAction() {
         rule.waitUntil(15_000) {
             rule.onAllNodesWithContentDescription("Home tab").fetchSemanticsNodes().isNotEmpty()
