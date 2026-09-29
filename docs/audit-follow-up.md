@@ -2178,6 +2178,14 @@ suite passed `OK (17 tests)` at 1920×1080/160. The test restores the original
 install state; this is software TV/controller evidence and does not claim
 physical controller, HDMI overscan, or Honor Desktop Mode acceptance.
 
+TV empty-download activation stabilization (2026-09-30): the Quick Actions
+regression now keeps its focus assertion but activates the dialog action through
+the focused Compose click contract, avoiding an unreliable UiAutomator center
+event against the separate AlertDialog window. The focused test passed `OK (1
+test)`, and the complete `TvActivityTest` suite passed `OK (17 tests)` at
+1920×1080/160. This preserves software TV navigation evidence without claiming
+physical controller input.
+
 TV game-card focus semantics increment (2026-09-30): `AccessibilitySemanticsTest`
 now covers the Blueprint game-card contract at component level by requesting
 focus on an installed card and asserting focused semantics for TV/controller

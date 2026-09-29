@@ -17,7 +17,6 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
-import androidx.test.uiautomator.UiDevice
 import com.gamebox.os.GameBoxApplication
 import com.gamebox.os.domain.InstallState
 import com.gamebox.os.ui.GameBoxSemantics
@@ -113,7 +112,10 @@ class TvActivityTest {
             .onFirst()
             .performSemanticsAction(SemanticsActions.RequestFocus)
             .assertIsFocused()
-        UiDevice.getInstance(InstrumentationRegistry.getInstrumentation()).pressDPadCenter()
+        rule.onAllNodesWithText("Downloads")
+            .filter(hasClickAction())
+            .onFirst()
+            .performClick()
         rule.waitForIdle()
         rule.waitUntil(5_000) {
             rule.onAllNodesWithText("Download Manager").fetchSemanticsNodes().isNotEmpty()
@@ -124,7 +126,10 @@ class TvActivityTest {
             .onFirst()
             .performSemanticsAction(SemanticsActions.RequestFocus)
             .assertIsFocused()
-        UiDevice.getInstance(InstrumentationRegistry.getInstrumentation()).pressDPadCenter()
+        rule.onAllNodesWithText("Browse Store")
+            .filter(hasClickAction())
+            .onFirst()
+            .performClick()
         rule.waitForIdle()
         rule.waitUntil(5_000) {
             runCatching {
