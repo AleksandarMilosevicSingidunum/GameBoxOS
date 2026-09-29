@@ -1953,3 +1953,11 @@ Library returns with the same game card focused. The complete Blueprint plus
 TV-host profile passed `OK (17 tests)` at 1920×1080/160 and 1280×720/160; the
 emulator was restored to 1080×2400/420. This remains software controller/focus
 evidence, separate from physical controller and Honor Desktop Mode acceptance.
+
+4K-class TV dimension gate (2026-09-29): after rebuilding the instrumentation
+artifacts from the authoritative source tree, the complete Blueprint plus
+dedicated TV-host profile passed `OK (17 tests)` at 3840×2160/160. This extends
+the existing 1920×1080 and 1280×720 software coverage across a 16:9 4K-class
+viewport; the emulator was restored to 1080×2400/420 afterward. This remains
+emulator layout/focus evidence and does not replace physical TV overscan or
+Honor Desktop Mode acceptance.
