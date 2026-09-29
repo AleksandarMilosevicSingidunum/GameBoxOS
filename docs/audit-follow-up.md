@@ -2186,6 +2186,14 @@ test)`, and the complete `TvActivityTest` suite passed `OK (17 tests)` at
 1920×1080/160. This preserves software TV navigation evidence without claiming
 physical controller input.
 
+TV dimension matrix recheck after Quick Actions stabilization (2026-09-30):
+the complete rebuilt `TvActivityTest` suite passed `OK (17 tests)` at
+1280×720/160 and `OK (17 tests)` at 3840×2160/160. Both runs included the
+corrected empty-download navigation path and restored the emulator to
+1080×2400/420 afterward. This extends software TV layout/focus evidence across
+720p and 4K-class profiles; it does not replace physical controller, HDMI
+overscan, or Honor Desktop Mode acceptance.
+
 TV game-card focus semantics increment (2026-09-30): `AccessibilitySemanticsTest`
 now covers the Blueprint game-card contract at component level by requesting
 focus on an installed card and asserting focused semantics for TV/controller
