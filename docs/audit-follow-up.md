@@ -2118,3 +2118,12 @@ TV import-card dimension recheck (2026-09-30): the focused non-authorized
 3840×2160/160 and 1280×720/160. The emulator was restored to 1080×2400/420;
 this extends the import focus evidence across the validated TV scaling range
 without claiming actual picker import or physical controller acceptance.
+
+TV browser-download action increment (2026-09-30): the configured-source
+`Open Vimm's Lair & track download` action in the shared discovery Details
+surface now uses the Blueprint TV secondary-action container on wide layouts,
+while retaining the compact Material action and its waiting/accessibility
+descriptions. JVM tests, debug APK and instrumentation APK builds passed, and
+the complete production-APK TV suite passed `OK (16 tests)` at 1920×1080/160.
+This validates presentation and controller routing; it does not claim a live
+browser download, copyrighted binary, or completed import.

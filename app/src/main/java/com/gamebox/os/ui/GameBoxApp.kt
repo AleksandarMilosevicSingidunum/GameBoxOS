@@ -3088,24 +3088,17 @@ private fun DiscoveryDetailsScreen(
                     fontSize = 11.sp,
                 )
                 if (directSource?.tracksBrowserDownload == true) {
-                    Button(
+                    TvDetailsSecondaryAction(
+                        label = if (trackingBrowserDownload) "Waiting for browser download…"
+                        else "Open ${directSource.label} & track download",
+                        compact = narrow,
                         enabled = !importing && !trackingBrowserDownload,
+                        contentDescription = if (trackingBrowserDownload)
+                            "Waiting for browser download of ${game.title}"
+                        else
+                            "Open Vimm's Lair and track download of ${game.title}",
                         onClick = ::openAndTrackBrowserDownload,
-                        modifier = Modifier.semantics {
-                            contentDescription = if (trackingBrowserDownload)
-                                "Waiting for browser download of ${game.title}"
-                            else
-                                "Open Vimm's Lair and track download of ${game.title}"
-                        },
-                    ) {
-                        Icon(Icons.Rounded.Download, null, Modifier.size(15.dp))
-                        Text(
-                            if (trackingBrowserDownload) "Waiting for browser download…"
-                            else "Open ${directSource.label} & track download",
-                            Modifier.padding(start = 7.dp),
-                            fontSize = 11.sp,
-                        )
-                    }
+                    )
                 }
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(9.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     configuredSources.forEach { (label, url) ->
@@ -3998,6 +3991,7 @@ private fun TvDetailsSecondaryAction(
     label: String,
     compact: Boolean,
     enabled: Boolean,
+    contentDescription: String? = null,
     onClick: () -> Unit,
 ) {
     if (compact) {
@@ -4017,6 +4011,9 @@ private fun TvDetailsSecondaryAction(
     Box(
         modifier = actionModifier
             .heightIn(min = 40.dp)
+            .then(contentDescription?.let { description ->
+                Modifier.semantics { this.contentDescription = description }
+            } ?: Modifier)
             .semantics { role = Role.Button },
         contentAlignment = Alignment.Center,
     ) {
