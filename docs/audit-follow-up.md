@@ -2308,3 +2308,11 @@ TV regression now opens Library and asserts the installed game card is present.
 The strengthened focused flow passed `OK (1 test)` on the API-35 emulator,
 covering Store → Details → Install → verified content → Library continuity;
 emulator gameplay and physical TV/controller acceptance remain separate gates.
+
+Full TV host regression recheck (2026-09-30): after restoring the API-35
+emulator to its normal 1080×2400/420 profile, the rebuilt `TvActivityTest`
+controller-host suite completed `OK (19 tests)` with zero failures. This is a
+fresh software TV regression checkpoint covering the accumulated navigation,
+download-state, install-to-Library, safe-area, uninstall-confirmation, focus,
+fullscreen-policy, and Quick Actions contracts; it does not claim physical
+HDMI framing, external-controller input, or emulator gameplay acceptance.
