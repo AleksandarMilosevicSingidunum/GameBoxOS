@@ -4146,9 +4146,24 @@ internal fun DownloadsScreen(
     }?.first
     LaunchedEffect(firstActionableJob?.id, firstActionableJob?.status) {
         if (firstActionableJob != null) {
+            repeat(8) {
+                val focused = runCatching {
+                    focusManager.clearFocus(force = true)
+                    activeDownloadsFocusRequester.requestFocus()
+                }.getOrDefault(false)
+                if (focused) {
+                    activeDownloadsFocusClaimed = true
+                    return@LaunchedEffect
+                }
+                androidx.compose.runtime.withFrameNanos { }
+            }
             kotlinx.coroutines.delay(300)
             focusManager.clearFocus(force = true)
-            runCatching { activeDownloadsFocusRequester.requestFocus() }
+            runCatching {
+                if (activeDownloadsFocusRequester.requestFocus()) {
+                    activeDownloadsFocusClaimed = true
+                }
+            }
         }
     }
     val actionPlan = downloadControllerActionPlan(actionable.map { it.first.status })

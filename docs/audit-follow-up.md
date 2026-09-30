@@ -2245,3 +2245,12 @@ focused while a queued transfer is visible. `DownloadsScreenStateTest` passed
 `OK (2 tests)`, and the complete rebuilt `TvActivityTest` suite passed `OK (17
 tests)` with zero failures on the API-35 emulator. Physical provider transfer
 and controller acceptance remain separate evidence.
+
+TV compact active-download focus increment (2026-09-30): active-download
+focus acquisition now retries across composition frames before the delayed
+fallback, and the compact TV state has a regression that focuses and activates
+the real `Pause` control. The complete `DownloadsScreenStateTest` suite passed
+`OK (3 tests)`, including queued, active, paused, failed, completed, and empty
+states; the rebuilt `TvActivityTest` suite passed `OK (17 tests)` with zero
+failures. This is software TV/layout/controller evidence, separate from live
+provider transfer timing and physical controller acceptance.

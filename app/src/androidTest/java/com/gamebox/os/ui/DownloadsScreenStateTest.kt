@@ -141,4 +141,43 @@ class DownloadsScreenStateTest {
             .performClick()
         assert(storeOpened)
     }
+
+    @Test
+    fun compactTvActiveDownloadFocusesPauseAction() {
+        var pauseCount = 0
+        val controller = object : RemoteDownloadController {
+            override fun install(game: Game) = Unit
+            override fun pause(game: Game) { pauseCount++ }
+            override fun resume(game: Game) = Unit
+            override fun cancel(game: Game) = Unit
+        }
+        val current = job.copy(
+            status = DownloadStatus.DOWNLOADING,
+            downloadedBytes = 512,
+        )
+        jobs.value = listOf(current)
+        compose.setContent {
+            MaterialTheme {
+                DownloadsScreen(
+                    repository = gameRepository,
+                    downloadRepository = downloadRepository,
+                    remoteDownloadController = controller,
+                    compact = true,
+                    onStore = {},
+                    onSettings = {},
+                )
+            }
+        }
+
+        compose.onNodeWithText("Downloads").assertIsDisplayed()
+        compose.onNodeWithContentDescription(GameBoxSemantics.downloadDescription(current))
+            .assertIsDisplayed()
+        val pause = compose.onAllNodesWithText("Pause")
+            .filter(hasClickAction())
+            .onFirst()
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .assertIsFocused()
+        pause.performClick()
+        assert(pauseCount == 1)
+    }
 }
