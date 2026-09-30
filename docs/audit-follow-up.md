@@ -2270,3 +2270,11 @@ selected. The focused case passed `OK (1 test)`, and the expanded complete
 `TvActivityTest` suite passed `OK (18 tests)` with zero failures on the API-35
 emulator. This is software controller/focus evidence, separate from physical
 remote/controller mappings and HDMI/Desktop Mode acceptance.
+
+TV download-recovery state increment (2026-09-30): the Downloads UI regression
+now asserts visible normalized status text and failure/cancellation messages,
+and covers `CANCELLED` recovery through the controller-reachable `Retry` action
+alongside queued, downloading, paused, failed, completed, and empty states.
+The complete `DownloadsScreenStateTest` suite passed `OK (3 tests)` on the
+API-35 emulator; this is software TV state/accessibility evidence, separate
+from live provider failures and physical controller acceptance.

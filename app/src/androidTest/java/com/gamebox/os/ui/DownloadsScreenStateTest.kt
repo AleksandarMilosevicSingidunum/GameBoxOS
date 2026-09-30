@@ -95,15 +95,22 @@ class DownloadsScreenStateTest {
             DownloadStatus.DOWNLOADING to "Pause",
             DownloadStatus.PAUSED to "Resume",
             DownloadStatus.FAILED to "Retry",
+            DownloadStatus.CANCELLED to "Retry",
             DownloadStatus.COMPLETED to null,
         ).forEach { (status, action) ->
             val current = job.copy(
                 status = status,
-                errorReason = if (status == DownloadStatus.FAILED) "Network unavailable" else null,
+                errorReason = when (status) {
+                    DownloadStatus.FAILED -> "Network unavailable"
+                    DownloadStatus.CANCELLED -> "Transfer cancelled"
+                    else -> null
+                },
             )
             jobs.value = listOf(current)
             compose.waitForIdle()
             compose.onNodeWithContentDescription(GameBoxSemantics.downloadDescription(current)).assertIsDisplayed()
+            compose.onNodeWithText(current.status.name.lowercase().replace('_', ' ')).assertIsDisplayed()
+            current.errorReason?.let { compose.onNodeWithText(it).assertIsDisplayed() }
             action?.let {
                 compose.onNodeWithText(it)
                     .assertIsDisplayed()
