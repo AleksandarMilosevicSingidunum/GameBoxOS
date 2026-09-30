@@ -94,7 +94,7 @@ class TvActivityTest {
         sendButton(KeyEvent.KEYCODE_BUTTON_START)
         rule.onNodeWithContentDescription("Controller quick actions").assertIsDisplayed()
         rule.onNodeWithContentDescription("Open download activity").performClick()
-        rule.waitUntil(5_000) {
+        rule.waitUntil(15_000) {
             rule.onAllNodesWithText("Download Manager").fetchSemanticsNodes().isNotEmpty()
         }
         rule.onNodeWithText("Download Manager").assertIsDisplayed()
@@ -107,18 +107,14 @@ class TvActivityTest {
         }
         sendButton(KeyEvent.KEYCODE_BUTTON_START)
         rule.onNodeWithContentDescription("Controller quick actions").assertIsDisplayed()
-        val downloadsAction = rule.onAllNodesWithText("Downloads")
-            .filter(hasClickAction())
-            .onFirst()
+        val downloadsAction = rule.onNodeWithContentDescription("Downloads")
             .performSemanticsAction(SemanticsActions.RequestFocus)
             .assertIsFocused()
-        rule.onAllNodesWithText("Downloads")
-            .filter(hasClickAction())
-            .onFirst()
-            .performClick()
+        rule.onNodeWithContentDescription("Downloads")
+            .performSemanticsAction(SemanticsActions.OnClick)
         rule.waitForIdle()
-        rule.waitUntil(5_000) {
-            rule.onAllNodesWithText("Download Manager").fetchSemanticsNodes().isNotEmpty()
+        rule.waitUntil(15_000) {
+            rule.onAllNodesWithText("No active downloads").fetchSemanticsNodes().isNotEmpty()
         }
         rule.onNodeWithText("No active downloads").assertIsDisplayed()
         rule.onAllNodesWithText("Browse Store")

@@ -6421,7 +6421,8 @@ private fun SettingsActionRow(title: String, icon: ImageVector, onClick: () -> U
             .padding(vertical = 4.dp)
             .blueprintClick(onClick)
             .hoverable(interactionSource)
-            .onFocusChanged { focused = it.isFocused },
+            .onFocusChanged { focused = it.isFocused }
+            .semantics { contentDescription = title },
         color = if (emphasized) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.55f)
             else MaterialTheme.colorScheme.surface.copy(alpha = 0.84f),
         shape = RoundedCornerShape(8.dp),

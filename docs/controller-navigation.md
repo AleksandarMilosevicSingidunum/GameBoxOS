@@ -15,6 +15,11 @@ opens a read-only status overlay populated from current storage, validated netwo
 connectivity, connected input devices and the Android device model. B/Back dismisses
 either overlay before changing the underlying screen.
 
+Quick-action rows expose stable content descriptions and click semantics so the
+same action contract is available to D-pad focus, controller A/Enter activation,
+and accessibility/instrumentation tests. Downloads returns to the route-specific
+empty or active state rather than relying on a wide-layout title string.
+
 This is production input wiring with deterministic timing tests. Automated tests
 do not replace acceptance on each physical controller model; controller-specific
 axis mappings and DeX focus behavior remain physical validation items.

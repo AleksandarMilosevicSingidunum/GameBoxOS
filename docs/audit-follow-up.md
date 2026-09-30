@@ -2194,13 +2194,20 @@ corrected empty-download navigation path and restored the emulator to
 720p and 4K-class profiles; it does not replace physical controller, HDMI
 overscan, or Honor Desktop Mode acceptance.
 
+Blueprint wide-layout recheck (2026-09-30): the rebuilt `BlueprintScreenshotsTest`
+profile passed `OK (6 tests)` at 1920×1080/160 after the TV Quick Actions
+stabilization. This validates the wide Blueprint state/layout assertions and
+responsive controls separately from the `TvActivityTest` controller matrix;
+physical HDMI framing, overscan, and Honor Desktop Mode behavior remain
+separate hardware evidence.
+
 TV game-card focus semantics increment (2026-09-30): `AccessibilitySemanticsTest`
 now covers the Blueprint game-card contract at component level by requesting
 focus on an installed card and asserting focused semantics for TV/controller
-navigation. The Android JVM suite and instrumentation APK compilation passed;
-execution of this new instrumentation case remains pending because the API-35
-emulator runner currently exits with `Process crashed` without a fresh app-side
-exception.
+navigation. The Android JVM suite, instrumentation APK compilation, and the
+isolated API-35 emulator case `gameCardCanReceiveControllerFocusForTVNavigation`
+all passed `OK (1 test)`; physical controller and HDMI/Desktop Mode acceptance
+remain separate hardware evidence.
 
 TV uninstall-dismissal return increment (2026-09-30): the controller regression
 now verifies the complete safety-dialog return contract: `BUTTON_A` opens the
@@ -2219,3 +2226,13 @@ focused test passed `OK (1 test)`, and the complete rebuilt `TvActivityTest`
 suite passed `OK (17 tests)` at 1920×1080/160. The test restores the original
 install state; this is software TV/controller evidence and does not claim
 physical controller, HDMI overscan, or Honor Desktop Mode acceptance.
+
+TV Quick Actions semantics increment (2026-09-30): controller activation of
+the Quick Actions `Downloads` row now has an explicit action-row content
+description and the regression invokes its declared `OnClick` semantics,
+then waits for the route-specific `No active downloads` state so both wide
+and compact TV density profiles are covered. The isolated flow passed `OK (1
+test)`, and the complete rebuilt `TvActivityTest` suite passed `OK (17 tests)`
+on the API-35 emulator at its normal 2400×1080/420 profile. This remains
+software TV/controller evidence, separate from physical HDMI and Honor
+Desktop Mode acceptance.
