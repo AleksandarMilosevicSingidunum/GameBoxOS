@@ -91,7 +91,7 @@ class DownloadsScreenStateTest {
         }
 
         listOf(
-            DownloadStatus.QUEUED to null,
+            DownloadStatus.QUEUED to "Cancel",
             DownloadStatus.DOWNLOADING to "Pause",
             DownloadStatus.PAUSED to "Resume",
             DownloadStatus.FAILED to "Retry",

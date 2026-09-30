@@ -2236,3 +2236,12 @@ test)`, and the complete rebuilt `TvActivityTest` suite passed `OK (17 tests)`
 on the API-35 emulator at its normal 2400×1080/420 profile. This remains
 software TV/controller evidence, separate from physical HDMI and Honor
 Desktop Mode acceptance.
+
+TV queued-download focus increment (2026-09-30): queued authorized transfers
+are now included in the first actionable download target, and their Cancel
+control receives the same focus requester used by Pause/Resume/Retry. This
+prevents a controller from entering Downloads with no actionable control
+focused while a queued transfer is visible. `DownloadsScreenStateTest` passed
+`OK (2 tests)`, and the complete rebuilt `TvActivityTest` suite passed `OK (17
+tests)` with zero failures on the API-35 emulator. Physical provider transfer
+and controller acceptance remain separate evidence.

@@ -4137,6 +4137,7 @@ internal fun DownloadsScreen(
     }
     val firstActionableJob = actionable.firstOrNull { (job, _) ->
         job.status in setOf(
+            DownloadStatus.QUEUED,
             DownloadStatus.DOWNLOADING,
             DownloadStatus.PAUSED,
             DownloadStatus.FAILED,
@@ -4354,7 +4355,10 @@ internal fun DownloadsScreen(
                                     DownloadStatus.CANCELLED
                                 )
                             ) {
-                                OutlinedButton(onClick = { remoteDownloadController.cancel(remoteGame) }) {
+                                OutlinedButton(
+                                    onClick = { remoteDownloadController.cancel(remoteGame) },
+                                    modifier = primaryActionModifier,
+                                ) {
                                     Text("Cancel")
                                 }
                             }
