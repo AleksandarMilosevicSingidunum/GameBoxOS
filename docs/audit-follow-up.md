@@ -2294,3 +2294,10 @@ content file, and cleans it up when the original state was not installed. The
 focused production TV flow passed `OK (1 test)` on the API-35 emulator; this is
 authorized local-fixture installation evidence, separate from live providers,
 commercial content, emulator gameplay, and physical controller acceptance.
+
+TV contract dimension recheck (2026-09-30): the borderless viewport/cutout
+regression and the real D-pad Home → Library → Center navigation regression
+each passed `OK (1 test)` at 1280×720/160 and again at 3840×2160/160. The
+emulator was restored to 1080×2400/420 afterward. This extends software TV
+window/focus evidence across the validated dimension range and does not replace
+physical HDMI overscan or Honor Desktop Mode acceptance.
