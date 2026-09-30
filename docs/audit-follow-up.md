@@ -2278,3 +2278,11 @@ alongside queued, downloading, paused, failed, completed, and empty states.
 The complete `DownloadsScreenStateTest` suite passed `OK (3 tests)` on the
 API-35 emulator; this is software TV state/accessibility evidence, separate
 from live provider failures and physical controller acceptance.
+
+TV borderless viewport contract increment (2026-09-30): `TvActivityTest` now
+asserts the production TV host retains fullscreen plus `FLAG_LAYOUT_NO_LIMITS`
+and the API-28+ `LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS` policy. The focused
+regression passed `OK (1 test)`, and the expanded complete TV host suite passed
+`OK (19 tests)` with zero failures on the API-35 emulator. This proves the app's
+software viewport policy; Honor Desktop Mode window framing and physical HDMI
+overscan remain separate hardware evidence.

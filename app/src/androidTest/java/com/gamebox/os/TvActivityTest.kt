@@ -557,6 +557,19 @@ class TvActivityTest {
     }
 
     @Test
+    fun tvActivityUsesBorderlessViewportAndCutoutPolicy() {
+        val flags = rule.activity.window.attributes.flags
+        assertTrue(flags and WindowManager.LayoutParams.FLAG_FULLSCREEN != 0)
+        assertTrue(flags and WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS != 0)
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
+            assertEquals(
+                WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS,
+                rule.activity.window.attributes.layoutInDisplayCutoutMode,
+            )
+        }
+    }
+
+    @Test
     fun externalDisplayLaunchBundleRequestsFullscreenWindowingMode() {
         val launchBundle = ActivityOptions.makeBasic().toGameBoxFullscreenLaunchBundle()
         assertEquals(1, launchBundle.getInt("android.activity.windowingMode", -1))
