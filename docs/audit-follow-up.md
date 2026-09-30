@@ -2254,3 +2254,11 @@ the real `Pause` control. The complete `DownloadsScreenStateTest` suite passed
 states; the rebuilt `TvActivityTest` suite passed `OK (17 tests)` with zero
 failures. This is software TV/layout/controller evidence, separate from live
 provider transfer timing and physical controller acceptance.
+
+Blueprint TV dimension screenshot matrix increment (2026-09-30): the rebuilt
+`BlueprintScreenshotsTest` profile passed `OK (6 tests)` at 1280×720/160 and
+again at 3840×2160/160, covering the wide/compact settings routes, installed
+game readiness, safe-area persistence, console filters, update state, and
+real screenshot capture. The emulator was restored to 1080×2400/420 after
+the runs. This extends software layout evidence and does not claim physical
+HDMI framing, overscan, or Honor Desktop Mode acceptance.
