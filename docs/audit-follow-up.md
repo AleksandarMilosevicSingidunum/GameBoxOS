@@ -2286,3 +2286,11 @@ regression passed `OK (1 test)`, and the expanded complete TV host suite passed
 `OK (19 tests)` with zero failures on the API-35 emulator. This proves the app's
 software viewport policy; Honor Desktop Mode window framing and physical HDMI
 overscan remain separate hardware evidence.
+
+TV authorized-install completion increment (2026-09-30): the controller-driven
+Store → Details → `Install game` regression now waits for the real authorized
+Galaxy Patrol worker to reach `INSTALLED`, verifies the 49,168-byte verified
+content file, and cleans it up when the original state was not installed. The
+focused production TV flow passed `OK (1 test)` on the API-35 emulator; this is
+authorized local-fixture installation evidence, separate from live providers,
+commercial content, emulator gameplay, and physical controller acceptance.

@@ -18,6 +18,8 @@ import org.junit.runner.RunWith
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.gamebox.os.GameBoxApplication
+import com.gamebox.os.download.AssetDownloadWorker
+import com.gamebox.os.download.AuthorizedHomebrewDownload
 import com.gamebox.os.domain.InstallState
 import com.gamebox.os.ui.GameBoxSemantics
 import kotlinx.coroutines.flow.first
@@ -297,6 +299,8 @@ class TvActivityTest {
         val target = repository.observeGames().value.firstOrNull { it.id.value == "galaxy-patrol" }
             ?: error("Authorized fixture is required for TV install coverage")
         val originalState = target.state
+        val installedContent = app.filesDir.resolve(AssetDownloadWorker.INSTALL_ROOT)
+            .resolve(AuthorizedHomebrewDownload.RELATIVE_PATH)
         try {
             app.container.authorizedDownloadController.cancel()
             runBlocking { repository.setInstallStateAndAwait(target.id, InstallState.NOT_INSTALLED) }
@@ -328,12 +332,15 @@ class TvActivityTest {
             runBlocking {
                 withTimeout(5_000) {
                     repository.observeGames().first { games ->
-                        games.firstOrNull { it.id == target.id }?.state != InstallState.NOT_INSTALLED
+                        games.firstOrNull { it.id == target.id }?.state == InstallState.INSTALLED
                     }
                 }
             }
+            assertTrue(installedContent.isFile)
+            assertEquals(AuthorizedHomebrewDownload.SIZE_BYTES, installedContent.length())
         } finally {
             app.container.authorizedDownloadController.cancel()
+            if (originalState != InstallState.INSTALLED) installedContent.delete()
             runBlocking { repository.setInstallStateAndAwait(target.id, originalState) }
         }
     }
