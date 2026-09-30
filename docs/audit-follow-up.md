@@ -2301,3 +2301,10 @@ each passed `OK (1 test)` at 1280×720/160 and again at 3840×2160/160. The
 emulator was restored to 1080×2400/420 afterward. This extends software TV
 window/focus evidence across the validated dimension range and does not replace
 physical HDMI overscan or Honor Desktop Mode acceptance.
+
+TV install-to-library continuity increment (2026-09-30): after the controller
+drives the authorized fixture to verified `INSTALLED` content, the production
+TV regression now opens Library and asserts the installed game card is present.
+The strengthened focused flow passed `OK (1 test)` on the API-35 emulator,
+covering Store → Details → Install → verified content → Library continuity;
+emulator gameplay and physical TV/controller acceptance remain separate gates.

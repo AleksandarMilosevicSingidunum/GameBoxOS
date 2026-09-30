@@ -338,6 +338,15 @@ class TvActivityTest {
             }
             assertTrue(installedContent.isFile)
             assertEquals(AuthorizedHomebrewDownload.SIZE_BYTES, installedContent.length())
+            rule.onNodeWithContentDescription("Library tab").performClick()
+            rule.waitUntil(5_000) {
+                rule.onAllNodesWithContentDescription(
+                    GameBoxSemantics.gameCardDescription(target.copy(state = InstallState.INSTALLED), hero = false)
+                ).fetchSemanticsNodes().isNotEmpty()
+            }
+            rule.onNodeWithContentDescription(
+                GameBoxSemantics.gameCardDescription(target.copy(state = InstallState.INSTALLED), hero = false)
+            ).assertIsDisplayed()
         } finally {
             app.container.authorizedDownloadController.cancel()
             if (originalState != InstallState.INSTALLED) installedContent.delete()
