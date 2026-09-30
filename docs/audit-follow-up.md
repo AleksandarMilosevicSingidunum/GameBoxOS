@@ -2262,3 +2262,11 @@ game readiness, safe-area persistence, console filters, update state, and
 real screenshot capture. The emulator was restored to 1080×2400/420 after
 the runs. This extends software layout evidence and does not claim physical
 HDMI framing, overscan, or Honor Desktop Mode acceptance.
+
+TV D-pad top-navigation increment (2026-09-30): the production TV host now has
+a regression that focuses the Home tab, sends a real `DPAD_RIGHT`, verifies
+focus moves to Library, then sends `DPAD_CENTER` and verifies Library becomes
+selected. The focused case passed `OK (1 test)`, and the expanded complete
+`TvActivityTest` suite passed `OK (18 tests)` with zero failures on the API-35
+emulator. This is software controller/focus evidence, separate from physical
+remote/controller mappings and HDMI/Desktop Mode acceptance.

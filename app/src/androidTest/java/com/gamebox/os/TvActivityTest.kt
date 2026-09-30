@@ -76,6 +76,26 @@ class TvActivityTest {
     }
 
     @Test
+    fun tvControllerTraversesTopTabsWithDpad() {
+        rule.waitUntil(15_000) {
+            rule.onAllNodesWithContentDescription("Home tab").fetchSemanticsNodes().isNotEmpty()
+        }
+        rule.onNodeWithContentDescription("Home tab")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .assertIsFocused()
+        sendButton(KeyEvent.KEYCODE_DPAD_RIGHT)
+        rule.onNodeWithContentDescription("Library tab").assertIsFocused()
+        sendButton(KeyEvent.KEYCODE_DPAD_CENTER)
+        rule.waitUntil(5_000) {
+            runCatching {
+                rule.onNodeWithContentDescription("Library tab").fetchSemanticsNode()
+                    .config[androidx.compose.ui.semantics.SemanticsProperties.Selected] == true
+            }.getOrDefault(false)
+        }
+        rule.onNodeWithContentDescription("Library tab").assertIsSelected()
+    }
+
+    @Test
     fun tvActivityNavigatesWideDestinationsAndDownloadsWithController() {
         rule.waitUntil(15_000) {
             rule.onAllNodesWithContentDescription("Home tab").fetchSemanticsNodes().isNotEmpty()
