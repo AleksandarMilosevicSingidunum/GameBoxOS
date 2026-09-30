@@ -2316,3 +2316,13 @@ fresh software TV regression checkpoint covering the accumulated navigation,
 download-state, install-to-Library, safe-area, uninstall-confirmation, focus,
 fullscreen-policy, and Quick Actions contracts; it does not claim physical
 HDMI framing, external-controller input, or emulator gameplay acceptance.
+
+TV Play Now handoff probe (2026-09-30): a controller-driven probe using the
+legal bundled Galaxy Patrol fixture activated the TV Details `Play Now` action
+and the activity manager showed `com.retroarch/.browser.retroactivity.RetroActivityFuture`
+top-resumed with `launchedFromPackage=com.gamebox.os`. This is direct emulator
+handoff evidence, but the same API-35 emulator reported a SystemUI ANR while
+RetroArch remained top-resumed after Back, so no automated return-to-GameBox
+pass is claimed and no flaky test was committed. The emulator was force-stopped
+back to GameBox afterward; physical gameplay and TV return behavior remain open
+validation gates.
