@@ -2510,3 +2510,17 @@ the content surface remained blank and the OEM caption bar remained visible;
 the available fullscreen control did not change the window bounds. This is
 now a confirmed physical TV launch pass with the emulator rendering,
 borderless/fullscreen, gameplay-input, and normal-return gates still open.
+
+API-35 emulator exit-flow recheck (2026-10-01): the current debug APK was
+installed on `GameBox_API35`, the legal Galaxy Patrol title was found through
+Store search, installed, and opened through the real Details `Play Now` action.
+The 49,168-byte NES fixture still matches its expected SHA-256 and the
+emulator's RetroArch 1.22.2 package contains the required
+`fceumm_libretro_android.so` core. Activity-manager evidence showed
+`com.retroarch/.browser.retroactivity.RetroActivityFuture` top-resumed, but
+the native surface was blank; Android Back and the RetroArch menu key left the
+activity top-resumed. This reproduces the emulator runtime/exit gate without
+force-stop or task killing. The emulator is therefore a real launch attempt,
+not gameplay or return-to-GameBox evidence, and the next implementation gate
+is a compatible emulator/session strategy rather than more GameBox Store
+navigation.
