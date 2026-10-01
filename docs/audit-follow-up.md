@@ -2524,3 +2524,21 @@ force-stop or task killing. The emulator is therefore a real launch attempt,
 not gameplay or return-to-GameBox evidence, and the next implementation gate
 is a compatible emulator/session strategy rather than more GameBox Store
 navigation.
+### Keyless metadata fallback and current TV test gate (1 October 2026)
+
+Automatic catalog enrichment now uses the keyless Wikidata metadata client. It requires an
+exact normalized title, reads only bounded HTTPS entity responses, merges missing description,
+release-year, and cover-art fields, caches lookups for the process, and never creates a game
+binary source. TheGamesDB remains an explicit/manual match and discovery-sync provider; Vimm
+remains metadata/navigation-only. `WikidataMetadataClientTest` covers exact matches, field
+preservation, and no-match behavior. The full Android JVM suite and debug APK assembly pass.
+
+The API-35 emulator was still in the real `com.retroarch/.browser.retroactivity.RetroActivityFuture`
+after the prior Galaxy Patrol launch. A normal Android Back key was sent once and the activity
+did not return to GameBox; no force-stop, task kill, or synthetic relaunch was used. This keeps
+the emulator exit/return gate open.
+
+The connected production import/save/reimport run executed 11 tests on API-35 with 0 failures.
+The same run on the physical Honor device crashed its instrumentation process during the first
+reimport test before an assertion or logcat could be retrieved. This is recorded as physical
+instrumentation evidence only and does not promote emulator results to Honor/TV acceptance.
