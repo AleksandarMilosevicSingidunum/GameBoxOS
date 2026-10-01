@@ -28,6 +28,7 @@ data class MetadataMatchCandidate(
     val genre: String? = null,
     val description: String? = null,
     val artworkUrl: String? = null,
+    val provider: String = "THE_GAMES_DB",
 ) {
     init {
         require(externalId.isNotBlank() && externalId.length <= 80)
@@ -44,13 +45,13 @@ class TheGamesDbMetadataClient(
     private val connectionFactory: (URL) -> HttpsURLConnection = {
         it.openConnection() as HttpsURLConnection
     },
-) {
+) : GameMetadataCandidateProvider {
     suspend fun enrich(game: Game): Game = withContext(Dispatchers.IO) {
         val payload = fetchByName(game.title) ?: return@withContext game
         TheGamesDbMetadataParser.enrich(game, payload, json)
     }
 
-    suspend fun findCandidates(game: Game): List<MetadataMatchCandidate> = withContext(Dispatchers.IO) {
+    override suspend fun findCandidates(game: Game): List<MetadataMatchCandidate> = withContext(Dispatchers.IO) {
         val payload = fetchByName(game.title) ?: return@withContext emptyList()
         TheGamesDbMetadataParser.candidates(game, payload, json)
     }
@@ -87,6 +88,21 @@ class TheGamesDbMetadataClient(
             },
             connectionFactory = connectionFactory,
         )
+    }
+}
+
+fun interface GameMetadataCandidateProvider {
+    suspend fun findCandidates(game: Game): List<MetadataMatchCandidate>
+}
+
+/** Tries providers in order and stops at the first provider with safe candidates. */
+class GameMetadataSearchClient(private val providers: List<GameMetadataCandidateProvider>) {
+    suspend fun findCandidates(game: Game): List<MetadataMatchCandidate> {
+        providers.forEach { provider ->
+            val candidates = provider.findCandidates(game)
+            if (candidates.isNotEmpty()) return candidates
+        }
+        return emptyList()
     }
 }
 

@@ -15,3 +15,10 @@ bounded, control characters are rejected, and release years are limited to
 and the per-game artwork correction portion of DATA-27. They do not claim that an
 ambiguous TheGamesDB match has been confirmed; provider candidate selection remains
 a separate DATA-23 flow.
+
+The **Find metadata match** action now searches TheGamesDB first when a key is
+configured, then falls back to an exact-title Wikidata lookup when TheGamesDB
+returns no candidate (including when no key is configured). The selected result
+records its actual provider and external ID. This fallback is metadata-only and
+does not query Vimm for game files or download links. Existing metadata remains
+unchanged until the user selects a candidate.

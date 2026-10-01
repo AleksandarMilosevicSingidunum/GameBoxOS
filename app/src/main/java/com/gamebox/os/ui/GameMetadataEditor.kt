@@ -18,7 +18,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.gamebox.os.data.GameRepository
 import com.gamebox.os.catalog.MetadataMatchCandidate
-import com.gamebox.os.catalog.TheGamesDbMetadataClient
+import com.gamebox.os.catalog.GameMetadataSearchClient
 import com.gamebox.os.settings.SettingsRepository
 import com.gamebox.os.domain.Game
 import com.gamebox.os.domain.GameMetadataOverrides
@@ -44,7 +44,12 @@ internal fun GameMetadataEditorDialog(
     var candidates by remember(game.id) { mutableStateOf<List<MetadataMatchCandidate>>(emptyList()) }
     val scope = rememberCoroutineScope()
     val metadataClient = remember(settingsRepository) {
-        TheGamesDbMetadataClient(settingsRepository::theGamesDbApiKey)
+        GameMetadataSearchClient(
+            providers = listOf(
+                com.gamebox.os.catalog.TheGamesDbMetadataClient(settingsRepository::theGamesDbApiKey),
+                com.gamebox.os.catalog.WikidataMetadataClient(),
+            ),
+        )
     }
 
     fun persist(overrides: GameMetadataOverrides) {
@@ -88,7 +93,7 @@ internal fun GameMetadataEditorDialog(
                 repository.applyProviderMetadataMatch(
                     game.id,
                     ProviderMetadataSelection(
-                        provider = "THE_GAMES_DB",
+                        provider = candidate.provider,
                         externalId = candidate.externalId,
                         title = candidate.title,
                         year = candidate.year,
@@ -158,7 +163,7 @@ internal fun GameMetadataEditorDialog(
                 )
                 Text(
                     game.metadataExternalId?.let {
-                        "Confirmed TheGamesDB match: " + it
+                        "Confirmed ${game.metadataProvider} match: " + it
                     } ?: "No provider match has been confirmed",
                     modifier = Modifier.padding(top = 12.dp),
                 )
@@ -167,11 +172,11 @@ internal fun GameMetadataEditorDialog(
                     onClick = ::findMatches,
                     modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
                 ) {
-                    Text(if (findingMatches) "Finding matches…" else "Find TheGamesDB match")
+                    Text(if (findingMatches) "Finding matches…" else "Find metadata match")
                 }
                 if (matchSearchCompleted && candidates.isEmpty()) {
                     Text(
-                        "No exact-title candidates were returned. Your existing metadata was not changed.",
+                        "No exact-title matches were found. Your existing metadata was not changed.",
                         modifier = Modifier.padding(top = 6.dp),
                     )
                 }
@@ -191,7 +196,7 @@ internal fun GameMetadataEditorDialog(
                                 listOfNotNull(
                                     candidate.platform,
                                     candidate.year?.toString(),
-                                    "TheGamesDB #" + candidate.externalId,
+                                    "${candidate.provider} #" + candidate.externalId,
                                 ).joinToString(" • ")
                             )
                             Text("Use this match")

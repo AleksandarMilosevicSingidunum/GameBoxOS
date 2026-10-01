@@ -57,6 +57,21 @@ class WikidataMetadataClientTest {
         assertNull(result.metadataProvider)
     }
 
+    @Test
+    fun exposesExactWikidataMatchForExplicitMetadataSelection() = runBlocking {
+        val client = WikidataMetadataClient(connectionFactory = { url ->
+            StubConnection(url, if (url.query.orEmpty().contains("wbsearchentities")) search else entity)
+        })
+
+        val candidate = client.findCandidates(game(title = "Galaxy Patrol", description = null, artwork = null)).single()
+
+        assertEquals("Q123", candidate.externalId)
+        assertEquals("Galaxy Patrol", candidate.title)
+        assertEquals("WIKIDATA", candidate.provider)
+        assertEquals(1994, candidate.year)
+        assertEquals("A video game.", candidate.description)
+    }
+
     private fun game(title: String, description: String?, artwork: String?) = Game(
         id = GameId("test-game"), title = title, platform = "NES", year = if (description == "Curated") 2001 else 0,
         genre = "", sizeMb = 1, state = InstallState.NOT_INSTALLED,

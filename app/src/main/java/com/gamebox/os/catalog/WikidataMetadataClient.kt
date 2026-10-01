@@ -30,24 +30,41 @@ class WikidataMetadataClient(
     private val connectionFactory: (URL) -> HttpsURLConnection = {
         it.openConnection() as HttpsURLConnection
     },
-) {
+) : GameMetadataCandidateProvider {
     private val cache = LinkedHashMap<String, WikidataMetadata?>(128, 0.75f, true)
 
     suspend fun enrich(game: Game): Game = withContext(Dispatchers.IO) {
         if (game.title.isBlank()) return@withContext game
         val key = normalizeCatalogTitle(game.title)
-        val metadata = synchronized(cache) {
-            if (cache.containsKey(key)) cache[key]
-            else null
-        } ?: runCatching { lookup(game.title) }
-            .onFailure {
-                if (it is CancellationException) throw it
-            }
-            .getOrNull()
-        synchronized(cache) {
-            if (!cache.containsKey(key)) cache[key] = metadata
-        }
+        val metadata = cachedLookup(key) { lookup(game.title) }
         metadata?.mergeInto(game) ?: game
+    }
+
+    override suspend fun findCandidates(game: Game): List<MetadataMatchCandidate> = withContext(Dispatchers.IO) {
+        if (game.title.isBlank()) return@withContext emptyList()
+        val key = normalizeCatalogTitle(game.title)
+        val metadata = cachedLookup(key) { lookup(game.title) } ?: return@withContext emptyList()
+        listOf(
+            MetadataMatchCandidate(
+                externalId = metadata.externalId,
+                title = metadata.title,
+                year = metadata.year,
+                description = metadata.description,
+                artworkUrl = metadata.artworkUrl,
+                provider = "WIKIDATA",
+            ),
+        )
+    }
+
+    private suspend fun cachedLookup(key: String, load: suspend () -> WikidataMetadata?): WikidataMetadata? {
+        synchronized(cache) {
+            if (cache.containsKey(key)) return cache[key]
+        }
+        val metadata = runCatching { load() }
+            .onFailure { if (it is CancellationException) throw it }
+            .getOrNull()
+        synchronized(cache) { if (!cache.containsKey(key)) cache[key] = metadata }
+        return metadata
     }
 
     private suspend fun lookup(title: String): WikidataMetadata? {
