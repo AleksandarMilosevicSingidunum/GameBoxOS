@@ -649,6 +649,9 @@ internal fun NavButton(item: Destination, selected: Destination, onSelect: (Dest
             .graphicsLayer { scaleX = scale; scaleY = scale }
             .hoverable(interactionSource)
             .focusDebugTarget()
+            // Keep tab semantics focusable on desktop/TV surfaces where a
+            // clickable-only node may expose RequestFocus without accepting it.
+            .focusable()
             .onFocusChanged { focused = it.isFocused }
             .semantics {
                 contentDescription = item.title + " tab"
@@ -657,6 +660,21 @@ internal fun NavButton(item: Destination, selected: Destination, onSelect: (Dest
                 onClick(label = "Select ${item.title}") {
                     onSelect(item)
                     true
+                }
+            }
+            .onPreviewKeyEvent { event ->
+                if (event.type != KeyEventType.KeyDown) {
+                    false
+                } else {
+                    when (event.nativeKeyEvent.keyCode) {
+                        AndroidKeyEvent.KEYCODE_BUTTON_A,
+                        AndroidKeyEvent.KEYCODE_DPAD_CENTER,
+                        AndroidKeyEvent.KEYCODE_ENTER -> {
+                            onSelect(item)
+                            true
+                        }
+                        else -> false
+                    }
                 }
             }
             .clickable(interactionSource = interactionSource, indication = null) { onSelect(item) }
