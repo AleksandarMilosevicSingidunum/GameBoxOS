@@ -2420,3 +2420,17 @@ node cannot consume confirmation without selecting the tab. The isolated
 top-tab regression passed after the change, and the focused Play Now regression
 passed again. Commit: `510db35`. The full TV class still needs a clean
 19/19 recheck after the fixture-timeout failures are addressed.
+
+Physical HDMI TV recheck after focus fixes (2026-10-01): the connected Honor
+Magic6 Pro reported the real external display as HDMI display 3 at 1920x1080
+and the current GameBox surface was borderless after the OEM fullscreen action.
+Using the live accessibility hierarchy, the Galaxy Patrol home card opened its
+Details screen on the TV. The current on-device catalog state then exposed the
+Details `Install game` action only at zero bounds and the X/install shortcut did
+not produce an install transition; no `Play Now` action or RetroArch handoff
+was observed. This is physical-TV navigation/fullscreen evidence, but not an
+install or gameplay pass. The missing hardware content fixture must be restored
+before the complete TV install-to-play journey can be revalidated. Live dumps
+were captured as `gamebox-tv-live.xml`, `gamebox-tv-details.xml`, and
+`gamebox-tv-install.xml` on the device; no force-stop or substitute action was
+used.
