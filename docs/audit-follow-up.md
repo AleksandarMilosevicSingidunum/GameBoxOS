@@ -2489,3 +2489,13 @@ The regression suite passed: `GalaxyPatrolExportTest` 2/2 on API 35, including
 fresh-gateway cleanup, and the JVM unit suite passed. The existing historical
 exports remain separate device evidence; future launches no longer accumulate
 new duplicates through this path.
+
+Physical Honor validation of export cleanup (2026-10-01): the APK containing
+`fb97989` was installed on the connected Honor Magic6 Pro and GameBox was
+opened on HDMI display 3. After activating `Play Now`, the known export count
+was 9 and became 10. A second `Play Now` retry left the count at 10, proving
+the persisted cleanup removed the prior interrupted-session export before
+publishing the replacement. The old historical exports are still present as
+separate device evidence; no unrelated files were removed. The pre-existing
+RetroArch task remained stuck and did not foreground, so this validates cleanup
+only, not emulator gameplay or return-to-GameBox.
