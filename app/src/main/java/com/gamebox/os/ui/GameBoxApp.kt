@@ -3503,6 +3503,11 @@ private fun DetailsScreen(
     val primaryActionModifier = Modifier
         .fillMaxWidth()
         .focusRequester(primaryActionFocusRequester)
+        // Keep the primary details action a direct TV focus target. Material
+        // Button is focusable in normal input traversal, but an explicit focus
+        // node is required for Compose's RequestFocus semantics action on
+        // external-display/desktop surfaces.
+        .focusable()
     LaunchedEffect(game.id, compact) {
         if (!compact) {
             androidx.compose.runtime.withFrameNanos { }
