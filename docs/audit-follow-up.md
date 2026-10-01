@@ -5,12 +5,14 @@
 The connected Honor hardware is now the primary TV acceptance target. A live ADB
 session identified the physical device as Honor `PGT-N19` running Android 16 and
 reported an active HDMI presentation display at `1920×1080`/160 dpi. GameBox was
-visible during wired projection, but the manually display-targeted launch created
-a Desktop Mode freeform task rather than the dedicated non-exported `TvActivity`;
-the TV borderless/fullscreen gate therefore remains open. This is real hardware
-evidence, not emulator evidence. Follow-up testing must use the in-product
-external-display launch path and capture the physical TV surface before counting
-fullscreen, overscan, controller, or end-to-end gameplay acceptance.
+visible during wired projection. The in-product Show on TV action now reaches the
+dedicated non-exported `TvActivity` on HDMI display 3. Honor initially places that
+activity in a captioned `1152×691` Desktop Mode task; after the display-targeted
+fullscreen control, the same activity reports a `1920×1080` requested window,
+full touch region, and no caption node. The app requests fullscreen through both
+the supported window flags and the launch-options hint, but this OEM still requires
+the system maximize action. This is real hardware evidence, not emulator evidence;
+automatic OEM promotion remains an open hardware integration gate.
 
 Baseline: 9 September 2026 requirement audit, main `1504046a036f3a2a7e044b08bd62b6cb059b927e`. 
 Keep implementation, production integration, automated validation, live-service/emulator

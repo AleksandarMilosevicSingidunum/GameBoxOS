@@ -45,7 +45,7 @@ class ExternalDisplayLauncherTest {
     @Test
     fun externalDisplaySuccessMessageDoesNotClaimConfirmationAlreadyCompleted() {
         assertEquals(
-            "Display switch requested for SMART TV; confirm it if prompted, then use the system fullscreen/maximize control if Desktop Mode opens a window",
+            "GameBox TV mode requested on SMART TV; confirm the display switch if prompted",
             externalDisplayLaunchRequestedMessage(ExternalDisplayTarget(23, "SMART TV")),
         )
     }
