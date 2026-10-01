@@ -48,12 +48,11 @@ connected-device instrumentation run. This does not validate a real emulator or 
 save format.
 No game files are supplied or downloaded by this flow.
 
-Current API-35 recheck (2026-10-01): `SystemDocumentPickerReimportTest` no
-longer completes on the current Google APIs emulator. DocumentsUI opens,
-shows the synthetic Downloads document, and returns to the test host after the
-selection, but the repository never reaches `INSTALLED` within 20 seconds and
-the test fails at its post-picker verification. Device logs show no GameBox
-import exception or crash; the result callback/selection contract requires a
-focused follow-up before this flow can be considered green again. The earlier
-pass recorded above is historical and is not reused as current evidence.
+API-35 recheck and fixture correction (2026-10-01): the first rerun exposed a
+stale test fixture that still stored the retained file as `<gameId>/<file>`.
+Current production registration stores the console-scoped relative path
+without the implicit `imports/` root (`psp/<gameId>/<file>`). After aligning
+the fixture with `RomImportPolicy.importRootRelativePath`, the real
+DocumentsUI picker flow passed again on `GameBox_API35`, including verified
+Room registration, managed file placement, and transaction cleanup.
 

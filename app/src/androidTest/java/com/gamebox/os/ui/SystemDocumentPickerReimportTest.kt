@@ -27,6 +27,7 @@ import com.gamebox.os.domain.Game
 import com.gamebox.os.domain.GameId
 import com.gamebox.os.domain.InstallState
 import com.gamebox.os.importer.AuthorizedRomImporter
+import com.gamebox.os.importer.RomImportPolicy
 import java.io.File
 import java.nio.file.Files
 import java.security.MessageDigest
@@ -74,7 +75,10 @@ class SystemDocumentPickerReimportTest {
             genre = "Test",
             sizeMb = 1,
             state = InstallState.MISSING_FILES,
-            localContentRelativePath = gameId.value + "/" + fileName,
+            localContentRelativePath = RomImportPolicy.importRootRelativePath(
+                gameId,
+                RomImportPolicy.managedRelativePath(gameId, fileName, "PSP"),
+            ),
             localContentSha256 = hash,
             localContentMimeType = "application/x-iso9660-image",
         )
@@ -148,7 +152,7 @@ class SystemDocumentPickerReimportTest {
                 "Content verified and restored. Existing saves and history retained."
             ).assertIsDisplayed()
 
-            val installed = root.resolve("imports/" + gameId.value + "/" + fileName)
+            val installed = root.resolve(RomImportPolicy.managedRelativePath(gameId, fileName, "PSP"))
             assertArrayEquals(payload, installed.readBytes())
             assertEquals(hash, repository.game(gameId)?.localContentSha256)
             assertFalse(
