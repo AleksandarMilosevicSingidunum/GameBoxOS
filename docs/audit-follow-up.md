@@ -14,6 +14,15 @@ the supported window flags and the launch-options hint, but this OEM still requi
 the system maximize action. This is real hardware evidence, not emulator evidence;
 automatic OEM promotion remains an open hardware integration gate.
 
+The same live HDMI session was then promoted through Honor's display-targeted
+fullscreen control. The `TvActivity` hierarchy reported root bounds `[0,0][1920,1080]`,
+no Honor caption node, and the window manager reported a `1920×1080` requested
+surface with a full-display touch region. A display-targeted tap moved the real TV
+surface from Home to Store; the captured hierarchy showed `GAMEBOX OS / STORE`,
+console filters for All/PS2/GameCube/Wii/PSP/Dreamcast/3DS/Switch/Homebrew, and
+search controls. This is physical TV UI/navigation evidence, not emulator evidence;
+controller, overscan, long-run, and complete legal-game lifecycle gates remain open.
+
 Baseline: 9 September 2026 requirement audit, main `1504046a036f3a2a7e044b08bd62b6cb059b927e`. 
 Keep implementation, production integration, automated validation, live-service/emulator
 validation and hardware acceptance separate. The original audit is a frozen baseline,
