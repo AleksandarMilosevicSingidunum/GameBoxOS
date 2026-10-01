@@ -2529,8 +2529,9 @@ navigation.
 Automatic catalog enrichment now uses the keyless Wikidata metadata client. It requires an
 exact normalized title, reads only bounded HTTPS entity responses, merges missing description,
 release-year, and cover-art fields, caches lookups for the process, and never creates a game
-binary source. TheGamesDB remains an explicit/manual match and discovery-sync provider; Vimm
-remains metadata/navigation-only. `WikidataMetadataClientTest` covers exact matches, field
+binary source. TheGamesDB remains a discovery-sync provider and the first optional manual-match
+provider; manual matching falls back to exact-title Wikidata when TheGamesDB has no result/key.
+Vimm remains metadata/navigation-only. `WikidataMetadataClientTest` covers exact matches, field
 preservation, and no-match behavior. The full Android JVM suite and debug APK assembly pass.
 
 The API-35 emulator was still in the real `com.retroarch/.browser.retroactivity.RetroActivityFuture`
@@ -2568,3 +2569,37 @@ and became top-resumed; `pidof com.retroarch` still reported a live RetroArch pr
 RetroArch task remained in history. This validates a Home-to-GameBox return/session-preservation
 route without force-stop or task kill. The direct Back route still remains unverified because
 RetroActivityFuture consumes or ignores Back on this build.
+
+Physical Honor/HDMI end-to-end checkpoint (1 October 2026): with the actual PGT-N19 connected
+to a 1920×1080 external HDMI display (Android logical display 3), GameBox was opened on that
+display and captured at full display bounds. The Store showed eight configured discovery/import
+titles but zero synced TheGamesDB catalog results because no API key is configured. Opening
+Cave Story’s **Import your copy** action launched Android DocumentsUI on the HDMI display; no
+file was selected. The picker rendered with Honor desktop chrome/taskbar, and returning to
+GameBox initially exposed those PC-mode controls until its fullscreen window control restored
+the borderless view. This proves physical-TV picker launch/return only, not a successful import.
+
+The separate built-in legal Galaxy Patrol fixture completed a physical GameBox install through
+the authorized asset worker. Its managed file was
+`files/installed/retro/galaxy-patrol/content/galaxy-patrol.nes`, and on-device SHA-256 was
+`97c1757ffd6a5bc1a591809b2b0f8988741f61f6abd82889c148ecae8a2f471f`, matching the pinned
+fixture. The physical-TV Library showed Galaxy Patrol as installed. Play Now launched the real
+`com.retroarch/.browser.retroactivity.RetroActivityFuture` on display 3, but the captured output
+was mostly black with RetroArch touch controls and GameBox visible behind/around its surface;
+this is not a gameplay pass. The GameBox controller tile showed **Not connected**, so no
+physical controller input was tested. One normal Back input did not exit RetroArch. A normal
+Home action followed by reopening GameBox restored GameBox as the focused TV activity while
+RetroArch remained alive (`pid 22260`) in task history; a Honor desktop app-drawer overlay had
+to be dismissed with Back. This is physical Home-return/session evidence, not a clean Back
+exit or verified playable session.
+
+From the TV Details content-management controls, the user-facing uninstall confirmation listed
+one managed content file (49,168 bytes) and stated that saves, backups, metadata, favorites,
+and history would be retained. After confirmation, `run-as` confirmed the managed ROM path was
+absent and GameBox reported **Game content · not installed** plus one file removed. The library
+record remained available. Reinstalling from the built-in authorized asset worker restored the
+same path and on-device SHA-256. No managed saves existed during this run, so actual save-file
+preservation was not exercised on the physical device. The legal install → Library → Play Now
+handoff attempt → Home return → content-only uninstall → reinstall loop is now physically
+observed on TV; native gameplay, controller input, save persistence, and direct emulator exit
+remain open acceptance gates.
