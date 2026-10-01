@@ -2434,3 +2434,12 @@ before the complete TV install-to-play journey can be revalidated. Live dumps
 were captured as `gamebox-tv-live.xml`, `gamebox-tv-details.xml`, and
 `gamebox-tv-install.xml` on the device; no force-stop or substitute action was
 used.
+
+Physical TV content-state follow-up (2026-10-01): a read-only `run-as`
+inspection on the same Honor found the managed file
+`files/installed/retro/galaxy-patrol/content/galaxy-patrol.nes` still present,
+while the TV Details screen continued to report `not installed`. The failed
+install/play action is therefore also a metadata-to-filesystem consistency
+defect after reinstall, not evidence that the legal fixture is absent. The
+next hardware iteration must reconcile the installed-content scan with the
+Room record before re-running the controller-driven install/play journey.
