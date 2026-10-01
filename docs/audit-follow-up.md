@@ -2542,3 +2542,15 @@ The connected production import/save/reimport run executed 11 tests on API-35 wi
 The same run on the physical Honor device crashed its instrumentation process during the first
 reimport test before an assertion or logcat could be retrieved. This is recorded as physical
 instrumentation evidence only and does not promote emulator results to Honor/TV acceptance.
+
+The archive gate was separated from the picker gate: `SevenZipRuntimeTest` passed on both the
+physical Honor and API-35 devices, confirming the packaged 7z/XZ runtime. The combined
+DocumentsUI/reimport test completed on API-35 but the Honor instrumentation process crashed
+while opening the production picker, so TV-sized physical picker acceptance remains open.
+
+A subsequent full `TvActivityTest` run completed all 19 tests on API-35 with 0 failures. The
+same invocation started the physical Honor run first, which crashed on
+`tvControllerLeavesEmptyDownloadsForStore` before an assertion; the Gradle aggregate therefore
+failed even though the emulator completed 19/19. The current APK and production source remain
+the same as the passing normal TV suite; this is retained as a reproducibility/hardware-test
+environment issue until Honor instrumentation can complete again.
