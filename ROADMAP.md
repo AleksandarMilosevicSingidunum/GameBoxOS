@@ -40,17 +40,23 @@ hardware, live-provider, and real-emulator claims are kept separate.
 
 ### Remaining software work, ordered by impact
 
-1. Restore the API-35 TV emulator endpoint and close the TV Play Now → emulator
+1. Make the connected Honor + physical HDMI TV the primary acceptance target:
+   launch GameBox on the real 1920×1080 presentation display, close the
+   desktop/freeform framing gap, and validate borderless fullscreen, overscan,
+   D-pad/controller focus, Store → install → Library → Play Now, emulator exit,
+   return, saves, uninstall, and reinstall. Emulator runs remain supporting
+   evidence and must not replace this hardware gate.
+2. Restore the API-35 TV emulator endpoint and close the TV Play Now → emulator
    exit → GameBox return regression; keep the test authoritative rather than
    using a forced stop as a substitute for Back/exit.
-2. Add compact-TV semantics coverage for secondary Details actions, including
+3. Add compact-TV semantics coverage for secondary Details actions, including
    authorized import, browser-download tracking, uninstall, and save actions.
-3. Validate the legal import lifecycle through Android DocumentsUI on a TV-sized
+4. Validate the legal import lifecycle through Android DocumentsUI on a TV-sized
    surface, including ZIP/7z extraction, source cleanup, managed directory
    placement, uninstall cleanup, and reimport identity preservation.
-4. Validate at least one additional real emulator adapter and adapter-specific
+5. Validate at least one additional real emulator adapter and adapter-specific
    save recovery; retain explicit missing-core/failed-handoff behavior.
-5. Complete live authenticated provider/cloud-save endpoint validation, clean
+6. Complete live authenticated provider/cloud-save endpoint validation, clean
    checkout CI/release gates, signed artifacts, update-channel and rollback
    execution, and Windows production installation/upgrade evidence.
 

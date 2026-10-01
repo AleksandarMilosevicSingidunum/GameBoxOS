@@ -1,6 +1,18 @@
 # Audit implementation follow-up
 
-Baseline: 9 September 2026 requirement audit, main `1504046a036f3a2a7e044b08bd62b6cb059b927e`.
+## Connected TV priority checkpoint (1 October 2026)
+
+The connected Honor hardware is now the primary TV acceptance target. A live ADB
+session identified the physical device as Honor `PGT-N19` running Android 16 and
+reported an active HDMI presentation display at `1920×1080`/160 dpi. GameBox was
+visible during wired projection, but the manually display-targeted launch created
+a Desktop Mode freeform task rather than the dedicated non-exported `TvActivity`;
+the TV borderless/fullscreen gate therefore remains open. This is real hardware
+evidence, not emulator evidence. Follow-up testing must use the in-product
+external-display launch path and capture the physical TV surface before counting
+fullscreen, overscan, controller, or end-to-end gameplay acceptance.
+
+Baseline: 9 September 2026 requirement audit, main `1504046a036f3a2a7e044b08bd62b6cb059b927e`. 
 Keep implementation, production integration, automated validation, live-service/emulator
 validation and hardware acceptance separate. The original audit is a frozen baseline,
 not a claim that subsequent branch work is already on main.
