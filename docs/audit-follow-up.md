@@ -2554,3 +2554,10 @@ same invocation started the physical Honor run first, which crashed on
 failed even though the emulator completed 19/19. The current APK and production source remain
 the same as the passing normal TV suite; this is retained as a reproducibility/hardware-test
 environment issue until Honor instrumentation can complete again.
+
+Physical PPSSPP adapter smoke checkpoint (1 October 2026): Honor reports PPSSPP `v1.20.4`
+(`org.ppsspp.ppsspp`) installed. Launching `org.ppsspp.ppsspp/.PpssppActivity` on HDMI display
+3 created a real 1920×1080 hardware freeform task and made PPSSPP top-resumed on that display.
+A normal Back key did not close PPSSPP, matching the still-open emulator-return gate; GameBox
+was then restored to the same TV display. This proves adapter availability/launch only, not a
+playable PSP title or save recovery.
