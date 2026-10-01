@@ -2467,3 +2467,15 @@ fullscreen/borderless layout, controller navigation, Store/Details, authorized
 install, legal copy-import action, Library, uninstall confirmation, and display
 launch assertions. The focused physical-TV RetroArch return/exit gate above is
 not represented as passed by this emulator suite.
+
+Physical Honor/HDMI recheck (2026-10-01): the real device remained connected
+with HDMI display 3 active at 1920x1080. A display-targeted activation of the
+visible `Play Now` action again launched
+`com.retroarch/.browser.retroactivity.RetroActivityFuture` on display 3. The
+RetroArch task stayed foreground after normal Android Back, controller B,
+Select+Start, Escape, and the visible freeform window-close control. The live
+hierarchy remained a blank RetroArch surface, so this is a reproducible
+physical emulator-session/exit failure, not a GameBox install failure. The TV
+was returned to a visible GameBox task with a normal activity launch for
+continued testing; no force-stop or task kill was used and return-to-GameBox is
+still not claimed as passed.
