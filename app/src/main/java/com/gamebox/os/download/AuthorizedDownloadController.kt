@@ -76,6 +76,15 @@ class WorkManagerAuthorizedDownloadController(
             gameRepository.observeGames().first { games ->
                 games.any { it.id == HOMEBREW_GAME_ID }
             }
+            gameRepository.game(HOMEBREW_GAME_ID)?.let { existingGame ->
+                val persistedStatus = contentValidator.validate(
+                    AuthorizedHomebrewDownload.RELATIVE_PATH,
+                    AuthorizedHomebrewDownload.SHA256,
+                )
+                reconcileAuthorizedInstallState(existingGame.state, persistedStatus)?.let {
+                    gameRepository.setInstallState(HOMEBREW_GAME_ID, it)
+                }
+            }
             state.collect { current ->
                 current.status.toInstallState()?.let {
                     gameRepository.setInstallState(HOMEBREW_GAME_ID, it)
@@ -148,4 +157,16 @@ class WorkManagerAuthorizedDownloadController(
     private companion object {
         val HOMEBREW_GAME_ID = GameId("galaxy-patrol")
     }
+}
+
+internal fun reconcileAuthorizedInstallState(
+    current: InstallState,
+    persisted: InstalledContentStatus,
+): InstallState? = when (persisted) {
+    InstalledContentStatus.VERIFIED ->
+        InstallState.INSTALLED.takeIf { current != InstallState.INSTALLED }
+    InstalledContentStatus.MISSING ->
+        InstallState.MISSING_FILES.takeIf { current == InstallState.INSTALLED }
+    InstalledContentStatus.ALTERED ->
+        InstallState.FAILED.takeIf { current == InstallState.INSTALLED }
 }

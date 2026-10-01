@@ -2443,3 +2443,17 @@ install/play action is therefore also a metadata-to-filesystem consistency
 defect after reinstall, not evidence that the legal fixture is absent. The
 next hardware iteration must reconcile the installed-content scan with the
 Room record before re-running the controller-driven install/play journey.
+
+Physical HDMI repair and handoff checkpoint (2026-10-01): startup reconciliation
+now verifies the pinned Galaxy Patrol asset and repairs a stale `NOT_INSTALLED`
+Room state to `INSTALLED`; the regression is covered by
+`AuthorizedHomebrewFixtureTest.persistedAuthorizedContentRepairsRoomStateAfterColdStart`.
+The external-display flag is now passed from `GameBoxHostActivity` so Honor
+Desktop Mode cannot misclassify the HDMI window as a compact phone layout. On
+the rebuilt APK, the physical TV Details screen exposed a visible, focusable
+`Play Now` node at `[1099,616][1285,660]`. Activating that button launched the
+real `com.retroarch/.browser.retroactivity.RetroActivityFuture` on HDMI display
+3 with the managed `content://com.gamebox.os.files/installed_content/...` URI.
+Normal Android Back, controller B, and Start events did not exit RetroArch on
+this projection surface, so return-to-GameBox and subsequent save/uninstall
+steps remain open hardware gates; no force-stop was used.

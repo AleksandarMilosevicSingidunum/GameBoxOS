@@ -56,6 +56,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
@@ -206,6 +207,7 @@ fun GameBoxApp(
     managedSaveDiscovery: com.gamebox.os.storage.ManagedSaveDiscovery,
     saveControllerFactory: ((GameId, kotlinx.coroutines.CoroutineScope) -> SaveSafetyController)? = null,
     navigationRequest: GameBoxNavigationRequest? = null,
+    externalDisplayOverride: Boolean = false,
 ) {
     val games by repository.observeGames().collectAsState()
     val appSettings by settingsRepository.settings.collectAsState(
@@ -214,6 +216,12 @@ fun GameBoxApp(
     val allowDeveloperOptions = LocalContext.current.applicationInfo.flags and
         android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE != 0
     val hostDisplayId = (LocalContext.current as? android.app.Activity)?.display?.displayId
+        ?: LocalView.current.display?.displayId
+    // External HDMI/Desktop-mode surfaces are the living-room target even when
+    // the OEM reports them with the phone's high-density dp configuration.
+    val externalDisplay = externalDisplayOverride || (hostDisplayId != null &&
+        hostDisplayId != android.view.Display.DEFAULT_DISPLAY
+        )
     val runtimeDeviceStatus = rememberRuntimeDeviceStatus()
     val controllerActions = remember { ControllerActionRegistry() }
     val appScope = rememberCoroutineScope()
@@ -324,14 +332,18 @@ fun GameBoxApp(
                 )
             )
     ) {
-        val compact = shouldUseCompactLayout(
-            mode = com.gamebox.os.settings.effectiveDeveloperLayoutMode(
-                appSettings.developerLayoutMode,
-                allowDeveloperOptions,
-            ),
-            widthDp = maxWidth.value,
-            heightDp = maxHeight.value,
-        )
+        val compact = if (externalDisplay) {
+            false
+        } else {
+            shouldUseCompactLayout(
+                mode = com.gamebox.os.settings.effectiveDeveloperLayoutMode(
+                    appSettings.developerLayoutMode,
+                    allowDeveloperOptions,
+                ),
+                widthDp = maxWidth.value,
+                heightDp = maxHeight.value,
+            )
+        }
         if (!compact) {
             Box(
                 Modifier

@@ -2,6 +2,7 @@ package com.gamebox.os
 
 import android.content.Intent
 import android.os.Bundle
+import android.view.Display
 import android.view.InputDevice
 import android.view.KeyEvent
 import android.view.MotionEvent
@@ -56,6 +57,7 @@ abstract class GameBoxHostActivity : ComponentActivity() {
                         container.managedSaveDiscovery,
                         saveControllerFactory = saveFactory,
                         navigationRequest = navigationRequest.value,
+                        externalDisplayOverride = display?.displayId != Display.DEFAULT_DISPLAY,
                     )
                 }
             }
