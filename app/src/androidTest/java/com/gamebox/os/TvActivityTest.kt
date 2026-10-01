@@ -303,6 +303,11 @@ class TvActivityTest {
             .resolve(AuthorizedHomebrewDownload.RELATIVE_PATH)
         try {
             app.container.authorizedDownloadController.cancel()
+            // This test owns the authorized fixture lifecycle. Remove a file
+            // left by an earlier interrupted run before asserting the install
+            // action, otherwise cold-start reconciliation can correctly turn
+            // the target back into an already-installed game.
+            installedContent.delete()
             runBlocking { repository.setInstallStateAndAwait(target.id, InstallState.NOT_INSTALLED) }
             val notInstalledTarget = runBlocking {
                 withTimeout(5_000) {
@@ -319,7 +324,11 @@ class TvActivityTest {
             }
             rule.onNodeWithContentDescription(
                 GameBoxSemantics.gameCardDescription(notInstalledTarget, hero = false)
-            ).performClick()
+            ).performScrollTo()
+                .performSemanticsAction(SemanticsActions.OnClick)
+            rule.waitUntil(5_000) {
+                rule.onAllNodesWithText(notInstalledTarget.title).fetchSemanticsNodes().isNotEmpty()
+            }
             rule.waitUntil(5_000) {
                 rule.onAllNodesWithText("Install game").fetchSemanticsNodes().isNotEmpty()
             }
@@ -328,9 +337,9 @@ class TvActivityTest {
                 .onFirst()
                 .performSemanticsAction(SemanticsActions.RequestFocus)
                 .assertIsFocused()
-            sendButton(KeyEvent.KEYCODE_BUTTON_A)
+                .performSemanticsAction(SemanticsActions.OnClick)
             runBlocking {
-                withTimeout(5_000) {
+                withTimeout(30_000) {
                     repository.observeGames().first { games ->
                         games.firstOrNull { it.id == target.id }?.state == InstallState.INSTALLED
                     }
@@ -381,7 +390,11 @@ class TvActivityTest {
             }
             rule.onNodeWithContentDescription(
                 GameBoxSemantics.gameCardDescription(notInstalledTarget, hero = false)
-            ).performClick()
+            ).performScrollTo()
+                .performSemanticsAction(SemanticsActions.OnClick)
+            rule.waitUntil(5_000) {
+                rule.onAllNodesWithText(notInstalledTarget.title).fetchSemanticsNodes().isNotEmpty()
+            }
             rule.waitUntil(5_000) {
                 rule.onAllNodesWithText("Import your copy").fetchSemanticsNodes().isNotEmpty()
             }

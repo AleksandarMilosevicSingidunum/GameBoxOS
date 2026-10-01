@@ -2457,3 +2457,13 @@ real `com.retroarch/.browser.retroactivity.RetroActivityFuture` on HDMI display
 Normal Android Back, controller B, and Start events did not exit RetroArch on
 this projection surface, so return-to-GameBox and subsequent save/uninstall
 steps remain open hardware gates; no force-stop was used.
+
+TV instrumentation suite recheck (2026-10-01): after making the authorized
+fixture test own cleanup of any stale extracted asset, opening Store cards via
+their exposed click semantics, and allowing the asynchronous install worker a
+30-second verification window, all 19 `TvActivityTest` tests passed on
+`GameBox_API35` (API 35). This covers the reproducible TV contract for
+fullscreen/borderless layout, controller navigation, Store/Details, authorized
+install, legal copy-import action, Library, uninstall confirmation, and display
+launch assertions. The focused physical-TV RetroArch return/exit gate above is
+not represented as passed by this emulator suite.
