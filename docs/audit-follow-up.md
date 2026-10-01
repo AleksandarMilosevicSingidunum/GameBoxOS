@@ -13,6 +13,9 @@ full touch region, and no caption node. The app requests fullscreen through both
 the supported window flags and the launch-options hint, but this OEM still requires
 the system maximize action. This is real hardware evidence, not emulator evidence;
 automatic OEM promotion remains an open hardware integration gate.
+An explicit `ACTION_MAIN`/`CATEGORY_HOME` launch of the same `TvActivity` was
+also probed on the Honor and still produced the same `1152×691` freeform task;
+that experiment was reverted because it did not improve the TV result.
 
 The same live HDMI session was then promoted through Honor's display-targeted
 fullscreen control. The `TvActivity` hierarchy reported root bounds `[0,0][1920,1080]`,
