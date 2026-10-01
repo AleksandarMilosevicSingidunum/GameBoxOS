@@ -2399,3 +2399,15 @@ showed GameBox still top-resumed, with the prior RetroArch task underneath. No
 force-stop or other substitute action was used, so this remains an open
 physical-TV handoff/input failure rather than a claimed pass. Proof artifact:
 `artifacts/honor-tv-galaxy-details-reinstall.xml`.
+
+TV primary-action focus correction (2026-10-01): the physical recheck and an
+API-35 run both showed that the visible Details `Play Now` action could be
+selected in semantics but did not become focused through `RequestFocus`. The
+production Details screen now adds an explicit `focusable()` node to the wide
+primary action alongside its existing `FocusRequester`. The focused
+`TvActivityTest.tvControllerOpensInstalledGameAndShowsPlayNow` passed on the
+restored API-35 emulator after the change, and the complete JVM unit suite
+passed. A complete 19-test TV-suite recheck still has three separate failures
+(initial Home-tab focus, authorized-import fixture timeout, and authorized
+install fixture timeout); those remain open and are not counted as a full-suite
+pass. Commit: `7bd0568`.
