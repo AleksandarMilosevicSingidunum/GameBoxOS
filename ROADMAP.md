@@ -2,6 +2,66 @@
 
 The development blueprint is guidance. Work proceeds in small, testable increments while preserving one vertical slice.
 
+## Requirement audit snapshot — 1 October 2026
+
+This snapshot maps the continuing goal to current evidence. A checked item is
+implemented and covered by the repository's automated or documented evidence;
+hardware, live-provider, and real-emulator claims are kept separate.
+
+### Done and evidenced
+
+- Android/Compose shell, Room catalog state, DataStore settings, WorkManager
+  downloads, checksum-gated promotion, legal-copy import profiles, save-safe
+  uninstall, SAF save/external-library flows, and Windows companion foundation
+  are implemented with JVM/instrumentation coverage.
+- The Blueprint TV shell is implemented: 16:9 layout, fullscreen/cutout policy,
+  D-pad/LB/RB navigation, focus restoration, Quick Actions, Downloads states,
+  safe-area controls, install-to-Library continuity, uninstall confirmation,
+  and controller-reachable settings actions.
+- TV software evidence is recorded for 1280×720, 1920×1080, and 3840×2160
+  profiles. The latest normal-profile `TvActivityTest` run passed `19/19`.
+- The legal Galaxy Patrol fixture has a verified TV Store → install → Library
+  path. RetroArch handoff from TV `Play Now` has also been observed through the
+  real `RetroActivityFuture` activity.
+
+### Implemented, but validation remains partial
+
+- The TV RetroArch return path is implemented in the launch/session controller,
+  but the latest API-35 probe hit a SystemUI ANR while RetroArch remained
+  top-resumed after Back. Prior Honor evidence is retained separately; a fresh
+  emulator return pass is still required.
+- Vimm's Lair remains discovery/navigation plus user-initiated browser-download
+  tracking. It must never resolve or download binary URLs itself. Live browser,
+  DownloadManager completion, legal import, and physical-TV validation remain
+  separate evidence gates.
+- PPSSPP/Dolphin and other adapter-specific gameplay/save flows, live
+  WebDAV/S3 endpoints, physical accessibility, and production Windows install
+  are not yet complete acceptance evidence.
+
+### Remaining software work, ordered by impact
+
+1. Restore the API-35 TV emulator endpoint and close the TV Play Now → emulator
+   exit → GameBox return regression; keep the test authoritative rather than
+   using a forced stop as a substitute for Back/exit.
+2. Add compact-TV semantics coverage for secondary Details actions, including
+   authorized import, browser-download tracking, uninstall, and save actions.
+3. Validate the legal import lifecycle through Android DocumentsUI on a TV-sized
+   surface, including ZIP/7z extraction, source cleanup, managed directory
+   placement, uninstall cleanup, and reimport identity preservation.
+4. Validate at least one additional real emulator adapter and adapter-specific
+   save recovery; retain explicit missing-core/failed-handoff behavior.
+5. Complete live authenticated provider/cloud-save endpoint validation, clean
+   checkout CI/release gates, signed artifacts, update-channel and rollback
+   execution, and Windows production installation/upgrade evidence.
+
+### Hardware/live gates that do not block software work
+
+- Physical controller/reconnect and long-duration Honor Desktop/TV soak.
+- Honor OEM fullscreen/freeform framing, HDMI overscan, Ethernet/PD/thermal,
+  external-storage unplug recovery, and physical TV screenshots.
+- Real provider credentials/endpoints, commercial-game compatibility, and
+  physical emulator gameplay/save evidence.
+
 ## 0.1 - Day-zero shell
 
 - [x] Android and Compose project

@@ -2326,3 +2326,14 @@ RetroArch remained top-resumed after Back, so no automated return-to-GameBox
 pass is claimed and no flaky test was committed. The emulator was force-stopped
 back to GameBox afterward; physical gameplay and TV return behavior remain open
 validation gates.
+
+Requirement audit snapshot (2026-10-01): `ROADMAP.md` now records the current
+definition-of-done mapping: implemented Android/Windows foundations and TV
+software contracts; partial live-provider, adapter, cloud, release, and
+hardware gates; and the ordered remaining software backlog. The current compact
+TV secondary-action semantics experiment was intentionally not counted as done:
+it compiled, but the available Honor run was a phone-profile result and the
+API-35 emulator disappeared before a TV assertion completed. The unverified
+experiment was reverted. This keeps the goal state and README aligned with
+authoritative evidence rather than treating an unavailable test surface as a
+pass.
