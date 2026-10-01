@@ -2411,3 +2411,12 @@ passed. A complete 19-test TV-suite recheck still has three separate failures
 (initial Home-tab focus, authorized-import fixture timeout, and authorized
 install fixture timeout); those remain open and are not counted as a full-suite
 pass. Commit: `7bd0568`.
+
+TV tab focus/activation correction (2026-10-01): the isolated API-35
+`tvControllerTraversesTopTabsWithDpad` regression then exposed the same
+clickable-without-direct-focus behavior on `NavButton`. Nav buttons now declare
+an explicit focus node and handle A/DPAD_CENTER/Enter in preview so a focus
+node cannot consume confirmation without selecting the tab. The isolated
+top-tab regression passed after the change, and the focused Play Now regression
+passed again. Commit: `510db35`. The full TV class still needs a clean
+19/19 recheck after the fixture-timeout failures are addressed.
