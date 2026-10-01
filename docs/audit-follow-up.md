@@ -2499,3 +2499,14 @@ publishing the replacement. The old historical exports are still present as
 separate device evidence; no unrelated files were removed. The pre-existing
 RetroArch task remained stuck and did not foreground, so this validates cleanup
 only, not emulator gameplay or return-to-GameBox.
+
+Physical TV display-targeted handoff correction (2026-10-01): an initial
+coordinate tap used Android's default display and opened Netflix on the phone,
+so it was discarded as invalid TV evidence. Using the device input service's
+`-d 3` display selector against the same focused `Play Now` control then
+launched `com.retroarch/.browser.retroactivity.RetroActivityFuture` on the
+actual HDMI display 3. The TV hierarchy confirmed the RetroArch window, but
+the content surface remained blank and the OEM caption bar remained visible;
+the available fullscreen control did not change the window bounds. This is
+now a confirmed physical TV launch pass with the emulator rendering,
+borderless/fullscreen, gameplay-input, and normal-return gates still open.
