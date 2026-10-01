@@ -2386,3 +2386,16 @@ launcher presentation after the OEM fullscreen action; fresh-launch automatic
 fullscreen remains an Honor Desktop Mode limitation and is not claimed as
 resolved. Proof artifacts: `artifacts/honor-tv-fullscreen-final.xml` and
 `artifacts/honor-tv-fullscreen-final.png`.
+
+Physical TV flow recheck after current-APK reinstall (2026-10-01): the current
+checkout built successfully and installed on the connected Honor. The supported
+external-display path created a GameBox task on HDMI display 3, but Honor
+Desktop Mode routed it to `MainActivity` in a freeform surface rather than the
+dedicated `TvActivity`; activating the OEM fullscreen control restored the
+borderless app surface. The installed Galaxy Patrol card opened its details on
+the TV, but the focused `Play Now` semantics node reported zero bounds and
+display-targeted Select/tap input did not launch RetroArch. The activity manager
+showed GameBox still top-resumed, with the prior RetroArch task underneath. No
+force-stop or other substitute action was used, so this remains an open
+physical-TV handoff/input failure rather than a claimed pass. Proof artifact:
+`artifacts/honor-tv-galaxy-details-reinstall.xml`.
