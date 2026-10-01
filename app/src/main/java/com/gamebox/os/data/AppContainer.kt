@@ -11,9 +11,9 @@ import com.gamebox.os.catalog.MetadataEnrichingCatalogProvider
 import com.gamebox.os.catalog.CatalogCredentialStore
 import com.gamebox.os.catalog.CatalogProviderFactory
 import com.gamebox.os.catalog.SelectingCatalogProvider
-import com.gamebox.os.catalog.TheGamesDbMetadataClient
 import com.gamebox.os.catalog.TheGamesDbCatalogSync
 import com.gamebox.os.catalog.HttpsTheGamesDbCatalogTransport
+import com.gamebox.os.catalog.WikidataMetadataClient
 import com.gamebox.os.data.local.GameBoxDatabase
 import com.gamebox.os.data.local.DatabaseMigrationBackupManager
 import com.gamebox.os.data.local.GAMEBOX_DATABASE_VERSION
@@ -138,7 +138,7 @@ class DefaultAppContainer(context: Context) : AppContainer {
         configuredUrl = settingsRepository::catalogUrl,
         networkAvailable = { isNetworkAvailable(applicationContext) }
     )
-    private val metadataClient = TheGamesDbMetadataClient(settingsRepository::theGamesDbApiKey)
+    private val wikidataMetadataClient = WikidataMetadataClient()
     override val catalogDiscoverySync = TheGamesDbCatalogSync(
         apiKey = settingsRepository::theGamesDbApiKey,
         transport = HttpsTheGamesDbCatalogTransport(),
@@ -151,7 +151,7 @@ class DefaultAppContainer(context: Context) : AppContainer {
 
     override val catalogProvider = MetadataEnrichingCatalogProvider(
         base = configuredCatalogProvider,
-        enrich = metadataClient::enrich,
+        enrich = wikidataMetadataClient::enrich,
     )
 
     override val downloadRepository: DownloadRepository =

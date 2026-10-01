@@ -4032,7 +4032,7 @@ private fun DetailsScreen(
 }
 
 @Composable
-private fun TvDetailsSecondaryAction(
+internal fun TvDetailsSecondaryAction(
     label: String,
     compact: Boolean,
     enabled: Boolean,
@@ -4040,7 +4040,13 @@ private fun TvDetailsSecondaryAction(
     onClick: () -> Unit,
 ) {
     if (compact) {
-        OutlinedButton(onClick = onClick, enabled = enabled) {
+        OutlinedButton(
+            onClick = onClick,
+            enabled = enabled,
+            modifier = Modifier.semantics {
+                this.contentDescription = contentDescription ?: label
+            },
+        ) {
             Text(label)
         }
         return

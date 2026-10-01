@@ -14,6 +14,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.disabled
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
@@ -110,9 +111,17 @@ private fun SaveCardAction(
 ) {
     if (compact) {
         if (filled) {
-            Button(onClick = onClick, enabled = enabled) { Text(label) }
+            Button(
+                onClick = onClick,
+                enabled = enabled,
+                modifier = Modifier.semantics { contentDescription = label },
+            ) { Text(label) }
         } else {
-            OutlinedButton(onClick = onClick, enabled = enabled) { Text(label) }
+            OutlinedButton(
+                onClick = onClick,
+                enabled = enabled,
+                modifier = Modifier.semantics { contentDescription = label },
+            ) { Text(label) }
         }
         return
     }

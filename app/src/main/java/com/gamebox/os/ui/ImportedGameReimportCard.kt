@@ -12,6 +12,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.gamebox.os.data.GameRepository
 import com.gamebox.os.content.GameMutationGate
@@ -140,11 +142,15 @@ internal fun ImportedGameReimportCard(game: Game, importer: AuthorizedRomImporte
                 Text("Select the original game file, or the descriptor and all tracks with their original filenames. Checksums must match. You can instead forget stale file references. Saves and history are always kept.")
                 if (busy) LinearProgressIndicator(Modifier.fillMaxWidth())
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Button(enabled = enabled && !busy && game.canReimportContent(),
-                        onClick = { picker.launch(arrayOf("*/*")) }) { Text("Locate files") }
+                    Button(
+                        enabled = enabled && !busy && game.canReimportContent(),
+                        onClick = { picker.launch(arrayOf("*/*")) },
+                        modifier = Modifier.semantics { contentDescription = "Locate files" },
+                    ) { Text("Locate files") }
                     TextButton(
                         enabled = enabled && !busy && game.canReimportContent(),
                         onClick = { confirmForget = true },
+                        modifier = Modifier.semantics { contentDescription = "Forget missing file references" },
                     ) { Text("Forget") }
                 }
                 message?.let { Text(it) }
