@@ -2374,3 +2374,15 @@ API-35 emulator disappeared before a TV assertion completed. The unverified
 experiment was reverted. This keeps the goal state and README aligned with
 authoritative evidence rather than treating an unavailable test surface as a
 pass.
+
+Physical TV fullscreen checkpoint (2026-10-01): the connected Honor PGT-N19 was
+rechecked with the HDMI display active at 1920×1080/160 dpi and GameBox
+`TvActivity` top-resumed on display 3. Honor Desktop Mode initially presented
+GameBox as a 1152×691 freeform window with its caption bar, but activating the
+visible fullscreen control on the actual TV changed the app root to
+`[0,0][1920,1080]`, removed `androidhnext:id/hw_caption`, and kept GameBox
+focused. This is direct physical-TV evidence for the intended borderless
+launcher presentation after the OEM fullscreen action; fresh-launch automatic
+fullscreen remains an Honor Desktop Mode limitation and is not claimed as
+resolved. Proof artifacts: `artifacts/honor-tv-fullscreen-final.xml` and
+`artifacts/honor-tv-fullscreen-final.png`.
