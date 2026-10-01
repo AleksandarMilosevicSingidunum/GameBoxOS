@@ -23,6 +23,17 @@ console filters for All/PS2/GameCube/Wii/PSP/Dreamcast/3DS/Switch/Homebrew, and
 search controls. This is physical TV UI/navigation evidence, not emulator evidence;
 controller, overscan, long-run, and complete legal-game lifecycle gates remain open.
 
+Physical TV legal-game journey checkpoint (1 October 2026): on the maximized
+Honor HDMI surface, the legal Galaxy Patrol fixture was opened from Store, its
+Details action changed from `not installed` to `installed`, Library showed
+`Galaxy Patrol, Retro, installed`, and Play Now launched the real
+`com.retroarch/.browser.retroactivity.RetroActivityFuture` on display 3. A
+display-targeted Android Back and controller-equivalent B input did not return
+to GameBox; RetroArch remained top-resumed and running. The Honor Desktop Mode
+caption exposed a visible Close control, but ADB touchscreen injection did not
+activate it and the shell has no mouse-source command. No force-stop was used,
+so the physical return gate remains honestly open.
+
 Baseline: 9 September 2026 requirement audit, main `1504046a036f3a2a7e044b08bd62b6cb059b927e`. 
 Keep implementation, production integration, automated validation, live-service/emulator
 validation and hardware acceptance separate. The original audit is a frozen baseline,
