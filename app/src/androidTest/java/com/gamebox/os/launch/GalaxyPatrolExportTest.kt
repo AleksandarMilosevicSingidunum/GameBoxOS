@@ -42,4 +42,35 @@ class GalaxyPatrolExportTest {
             source.delete()
         }
     }
+
+    @Test fun cleanupRemovesTemporaryExportsAfterInterruptedSession() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val directory = "Download/GameBox-export-cleanup-test-" + UUID.randomUUID()
+        val source = File.createTempFile("galaxy-cleanup-", ".nes", context.cacheDir)
+        try {
+            val bytes = context.assets.open("downloads/galaxy-patrol.nes").use { it.readBytes() }
+            source.writeBytes(bytes)
+            val gateway = AndroidPackageGateway(context)
+            val exported = requireNotNull(gateway.publishGalaxyPatrolForRetroArch(source, directory))
+            assertTrue(File(exported).isFile)
+
+            // A fresh gateway models the process that follows an interrupted
+            // handoff; cleanup must use persisted ownership, not only memory.
+            AndroidPackageGateway(context).cleanupLaunchedContent()
+
+            assertFalse("Interrupted-session export must be removed", File(exported).exists())
+        } finally {
+            val collection = MediaStore.Downloads.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY)
+            val ownedRows = context.contentResolver.query(
+                collection, arrayOf(MediaStore.Downloads._ID),
+                MediaStore.Downloads.RELATIVE_PATH + " = ?", arrayOf(directory + "/"), null
+            )?.use { cursor ->
+                buildList {
+                    while (cursor.moveToNext()) add(ContentUris.withAppendedId(collection, cursor.getLong(0)))
+                }
+            }.orEmpty()
+            ownedRows.forEach { context.contentResolver.delete(it, null, null) }
+            source.delete()
+        }
+    }
 }

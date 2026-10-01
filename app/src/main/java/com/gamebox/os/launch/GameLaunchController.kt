@@ -279,13 +279,23 @@ class AndroidPackageGateway(
     private val verifier: Sha256Verifier = Sha256Verifier(),
     private val externalContent: ExternalLibraryContentStore? = null,
 ) : PackageGateway {
+    private val temporaryPublishedPreference = context.getSharedPreferences(
+        "gamebox_launch_exports",
+        Context.MODE_PRIVATE,
+    )
+    private val temporaryPublishedPreferenceKey = "uris"
     private val temporaryPublishedContent = ConcurrentHashMap.newKeySet<Uri>()
 
     override fun cleanupLaunchedContent() {
-        temporaryPublishedContent.toList().forEach { uri ->
+        val persisted = temporaryPublishedPreference
+            .getStringSet(temporaryPublishedPreferenceKey, emptySet())
+            .orEmpty()
+            .mapNotNull { raw -> runCatching { Uri.parse(raw) }.getOrNull() }
+        (temporaryPublishedContent.toList() + persisted).distinct().forEach { uri ->
             runCatching { context.contentResolver.delete(uri, null, null) }
             temporaryPublishedContent.remove(uri)
         }
+        temporaryPublishedPreference.edit().remove(temporaryPublishedPreferenceKey).apply()
     }
 
     override fun launch(capability: EmulatorCapability, preparation: LaunchPreparation): GatewayResult =
@@ -303,6 +313,11 @@ class AndroidPackageGateway(
         displayId: Int?,
     ): GatewayResult {
         preparation.checkActive()
+        // A previous emulator session may have been interrupted before the
+        // host resumed, so its temporary MediaStore export was never removed.
+        // Reconcile those app-owned exports before publishing the next one;
+        // otherwise every retry creates another duplicate in Downloads.
+        cleanupLaunchedContent()
         val resolvedPackage = resolvePackageName(capability.packageName)
             ?: return GatewayResult.EMULATOR_UNAVAILABLE
         val launcherIntent = context.packageManager.getLaunchIntentForPackage(resolvedPackage)
@@ -511,6 +526,14 @@ class AndroidPackageGateway(
                 "Exported game has no filesystem path"
             }
             temporaryPublishedContent += published
+            val tracked = temporaryPublishedPreference
+                .getStringSet(temporaryPublishedPreferenceKey, emptySet())
+                .orEmpty()
+                .toMutableSet()
+                .apply { add(published.toString()) }
+            temporaryPublishedPreference.edit()
+                .putStringSet(temporaryPublishedPreferenceKey, tracked)
+                .apply()
             exportedPath
         } catch (error: Exception) {
             context.contentResolver.delete(published, null, null)

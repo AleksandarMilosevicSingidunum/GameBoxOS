@@ -2479,3 +2479,13 @@ physical emulator-session/exit failure, not a GameBox install failure. The TV
 was returned to a visible GameBox task with a normal activity launch for
 continued testing; no force-stop or task kill was used and return-to-GameBox is
 still not claimed as passed.
+
+Interrupted emulator-export cleanup (2026-10-01): physical-device inspection
+found repeated temporary `galaxy-patrol.nes` exports under
+`Download/GameBox` after RetroArch failed to return. `AndroidPackageGateway`
+now reconciles temporary export URIs before every launch and persists ownership
+so a fresh gateway/process can remove exports left by an interrupted session.
+The regression suite passed: `GalaxyPatrolExportTest` 2/2 on API 35, including
+fresh-gateway cleanup, and the JVM unit suite passed. The existing historical
+exports remain separate device evidence; future launches no longer accumulate
+new duplicates through this path.
