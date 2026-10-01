@@ -2561,3 +2561,10 @@ Physical PPSSPP adapter smoke checkpoint (1 October 2026): Honor reports PPSSPP 
 A normal Back key did not close PPSSPP, matching the still-open emulator-return gate; GameBox
 was then restored to the same TV display. This proves adapter availability/launch only, not a
 playable PSP title or save recovery.
+
+API-35 emulator return follow-up: while RetroArch was top-resumed, a normal Android Home
+action moved it to a paused/invisible task. GameBox was then opened as the user-facing launcher
+and became top-resumed; `pidof com.retroarch` still reported a live RetroArch process and the
+RetroArch task remained in history. This validates a Home-to-GameBox return/session-preservation
+route without force-stop or task kill. The direct Back route still remains unverified because
+RetroActivityFuture consumes or ignores Back on this build.
