@@ -4062,3 +4062,19 @@ database files are present. Do not treat the failed run as a product-test pass.
   with the debug/release build is unsafe. Re-test browser fullscreen and the
   title-specific Vimm page after a signed build is available. No game file was
   downloaded; the physical controller still reports disconnected.
+
+## 2026-10-11 — Honor TV legal install and emulator launch slice
+
+- [x] On the actual 1920x1080 Honor external display, installed the included
+  1 MB Galaxy Patrol homebrew using the separate `0.1.0-debug` build. Its
+  detail page changed to `installed`, and Library showed it as available
+  offline.
+- [x] Opened its details from Library and launched it through NES.emu. The
+  emulator reached the running game screen; returning to GameBox restored the
+  production Home screen. The production Home capture is full-screen with no
+  HONOR dock/taskbar.
+- [ ] NES.emu still displays its touch-controller overlay while the game runs;
+  hiding that overlay and verifying real Bluetooth gamepad input remain open.
+  The game was launched but not played through a complete level or save/restore
+  cycle. Vimm's website download button was not activated and no ROM was
+  downloaded.
