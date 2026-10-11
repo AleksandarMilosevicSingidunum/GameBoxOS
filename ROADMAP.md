@@ -18,6 +18,9 @@
   never activated.
 - [x] Restored HONOR's per-app **Open in full screen mode** and maximized
   GameBox. Final HDMI capture had no Dock, taskbar, or window chrome.
+- [x] Opened Download Manager on the TV after returning from Vimm: Queue was
+  **0** (0 active, 0 queued/paused), and Completed was **1** with only the
+  existing 48 KB Galaxy Patrol fixture. No Vimm transfer record was created.
 - [ ] Bluetooth controller is still absent from Android's input inventory.
   Physical A activation and a lawful end-to-end Vimm transfer remain untested;
   do not test by activating a commercial game download.
