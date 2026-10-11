@@ -72,6 +72,18 @@ internal fun GameDetailsContentPanel(
 ) {
     val game = state.game
     val launchState = state.launchState
+    val missingInstall = game.state in setOf(
+        InstallState.NOT_INSTALLED,
+        InstallState.FAILED,
+        InstallState.MISSING_FILES,
+    )
+    val installerUnavailable = !state.authorizedFixture && missingInstall &&
+        (game.sourceUrl == null || game.expectedSha256 == null)
+    val howToPlay = if (installerUnavailable) {
+        "How to play: this listing has no verified installer. Import your own game copy from Library, then press Play after verification."
+    } else {
+        "How to play: install this authorized game, install the approved emulator shown in Game settings, then press Play after verification."
+    }
     val canUninstall = launchState.status !in setOf(
         LaunchUiState.Status.PREPARING,
         LaunchUiState.Status.LAUNCHED,
@@ -94,10 +106,10 @@ internal fun GameDetailsContentPanel(
             if (game.state !in setOf(InstallState.INSTALLED, InstallState.UPDATE_AVAILABLE)) {
                 Spacer(Modifier.height(8.dp))
                 Text(
-                    "How to play: install this authorized game, install the approved emulator shown in Game settings, then press Play after verification.",
+                    howToPlay,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.78f),
                     modifier = Modifier.semantics {
-                        contentDescription = "How to play: install the game, install the approved emulator, then press Play after verification"
+                        contentDescription = howToPlay
                     },
                 )
             }
@@ -170,6 +182,7 @@ internal fun GameDetailsContentPanel(
                             game.state in setOf(InstallState.INSTALLED, InstallState.UPDATE_AVAILABLE) &&
                             !state.hasApprovedEmulator
                         ) "Unsupported system"
+                        else if (installerUnavailable) "No installer"
                         else if (!state.authorizedFixture) game.state.primaryAction()
                         else if (state.authorizedState.status == AuthorizedDownloadState.Status.SUCCEEDED)
                             "Reinstall game" else "Install game",

@@ -87,6 +87,62 @@ class GameDetailsHeroTest {
     }
 
     @Test
+    fun listingWithoutVerifiedInstallerExplainsPersonalImportPath() {
+        val game = testGame(InstallState.NOT_INSTALLED)
+        compose.setContent {
+            MaterialTheme {
+                GameDetailsHero(
+                    game = game,
+                    detail = GameDetailPresentation.from(game),
+                    compact = false,
+                    authorizedFixture = false,
+                    workerActive = false,
+                    hasRemoteSource = false,
+                    primaryActionFocusRequester = remember { FocusRequester() },
+                    onPlay = {},
+                    onInstallAuthorized = {},
+                    onInstallRemote = {},
+                )
+            }
+        }
+
+        compose.onNodeWithText(
+            "No verified installer is configured. Import your own game copy from Library.",
+        ).assertIsDisplayed()
+    }
+
+    @Test
+    fun listingWithoutVerifiedInstallerDoesNotOfferDisabledInstallActionAsReady() {
+        compose.setContent {
+            MaterialTheme {
+                GameDetailsContentPanel(
+                    state = GameDetailsContentState(
+                        game = testGame(InstallState.NOT_INSTALLED),
+                        requiredEmulatorCore = null,
+                        authorizedState = AuthorizedDownloadState(),
+                        launchState = LaunchUiState(),
+                        authorizedFixture = false,
+                        workerActive = false,
+                        saveDescription = "No managed save files found",
+                        compact = true,
+                    ),
+                    actions = GameDetailsContentActions(
+                        onPrimaryAction = {}, onCancelDownload = {}, onPlay = {}, onUninstall = {},
+                        onPauseDownload = {}, onToggleFavorite = {}, onBack = {},
+                        onRefreshSaves = {}, onCancelPreparation = {},
+                    ),
+                )
+            }
+        }
+
+        compose.onNodeWithText(
+            "How to play: this listing has no verified installer. Import your own game copy from Library, then press Play after verification.",
+        ).assertIsDisplayed()
+        compose.onNodeWithText("No installer").assertIsNotEnabled()
+        compose.onNodeWithText("Install").assertDoesNotExist()
+    }
+
+    @Test
     fun unsupportedInstalledGameDisablesContentPanelPlayAction() {
         var plays = 0
         val game = testGame(InstallState.INSTALLED).copy(platform = "Switch")
@@ -236,7 +292,7 @@ class GameDetailsHeroTest {
 
         compose.onNodeWithText("Unknown").assertDoesNotExist()
         compose.onNodeWithText("1 player").assertIsDisplayed()
-        compose.onNodeWithText("512 MB").assertIsDisplayed()
+        compose.onAllNodesWithText("512 MB").assertCountEquals(2)
     }
 
     @Test

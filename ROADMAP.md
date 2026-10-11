@@ -1,5 +1,31 @@
 # GameBox OS Roadmap
 
+## 11 October 2026 — Honor TV details and authorized-install verification
+
+- [x] Captured the actual HDMI panel at 1920×1080: GameBox fills the TV, has no
+  window border, and the HONOR Dock/taskbar is absent. The UI is still on the
+  TV's Store/details route after hardware tests.
+- [x] Store exposes three legal/homebrew-style entries (Celeste Classic,
+  Freedoom, OpenMW). Celeste Classic has no checksum-backed installer; the old
+  detail copy incorrectly promised an authorized install and showed a disabled
+  “Install” action. Updated the hero and content guidance to say that no
+  verified installer is configured, direct the user to Library → import their
+  own copy, and label the disabled action “No installer.” Screen-reader
+  description now matches the visible guidance.
+- [x] Ran `GameDetailsHeroTest` on the physical Honor: 11/11 passed, including
+  D-pad focus from Play to Vimm Download and both no-installer regression tests.
+  The duplicate `512 MB` test assertion now accounts for its two legitimate UI
+  occurrences.
+- [x] Ran `AuthorizedInstallLifecycleTest` on the physical Honor: 1/1 passed
+  for the authorized Galaxy Patrol install → uninstall → reinstall and save /
+  backup retention flow.
+- [ ] No external Bluetooth controller is enumerated; GameBox still reports
+  `Controller: Not connected`. Automated key-event tests are not physical-input
+  acceptance.
+- [ ] Vimm integration currently provides search/discovery and opens the site;
+  it does not download game binaries. Vimm direct-download/automatic-import
+  acceptance remains open. No commercial game was downloaded.
+
 ## 11 October 2026 — Honor TV fullscreen and Vimm search flow
 
 - [x] Read-only Android diagnostics identify the connected HDMI TV as active
