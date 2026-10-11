@@ -9,6 +9,9 @@
 - [x] Sent controller-B key input while the live Vimm page was open. GameBox
   returned to the details screen and showed “Returned without starting a
   download.” No site download control was activated and no ROM was downloaded.
+- [x] On production, three R1 tab changes reached Downloads on the TV. It
+  showed 0 active, 0 queued/paused, and one completed Galaxy Patrol marked
+  Ready, with 436.3 GB free. No transfer was started or removed.
 - [ ] This was TV-side Android key injection and touchscreen text/result
   selection, not a physical Bluetooth-controller acceptance; HONOR reports no
   controller connected. The focused instrumentation run crashed before
