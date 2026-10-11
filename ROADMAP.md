@@ -1,5 +1,27 @@
 # GameBox OS Roadmap
 
+## 11 October 2026 — HONOR TV Vimm search and focus retest
+
+- [x] On the physical 1920×1080 HDMI output, used GameBox's on-screen search
+  keyboard to submit the legal/freeware term `Freedoom` to the configured Vimm
+  source. The 16-console search completed with four results and offered
+  **Did you mean “Freedom”?**; results were grouped by console.
+- [x] Opened a result's details and followed GameBox's **Download** action to
+  Vimm's Vault inside `TrackedSourceBrowserActivity`. Vimm's detail request was
+  unavailable in GameBox, but the actual page loaded, and its Download button
+  had the visible yellow focus cue on first load. Used **Back to GameBox**;
+  GameBox confirmed it returned without starting a download.
+- [x] One injected D-pad Right moved browser focus from the focused Download
+  control to Vimm's footer copyright link. This is not physical-controller
+  acceptance, but it shows directional WebView traversal is not intuitive on
+  this page. No file was downloaded and the website's Download control was
+  never activated.
+- [x] Restored HONOR's per-app **Open in full screen mode** and maximized
+  GameBox. Final HDMI capture had no Dock, taskbar, or window chrome.
+- [ ] Bluetooth controller is still absent from Android's input inventory.
+  Physical A activation and a lawful end-to-end Vimm transfer remain untested;
+  do not test by activating a commercial game download.
+
 ## 11 October 2026 — Controller detection and navigation retest
 
 - [x] On the physical HONOR TV session, queried Android's live input inventory:
