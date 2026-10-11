@@ -1,5 +1,30 @@
 # GameBox OS Roadmap
 
+## 11 October 2026 — Honor TV fullscreen and Vimm search flow
+
+- [x] Read-only Android diagnostics identify the connected HDMI TV as active
+  display 12 at 1920×1080. GameBox `MainActivity` is fullscreen on that display.
+- [x] Used HONOR's GameBox Dock menu **Open in full screen mode** setting.
+  The settled TV capture has no Dock/taskbar, and `dumpsys window` reports the
+  HONOR `Dock` window as `GONE` (`mViewVisibility=0x8`) while GameBox remains
+  visible. This per-app HONOR setting is left enabled to satisfy the requested
+  living-room fullscreen behavior.
+- [x] On the TV surface, the Home Vimm action opened Store; the Vimm source
+  opened the controller search keyboard. Display-targeted Android D-pad/A/B
+  key events moved Q→W, entered `W`, and closed the keyboard with the query
+  preserved. Activating the Vimm source then displayed 628 results grouped by
+  console with artwork. No game was downloaded; results included commercial
+  titles and this run did not select a legal homebrew download.
+- [x] A display-targeted R1 event switched Store to Downloads; the fullscreen
+  view remained clear of the Dock and showed 0 active, 0 queued/paused, and 1
+  completed item (Galaxy Patrol).
+- [ ] Android reports no attached external gamepad; GameBox says
+  `Controller: Not connected`. These synthetic key-event checks do not replace
+  physical Bluetooth-controller acceptance. Vimm Download → durable transfer →
+  automatic import and emulator play/return are still open.
+- [x] The temporary Android UI-hierarchy diagnostic was removed from
+  `/data/local/tmp` after inspection.
+
 ## 11 October 2026 — Honor TV reconnect and controller gate
 
 - [x] Reopened GameBox on the connected physical `HONOR PGT-N19 API 36.0`
