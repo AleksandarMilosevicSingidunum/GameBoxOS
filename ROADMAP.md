@@ -1,5 +1,23 @@
 # GameBox OS Roadmap
 
+## 11 October 2026 — HONOR TV Vimm route and browser Back acceptance
+
+- [x] On the physical Honor with the debug app on external display 12
+  (1920×1080), searched `MARIO`, received 65 results grouped by console with
+  artwork, and opened Mario & Luigi: Superstar Saga details. The details
+  fallback was accurate; GameBox's Download action opened the tracked Vimm page.
+- [x] Sent controller-B key input while the live Vimm page was open. GameBox
+  returned to the details screen and showed “Returned without starting a
+  download.” No site download control was activated and no ROM was downloaded.
+- [ ] This was TV-side Android key injection and touchscreen text/result
+  selection, not a physical Bluetooth-controller acceptance; HONOR reports no
+  controller connected. The focused instrumentation run crashed before
+  assertions because `HwPCUtils#HwActivityStarterEx` force-stopped
+  `com.gamebox.os.debug` while starting its test Activity.
+- [ ] Production `com.gamebox.os` remains unchanged at version 0.1.0. Durable
+  Download Manager → automatic-import behavior and physical-controller input
+  remain unverified.
+
 ## 11 October 2026 — Full host verification and HONOR test-runner limitation
 
 - [x] Android JVM suite: 780 tests, 0 failures/errors, 1 skipped; `:app:lintDebug`
