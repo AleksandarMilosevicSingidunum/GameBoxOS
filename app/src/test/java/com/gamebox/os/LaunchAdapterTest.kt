@@ -10,14 +10,39 @@ import com.gamebox.os.launch.EmulatorContentRoot
 import com.gamebox.os.launch.ReturnTracker
 import com.gamebox.os.launch.retroArchCorePath
 import com.gamebox.os.launch.externalDisplayLaunchId
+import com.gamebox.os.launch.hasRetroArchCoreContract
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.flow.first
 
 class LaunchAdapterTest {
+    @Test fun retroArchLaunchRequiresARecognizedCoreContractBeforeStartingNativeActivity() {
+        val base = EmulatorCapability(
+            id = "imported-test",
+            gameId = GameId("test-game"),
+            packageName = "com.retroarch.aarch64",
+            contentRelativePath = "test/game.nes",
+            mimeType = "application/octet-stream",
+            expectedSha256 = "a".repeat(64),
+        )
+
+        assertEquals(false, hasRetroArchCoreContract(base))
+        assertEquals(false, hasRetroArchCoreContract(base.copy(
+            requiredCore = "NES core",
+            retroArchCoreFileName = "../../bad.so",
+        )))
+        assertEquals(true, hasRetroArchCoreContract(base.copy(
+            requiredCore = "NES core",
+            retroArchCoreFileName = "fceumm_libretro_android.so",
+        )))
+        assertEquals(true, hasRetroArchCoreContract(base.copy(packageName = "org.ppsspp.ppsspp")))
+    }
+
     @Test fun emulatorLaunchDisplayIdUsesOnlyExternalDisplays() {
         assertEquals(null, externalDisplayLaunchId(null))
         assertEquals(null, externalDisplayLaunchId(0))
@@ -129,12 +154,14 @@ class LaunchAdapterTest {
         assertEquals("application/octet-stream", capability.mimeType)
     }
 
-    @Test fun galaxyPatrolDeclaresRequiredNesCore() {
+    @Test fun galaxyPatrolUsesStandaloneNesEmuWithoutRetroArchCore() {
         val game = Game(GameId("galaxy-patrol"), "Galaxy Patrol", "Retro", 2018, "Arcade", 1, InstallState.INSTALLED)
         val registry = EmulatorCapabilityRegistry()
-        val message = registry.readinessMessage(game)
-        assertEquals(true, message?.contains("FCEUmm"))
-        assertEquals("fceumm_libretro_android.so", registry.forGame(game)?.retroArchCoreFileName)
+        val capability = requireNotNull(registry.forGame(game))
+        assertEquals("com.explusalpha.NesEmu", capability.packageName)
+        assertNull(registry.readinessMessage(game))
+        assertNull(capability.requiredCore)
+        assertNull(capability.retroArchCoreFileName)
     }
 
     @Test fun galaxyPatrolUsesRetroArchStablePrivateCorePath() {
@@ -151,14 +178,38 @@ class LaunchAdapterTest {
         val n64 = Game(GameId("n64-test"), "N64 Test", "N64", 1999, "Racing", 1, installed)
         val dreamcast = Game(GameId("dc-test"), "DC Test", "Dreamcast", 1999, "Racing", 1, installed)
 
-        assertEquals(listOf("com.github.stenzek.duckstation", "com.retroarch.aarch64"), registry.optionsFor(ps1))
-        assertEquals(listOf("org.mupen64plusae.v3.fzurita", "com.retroarch.aarch64"), registry.optionsFor(n64))
-        assertEquals(listOf("com.flycast.emulator", "com.retroarch.aarch64"), registry.optionsFor(dreamcast))
+        assertEquals(listOf("com.github.stenzek.duckstation"), registry.optionsFor(ps1))
+        assertEquals(listOf("org.mupen64plusae.v3.fzurita"), registry.optionsFor(n64))
+        assertEquals(listOf("com.flycast.emulator"), registry.optionsFor(dreamcast))
         assertEquals("DuckStation", registry.displayName("com.github.stenzek.duckstation"))
         assertEquals("M64Plus FZ", registry.displayName("org.mupen64plusae.v3.fzurita"))
         assertEquals("Flycast", registry.displayName("com.flycast.emulator"))
         val nes = Game(GameId("nes-test"), "NES Test", "Nintendo Entertainment System", 1986, "Action", 1, installed)
-        assertEquals("com.retroarch.aarch64", registry.optionsFor(nes).first())
+        assertEquals("com.explusalpha.NesEmu", registry.optionsFor(nes).first())
+    }
+
+    @Test fun supportedStandalonePlatformDefaultsNeverSelectRetroArch() {
+        val registry = EmulatorCapabilityRegistry()
+        listOf(
+            "NES", "SNES", "Game Boy", "Game Boy Color", "Game Boy Advance", "Genesis",
+            "Master System", "Game Gear", "Atari 2600", "PS1", "PSP", "PS2", "N64",
+            "Dreamcast", "GameCube", "Wii", "WiiWare", "DS", "3DS",
+        ).forEach { platform ->
+            val game = Game(GameId("adapter-test-${platform.hashCode()}"), "Adapter test", platform, 2000,
+                "Test", 1, InstallState.INSTALLED)
+            val options = registry.optionsFor(game)
+            assertTrue("$platform must expose a standalone default", options.isNotEmpty())
+            assertTrue("$platform must not default to RetroArch", options.none { it.startsWith("com.retroarch") })
+        }
+    }
+
+    @Test fun unsupportedPlatformsDoNotAdvertiseAnApprovedEmulator() {
+        val registry = EmulatorCapabilityRegistry()
+        listOf("PS3", "Switch", "Xbox", "Xbox 360", "Unknown system").forEach { platform ->
+            val game = Game(GameId("unsupported-${platform.hashCode()}"), "Test", platform, 0,
+                "Test", 1, InstallState.INSTALLED)
+            assertFalse("$platform must not imply Play support", registry.hasApprovedAdapter(game))
+        }
     }
 
     @Test fun importedContentUsesImportRootAndFriendlyPlatformAlias() {

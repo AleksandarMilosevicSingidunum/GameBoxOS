@@ -235,6 +235,45 @@ class LaunchSessionControllerTest {
         assertTrue(returned.message!!.contains("Backed up 1 save artifact"))
     }
 
+    @Test fun windowFocusReturnFinishesSessionWhenHostNeverPauses(): Unit = runBlocking {
+        val repository = FakeGameRepository()
+        val game = repository.observeGames().value.first().copy(state = InstallState.INSTALLED)
+        val journal = Journal()
+        val gateway = object : PackageGateway {
+            override fun launch(capability: EmulatorCapability, preparation: LaunchPreparation) =
+                preparation.dispatch { GatewayResult.LAUNCHED }
+        }
+        val controller = DefaultGameLaunchController(
+            EmulatorCapabilityRegistry(listOf(capability.copy(gameId = game.id))),
+            gateway,
+            repository,
+            scope = this,
+            sessionJournal = journal,
+        )
+
+        controller.launch(game)
+        withTimeout(5_000) {
+            controller.observeState().first { it.status == LaunchUiState.Status.LAUNCHED }
+        }
+        assertEquals(game.id.value, journal.pending)
+
+        // Honor Desktop can leave GameBox resumed while another freeform task
+        // owns focus, so Activity.onPause/onResume may not bracket the session.
+        controller.onHostWindowFocusChanged(false)
+        controller.onHostWindowFocusChanged(true)
+
+        val recovered = withTimeout(5_000) {
+            controller.observeState().first {
+                it.status == LaunchUiState.Status.RETURNED || it.status == LaunchUiState.Status.SESSION_ERROR
+            }
+        }
+        assertEquals("focus return did not reconcile the journal: ${journal.events}",
+            LaunchUiState.Status.RETURNED, recovered.status)
+        assertNull(journal.pending)
+        assertEquals(listOf("begin", "confirm", "finish"), journal.events)
+        assertTrue(recovered.message!!.contains("Returned to GameBox"))
+    }
+
     @Test fun failedConfiguredEmulatorRestoreBlocksDispatch(): Unit = runBlocking {
         val repository = FakeGameRepository()
         val game = repository.observeGames().value.first().copy(state = InstallState.INSTALLED)

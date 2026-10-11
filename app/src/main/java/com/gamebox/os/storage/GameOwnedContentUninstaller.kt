@@ -2,10 +2,13 @@ package com.gamebox.os.storage
 
 import java.io.File
 import java.nio.file.Files
+import com.gamebox.os.importer.RomImportPolicy
 
 data class ContentRemovalManifest(val gameId: String, val relativePaths: List<String>)
 data class ContentRemovalPreview(val bytes: Long, val files: Int)
-class ContentRemovalFailed(val removedFiles: Int, cause: Exception) : Exception("Content removal incomplete", cause)
+class ContentRemovalFailed(val removedFiles: Int, cause: Exception) : Exception("Content removal incomplete", cause) {
+    fun totalRemovedFiles(removedBeforeFailure: Int): Int = removedBeforeFailure + removedFiles
+}
 
 /** Deletes only individually recorded files, never a directory or save root. */
 class GameOwnedContentUninstaller(filesDirectory: File) {
@@ -39,8 +42,10 @@ class GameOwnedContentUninstaller(filesDirectory: File) {
                 path.none { it == '\\' || it == ':' || it == '\u0000' } &&
                 path.split('/').none { it.isEmpty() || it == "." || it == ".." }) { "Unsafe content path" }
             val parts = path.split('/')
-            val owned = (parts.firstOrNull() == "imports" && parts.dropLast(1).contains(id)) ||
-                path.startsWith("imports/$id/") || path.startsWith("installed/remote/$id/") ||
+            val ownedImport = path.startsWith("imports/$id/") ||
+                (parts.size >= 4 && parts[0] == "imports" &&
+                    parts[1] in RomImportPolicy.managedPlatformDirectories() && parts[2] == id)
+            val owned = ownedImport || path.startsWith("installed/remote/$id/") ||
                 (id == "galaxy-patrol" && path == "installed/retro/galaxy-patrol/content/galaxy-patrol.nes")
             require(owned) { "Content does not belong to the selected game" }
             File(root, path).also(::validateFile)

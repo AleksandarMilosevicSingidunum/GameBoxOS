@@ -32,8 +32,11 @@ class GeneralContentRemovalTest {
         val root = Files.createTempDirectory(app.cacheDir.toPath(), "content-link-test-").toFile()
         val link = root.resolve("imports/disc/game.chd")
         try {
-            val other = root.resolve("imports/other/game.chd").apply { parentFile.mkdirs(); writeText("keep") }
-            link.parentFile.mkdirs()
+            val other = root.resolve("imports/other/game.chd").apply {
+                checkNotNull(parentFile).apply { check(mkdirs() || isDirectory) }
+                writeText("keep")
+            }
+            checkNotNull(link.parentFile).apply { check(mkdirs() || isDirectory) }
             Files.createSymbolicLink(link.toPath(), other.toPath())
             assertThrows(IllegalArgumentException::class.java) {
                 GameOwnedContentUninstaller(root).uninstall(ContentRemovalManifest("disc", listOf("imports/disc/game.chd")))
@@ -66,7 +69,10 @@ class GeneralContentRemovalTest {
                 object : CatalogProvider { override suspend fun load(): CatalogSnapshot = error("Seeded database must not load a catalog") },
                 scope, {}, {})
             withTimeout(5_000) { repository.observeGames().first { it.any { row -> row.id == game.id } } }
-            fun fixture(path: String) = root.resolve(path).apply { parentFile.mkdirs(); writeText("content") }
+            fun fixture(path: String) = root.resolve(path).apply {
+                checkNotNull(parentFile).apply { check(mkdirs() || isDirectory) }
+                writeText("content")
+            }
             val cue = fixture("imports/disc-test/game.cue")
             val track = fixture("imports/disc-test/track.bin")
             val save = fixture("saves/disc-test/progress.sav")
@@ -168,11 +174,11 @@ class GeneralContentRemovalTest {
                 repository.observeGames().first { rows -> rows.any { it.id == game.id } }
             }
             val content = root.resolve("imports/backup-failure/game.nes").apply {
-                parentFile.mkdirs()
+                checkNotNull(parentFile).apply { check(mkdirs() || isDirectory) }
                 writeText("owned game content")
             }
             val emptySave = root.resolve("saves/backup-failure/progress.sav").apply {
-                parentFile.mkdirs()
+                checkNotNull(parentFile).apply { check(mkdirs() || isDirectory) }
                 createNewFile()
             }
             database.saveRecordDao().upsert(

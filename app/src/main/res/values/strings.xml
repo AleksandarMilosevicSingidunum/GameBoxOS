@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="tracked_source_back_to_gamebox">Back to GameBox</string>
+    <string name="tracked_source_web_page">Web source</string>
+    <string name="tracked_source_loading_page">Loading source page</string>
+    <string name="tracked_source_https_downloads_only">Only HTTPS downloads are supported</string>
+    <string name="tracked_source_unsupported_filename">The source did not provide a supported game filename. Use Import your copy after downloading in a browser.</string>
+    <string name="tracked_source_download_start_failed">Could not start download: %1$s</string>
+</resources>

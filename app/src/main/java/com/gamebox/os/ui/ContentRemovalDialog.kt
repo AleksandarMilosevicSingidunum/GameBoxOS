@@ -15,6 +15,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 
 @Composable
@@ -47,10 +49,13 @@ internal fun ContentRemovalDialog(game: Game, controller: SaveSafetyController, 
                 cloudPreflight?.let { Text(it.message) }
                 if (cloudAcknowledgementRequired && !finished) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Checkbox(
+                        BlueprintCheckbox(
                             checked = acknowledgeLocalOnly,
                             enabled = !busy,
                             onCheckedChange = { acknowledgeLocalOnly = it },
+                            modifier = Modifier.semantics {
+                                contentDescription = "Acknowledge local backup because cloud backup is unavailable"
+                            },
                         )
                         Text(
                             "I understand cloud backup is unavailable and want to continue using the verified local backup.",
@@ -63,7 +68,7 @@ internal fun ContentRemovalDialog(game: Game, controller: SaveSafetyController, 
             }
         },
         confirmButton = {
-            Button(enabled = !busy && (finished ||
+            BlueprintButton(enabled = !busy && (finished ||
                 (preview != null && cloudPreflight != null &&
                     (!cloudAcknowledgementRequired || acknowledgeLocalOnly))), onClick = {
                 if (finished) onClose() else {
@@ -85,6 +90,6 @@ internal fun ContentRemovalDialog(game: Game, controller: SaveSafetyController, 
                 }
             }) { Text(if (finished) "Close" else "Uninstall content") }
         },
-        dismissButton = { if (!finished) OutlinedButton(enabled = !busy, onClick = onClose) { Text("Cancel") } },
+        dismissButton = { if (!finished) BlueprintOutlinedButton(enabled = !busy, onClick = onClose) { Text("Cancel") } },
     )
 }

@@ -2,6 +2,7 @@ package com.gamebox.os.storage
 
 import android.content.Context
 import android.net.Uri
+import androidx.core.net.toUri
 import androidx.documentfile.provider.DocumentFile
 import java.io.InputStream
 
@@ -76,7 +77,7 @@ class ExternalLibraryContentStore(
     private fun resolve(gameId: String, relativePath: String): DocumentFile? {
         val segments = externalLibrarySegments(gameId, relativePath)
         val configured = treeUri().takeIf(String::isNotBlank) ?: return null
-        val uri = runCatching { Uri.parse(configured) }.getOrNull() ?: return null
+        val uri = runCatching { configured.toUri() }.getOrNull() ?: return null
         val root = DocumentFile.fromTreeUri(applicationContext, uri)
             ?.takeIf { it.exists() && it.isDirectory && it.canRead() }
             ?: return null

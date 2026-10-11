@@ -10,12 +10,73 @@ import org.junit.Test
 
 class ConfiguredSourceResultTest {
     @Test
+    fun consoleResultRowsMergeVimmPlatformAliasesAndFollowPresetOrder() {
+        val rows = configuredDiscoveryResultConsoleRows(
+            listOf(
+                DiscoverySourceGame("vimm-source", "ps2-1", "PS2 First", "PlayStation 2"),
+                DiscoverySourceGame("vimm-source", "gba-1", "GBA First", "GBA"),
+                DiscoverySourceGame("vimm-source", "ps2-2", "PS2 Second", "PS2"),
+                DiscoverySourceGame("vimm-source", "gba-2", "GBA Second", "Game Boy Advance"),
+            ),
+        )
+
+        assertEquals(listOf("Game Boy Advance", "PS2"), rows.map { it.label })
+        assertEquals(listOf("GBA First", "GBA Second"), rows[0].games.map { it.title })
+        assertEquals(listOf("PS2 First", "PS2 Second"), rows[1].games.map { it.title })
+    }
+
+    @Test
+    fun editionLabelShowsOnlyRegionAndYearProvidedBySource() {
+        assertEquals(
+            "Europe · 2004",
+            configuredSourceResultEditionLabel(
+                DiscoverySourceGame(
+                    sourceId = "vimm-source",
+                    externalId = "12345",
+                    title = "Example Game",
+                    platform = "PSP",
+                    region = " Europe ",
+                    year = 2004,
+                ),
+            ),
+        )
+        assertEquals(
+            "Japan",
+            configuredSourceResultEditionLabel(
+                DiscoverySourceGame("vimm-source", "12346", "Example Game", "PSP", region = "Japan"),
+            ),
+        )
+        assertEquals(
+            null,
+            configuredSourceResultEditionLabel(
+                DiscoverySourceGame("vimm-source", "12347", "Example Game", "PSP"),
+            ),
+        )
+    }
+
+    @Test
+    fun sourcePlatformBadgeUsesCompactConsoleLabels() {
+        assertEquals("GBA", configuredSourceResultPlatformLabel("Nintendo Game Boy Advance"))
+        assertEquals("GBC", configuredSourceResultPlatformLabel("Game Boy Color"))
+        assertEquals("PS2", configuredSourceResultPlatformLabel("Sony PlayStation 2"))
+        assertEquals("Unknown Console", configuredSourceResultPlatformLabel(" Unknown Console "))
+    }
+
+    @Test
     fun staleSourceDetailsProduceActionableMetadataOnlyNotice() {
         assertEquals(
-            "Vimm's Lair details are unavailable; the listing may be stale. " +
-                "You can still open the source page or import your own copy. (HTTP 404)",
-            configuredSourceDetailFailureMessage("Vimm's Lair", "HTTP 404"),
+            "Vimm's Lair result found, but extra details could not be loaded. You can still use Download to open the source, or import a copy you own.",
+            configuredSourceDetailFailureMessage("Vimm's Lair"),
         )
+    }
+
+    @Test
+    fun sourceDetailLookupFailureDoesNotClaimTheListingWasRemoved() {
+        val notice = configuredSourceNotFoundMessage("Vimm's Lair")
+
+        assertTrue(notice.contains("details could not be loaded in GameBox"))
+        assertTrue(notice.contains("open the source page"))
+        assertFalse(notice.contains("no longer has this listing"))
     }
 
     @Test

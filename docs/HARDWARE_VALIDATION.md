@@ -1,12 +1,12 @@
 # GameBox OS hardware validation checklist
 
-Run these checks on the Honor Magic5 Pro with the purchased UGREEN 7-in-1 hub before production release.
+Run these checks on the Honor Magic6 Pro (`PGT-N19`) with the purchased UGREEN 7-in-1 hub before production release.
 
 Preliminary evidence only: wired desktop output through a non-final dock was observed with little to no noticeable latency. No controller was available during that test, so it does not close the controller, final-hub, concurrent-I/O, reconnect, or soak gates.
 
 - [ ] GameBox selected as the Android HOME app and recoverable after cold boot/unlock without relying on the damaged internal display
 - [ ] Controller navigation, focus restoration, Back/B handling, and reconnect after sleep
-- [ ] Honor Magic5 Pro at 16:9 over HDMI with controller input in the chosen mirroring/Desktop Mode path
+- [ ] Honor Magic6 Pro (`PGT-N19`) at 16:9 over HDMI with controller input in the chosen mirroring/Desktop Mode path
 - [ ] Purchased UGREEN 7-in-1 hub: HDMI, PD charging, Gigabit Ethernet, and USB controller coexistence
 - [ ] HDMI disconnect/reconnect restores the GameBox surface and controller focus
 - [ ] Ethernet unplug/replug recovers without breaking controller navigation
@@ -22,7 +22,7 @@ Preliminary evidence only: wired desktop output through a non-final dock was obs
 
 ## On-device runtime evidence
 
-During Honor Magic5 Pro acceptance, keep **GameBox Settings** open while connecting and
+During Honor Magic6 Pro acceptance, keep **GameBox Settings** open while connecting and
 disconnecting the final hub. The runtime status cards expose the controller identity,
 active audio route, detected secondary displays with their reported resolution, active
 network transport (including Ethernet versus Wi-Fi), battery percentage, and Android's

@@ -26,7 +26,7 @@ object CompanionLibraryRoute {
         if (pairingSecret.isNullOrBlank() ||
             !CompanionProtocol.verifyAuthorization(pairingSecret, method, path, authorization, nowUnixTimeSeconds)
         ) return CompanionHttpResponse(401, """{"error":"unauthorized"}""")
-        return CompanionHttpResponse(200, """{"protocolVersion":1,"games":[${library.joinToString(",") { it.toJson() }}]}""")
+        return CompanionHttpResponse(200, """{"protocolVersion":${CompanionProtocol.VERSION},"games":[${library.joinToString(",") { it.toJson() }}]}""")
     }
 
     private fun CompanionLibraryItem.toJson() =

@@ -28,12 +28,12 @@ fun DownloadJobEntity.toDomain(): DownloadJob = DownloadJob(
     errorReason = errorReason
 )
 
-fun Game.toDownloadEntity(): DownloadJobEntity = DownloadJobEntity(
+fun Game.toDownloadEntity(totalBytes: Long? = null): DownloadJobEntity = DownloadJobEntity(
     id = id.value,
     gameId = id.value,
     title = title,
     status = DownloadStatus.QUEUED.name,
-    totalBytes = sizeMb.toLong() * 1024L * 1024L,
+    totalBytes = totalBytes ?: sizeMb.toLong() * 1024L * 1024L,
     downloadedBytes = 0L,
     errorReason = null
 )

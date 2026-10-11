@@ -11,4 +11,11 @@ class HomeRoleStatusTest {
         assertFalse(shouldFocusEmptyHomeSetup(isDefaultHome = true, gameCount = 0))
         assertFalse(shouldFocusEmptyHomeSetup(isDefaultHome = false, gameCount = 1))
     }
+
+    @Test
+    fun defaultHomeSetupBannerIsLimitedToRelevantSurface() {
+        assertTrue(shouldShowDefaultHomeSetupBanner(isDefaultHome = false, allowPromptOnSurface = true))
+        assertFalse(shouldShowDefaultHomeSetupBanner(isDefaultHome = true, allowPromptOnSurface = true))
+        assertFalse(shouldShowDefaultHomeSetupBanner(isDefaultHome = false, allowPromptOnSurface = false))
+    }
 }

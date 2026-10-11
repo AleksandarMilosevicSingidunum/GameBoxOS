@@ -14,14 +14,12 @@ data class LibrarySummary(
 }
 
 fun summarizeLibrary(games: List<Game>): LibrarySummary {
-    val playable = games.filter {
-        it.state == InstallState.INSTALLED || it.state == InstallState.UPDATE_AVAILABLE
-    }
+    val playable = games.filter { it.state.isPlayableLocally() }
     return LibrarySummary(
         totalGames = games.size,
         installedGames = playable.size,
         favorites = games.count { it.favorite },
         totalMinutesPlayed = games.sumOf { it.minutesPlayed.coerceAtLeast(0) },
-        resumeGame = games.filter { it.lastPlayed != null }.maxByOrNull { it.lastPlayed.orEmpty() }
+        resumeGame = playable.filter { it.lastPlayed != null }.maxByOrNull { it.lastPlayed.orEmpty() }
     )
 }

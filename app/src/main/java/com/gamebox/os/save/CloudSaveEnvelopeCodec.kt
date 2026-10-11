@@ -46,19 +46,20 @@ object CloudSaveEnvelopeCodec {
     fun decode(expectedGameId: String, encoded: ByteArray): CloudSaveEnvelope {
         require(encoded.size <= CloudSaveSyncContract.MAX_PAYLOAD_BYTES) { "Cloud save envelope exceeds the 16 MiB limit" }
         return DataInputStream(ByteArrayInputStream(encoded)).use { input ->
-            require(input.readNBytes(MAGIC.size).contentEquals(MAGIC)) { "Cloud save envelope header is invalid" }
+            require(input.readExact(MAGIC.size, "Cloud save envelope header is invalid").contentEquals(MAGIC)) {
+                "Cloud save envelope header is invalid"
+            }
             val gameIdLength = input.readUnsignedShort()
             require(gameIdLength in 1..96) { "Cloud save envelope game id is invalid" }
-            val gameId = input.readNBytes(gameIdLength).toString(Charsets.UTF_8)
+            val gameId = input.readExact(gameIdLength, "Cloud save envelope game id is invalid").toString(Charsets.UTF_8)
             require(gameId == expectedGameId) { "Cloud save belongs to a different game" }
             val updatedAtMillis = input.readLong()
             require(updatedAtMillis >= 0L) { "Cloud save timestamp is invalid" }
             val payloadSize = input.readInt()
             require(payloadSize in 0..MAX_RAW_PAYLOAD_BYTES) { "Cloud save payload size is invalid" }
-            val expectedChecksum = input.readNBytes(32)
-            require(expectedChecksum.size == 32) { "Cloud save checksum is missing" }
-            val payload = input.readNBytes(payloadSize)
-            require(payload.size == payloadSize && input.read() == -1) { "Cloud save envelope length is invalid" }
+            val expectedChecksum = input.readExact(32, "Cloud save checksum is missing")
+            val payload = input.readExact(payloadSize, "Cloud save envelope length is invalid")
+            require(input.read() == -1) { "Cloud save envelope length is invalid" }
             val actualChecksum = sha256Bytes(payload)
             require(actualChecksum.contentEquals(expectedChecksum)) { "Cloud save payload checksum mismatch" }
             CloudSaveEnvelope(gameId, updatedAtMillis, payload, actualChecksum.toHex())
@@ -66,6 +67,15 @@ object CloudSaveEnvelopeCodec {
     }
 
     fun sha256(payload: ByteArray): String = sha256Bytes(payload).toHex()
+
+    private fun DataInputStream.readExact(size: Int, message: String): ByteArray =
+        ByteArray(size).also { bytes ->
+            try {
+                readFully(bytes)
+            } catch (_: java.io.EOFException) {
+                throw IllegalArgumentException(message)
+            }
+        }
 
     private fun sha256Bytes(payload: ByteArray): ByteArray =
         MessageDigest.getInstance("SHA-256").digest(payload)

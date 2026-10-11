@@ -12,6 +12,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import com.gamebox.os.display.externalDisplayActivityResultOptions
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
@@ -32,13 +33,16 @@ import kotlinx.coroutines.withContext
 internal fun ImportedGameReimportCard(game: Game, importer: AuthorizedRomImporter,
     repository: GameRepository, enabled: Boolean) {
     val context = LocalContext.current
+    val documentPickerOptions = remember(context) { externalDisplayActivityResultOptions(context) }
     val scope = rememberCoroutineScope()
     var busy by remember(game.id) { mutableStateOf(false) }
     var message by remember(game.id) { mutableStateOf<String?>(null) }
+    var importProgress by remember(game.id) { mutableStateOf<RomImportProgress?>(null) }
     var confirmForget by remember(game.id) { mutableStateOf(false) }
-    val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
+    val picker = rememberLauncherForActivityResult(OpenGameFilesContract(allowMultiple = true)) { uris ->
         if (uris.isEmpty()) message = "No files selected" else {
             busy = true
+            importProgress = null
             scope.launch {
                 try {
                     // Once confirmed, finish registration even if navigation removes this card.
@@ -60,7 +64,13 @@ internal fun ImportedGameReimportCard(game: Game, importer: AuthorizedRomImporte
                         val expected = listOf(original) + current.localContentFiles.filterNot {
                             it.relativePath == original.relativePath
                         }
-                        when (val result = importer.importSet(current.id, sources, current.platform, expected)) {
+                        when (val result = importer.importSet(
+                            current.id,
+                            sources,
+                            current.platform,
+                            expected,
+                            onProgress = { importProgress = it },
+                        )) {
                             is RomImportSetResult.Imported -> {
                                 val primary = result.launchFile
                                 try {
@@ -82,10 +92,27 @@ internal fun ImportedGameReimportCard(game: Game, importer: AuthorizedRomImporte
                                 val cleanupDeferred = runCatching {
                                     importer.confirmRegistration(current.id, result.transactionId)
                                 }.isFailure
-                                if (cleanupDeferred) {
-                                    "Content verified and restored. Saves and history retained; transaction cleanup will finish after restart."
+                                val sourcesRemoved = if (cleanupDeferred) 0 else
+                                    sources.count { deleteImportedSource(context, it.uri) }
+                                val removedCountMessage = if (sourcesRemoved == 1) {
+                                    "1 selected source file removed."
                                 } else {
-                                    "Content verified and restored. Existing saves and history retained."
+                                    "$sourcesRemoved selected source files removed."
+                                }
+                                val sourceStatus = when {
+                                    cleanupDeferred ->
+                                        "Source files were retained until transaction recovery completes."
+                                    sourcesRemoved == sources.size ->
+                                        removedCountMessage
+                                    sourcesRemoved > 0 ->
+                                        "$sourcesRemoved of ${sources.size} selected source file(s) removed; Android retained the rest."
+                                    else ->
+                                        "Source files were retained because Android denied deletion."
+                                }
+                                if (cleanupDeferred) {
+                                    "Content verified and restored. Saves and history retained; transaction cleanup will finish after restart. $sourceStatus"
+                                } else {
+                                    "Content verified and restored. Existing saves and history retained. $sourceStatus"
                                 }
                             }
                             RomImportSetResult.SourceUnavailable -> "A selected file could not be opened; select the files again."
@@ -97,7 +124,10 @@ internal fun ImportedGameReimportCard(game: Game, importer: AuthorizedRomImporte
                 } catch (error: Exception) {
                     if (error is CancellationException) throw error
                     message = "Reimport did not complete: " + (error.message?.take(160) ?: "check storage and retry")
-                } finally { busy = false }
+                } finally {
+                    busy = false
+                    importProgress = null
+                }
             }
         }
     }
@@ -109,7 +139,7 @@ internal fun ImportedGameReimportCard(game: Game, importer: AuthorizedRomImporte
                 Text("GameBox will remove only its stale file references. Saves, backups, artwork, favorites, metadata and play history are retained. You can import or install the game again later.")
             },
             confirmButton = {
-                Button(onClick = {
+                BlueprintButton(onClick = {
                     confirmForget = false
                     busy = true
                     scope.launch {
@@ -129,7 +159,9 @@ internal fun ImportedGameReimportCard(game: Game, importer: AuthorizedRomImporte
                     }
                 }) { Text("Forget file references") }
             },
-            dismissButton = { TextButton(onClick = { confirmForget = false }) { Text("Cancel") } },
+            dismissButton = {
+                BlueprintTextButton(onClick = { confirmForget = false }) { Text("Cancel") }
+            },
         )
     }
     if (game.canReimportContent() || busy || message != null) {
@@ -140,14 +172,19 @@ internal fun ImportedGameReimportCard(game: Game, importer: AuthorizedRomImporte
                     style = MaterialTheme.typography.titleMedium,
                 )
                 Text("Select the original game file, or the descriptor and all tracks with their original filenames. Checksums must match. You can instead forget stale file references. Saves and history are always kept.")
-                if (busy) LinearProgressIndicator(Modifier.fillMaxWidth())
+                if (busy) {
+                    GameImportProgressIndicator(
+                        modifier = Modifier.fillMaxWidth(),
+                        progress = importProgress,
+                    )
+                }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Button(
+                    BlueprintButton(
                         enabled = enabled && !busy && game.canReimportContent(),
-                        onClick = { picker.launch(arrayOf("*/*")) },
+                        onClick = { picker.launch(arrayOf("*/*"), documentPickerOptions) },
                         modifier = Modifier.semantics { contentDescription = "Locate files" },
                     ) { Text("Locate files") }
-                    TextButton(
+                    BlueprintTextButton(
                         enabled = enabled && !busy && game.canReimportContent(),
                         onClick = { confirmForget = true },
                         modifier = Modifier.semantics { contentDescription = "Forget missing file references" },

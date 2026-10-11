@@ -32,6 +32,9 @@ class CloudSaveEnvelopeCodecTest {
         assertThrows(IllegalArgumentException::class.java) {
             CloudSaveEnvelopeCodec.decode("galaxy-patrol", corrupted)
         }
+        assertThrows(IllegalArgumentException::class.java) {
+            CloudSaveEnvelopeCodec.decode("galaxy-patrol", encoded.copyOf(encoded.size - 1))
+        }
     }
 
     @Test fun enforcesRawPayloadLimitBeforeAllocation() {

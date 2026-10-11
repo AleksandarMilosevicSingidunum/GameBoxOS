@@ -17,7 +17,7 @@ object EmulatorIntentPolicy {
     const val PPSSPP_GOLD_PACKAGE = "org.ppsspp.ppssppgold"
     const val PPSSPP_LEGACY_PACKAGE = "org.ppsspp.ppsspplegacy"
     const val DOLPHIN_PACKAGE = "org.dolphinemu.dolphinemu"
-    const val DOLPHIN_AUTO_START_FILES = "AutoStartFiles"
+    const val DOLPHIN_AUTO_START_FILE = "AutoStartFile"
     const val RETROARCH_ROM = "ROM"
     const val RETROARCH_CORE = "LIBRETRO"
     const val RETROARCH_CONFIG = "CONFIGFILE"
@@ -63,7 +63,11 @@ object EmulatorIntentPolicy {
                 )
             packageName == DOLPHIN_PACKAGE -> EmulatorIntentPlan(
                 style = EmulatorIntentStyle.LAUNCHER_EXTRAS,
-                stringArrayExtras = mapOf(DOLPHIN_AUTO_START_FILES to listOf(contentUri)),
+                stringExtras = mapOf(DOLPHIN_AUTO_START_FILE to contentUri),
+            )
+            packageName == "me.magnum.melonds" -> EmulatorIntentPlan(
+                style = EmulatorIntentStyle.ACTION_VIEW,
+                activityClassName = "me.magnum.melonds.ui.emulator.EmulatorActivity",
             )
             else -> EmulatorIntentPlan(EmulatorIntentStyle.ACTION_VIEW)
         }

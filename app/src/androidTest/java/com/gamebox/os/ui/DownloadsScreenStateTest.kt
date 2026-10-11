@@ -1,6 +1,7 @@
 package com.gamebox.os.ui
 
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.v2.createComposeRule
@@ -49,7 +50,7 @@ class DownloadsScreenStateTest {
     private val jobs = MutableStateFlow(listOf(job))
     private val downloadRepository = object : DownloadRepository {
         override fun observeJobs(): StateFlow<List<DownloadJob>> = jobs
-        override fun enqueue(game: Game) = Unit
+        override fun enqueue(game: Game, totalBytes: Long?) = Unit
         override fun pause(id: GameId) = Unit
         override fun resume(id: GameId) = Unit
         override fun cancel(id: GameId) = Unit
@@ -86,6 +87,7 @@ class DownloadsScreenStateTest {
                     compact = false,
                     onStore = {},
                     onSettings = {},
+                    browserDownloadRecords = emptyList(),
                 )
             }
         }
@@ -107,9 +109,12 @@ class DownloadsScreenStateTest {
                 },
             )
             jobs.value = listOf(current)
-            compose.waitForIdle()
             compose.onNodeWithContentDescription(GameBoxSemantics.downloadDescription(current)).assertIsDisplayed()
-            compose.onNodeWithText(current.status.name.lowercase().replace('_', ' ')).assertIsDisplayed()
+            val statusLabel = current.status.name.lowercase().replace('_', ' ')
+            compose.waitUntil(timeoutMillis = 5_000) {
+                compose.onAllNodesWithText(statusLabel).fetchSemanticsNodes().isNotEmpty()
+            }
+            compose.onNodeWithText(statusLabel).assertIsDisplayed()
             current.errorReason?.let { compose.onNodeWithText(it).assertIsDisplayed() }
             action?.let {
                 compose.onNodeWithText(it)
@@ -126,7 +131,7 @@ class DownloadsScreenStateTest {
 
     @Test
     fun emptyDownloadsProvidesControllerReachableStoreRoute() {
-        var storeOpened = false
+        var storeOpened = 0
         jobs.value = emptyList()
         compose.setContent {
             MaterialTheme {
@@ -135,18 +140,23 @@ class DownloadsScreenStateTest {
                     downloadRepository = downloadRepository,
                     remoteDownloadController = remoteController,
                     compact = false,
-                    onStore = { storeOpened = true },
+                    onStore = { storeOpened++ },
                     onSettings = {},
+                    browserDownloadRecords = emptyList(),
                 )
             }
         }
 
-        compose.onNodeWithText("No active downloads").assertIsDisplayed()
+        compose.onNodeWithText("Your queue is clear").assertIsDisplayed()
+        compose.onNodeWithText("Choose a game").assertIsDisplayed()
+        compose.onNodeWithText("Download").assertIsDisplayed()
+        compose.onNodeWithText("Ready to play").assertIsDisplayed()
+        compose.onNodeWithText("Tracking continues in background").assertIsDisplayed()
         compose.onNodeWithText("Browse Store")
             .assertIsDisplayed()
             .performSemanticsAction(SemanticsActions.RequestFocus)
-            .performClick()
-        assert(storeOpened)
+            .performKeyInput { pressKey(Key.DirectionCenter) }
+        compose.runOnIdle { assert(storeOpened == 1) }
     }
 
     @Test
@@ -172,6 +182,7 @@ class DownloadsScreenStateTest {
                     compact = true,
                     onStore = {},
                     onSettings = {},
+                    browserDownloadRecords = emptyList(),
                 )
             }
         }
@@ -183,6 +194,11 @@ class DownloadsScreenStateTest {
             .filter(hasClickAction())
             .onFirst()
             .performSemanticsAction(SemanticsActions.RequestFocus)
+        compose.waitForIdle()
+        compose.waitUntil(timeoutMillis = 5_000) {
+            runCatching { pause.assertIsFocused() }.isSuccess
+        }
+        pause
             .assertIsFocused()
         pause.performClick()
         assert(pauseCount == 1)

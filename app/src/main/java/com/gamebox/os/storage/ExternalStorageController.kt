@@ -3,6 +3,7 @@ package com.gamebox.os.storage
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import androidx.core.net.toUri
 import androidx.documentfile.provider.DocumentFile
 import com.gamebox.os.settings.SettingsRepository
 
@@ -45,7 +46,7 @@ class ExternalStorageController(
         if (uriString.isNotBlank()) {
             runCatching {
                 applicationContext.contentResolver.releasePersistableUriPermission(
-                    Uri.parse(uriString),
+                    uriString.toUri(),
                     Intent.FLAG_GRANT_READ_URI_PERMISSION or
                         Intent.FLAG_GRANT_WRITE_URI_PERMISSION
                 )
@@ -61,7 +62,7 @@ class ExternalStorageController(
                 message = "No external library selected"
             )
         }
-        val uri = runCatching { Uri.parse(uriString) }.getOrNull()
+        val uri = runCatching { uriString.toUri() }.getOrNull()
             ?: return ExternalStorageStatus(ExternalStorageState.INVALID, message = "Stored location is invalid")
         if (uri.scheme != "content") {
             return ExternalStorageStatus(

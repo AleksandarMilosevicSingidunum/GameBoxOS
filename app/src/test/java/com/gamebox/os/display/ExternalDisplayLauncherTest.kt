@@ -6,7 +6,7 @@ import org.junit.Test
 class ExternalDisplayLauncherTest {
     @Test
     fun externalDisplayUsesASeparateStandardHost() {
-        assertEquals("com.gamebox.os.TvActivity", externalDisplayActivityClass.name)
+        assertEquals("com.gamebox.os.ExternalDisplayActivity", externalDisplayActivityClass.name)
     }
 
     @Test
@@ -51,18 +51,18 @@ class ExternalDisplayLauncherTest {
     }
 
     @Test
-    fun onlyTheRemovedExternalDisplayFinishesTvActivity() {
-        assertEquals(true, shouldFinishTvActivityForRemovedDisplay(23, 23))
-        assertEquals(false, shouldFinishTvActivityForRemovedDisplay(23, 24))
-        assertEquals(false, shouldFinishTvActivityForRemovedDisplay(0, 0))
-        assertEquals(false, shouldFinishTvActivityForRemovedDisplay(-1, -1))
+    fun onlyTheRemovedExternalDisplayFinishesItsActivity() {
+        assertEquals(true, shouldFinishExternalDisplayActivityForRemovedDisplay(23, 23))
+        assertEquals(false, shouldFinishExternalDisplayActivityForRemovedDisplay(23, 24))
+        assertEquals(false, shouldFinishExternalDisplayActivityForRemovedDisplay(0, 0))
+        assertEquals(false, shouldFinishExternalDisplayActivityForRemovedDisplay(-1, -1))
     }
 
     @Test
-    fun onlyTheChangedExternalDisplayReappliesTvWindowPolicy() {
-        assertEquals(true, shouldReapplyTvWindowPolicyForChangedDisplay(23, 23))
-        assertEquals(false, shouldReapplyTvWindowPolicyForChangedDisplay(23, 24))
-        assertEquals(false, shouldReapplyTvWindowPolicyForChangedDisplay(0, 0))
+    fun onlyTheChangedExternalDisplayReappliesItsWindowPolicy() {
+        assertEquals(true, shouldReapplyExternalDisplayWindowPolicyForChangedDisplay(23, 23))
+        assertEquals(false, shouldReapplyExternalDisplayWindowPolicyForChangedDisplay(23, 24))
+        assertEquals(false, shouldReapplyExternalDisplayWindowPolicyForChangedDisplay(0, 0))
     }
 
     @Test
@@ -70,5 +70,20 @@ class ExternalDisplayLauncherTest {
         assertEquals(false, isExternalDisplayId(-1))
         assertEquals(false, isExternalDisplayId(0))
         assertEquals(true, isExternalDisplayId(8))
+    }
+
+    @Test
+    fun fullscreenRetryRequiresFocusOnAnExternalDisplay() {
+        assertEquals(false, shouldRequestExternalFullscreenOnFocus(0, hasFocus = true))
+        assertEquals(false, shouldRequestExternalFullscreenOnFocus(8, hasFocus = false))
+        assertEquals(true, shouldRequestExternalFullscreenOnFocus(8, hasFocus = true))
+    }
+
+    @Test
+    fun primaryFullscreenRequestRequiresFocusedMultiWindowLauncher() {
+        assertEquals(false, shouldRequestPrimaryFullscreenOnFocus(0, hasFocus = false, isInMultiWindowMode = true))
+        assertEquals(false, shouldRequestPrimaryFullscreenOnFocus(0, hasFocus = true, isInMultiWindowMode = false))
+        assertEquals(true, shouldRequestPrimaryFullscreenOnFocus(0, hasFocus = true, isInMultiWindowMode = true))
+        assertEquals(false, shouldRequestPrimaryFullscreenOnFocus(8, hasFocus = true, isInMultiWindowMode = true))
     }
 }

@@ -7,8 +7,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
@@ -19,7 +17,6 @@ import androidx.compose.ui.unit.dp
 import com.gamebox.os.data.GameRepository
 import com.gamebox.os.catalog.MetadataMatchCandidate
 import com.gamebox.os.catalog.GameMetadataSearchClient
-import com.gamebox.os.settings.SettingsRepository
 import com.gamebox.os.domain.Game
 import com.gamebox.os.domain.GameMetadataOverrides
 import com.gamebox.os.domain.ProviderMetadataSelection
@@ -29,7 +26,6 @@ import kotlinx.coroutines.launch
 internal fun GameMetadataEditorDialog(
     game: Game,
     repository: GameRepository,
-    settingsRepository: SettingsRepository,
     onDismiss: () -> Unit,
 ) {
     var title by remember(game.id) { mutableStateOf(game.metadataOverrides.title.orEmpty()) }
@@ -43,11 +39,11 @@ internal fun GameMetadataEditorDialog(
     var matchSearchCompleted by remember(game.id) { mutableStateOf(false) }
     var candidates by remember(game.id) { mutableStateOf<List<MetadataMatchCandidate>>(emptyList()) }
     val scope = rememberCoroutineScope()
-    val metadataClient = remember(settingsRepository) {
+    val metadataClient = remember {
         GameMetadataSearchClient(
             providers = listOf(
-                com.gamebox.os.catalog.TheGamesDbMetadataClient(settingsRepository::theGamesDbApiKey),
                 com.gamebox.os.catalog.WikidataMetadataClient(),
+                com.gamebox.os.catalog.LibretroThumbnailClient(),
             ),
         )
     }
@@ -167,7 +163,7 @@ internal fun GameMetadataEditorDialog(
                     } ?: "No provider match has been confirmed",
                     modifier = Modifier.padding(top = 12.dp),
                 )
-                OutlinedButton(
+                BlueprintOutlinedButton(
                     enabled = !saving && !findingMatches,
                     onClick = ::findMatches,
                     modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
@@ -181,7 +177,7 @@ internal fun GameMetadataEditorDialog(
                     )
                 }
                 candidates.forEach { candidate ->
-                    OutlinedButton(
+                    BlueprintOutlinedButton(
                         enabled = !saving,
                         onClick = { applyMatch(candidate) },
                         modifier = Modifier.fillMaxWidth().padding(top = 6.dp)
@@ -209,7 +205,7 @@ internal fun GameMetadataEditorDialog(
             }
         },
         confirmButton = {
-            Button(
+            BlueprintButton(
                 enabled = !saving,
                 onClick = {
                     val parsedYear = if (year.isBlank()) null else year.toIntOrNull()
@@ -232,12 +228,12 @@ internal fun GameMetadataEditorDialog(
         dismissButton = {
             Column {
                 if (!game.metadataOverrides.isEmpty) {
-                    OutlinedButton(
+                    BlueprintOutlinedButton(
                         enabled = !saving,
                         onClick = { persist(GameMetadataOverrides()) },
                     ) { Text("Use provider metadata") }
                 }
-                OutlinedButton(enabled = !saving, onClick = onDismiss) { Text("Cancel") }
+                BlueprintOutlinedButton(enabled = !saving, onClick = onDismiss) { Text("Cancel") }
             }
         },
     )

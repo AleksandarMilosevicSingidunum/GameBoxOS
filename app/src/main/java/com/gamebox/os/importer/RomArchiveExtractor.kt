@@ -1,7 +1,6 @@
 package com.gamebox.os.importer
 
 import java.io.File
-import java.io.InputStream
 import java.util.zip.ZipFile
 import org.apache.commons.compress.archivers.sevenz.SevenZFile
 
@@ -19,18 +18,33 @@ object RomArchiveExtractor {
         platform: String?,
         maxFiles: Int,
         maxBytes: Long,
+        onProgress: ((bytesProcessed: Long, totalBytes: Long?) -> Unit)? = null,
     ): List<ExtractedFile>? {
         val extension = source.extension.lowercase()
         if (extension !in setOf("zip", "7z")) return null
         val output = staging.resolve("archive-content").apply { mkdirs() }
-        val result = when (extension) {
-            "zip" -> extractZip(source, output, platform, maxFiles, maxBytes)
-            else -> extractSevenZip(source, output, platform, maxFiles, maxBytes)
+        val result = try {
+            when (extension) {
+                "zip" -> extractZip(source, output, platform, maxFiles, maxBytes, onProgress)
+                else -> extractSevenZip(source, output, platform, maxFiles, maxBytes, onProgress)
+            }
+        } catch (error: Exception) {
+            // Do not leave an earlier entry (or a partially written current
+            // entry) behind when a later archive entry is corrupt or exceeds
+            // the import limits. The parent transaction also cleans staging,
+            // but keep this boundary safe for every caller.
+            output.deleteRecursively()
+            throw error
         }
-        require(result.isNotEmpty()) {
-            "The archive contains no supported ${RomImportPolicy.profileLabel(platform)} game files"
+        return try {
+            require(result.isNotEmpty()) {
+                "The archive contains no supported ${RomImportPolicy.profileLabel(platform)} game files"
+            }
+            result
+        } catch (error: Exception) {
+            output.deleteRecursively()
+            throw error
         }
-        return result
     }
 
     private fun extractZip(
@@ -39,19 +53,33 @@ object RomArchiveExtractor {
         platform: String?,
         maxFiles: Int,
         maxBytes: Long,
+        onProgress: ((bytesProcessed: Long, totalBytes: Long?) -> Unit)?,
     ): List<ExtractedFile> {
         ZipFile(source).use { zip ->
+            val totalBytes = zipSupportedContentSize(zip, platform)
             var total = 0L
+            var processed = 0L
+            val progressThrottle = ByteProgressThrottle(
+                onProgress = { bytes -> onProgress?.invoke(bytes, totalBytes) },
+            )
             return zip.entries().asSequence()
                 .filterNot { it.isDirectory }
                 .mapNotNull { entry ->
-                    val name = safeEntryName(entry.name) ?: return@mapNotNull null
-                    val safeName = runCatching { RomImportPolicy.safeFileName(name, platform) }.getOrNull()
-                        ?: return@mapNotNull null
+                    val safeName = supportedContentName(entry.name, platform) ?: return@mapNotNull null
                     require(resultCount(output) < maxFiles) { "Archive contains too many supported game files" }
                     val target = uniqueTarget(output, safeName)
-                    val written = zip.getInputStream(entry).use { input -> writeBounded(input, target, maxBytes - total) }
+                    val written = zip.getInputStream(entry).use { input ->
+                        writeBounded(
+                            readChunk = input::read,
+                            target = target,
+                            remaining = maxBytes - total,
+                        ) { count ->
+                            processed += count
+                            progressThrottle.onBytesProcessed(processed)
+                        }
+                    }
                     total += written
+                    progressThrottle.finish(processed)
                     ExtractedFile(target, safeName)
                 }
                 .toList()
@@ -64,19 +92,32 @@ object RomArchiveExtractor {
         platform: String?,
         maxFiles: Int,
         maxBytes: Long,
+        onProgress: ((bytesProcessed: Long, totalBytes: Long?) -> Unit)?,
     ): List<ExtractedFile> {
-        SevenZFile(source).use { archive ->
+        val totalBytes = sevenZipSupportedContentSize(source, platform)
+        SevenZFile.builder().setFile(source).get().use { archive ->
             var total = 0L
+            var processed = 0L
+            val progressThrottle = ByteProgressThrottle(
+                onProgress = { bytes -> onProgress?.invoke(bytes, totalBytes) },
+            )
             val result = mutableListOf<ExtractedFile>()
             while (true) {
                 val entry = archive.nextEntry ?: break
                 if (entry.isDirectory) continue
-                val name = safeEntryName(entry.name) ?: continue
-                val safeName = runCatching { RomImportPolicy.safeFileName(name, platform) }.getOrNull() ?: continue
+                val safeName = supportedContentName(entry.name, platform) ?: continue
                 require(result.size < maxFiles) { "Archive contains too many supported game files" }
                 val target = uniqueTarget(output, safeName)
-                val written = writeBounded(archive, target, maxBytes - total)
+                val written = writeBounded(
+                    readChunk = archive::read,
+                    target = target,
+                    remaining = maxBytes - total,
+                ) { count ->
+                    processed += count
+                    progressThrottle.onBytesProcessed(processed)
+                }
                 total += written
+                progressThrottle.finish(processed)
                 result += ExtractedFile(target, safeName)
             }
             return result
@@ -91,33 +132,63 @@ object RomArchiveExtractor {
         return normalized.substringAfterLast('/').takeIf { it.isNotBlank() }
     }
 
-    private fun writeBounded(input: InputStream, target: File, remaining: Long): Long {
-        require(remaining > 0) { "Archive exceeds the configured import limit" }
-        var total = 0L
-        target.outputStream().buffered().use { output ->
-            val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
-            while (true) {
-                val read = input.read(buffer)
-                if (read < 0) break
-                total += read
-                require(total <= remaining) { "Archive exceeds the configured import limit" }
-                output.write(buffer, 0, read)
-            }
-        }
-        return total
+    private fun supportedContentName(raw: String, platform: String?): String? {
+        val name = safeEntryName(raw) ?: return null
+        return runCatching { RomImportPolicy.safeArchiveContentFileName(name, platform) }.getOrNull()
     }
 
-    private fun writeBounded(input: SevenZFile, target: File, remaining: Long): Long {
+    private fun zipSupportedContentSize(zip: ZipFile, platform: String?): Long? {
+        val entries = zip.entries()
+        var total = 0L
+        var known = true
+        while (entries.hasMoreElements()) {
+            val entry = entries.nextElement()
+            if (entry.isDirectory || supportedContentName(entry.name, platform) == null) continue
+            if (entry.size < 0L) {
+                known = false
+            } else if (known) {
+                val next = total + entry.size
+                if (next < total) known = false else total = next
+            }
+        }
+        return total.takeIf { known && it > 0L }
+    }
+
+    private fun sevenZipSupportedContentSize(source: File, platform: String?): Long? {
+        SevenZFile.builder().setFile(source).get().use { archive ->
+            var total = 0L
+            var known = true
+            while (true) {
+                val entry = archive.nextEntry ?: break
+                if (entry.isDirectory || supportedContentName(entry.name, platform) == null) continue
+                if (entry.size < 0L) {
+                    known = false
+                } else if (known) {
+                    val next = total + entry.size
+                    if (next < total) known = false else total = next
+                }
+            }
+            return total.takeIf { known && it > 0L }
+        }
+    }
+
+    private fun writeBounded(
+        readChunk: (ByteArray) -> Int,
+        target: File,
+        remaining: Long,
+        onChunk: (Long) -> Unit = {},
+    ): Long {
         require(remaining > 0) { "Archive exceeds the configured import limit" }
         var total = 0L
         target.outputStream().buffered().use { output ->
             val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
             while (true) {
-                val read = input.read(buffer)
-                if (read < 0) break
-                total += read
+                val bytesRead = readChunk(buffer)
+                if (bytesRead < 0) break
+                total += bytesRead
                 require(total <= remaining) { "Archive exceeds the configured import limit" }
-                output.write(buffer, 0, read)
+                output.write(buffer, 0, bytesRead)
+                onChunk(bytesRead.toLong())
             }
         }
         return total

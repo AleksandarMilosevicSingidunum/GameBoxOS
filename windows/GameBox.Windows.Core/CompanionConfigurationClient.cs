@@ -67,7 +67,7 @@ public sealed class CompanionConfigurationClient
         var normalized = host.Trim().Trim('[', ']');
         if (normalized.Contains('/') || normalized.Contains('\\') || normalized.Contains('?') || normalized.Contains('#'))
             throw new ArgumentException("Host must not include a scheme, path, or query.", nameof(host));
-        var request = new HttpRequestMessage(method, new UriBuilder(Uri.UriSchemeHttp, normalized, port, RequestPath).Uri);
+        var request = new HttpRequestMessage(method, new UriBuilder(Uri.UriSchemeHttps, normalized, port, RequestPath).Uri);
         string? hash = null;
         if (flags is not null)
         {

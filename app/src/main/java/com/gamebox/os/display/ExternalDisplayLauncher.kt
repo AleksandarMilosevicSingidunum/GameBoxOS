@@ -3,12 +3,14 @@ package com.gamebox.os.display
 import android.app.Activity
 import android.app.ActivityOptions
 import android.content.Context
+import android.content.ContextWrapper
 import android.content.Intent
 import android.hardware.display.DisplayManager
 import android.os.Bundle
 import android.view.Display
 import java.util.Locale
-import com.gamebox.os.TvActivity
+import androidx.core.app.ActivityOptionsCompat
+import com.gamebox.os.ExternalDisplayActivity
 
 internal data class ExternalDisplayTarget(
     val displayId: Int,
@@ -18,29 +20,39 @@ internal data class ExternalDisplayTarget(
     val isVirtual: Boolean = false,
 )
 
-internal val externalDisplayActivityClass = TvActivity::class.java
+internal val externalDisplayActivityClass = ExternalDisplayActivity::class.java
 
-// ActivityOptions exposes this through a hidden setter on some Android builds. The
-// bundle key is understood by the platform window manager and is safely ignored by
-// builds that do not support launch-windowing hints.
+// Best-effort desktop-shell launch hint. The public Activity fullscreen request
+// is also used by the destination on Android versions that expose it.
 private const val fullscreenWindowingMode = 1
 private const val launchWindowingModeKey = "android.activity.windowingMode"
 
 internal fun ActivityOptions.toGameBoxFullscreenLaunchBundle(): Bundle =
-    apply {
-        // Some Android desktop shells honor the public bundle hint below,
-        // while OEM shells expose the same request only through the hidden
-        // ActivityOptions setter. Use the setter opportunistically and retain
-        // the bundle key as the compatible fallback.
-        runCatching {
-            ActivityOptions::class.java
-                .getDeclaredMethod("setLaunchWindowingMode", Int::class.javaPrimitiveType)
-                .apply { isAccessible = true }
-                .invoke(this, fullscreenWindowingMode)
-        }
+    toBundle().apply {
+        // This is a best-effort hint for OEM desktop shells. Android's public
+        // fullscreen request is also made by the destination Activity where supported.
+        putInt(launchWindowingModeKey, fullscreenWindowingMode)
     }
-        .toBundle()
-        .apply { putInt(launchWindowingModeKey, fullscreenWindowingMode) }
+
+/** Carry the external-display/fullscreen launch hint through ActivityResult pickers. */
+internal fun externalDisplayActivityResultOptions(context: Context): ActivityOptionsCompat? {
+    val activity = generateSequence(context as Context?) { current ->
+        (current as? ContextWrapper)?.baseContext
+    }.filterIsInstance<Activity>().firstOrNull() ?: return null
+    val displayId = activity.currentDisplayId()
+    if (!isExternalDisplayId(displayId)) return null
+
+    val bundle = ActivityOptions.makeBasic().apply {
+        launchDisplayId = displayId
+    }.toGameBoxFullscreenLaunchBundle()
+    return BundleBackedActivityOptionsCompat(bundle)
+}
+
+private class BundleBackedActivityOptionsCompat(bundle: Bundle) : ActivityOptionsCompat() {
+    private val launchOptions = Bundle(bundle)
+
+    override fun toBundle(): Bundle = Bundle(launchOptions)
+}
 
 internal fun firstPresentationDisplayTarget(targets: List<ExternalDisplayTarget>): ExternalDisplayTarget? =
     targets.firstOrNull { !it.isVirtual } ?: targets.firstOrNull()
@@ -56,13 +68,14 @@ internal fun externalDisplayLaunchRequestedMessage(target: ExternalDisplayTarget
 
 internal fun isExternalDisplayId(displayId: Int): Boolean = displayId > Display.DEFAULT_DISPLAY
 
-internal fun shouldFinishTvActivityForRemovedDisplay(
+/** Keep phone content clear of system UI while letting a fullscreen TV host use every pixel. */
+internal fun shouldFinishExternalDisplayActivityForRemovedDisplay(
     currentDisplayId: Int,
     removedDisplayId: Int,
 ): Boolean =
     isExternalDisplayId(currentDisplayId) && currentDisplayId == removedDisplayId
 
-internal fun shouldReapplyTvWindowPolicyForChangedDisplay(
+internal fun shouldReapplyExternalDisplayWindowPolicyForChangedDisplay(
     currentDisplayId: Int,
     changedDisplayId: Int,
 ): Boolean =
@@ -102,10 +115,10 @@ internal fun launchGameBoxOnExternalDisplay(activity: Activity): String {
             // the final surface size.
         }
         val launchOptions = options.toGameBoxFullscreenLaunchBundle()
-        // Always target the dedicated TV host. OEM desktop shells can resolve
+        // Always target the dedicated external-display host. OEM desktop shells can resolve
         // an ACTION_MAIN/CATEGORY_HOME launch back to MainActivity even when
         // the user explicitly requested an external display, which creates a
-        // phone/freeform surface instead of the borderless TV host.
+        // phone/freeform surface instead of the borderless external-display host.
         val launchIntent = Intent(activity, externalDisplayActivityClass)
             .addFlags(
                 Intent.FLAG_ACTIVITY_NEW_TASK or

@@ -8,9 +8,12 @@ import org.junit.Test
 class CompanionProtocolTest {
     private val secret = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
 
-    @Test fun verifiesMatchingVersionOneRequest() {
-        val authorization = CompanionProtocol.createAuthorization(secret, "GET", "/v1/status", 1_700_000_000)
-        assertTrue(authorization.endsWith(":69acae0c7272bf32ddb759bb84ae0476177867864848ea6113589efe963afff6"))
+    @Test fun verifiesVersionTwoNonceBoundRequest() {
+        val nonce = "0123456789abcdef0123456789abcdef"
+        val authorization = CompanionProtocol.createAuthorization(
+            secret, "GET", "/v1/status", 1_700_000_000, nonce = nonce,
+        )
+        assertTrue(authorization.endsWith("$nonce:a2dec6ccb749ba2c91fdd59f963e92059156e9e481798ca56235458bd06f2b63"))
         assertTrue(CompanionProtocol.verifyAuthorization(secret, "GET", "/v1/status", authorization, 1_700_000_030))
     }
 

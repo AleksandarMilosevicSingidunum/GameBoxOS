@@ -8,11 +8,11 @@ class HubControllerLabelsTest {
     fun pcHubOffersVisibilityAndDesktopActions() {
         assertEquals(
             HubControllerLabels("Installed only", "Desktop mode"),
-            hubControllerLabels("PC Hub", showUnavailable = true),
+            hubControllerLabels(AppHubKind.PC, showUnavailable = true),
         )
         assertEquals(
             HubControllerLabels("Show setup", "Desktop mode"),
-            hubControllerLabels("PC Hub", showUnavailable = false),
+            hubControllerLabels(AppHubKind.PC, showUnavailable = false),
         )
     }
 
@@ -20,11 +20,11 @@ class HubControllerLabelsTest {
     fun mediaHubOffersVisibilityAndAudioActions() {
         assertEquals(
             HubControllerLabels("Installed only", "Audio"),
-            hubControllerLabels("Media", showUnavailable = true),
+            hubControllerLabels(AppHubKind.MEDIA, showUnavailable = true),
         )
         assertEquals(
             HubControllerLabels("Show setup", "Audio"),
-            hubControllerLabels("Media", showUnavailable = false),
+            hubControllerLabels(AppHubKind.MEDIA, showUnavailable = false),
         )
     }
 }

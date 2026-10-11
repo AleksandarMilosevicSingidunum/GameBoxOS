@@ -3,7 +3,6 @@ package com.gamebox.os.ui
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
@@ -47,14 +46,14 @@ internal fun MetadataFilterControl(
     selected: String?,
     onSelected: (String?) -> Unit,
 ) {
-    TextButton(
+    BlueprintTextButton(
         onClick = { onSelected(nextMetadataFilterValue(selected, values)) },
         enabled = selected != null || values.any(String::isNotBlank),
         modifier = Modifier.fillMaxWidth(),
     ) {
         Text(
             "$label: " + (selected ?: "All"),
-            fontSize = 10.sp,
+            fontSize = 12.sp,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )

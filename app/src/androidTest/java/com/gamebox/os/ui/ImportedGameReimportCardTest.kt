@@ -1,11 +1,18 @@
 package com.gamebox.os.ui
 
+import android.view.KeyEvent
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.*
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.unit.dp
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.platform.app.InstrumentationRegistry
 import com.gamebox.os.GameBoxApplication
 import com.gamebox.os.domain.Game
 import com.gamebox.os.domain.GameId
@@ -43,10 +50,19 @@ class ImportedGameReimportCardTest {
                 app.container.authorizedRomImporter, app.container.gameRepository, enabled = true)
         } }
 
-        compose.onNodeWithText("Forget").assertIsDisplayed().performClick()
+        compose.onNodeWithText("Forget")
+            .assertIsDisplayed()
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .assertIsFocused()
+        InstrumentationRegistry.getInstrumentation().sendKeyDownUpSync(KeyEvent.KEYCODE_BUTTON_A)
         compose.onNodeWithText("Forget missing game files?").assertIsDisplayed()
-        compose.onNodeWithText("Forget file references").assertIsDisplayed()
-        compose.onNodeWithText("Cancel").performClick()
+        compose.onNodeWithText("Forget file references")
+            .assertIsDisplayed()
+            .assert(SemanticsMatcher.keyIsDefined(SemanticsActions.RequestFocus))
+        compose.onNodeWithText("Cancel")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .assertIsFocused()
+        InstrumentationRegistry.getInstrumentation().sendKeyDownUpSync(KeyEvent.KEYCODE_BUTTON_A)
         compose.onNodeWithText("Forget missing game files?").assertDoesNotExist()
     }
 
@@ -60,6 +76,24 @@ class ImportedGameReimportCardTest {
         compose.onNodeWithText("Locate files").assertIsNotEnabled()
         compose.runOnIdle { enabled.value = true }
         compose.onNodeWithText("Locate files").assertIsEnabled()
+    }
+
+    @Test fun compactReimportPickerIsSpokenClickableAndFocusable() {
+        val app = ApplicationProvider.getApplicationContext<GameBoxApplication>()
+        compose.setContent { MaterialTheme {
+            Box(Modifier.width(560.dp)) {
+                ImportedGameReimportCard(
+                    retained.copy(state = InstallState.MISSING_FILES),
+                    app.container.authorizedRomImporter,
+                    app.container.gameRepository,
+                    enabled = true,
+                )
+            }
+        } }
+
+        compose.onNodeWithContentDescription("Locate files")
+            .assertHasClickAction()
+            .assert(SemanticsMatcher.keyIsDefined(SemanticsActions.RequestFocus))
     }
 }
 

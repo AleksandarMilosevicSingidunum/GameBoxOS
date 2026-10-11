@@ -3,33 +3,7 @@ package com.gamebox.os.data
 import android.content.Context
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
-import androidx.room.Room
-import com.gamebox.os.catalog.AssetCatalogProvider
-import com.gamebox.os.catalog.ConfiguredCatalogProvider
-import com.gamebox.os.catalog.HttpsCatalogProvider
-import com.gamebox.os.catalog.MetadataEnrichingCatalogProvider
-import com.gamebox.os.catalog.CatalogCredentialStore
-import com.gamebox.os.catalog.CatalogProviderFactory
-import com.gamebox.os.catalog.SelectingCatalogProvider
-import com.gamebox.os.catalog.TheGamesDbCatalogSync
-import com.gamebox.os.catalog.HttpsTheGamesDbCatalogTransport
-import com.gamebox.os.catalog.WikidataMetadataClient
-import com.gamebox.os.data.local.GameBoxDatabase
-import com.gamebox.os.data.local.DatabaseMigrationBackupManager
-import com.gamebox.os.data.local.GAMEBOX_DATABASE_VERSION
-import com.gamebox.os.data.local.MIGRATION_1_2
-import com.gamebox.os.data.local.MIGRATION_2_3
-import com.gamebox.os.data.local.MIGRATION_3_4
-import com.gamebox.os.data.local.MIGRATION_4_5
-import com.gamebox.os.data.local.MIGRATION_5_6
-import com.gamebox.os.data.local.MIGRATION_6_7
-import com.gamebox.os.data.local.MIGRATION_7_8
-import com.gamebox.os.data.local.MIGRATION_8_9
-import com.gamebox.os.data.local.MIGRATION_9_10
-import com.gamebox.os.data.local.MIGRATION_10_11
-import com.gamebox.os.data.local.MIGRATION_11_12
-import com.gamebox.os.data.local.MIGRATION_12_13
-import com.gamebox.os.data.local.MIGRATION_13_14
+import com.gamebox.os.data.local.GameBoxDatabaseRuntime
 import com.gamebox.os.data.local.RoomLaunchSessionJournal
 import com.gamebox.os.data.local.toDomain
 import com.gamebox.os.download.AuthorizedDownloadController
@@ -43,13 +17,6 @@ import com.gamebox.os.launch.EmulatorCapabilityRegistry
 import com.gamebox.os.launch.GameLaunchController
 import com.gamebox.os.storage.DefaultSaveSafetyController
 import com.gamebox.os.storage.SaveSafetyController
-import com.gamebox.os.storage.DirectorySaveAdapter
-import com.gamebox.os.storage.SaveAdapterRegistry
-import com.gamebox.os.storage.SaveBackupCoordinator
-import com.gamebox.os.storage.SaveBackupService
-import com.gamebox.os.storage.SaveSnapshotManifestStore
-import com.gamebox.os.storage.SaveRestoreCoordinator
-import com.gamebox.os.storage.SafSaveAdapter
 import com.gamebox.os.storage.ExternalLibraryContentStore
 import com.gamebox.os.importer.AuthorizedRomImporter
 import kotlinx.coroutines.CoroutineScope
@@ -73,31 +40,16 @@ interface AppContainer {
         gameId: com.gamebox.os.domain.GameId,
         scope: CoroutineScope,
     ): SaveSafetyController
-    val catalogDiscoverySync: TheGamesDbCatalogSync
     val catalogDiscoveryRepository: CatalogDiscoveryRepository
     val authorizedRomImporter: AuthorizedRomImporter
+    suspend fun gameScreenshots(game: com.gamebox.os.domain.Game): List<String>
 }
 
 class DefaultAppContainer(context: Context) : AppContainer {
     private val applicationContext = context.applicationContext
     private val processStartedAtMillis = System.currentTimeMillis()
     private val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-    private val databaseName = "gamebox.db"
-    private val preMigrationBackup = DatabaseMigrationBackupManager(
-        applicationContext.filesDir.resolve("database-backups")
-    ).createIfNeeded(
-        applicationContext.getDatabasePath(databaseName),
-        GAMEBOX_DATABASE_VERSION,
-    )
-    private val database = Room.databaseBuilder(
-        applicationContext,
-        GameBoxDatabase::class.java,
-        databaseName
-    ).addMigrations(
-        MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5,
-        MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10,
-        MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14,
-    ).build()
+    private val database = GameBoxDatabaseRuntime(applicationContext).database
     override val settingsRepository = SettingsRepository(applicationContext)
     private val settingsState = settingsRepository.settings.stateIn(
         applicationScope,
@@ -108,51 +60,15 @@ class DefaultAppContainer(context: Context) : AppContainer {
         settingsState.value.externalLibraryUri
     }
     override val authorizedRomImporter = AuthorizedRomImporter(applicationContext)
-    private val assetCatalogProvider = AssetCatalogProvider(applicationContext)
-    private val catalogCredentialStore = object : CatalogCredentialStore {
-        override fun credentials(key: String) = settingsRepository.catalogCredentials(key)
-    }
-    private val transportCatalogProvider = CatalogProviderFactory(
-        credentials = catalogCredentialStore,
-    ).create(settingsRepository::catalogProviderConfig)
-    private val selectedRemoteCatalogProvider = SelectingCatalogProvider(
-        selected = settingsRepository::catalogTransport,
-        providers = mapOf(
-            "HTTPS" to HttpsCatalogProvider(
-                applicationContext,
-                settingsRepository::catalogUrl,
-                credentialStore = catalogCredentialStore,
-                credentialKey = {
-                    "catalog-https".takeIf {
-                        catalogCredentialStore.credentials("catalog-https") != null
-                    }
-                },
-            ),
-            "WEBDAV" to transportCatalogProvider,
-            "S3" to transportCatalogProvider,
-        ),
+    private val catalogRuntime = CatalogRuntime(
+        context = applicationContext,
+        settings = settingsRepository,
+        discoveryDao = database.catalogDiscoveryDao(),
     )
-    private val configuredCatalogProvider = ConfiguredCatalogProvider(
-        fallback = assetCatalogProvider,
-        remote = selectedRemoteCatalogProvider,
-        configuredUrl = settingsRepository::catalogUrl,
-        networkAvailable = { isNetworkAvailable(applicationContext) }
-    )
-    private val wikidataMetadataClient = WikidataMetadataClient()
-    override val catalogDiscoverySync = TheGamesDbCatalogSync(
-        apiKey = settingsRepository::theGamesDbApiKey,
-        transport = HttpsTheGamesDbCatalogTransport(),
-        dao = database.catalogDiscoveryDao(),
-        onHealthChanged = settingsRepository::setTheGamesDbHealth,
-    )
-
-    override val catalogDiscoveryRepository: CatalogDiscoveryRepository =
-        RoomCatalogDiscoveryRepository(database.catalogDiscoveryDao(), catalogDiscoverySync)
-
-    override val catalogProvider = MetadataEnrichingCatalogProvider(
-        base = configuredCatalogProvider,
-        enrich = wikidataMetadataClient::enrich,
-    )
+    override val catalogDiscoveryRepository = catalogRuntime.discoveryRepository
+    override val catalogProvider = catalogRuntime.provider
+    override suspend fun gameScreenshots(game: com.gamebox.os.domain.Game): List<String> =
+        catalogRuntime.screenshotsFor(game)
 
     override val downloadRepository: DownloadRepository =
         RoomDownloadRepository(database.downloadJobDao(), applicationScope)
@@ -163,7 +79,8 @@ class DefaultAppContainer(context: Context) : AppContainer {
         catalogProvider = catalogProvider,
         scope = applicationScope,
         onCatalogSeeded = settingsRepository::markCatalogSeeded,
-        onCatalogRefreshed = settingsRepository::markCatalogRefreshed
+        onCatalogRefreshed = settingsRepository::markCatalogRefreshed,
+        enrichGameMetadata = catalogRuntime::enrichGameMetadata,
     )
 
     private val importRegistrationRecovery = applicationScope.launch {
@@ -188,46 +105,13 @@ class DefaultAppContainer(context: Context) : AppContainer {
         )
 
     override val authorizedDownloadController: AuthorizedDownloadController =
-        WorkManagerAuthorizedDownloadController(applicationContext, gameRepository, applicationScope)
+        WorkManagerAuthorizedDownloadController(
+            applicationContext, gameRepository, downloadRepository, applicationScope
+        )
 
-    private val automaticSaveBackup = SaveBackupCoordinator(
-        registry = SaveAdapterRegistry(
-            mapOf("*" to DirectorySaveAdapter(applicationContext.filesDir.resolve("saves")))
-        ),
-        backupService = SaveBackupService(
-            applicationContext.filesDir.resolve("saves"),
-            applicationContext.filesDir.resolve("save-backups"),
-        ),
-        manifestStore = SaveSnapshotManifestStore(
-            applicationContext.filesDir.resolve("save-backup-manifests")
-        ),
-    )
-
-    private val emulatorSaveAdapter = SafSaveAdapter(
+    private val gameSaveSessionBackups = GameSaveSessionBackups(
         context = applicationContext,
-        treeUri = { settingsState.value.emulatorSaveRootUri },
-    )
-
-    private val emulatorSaveBackup = SaveBackupCoordinator(
-        registry = SaveAdapterRegistry(mapOf("*" to emulatorSaveAdapter)),
-        backupService = SaveBackupService(
-            applicationContext.filesDir.resolve("emulator-saves"),
-            applicationContext.filesDir.resolve("emulator-save-backups"),
-        ),
-        manifestStore = SaveSnapshotManifestStore(
-            applicationContext.filesDir.resolve("emulator-save-backup-manifests")
-        ),
-    )
-
-    private val emulatorSaveRestore = SaveRestoreCoordinator(
-        backupService = SaveBackupService(
-            applicationContext.filesDir.resolve("emulator-saves"),
-            applicationContext.filesDir.resolve("emulator-save-backups"),
-        ),
-        manifestStore = SaveSnapshotManifestStore(
-            applicationContext.filesDir.resolve("emulator-save-backup-manifests")
-        ),
-        adapter = emulatorSaveAdapter,
+        emulatorSaveTreeUri = { settingsState.value.emulatorSaveRootUri },
     )
 
     override val gameLaunchController: GameLaunchController = DefaultGameLaunchController(
@@ -239,21 +123,13 @@ class DefaultAppContainer(context: Context) : AppContainer {
         backupAfterSession = { gameId ->
             gameRepository.game(gameId)?.let { game ->
                 kotlinx.coroutines.withContext(Dispatchers.IO) {
-                    val managed = automaticSaveBackup.backup(game.platform, game.id.value)
-                    val emulator = emulatorSaveBackup.backup(game.platform, game.id.value)
-                    com.gamebox.os.storage.GameSaveBackupResult(
-                        gameId = game.id.value,
-                        artifacts = managed.artifacts + emulator.artifacts,
-                        message = listOfNotNull(managed.message, emulator.message)
-                            .takeIf { it.isNotEmpty() }
-                            ?.joinToString(" "),
-                    )
+                    gameSaveSessionBackups.backup(game.platform, game.id.value)
                 }
             }
         },
         restoreBeforeSession = { gameId ->
             kotlinx.coroutines.withContext(Dispatchers.IO) {
-                emulatorSaveRestore.restoreLatest(gameId.value)
+                gameSaveSessionBackups.restoreLatest(gameId.value)
             }
         },
     )

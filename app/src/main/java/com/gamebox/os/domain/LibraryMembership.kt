@@ -1,7 +1,11 @@
 package com.gamebox.os.domain
 
+/** States whose content can be launched from local storage without another install step. */
+fun InstallState.isPlayableLocally(): Boolean =
+    this == InstallState.INSTALLED || this == InstallState.UPDATE_AVAILABLE
+
 /** Keep retained imports reachable after content-only removal. */
-fun Game.belongsToLibrary(): Boolean = state in setOf(InstallState.INSTALLED, InstallState.UPDATE_AVAILABLE) ||
+fun Game.belongsToLibrary(): Boolean = state.isPlayableLocally() ||
     localContentRelativePath != null || savePresent || lastPlayed != null
 
 fun Game.canReimportContent(): Boolean = localContentRelativePath != null &&

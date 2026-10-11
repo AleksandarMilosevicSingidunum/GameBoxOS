@@ -2,6 +2,8 @@ package com.gamebox.os.ui
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class GameBoxUiStateTest {
@@ -40,6 +42,29 @@ class GameBoxUiStateTest {
 
         assertEquals("last", state.restoreFocus("LIBRARY", listOf("first", "last")))
         assertEquals("last", state.restoreFocus("LIBRARY", listOf("first", "last")))
+    }
+
+    @Test fun controllerSetupShortcutRestoresAndConsumesItsSettingsSectionRequest() {
+        val state = GameBoxUiState.create()
+        state.openSettings(SettingsSection.CONTROLLERS)
+
+        val restored = GameBoxUiState.decode(state.encode())
+        assertEquals("SETTINGS", restored.destination)
+        assertEquals(SettingsSection.CONTROLLERS, restored.requestedSettingsSection())
+
+        restored.consumeSettingsSectionRequest(SettingsSection.CONTROLLERS)
+        assertNull(restored.requestedSettingsSection())
+    }
+
+    @Test fun homeVimmShortcutRequestSurvivesNavigationStateAndIsConsumed() {
+        val state = GameBoxUiState.create()
+        state.requestStoreVimmSearch()
+        state.openDestination("STORE")
+
+        val restored = GameBoxUiState.decode(state.encode())
+        assertTrue(restored.hasStoreVimmSearchRequest())
+        restored.consumeStoreVimmSearchRequest()
+        assertFalse(restored.hasStoreVimmSearchRequest())
     }
 
     @Test fun removedLastCardFallsBackToPreviousNeighborAfterStateRestore() {

@@ -19,6 +19,7 @@ import com.gamebox.os.content.GameContentPolicy
 import com.gamebox.os.content.GameMutationGate
 import com.gamebox.os.domain.Game
 import com.gamebox.os.navigation.GameBoxDeepLink
+import com.gamebox.os.storage.availableStorageBytes
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.sync.Semaphore
@@ -70,7 +71,7 @@ class RemoteDownloadWorker(
         }
         val remainingCapacity = (maxBytes - staging.stagedBytes).coerceAtLeast(0L)
         val requiredSpace = remainingCapacity + STORAGE_RESERVE_BYTES
-        if (applicationContext.filesDir.usableSpace < requiredSpace) {
+        if (availableStorageBytes(applicationContext) < requiredSpace) {
             return@withContext failure("insufficient storage")
         }
 

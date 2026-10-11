@@ -38,7 +38,14 @@ class AuthorizedInstallLifecycleTest {
         withTimeout(20_000) {
             container.gameRepository.observeGames().first { games -> games.any { it.id == gameId } }
         }
-        assertEquals(InstallState.NOT_INSTALLED, container.gameRepository.game(gameId)?.state)
+        // Room may already contain the catalog row while startup reconciliation
+        // correctly marks absent content as MISSING_FILES. Both are an
+        // uninstalled baseline; the lifecycle below must still prove install.
+        assertTrue(
+            "Expected an uninstalled baseline, got ${container.gameRepository.game(gameId)?.state}",
+            container.gameRepository.game(gameId)?.state in
+                setOf(InstallState.NOT_INSTALLED, InstallState.MISSING_FILES),
+        )
         suspend fun awaitStage(name: String, block: suspend () -> Unit) {
             try {
                 withTimeout(120_000) { block() }
@@ -81,6 +88,13 @@ class AuthorizedInstallLifecycleTest {
                 validator.validate(AuthorizedHomebrewDownload.RELATIVE_PATH, AuthorizedHomebrewDownload.SHA256))
         }
         installAndVerify()
+        val recordedDownload = withTimeout(20_000) {
+            container.downloadRepository.observeJobs().first { jobs ->
+                jobs.any { it.gameId == gameId && it.status == com.gamebox.os.domain.DownloadStatus.COMPLETED }
+            }.first { it.gameId == gameId }
+        }
+        assertEquals(AuthorizedHomebrewDownload.SIZE_BYTES, recordedDownload.totalBytes)
+        assertEquals(AuthorizedHomebrewDownload.SIZE_BYTES, recordedDownload.downloadedBytes)
 
         // Restore real completed WorkManager state while the library is still loading.
         // Delegate everything except the delayed read and captured installation write.
@@ -98,7 +112,7 @@ class AuthorizedInstallLifecycleTest {
         val restoreScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
         try {
             val restoredController = WorkManagerAuthorizedDownloadController(
-                app, delayedRepository, restoreScope
+                app, delayedRepository, container.downloadRepository, restoreScope
             )
             // Shared CI emulators can pause Room/WorkManager dispatch while the other
             // instrumentation classes finish; use a bounded eventual-state assertion that tolerates emulator contention.

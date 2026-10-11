@@ -17,11 +17,13 @@ public partial class MainWindow : Window
     private readonly LibraryStore _store;
     private readonly PairingProfileStore _pairingStore;
     private CancellationTokenSource? _deviceTransferCancellation;
+    private bool _controlsReady;
 
     public MainWindow()
     {
         InitializeComponent();
         GamesList.ItemsSource = _visibleGames;
+        _controlsReady = true;
         var appData = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "GameBoxOS");
         _store = new LibraryStore(Path.Combine(appData, "windows-library.json"));
@@ -45,7 +47,10 @@ public partial class MainWindow : Window
                     DeviceHostBox.Text = pairing.Host;
                     DevicePortBox.Text = pairing.Port.ToString();
                     DeviceSecretBox.Password = pairing.Secret;
-                    DeviceStatusText.Text = "Saved pairing restored for " + pairing.Host + ". Reconnecting…";
+                    DeviceCertificateBox.Text = pairing.CertificateSha256;
+                    DeviceStatusText.Text = string.IsNullOrWhiteSpace(pairing.CertificateSha256)
+                        ? "Saved pairing needs the TLS SHA-256 fingerprint from GameBox Settings."
+                        : "Saved secure pairing restored for " + pairing.Host + ". Reconnecting…";
                     ForgetDeviceButton.IsEnabled = true;
                     await ReconnectSavedDeviceAsync(pairing);
                 }
@@ -73,6 +78,7 @@ public partial class MainWindow : Window
 
     private void RefreshVisibleGames()
     {
+        if (!_controlsReady) return;
         var selectedId = Selected?.Id;
         _visibleGames.Clear();
         var sort = SortBox.SelectedIndex == 1 ? LibrarySort.RecentlyPlayed : LibrarySort.FavoritesThenTitle;
@@ -178,7 +184,8 @@ public partial class MainWindow : Window
         try
         {
             DeviceLibrarySummaryText.Text = "Refreshing paired GameBox library…";
-            var games = await new CompanionStatusClient(new HttpClient()).GetLibraryWithRetryAsync(
+            using var http = CreateCompanionHttpClient();
+            var games = await new CompanionStatusClient(http).GetLibraryWithRetryAsync(
                 DeviceHostBox.Text, port, DeviceSecretBox.Password);
             DeviceLibraryList.ItemsSource = games;
             DeviceLibrarySummaryText.Text = games.Count == 0
@@ -214,7 +221,7 @@ public partial class MainWindow : Window
         try
         {
             DeviceConfigurationSummaryText.Text = "Refreshing device preferences…";
-            using var http = new HttpClient();
+            using var http = CreateCompanionHttpClient();
             var configuration = await new CompanionConfigurationClient(http).GetWithRetryAsync(
                 DeviceHostBox.Text, port, DeviceSecretBox.Password);
             ShowDeviceConfiguration(configuration);
@@ -240,7 +247,7 @@ public partial class MainWindow : Window
         try
         {
             DeviceConfigurationSummaryText.Text = "Applying device preferences…";
-            using var http = new HttpClient();
+            using var http = CreateCompanionHttpClient();
             var confirmed = await new CompanionConfigurationClient(http).PutAsync(
                 DeviceHostBox.Text, port, DeviceSecretBox.Password, configuration);
             ShowDeviceConfiguration(confirmed);
@@ -258,12 +265,14 @@ public partial class MainWindow : Window
 
     private async Task ReconnectSavedDeviceAsync(PairingProfile pairing)
     {
+        if (string.IsNullOrWhiteSpace(pairing.CertificateSha256)) return;
         try
         {
-            var client = new CompanionStatusClient(new HttpClient());
+            using var clientHttp = CompanionCertificatePin.CreatePinnedClient(pairing.CertificateSha256);
+            var client = new CompanionStatusClient(clientHttp);
             var status = await client.ReconnectAsync(pairing.Host, pairing.Port, pairing.Secret);
             var games = await client.GetLibraryWithRetryAsync(pairing.Host, pairing.Port, pairing.Secret);
-            using var configurationHttp = new HttpClient();
+            using var configurationHttp = CompanionCertificatePin.CreatePinnedClient(pairing.CertificateSha256);
             var configuration = await new CompanionConfigurationClient(configurationHttp).GetWithRetryAsync(
                 pairing.Host, pairing.Port, pairing.Secret);
             DeviceLibraryList.ItemsSource = games;
@@ -309,10 +318,17 @@ public partial class MainWindow : Window
 
     private bool TryGetDeviceConnection(out int port)
     {
-        if (int.TryParse(DevicePortBox.Text.Trim(), out port) && port is >= 10240 and <= 65535)
-            return true;
-        DeviceLibrarySummaryText.Text = "Enter a valid GameBox companion port.";
-        return false;
+        if (!int.TryParse(DevicePortBox.Text.Trim(), out port) || port is < 10240 or > 65535)
+        {
+            DeviceLibrarySummaryText.Text = "Enter a valid GameBox companion port.";
+            return false;
+        }
+        try { _ = CompanionCertificatePin.Normalize(DeviceCertificateBox.Text); return true; }
+        catch (ArgumentException exception)
+        {
+            DeviceLibrarySummaryText.Text = exception.Message;
+            return false;
+        }
     }
 
     private async void DownloadDeviceSave_Click(object sender, RoutedEventArgs e)
@@ -331,7 +347,8 @@ public partial class MainWindow : Window
         try
         {
             DeviceLibrarySummaryText.Text = "Downloading and verifying " + game.Title + " save…";
-            var transfer = await new CompanionSaveClient(new HttpClient()).DownloadAsync(
+            using var http = CreateCompanionHttpClient();
+            var transfer = await new CompanionSaveClient(http).DownloadAsync(
                 DeviceHostBox.Text,
                 port,
                 DeviceSecretBox.Password,
@@ -385,7 +402,8 @@ public partial class MainWindow : Window
         {
             DeviceLibrarySummaryText.Text = "Sending and verifying " + game.Title + " save…";
             var bytes = await File.ReadAllBytesAsync(info.FullName, _deviceTransferCancellation.Token);
-            var result = await new CompanionSaveClient(new HttpClient()).UploadAsync(
+            using var http = CreateCompanionHttpClient();
+            var result = await new CompanionSaveClient(http).UploadAsync(
                 DeviceHostBox.Text,
                 port,
                 DeviceSecretBox.Password,
@@ -424,7 +442,8 @@ public partial class MainWindow : Window
             DeviceLibrarySummaryText.Text = favorite
                 ? "Adding " + game.Title + " to device favorites…"
                 : "Removing " + game.Title + " from device favorites…";
-            await new CompanionStatusClient(new HttpClient()).SetFavoriteAsync(
+            using var http = CreateCompanionHttpClient();
+            await new CompanionStatusClient(http).SetFavoriteAsync(
                 DeviceHostBox.Text, port, DeviceSecretBox.Password, game, favorite,
                 _deviceTransferCancellation.Token);
             await RefreshDeviceLibraryCoreAsync(port);
@@ -473,7 +492,8 @@ public partial class MainWindow : Window
         try
         {
             DeviceLibrarySummaryText.Text = "Hashing, sending, and verifying " + info.Name + "…";
-            var result = await new CompanionContentClient(new HttpClient()).UploadAsync(
+            using var http = CreateCompanionHttpClient();
+            var result = await new CompanionContentClient(http).UploadAsync(
                 DeviceHostBox.Text,
                 port,
                 DeviceSecretBox.Password,
@@ -502,7 +522,8 @@ public partial class MainWindow : Window
 
     private async Task RefreshDeviceLibraryCoreAsync(int port)
     {
-        var games = await new CompanionStatusClient(new HttpClient()).GetLibraryAsync(
+        using var http = CreateCompanionHttpClient();
+        var games = await new CompanionStatusClient(http).GetLibraryAsync(
             DeviceHostBox.Text, port, DeviceSecretBox.Password);
         DeviceLibraryList.ItemsSource = games;
     }
@@ -520,15 +541,17 @@ public partial class MainWindow : Window
 
         try
         {
+            var fingerprint = CompanionCertificatePin.Normalize(DeviceCertificateBox.Text);
             DeviceStatusText.Text = "Checking GameBox device…";
-            var status = await new CompanionStatusClient(new HttpClient()).ReconnectAsync(
+            using var http = CompanionCertificatePin.CreatePinnedClient(fingerprint);
+            var status = await new CompanionStatusClient(http).ReconnectAsync(
                 DeviceHostBox.Text, port, DeviceSecretBox.Password);
             DeviceStatusText.Text = $"{status.DeviceName} is {status.Status} (protocol v{status.ProtocolVersion}).";
             StatusText.Text = "Connected to " + status.DeviceName;
             await _pairingStore.SaveAsync(new PairingProfile(
-                DeviceHostBox.Text.Trim(), port, DeviceSecretBox.Password));
+                DeviceHostBox.Text.Trim(), port, DeviceSecretBox.Password, fingerprint));
             ForgetDeviceButton.IsEnabled = true;
-            using var configurationHttp = new HttpClient();
+            using var configurationHttp = CompanionCertificatePin.CreatePinnedClient(fingerprint);
             var configuration = await new CompanionConfigurationClient(configurationHttp).GetWithRetryAsync(
                 DeviceHostBox.Text, port, DeviceSecretBox.Password);
             ShowDeviceConfiguration(configuration);
@@ -542,6 +565,9 @@ public partial class MainWindow : Window
             DeviceStatusText.Text = "Unable to reach GameBox: " + ex.Message;
         }
     }
+
+    private HttpClient CreateCompanionHttpClient() =>
+        CompanionCertificatePin.CreatePinnedClient(DeviceCertificateBox.Text);
 
     private async void DiscoverDevice_Click(object sender, RoutedEventArgs e)
     {
@@ -559,8 +585,8 @@ public partial class MainWindow : Window
             }
             DiscoveredDevicesBox.SelectedIndex = 0;
             DeviceStatusText.Text = devices.Count == 1
-                ? "Found " + devices[0].DeviceName + " at " + devices[0].Host + ". Enter its pairing secret, then check and remember."
-                : "Found " + devices.Count + " GameBox devices. Choose one, enter its pairing secret, then check and remember.";
+                ? "Found " + devices[0].DeviceName + " at " + devices[0].Host + ". Copy its TLS fingerprint and pairing secret from GameBox Settings, then check and remember."
+                : "Found " + devices.Count + " GameBox devices. Choose one, copy its TLS fingerprint and pairing secret from GameBox Settings, then check and remember.";
         }
         catch (OperationCanceledException)
         {
@@ -587,6 +613,7 @@ public partial class MainWindow : Window
         _pairingStore.Delete();
         DeviceHostBox.Clear();
         DeviceSecretBox.Clear();
+        DeviceCertificateBox.Clear();
         DevicePortBox.Text = "49500";
         DeviceLibraryList.ItemsSource = null;
         DiscoveredDevicesBox.ItemsSource = null;

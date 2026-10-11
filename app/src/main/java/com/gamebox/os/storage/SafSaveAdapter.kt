@@ -2,6 +2,7 @@ package com.gamebox.os.storage
 
 import android.content.Context
 import android.net.Uri
+import androidx.core.net.toUri
 import androidx.documentfile.provider.DocumentFile
 import java.io.InputStream
 import java.security.MessageDigest
@@ -144,7 +145,7 @@ class SafSaveAdapter(
 
     private fun rootDocument(): DocumentFile? {
         val configured = treeUri().takeIf(String::isNotBlank) ?: return null
-        val uri = runCatching { Uri.parse(configured) }.getOrNull() ?: return null
+        val uri = runCatching { configured.toUri() }.getOrNull() ?: return null
         return DocumentFile.fromTreeUri(applicationContext, uri)
             ?.takeIf { it.exists() && it.isDirectory && it.canRead() }
     }

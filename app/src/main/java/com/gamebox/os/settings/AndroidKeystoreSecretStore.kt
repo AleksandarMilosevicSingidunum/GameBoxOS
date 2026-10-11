@@ -4,6 +4,7 @@ import android.content.Context
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
 import android.util.Base64
+import androidx.core.content.edit
 import java.security.KeyStore
 import javax.crypto.Cipher
 import javax.crypto.KeyGenerator
@@ -18,7 +19,7 @@ internal class AndroidKeystoreSecretStore(context: Context) {
         require(name.matches(Regex("^[a-z0-9_.-]{1,64}$"))) { "Secret name is invalid" }
         val normalized = value?.trim().orEmpty()
         if (normalized.isEmpty()) {
-            preferences.edit().remove(name).apply()
+            preferences.edit { remove(name) }
             return
         }
         require(normalized.length <= 4_096) { "Secret is too large" }
@@ -30,7 +31,7 @@ internal class AndroidKeystoreSecretStore(context: Context) {
         envelope[0] = cipher.iv.size.toByte()
         cipher.iv.copyInto(envelope, 1)
         ciphertext.copyInto(envelope, 1 + cipher.iv.size)
-        preferences.edit().putString(name, Base64.encodeToString(envelope, Base64.NO_WRAP)).apply()
+        preferences.edit { putString(name, Base64.encodeToString(envelope, Base64.NO_WRAP)) }
     }
 
     @Synchronized

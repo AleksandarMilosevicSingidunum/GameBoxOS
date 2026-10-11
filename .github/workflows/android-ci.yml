@@ -146,14 +146,14 @@ jobs:
             adb install -r app-debug.apk
             adb install -r app-debug-androidTest.apk
             set -o pipefail
-            adb shell am instrument -w -e class com.gamebox.os.ui.BlueprintScreenshotsTest com.gamebox.os.test/androidx.test.runner.AndroidJUnitRunner 2>&1 | tee instrumentation.txt
+            adb shell am instrument -w -e class com.gamebox.os.ui.BlueprintScreenshotsTest com.gamebox.os.debug.test/androidx.test.runner.AndroidJUnitRunner 2>&1 | tee instrumentation.txt
             adb logcat -d > logcat.txt || true
-            adb pull /sdcard/Android/data/com.gamebox.os/files/ui-captures ui-captures || true
+            adb pull /sdcard/Android/data/com.gamebox.os.debug/files/ui-captures ui-captures || true
             cat instrumentation.txt
             grep -Eq 'OK \([0-9]+ tests?\)' instrumentation.txt
             if [ "${{ matrix.profile }}" = "dex" ]; then
-              adb shell am instrument -w -e class com.gamebox.os.TvActivityTest com.gamebox.os.test/androidx.test.runner.AndroidJUnitRunner 2>&1 | tee tv-host-instrumentation.txt
-              grep -Eq 'OK \([0-9]+ tests?\)' tv-host-instrumentation.txt
+              adb shell am instrument -w -e class com.gamebox.os.ExternalDisplayActivityTest com.gamebox.os.debug.test/androidx.test.runner.AndroidJUnitRunner 2>&1 | tee external-display-host-instrumentation.txt
+              grep -Eq 'OK \([0-9]+ tests?\)' external-display-host-instrumentation.txt
             fi
       - name: Upload UI evidence
         if: always()
@@ -163,7 +163,7 @@ jobs:
           path: |
             ui-captures/
             instrumentation.txt
-            tv-host-instrumentation.txt
+            external-display-host-instrumentation.txt
             logcat.txt
           if-no-files-found: warn
           retention-days: 14

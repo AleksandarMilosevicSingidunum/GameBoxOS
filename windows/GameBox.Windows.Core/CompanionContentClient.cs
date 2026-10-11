@@ -174,6 +174,6 @@ public sealed class CompanionContentClient
         var normalized = host.Trim().Trim('[', ']');
         if (normalized.Contains('/') || normalized.Contains('\\') || normalized.Contains('?') || normalized.Contains('#'))
             throw new ArgumentException("Host must not include a scheme, path, or query.", nameof(host));
-        return new UriBuilder(Uri.UriSchemeHttp, normalized, port, path).Uri;
+        return new UriBuilder(Uri.UriSchemeHttps, normalized, port, path).Uri;
     }
 }

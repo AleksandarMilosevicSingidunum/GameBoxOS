@@ -2,12 +2,13 @@ package com.gamebox.os.catalog
 
 import java.net.HttpURLConnection
 import java.io.IOException
+import com.gamebox.os.io.readAtMost
+import com.gamebox.os.net.basicAuthorizationHeader
 import com.gamebox.os.provider.ProviderRecoveryDecision
 import com.gamebox.os.provider.ProviderRecoveryPolicy
 import java.net.URI
 import java.net.URL
 import java.security.MessageDigest
-import java.util.Base64
 import java.util.concurrent.atomic.AtomicReference
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -95,11 +96,8 @@ class HttpsCatalogTransportClient(
                 connection.connectTimeout = 10_000
                 connection.readTimeout = 15_000
                 connection.setRequestProperty("Accept", "application/json")
-                credentials?.takeIf { it.hasBasicAuth() }?.let { auth ->
-                    val token = Base64.getEncoder().encodeToString(
-                        (auth.username!! + ":" + auth.password!!).toByteArray()
-                    )
-                    connection.setRequestProperty("Authorization", "Basic " + token)
+                credentials?.let(::basicAuthorizationHeader)?.let { authorization ->
+                    connection.setRequestProperty("Authorization", authorization)
                 }
                 if (transport is CatalogTransport.S3 && credentials?.hasS3Auth() == true) {
                     val signer = s3SignerFactory(transport.region)
@@ -119,7 +117,7 @@ class HttpsCatalogTransportClient(
                             error = IllegalArgumentException("catalog response is too large"),
                         )
                     }
-                    val bytes = connection.inputStream.use { it.readNBytes(maxResponseBytes + 1) }
+                    val bytes = connection.inputStream.use { it.readAtMost(maxResponseBytes + 1) }
                     if (bytes.size > maxResponseBytes) {
                         throw catalogTransportFailure(
                             error = IllegalArgumentException("catalog response is too large"),

@@ -143,4 +143,74 @@ class GameDaoIntegrationTest {
         assertEquals(InstallState.UPDATE_AVAILABLE.name, updated.installState)
         assertEquals("1-2", updated.players)
     }
+
+    @Test
+    fun deferredMetadataEnrichmentPreservesUserOverridesAndNewerMatches() = runBlocking {
+        val original = GameEntity(
+            id = "deferred-metadata", title = "Deferred Metadata", platform = "NES",
+            year = 0, genre = "Unknown", sizeMb = 1,
+            installState = InstallState.NOT_INSTALLED.name, lastPlayed = null, minutesPlayed = 0,
+            userYear = 1985, userArtworkUrl = "https://local.test/cover.png",
+            userDescription = "My description",
+        )
+        dao.upsert(original)
+
+        assertEquals(1, dao.applyMetadataEnrichmentIfUnchanged(
+            id = original.id,
+            expectedYear = original.year,
+            expectedGenre = original.genre,
+            expectedArtworkUrl = original.artworkUrl,
+            expectedDescription = original.description,
+            expectedProvider = original.metadataProvider,
+            expectedExternalId = original.metadataExternalId,
+            expectedMatchedAtMillis = original.metadataMatchedAtMillis,
+            year = 1987,
+            genre = null,
+            artworkUrl = "https://wikimedia.test/cover.png",
+            description = "Provider description",
+            provider = "WIKIDATA",
+            externalId = "Q123",
+            matchedAtMillis = 10L,
+        ))
+        val enriched = requireNotNull(dao.getById(original.id))
+        assertEquals(1987, enriched.year)
+        assertEquals("https://wikimedia.test/cover.png", enriched.artworkUrl)
+        assertEquals("Provider description", enriched.description)
+        assertEquals("https://local.test/cover.png", enriched.userArtworkUrl)
+        assertEquals(1985, enriched.userYear)
+        assertEquals("My description", enriched.userDescription)
+
+        assertEquals(1, dao.applyProviderMetadataMatch(
+            id = original.id,
+            provider = "MANUAL",
+            externalId = "manual-1",
+            title = original.title,
+            year = 2001,
+            genre = null,
+            artworkUrl = null,
+            description = "Newer manual match",
+            matchedAtMillis = 20L,
+        ))
+        assertEquals(0, dao.applyMetadataEnrichmentIfUnchanged(
+            id = original.id,
+            expectedYear = enriched.year,
+            expectedGenre = enriched.genre,
+            expectedArtworkUrl = enriched.artworkUrl,
+            expectedDescription = enriched.description,
+            expectedProvider = enriched.metadataProvider,
+            expectedExternalId = enriched.metadataExternalId,
+            expectedMatchedAtMillis = enriched.metadataMatchedAtMillis,
+            year = 1999,
+            genre = null,
+            artworkUrl = "https://stale.test/cover.png",
+            description = "Stale result",
+            provider = "WIKIDATA",
+            externalId = "Q999",
+            matchedAtMillis = 30L,
+        ))
+        val latest = requireNotNull(dao.getById(original.id))
+        assertEquals(2001, latest.year)
+        assertEquals("Newer manual match", latest.description)
+        assertEquals("MANUAL", latest.metadataProvider)
+    }
 }

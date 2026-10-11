@@ -2,14 +2,15 @@ package com.gamebox.os.save
 
 import com.gamebox.os.catalog.CatalogCredentials
 import com.gamebox.os.catalog.S3RequestSigner
+import com.gamebox.os.net.basicAuthorizationHeader
 import com.gamebox.os.provider.ProviderRecoveryDecision
 import com.gamebox.os.provider.ProviderRecoveryPolicy
 import java.io.IOException
+import com.gamebox.os.io.readAtMost
 import java.net.HttpURLConnection
 import java.net.URI
 import java.net.URL
 import java.security.MessageDigest
-import java.util.Base64
 import java.util.concurrent.atomic.AtomicReference
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -68,7 +69,7 @@ class HttpsCloudSaveTransportClient(
             if (declaredLength > maxResponseBytes) {
                 throw IllegalArgumentException("Cloud save response exceeds the 16 MiB limit")
             }
-            val bytes = connection.inputStream.use { it.readNBytes(maxResponseBytes + 1) }
+            val bytes = connection.inputStream.use { it.readAtMost(maxResponseBytes + 1) }
             if (bytes.size > maxResponseBytes) {
                 throw IllegalArgumentException("Cloud save response exceeds the 16 MiB limit")
             }
@@ -189,9 +190,10 @@ class HttpsCloudSaveTransportClient(
         credentials: CatalogCredentials,
     ) {
         if (credentials.hasBasicAuth()) {
-            val raw = credentials.username!! + ":" + credentials.password!!
-            val token = Base64.getEncoder().encodeToString(raw.toByteArray(Charsets.UTF_8))
-            connection.setRequestProperty("Authorization", "Basic $token")
+            connection.setRequestProperty(
+                "Authorization",
+                checkNotNull(basicAuthorizationHeader(credentials)),
+            )
             return
         }
         val signer = s3Signer ?: throw IllegalArgumentException("S3 signer required for access-key credentials")

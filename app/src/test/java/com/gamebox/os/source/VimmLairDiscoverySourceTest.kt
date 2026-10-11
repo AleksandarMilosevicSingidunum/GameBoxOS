@@ -1,5 +1,7 @@
 package com.gamebox.os.source
 
+import com.gamebox.os.domain.normalizeCatalogTitle
+import com.gamebox.os.importer.RomImportPolicy
 import java.net.URI
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
@@ -10,6 +12,21 @@ import org.junit.Assert.assertThrows
 import org.junit.Test
 
 class VimmLairDiscoverySourceTest {
+    @Test
+    fun defaultPresetMatchesRequestedConsoleOrder() {
+        assertEquals(
+            listOf(
+                "Dreamcast", "Game Boy Advance", "Game Boy Color", "GameCube", "N64", "NES",
+                "PS1", "PS2", "PS3", "PSP", "SNES", "Wii", "WiiWare", "Xbox",
+                "Xbox 360", "DS", "3DS", "Switch",
+            ),
+            vimmLairDefaultPresetPlatforms,
+        )
+        assertEquals(vimmLairDefaultPresetPlatforms.toSet(), defaultVimmLairGameSource().platforms)
+        assertEquals(null, vimmLairPlatformSlug("3DS"))
+        assertEquals(null, vimmLairPlatformSlug("Switch"))
+    }
+
     @Test
     fun vimmSourceExposesDiscoveryOnlyCapabilities() {
         val source = VimmLairDiscoverySource(
@@ -29,14 +46,59 @@ class VimmLairDiscoverySourceTest {
     }
 
     @Test
-    fun platformMappingsCoverGameBoxTargetConsoles() {
+    fun platformMappingsCoverEveryVimmConsole() {
         assertEquals("PS2", vimmLairPlatformSlug("PS2"))
         assertEquals("GameCube", vimmLairPlatformSlug("Nintendo GameCube"))
         assertEquals("Wii", vimmLairPlatformSlug("Wii"))
         assertEquals("PSP", vimmLairPlatformSlug("PlayStation Portable"))
         assertEquals("Dreamcast", vimmLairPlatformSlug("Sega Dreamcast"))
+        assertEquals("Atari2600", vimmLairPlatformSlug("Atari 2600"))
+        assertEquals("Atari5200", vimmLairPlatformSlug("Atari 5200"))
+        assertEquals("Atari7800", vimmLairPlatformSlug("Atari 7800"))
+        assertEquals("CDi", vimmLairPlatformSlug("CD-i"))
+        assertEquals("PS3", vimmLairPlatformSlug("PlayStation 3"))
+        assertEquals("Xbox360", vimmLairPlatformSlug("Xbox 360"))
+        assertEquals("MasterSystem", vimmLairPlatformSlug("Master System"))
+        assertEquals("GameGear", vimmLairPlatformSlug("Game Gear"))
+        assertEquals("VirtualBoy", vimmLairPlatformSlug("Virtual Boy"))
+        assertEquals("Lynx", vimmLairPlatformSlug("Atari Lynx"))
+        assertEquals("Jaguar", vimmLairPlatformSlug("Atari Jaguar"))
+        assertEquals("JaguarCD", vimmLairPlatformSlug("Atari Jaguar CD"))
+        assertEquals("SegaCD", vimmLairPlatformSlug("Sega CD"))
+        assertEquals("32X", vimmLairPlatformSlug("Sega 32X"))
+        assertEquals("TG16", vimmLairPlatformSlug("TurboGrafx-16"))
+        assertEquals("TGCD", vimmLairPlatformSlug("TurboGrafx-CD"))
+        assertEquals("WiiWare", vimmLairPlatformSlug("WiiWare"))
         assertEquals(null, vimmLairPlatformSlug("Switch"))
         assertEquals(null, vimmLairPlatformSlug("3DS"))
+        val mappedPlatforms = vimmLairSupportedPlatforms.mapNotNull(::vimmLairPlatformSlug)
+        assertEquals(vimmLairSupportedPlatforms.size, mappedPlatforms.size)
+        assertEquals(mappedPlatforms.size, mappedPlatforms.distinct().size)
+    }
+
+    @Test
+    fun everyVimmConsoleHasAConsoleSpecificImportProfile() {
+        val missingProfiles = vimmLairSupportedPlatforms.filterNot { platform ->
+            RomImportPolicy.hasKnownPlatformProfile(platform)
+        }
+
+        assertEquals(emptyList<String>(), missingProfiles)
+        assertTrue("cdi" in RomImportPolicy.supportedExtensions("Jaguar CD"))
+        assertTrue("chd" in RomImportPolicy.supportedExtensions("CD-i"))
+        assertTrue("vb" in RomImportPolicy.supportedExtensions("Virtual Boy"))
+        assertTrue("32x" in RomImportPolicy.supportedExtensions("Sega 32X"))
+        assertTrue("hes" in RomImportPolicy.supportedExtensions("TurboGrafx-CD"))
+        assertTrue("wad" in RomImportPolicy.supportedExtensions("WiiWare"))
+        vimmLairSupportedPlatforms.forEach { platform ->
+            assertTrue("$platform must accept ZIP containers", "zip" in RomImportPolicy.supportedExtensions(platform))
+            assertTrue("$platform must accept 7z containers", "7z" in RomImportPolicy.supportedExtensions(platform))
+        }
+        assertEquals("copy.7z", RomImportPolicy.safeFileName("copy.7z", "PS2"))
+        assertTrue("iso" in RomImportPolicy.supportedGameExtensions("PS2"))
+        assertTrue("7z" !in RomImportPolicy.supportedGameExtensions("PS2"))
+        assertThrows(IllegalArgumentException::class.java) {
+            RomImportPolicy.safeArchiveContentFileName("nested.7z", "PS2")
+        }
     }
 
     @Test
@@ -75,35 +137,38 @@ class VimmLairDiscoverySourceTest {
         )
 
         assertEquals(
-            listOf("Dreamcast", "GameCube", "PS2", "PSP", "Wii"),
+            vimmLairSupportedPlatforms.sortedBy { normalizeCatalogTitle(it) },
             vimmLairSearchPlatforms(config, selectedPlatform = null),
         )
     }
 
 
     @Test
-    fun multiConsoleSearchKeepsSuccessfulResultsWhenOnePlatformFails() = runBlocking {
+    fun multiConsoleSearchKeepsResultsAndReportsSafeFailureReasons() = runBlocking {
         val config = GameSourceConfig(
             id = "vimm",
             name = "Vimm",
             type = GameSourceProviderType.VIMM_LAIR,
             baseUrl = "https://vimm.net/vault",
-            platforms = setOf("PS2", "GameCube"),
+            platforms = setOf("PS2", "GameCube", "NES"),
         )
         val summary = searchVimmLairAcrossPlatforms(
             config = config,
             query = "God",
             transport = VimmLairTransport { uri ->
                 when {
-                    uri.path.contains("/GameCube/") -> throw java.io.IOException("temporary")
+                    uri.path.contains("/GameCube/") ->
+                        throw IllegalArgumentException("Vimm request failed with HTTP 429")
+                    uri.path.contains("/NES/") -> throw java.io.IOException("temporary")
                     uri.path.contains("/PS2/") -> """<a href="/vault/100">God Hand</a>"""
                     else -> ""
                 }
             },
         )
 
-        assertEquals(listOf("GameCube", "PS2"), summary.attemptedPlatforms)
-        assertEquals(listOf("GameCube"), summary.failedPlatforms)
+        assertEquals(listOf("GameCube", "NES", "PS2"), summary.attemptedPlatforms)
+        assertEquals(listOf("GameCube", "NES"), summary.failedPlatforms)
+        assertEquals(mapOf("GameCube" to "HTTP 429", "NES" to "network error"), summary.failureReasons)
         assertEquals(1, summary.games.size)
         assertEquals("PS2", summary.games.single().platform)
         assertEquals("God Hand", summary.games.single().title)
@@ -294,6 +359,29 @@ class VimmLairDiscoverySourceTest {
         assertEquals(2005, game.year)
         assertEquals("https://vimm.net/image.php?id=1234", game.coverUrl)
         assertEquals("https://vimm.net/vault/1234", game.detailsUrl)
+    }
+
+    @Test
+    fun parserFindsCloseSpellingMatchesForGoogleLikeSearch() {
+        val html = """
+            <a href="/vault/23719">God of War: Chains of Olympus</a>
+            <a href="/vault/23720">God of War: Ghost of Sparta</a>
+            <a href="/vault/23721">Gran Turismo</a>
+        """.trimIndent()
+
+        val games = parseVimmLairListing(
+            html = html,
+            sourceId = "vimm",
+            platform = "PSP",
+            baseUrl = "https://vimm.net/vault",
+            query = "God of Wra Chains of Olympus",
+        )
+
+        assertEquals(listOf("23719"), games.map { it.externalId })
+        assertTrue(vimmLairApproximateTitleMatch("God of War: Chains of Olympus", "God of Wra"))
+        assertTrue(!vimmLairApproximateTitleMatch("Gran Turismo", "God of Wra"))
+        assertEquals("God of War", vimmLairCorrectedQuery("God of Wra", games))
+        assertEquals(null, vimmLairCorrectedQuery("God of War", games))
     }
 
     @Test

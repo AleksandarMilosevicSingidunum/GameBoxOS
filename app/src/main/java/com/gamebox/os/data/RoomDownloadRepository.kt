@@ -19,7 +19,7 @@ import kotlinx.coroutines.sync.withLock
 
 interface DownloadRepository {
     fun observeJobs(): StateFlow<List<DownloadJob>>
-    fun enqueue(game: Game)
+    fun enqueue(game: Game, totalBytes: Long? = null)
     fun pause(id: GameId)
     fun resume(id: GameId)
     fun cancel(id: GameId)
@@ -37,9 +37,9 @@ class RoomDownloadRepository(
 
     override fun observeJobs(): StateFlow<List<DownloadJob>> = jobs
 
-    override fun enqueue(game: Game) {
+    override fun enqueue(game: Game, totalBytes: Long?) {
         scope.launch(start = CoroutineStart.UNDISPATCHED) {
-            writes.withLock { dao.upsert(game.toDownloadEntity()) }
+            writes.withLock { dao.upsert(game.toDownloadEntity(totalBytes)) }
         }
     }
 

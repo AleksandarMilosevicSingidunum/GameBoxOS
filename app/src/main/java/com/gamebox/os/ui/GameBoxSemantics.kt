@@ -16,9 +16,25 @@ object GameBoxSemantics {
         add(game.title)
         add(game.platform)
         add(game.state.name.lowercase().replace('_', ' '))
+        game.minutesPlayed.coerceAtLeast(0).takeIf { it > 0 }?.let {
+            add(playtimeDescription(it))
+        }
         if (game.favorite) add("favorite")
         if (hero) add("continue playing")
     }.joinToString(", ")
+
+    internal fun playtimeDescription(minutesPlayed: Int): String {
+        val minutes = minutesPlayed.coerceAtLeast(0)
+        if (minutes == 0) return "0 minutes played"
+        val hours = minutes / 60
+        val remainingMinutes = minutes % 60
+        return buildList {
+            if (hours > 0) add(if (hours == 1) "1 hour" else "$hours hours")
+            if (remainingMinutes > 0) {
+                add(if (remainingMinutes == 1) "1 minute" else "$remainingMinutes minutes")
+            }
+        }.joinToString(" ") + " played"
+    }
 
     fun downloadDescription(job: DownloadJob): String = buildList {
         add(job.title)

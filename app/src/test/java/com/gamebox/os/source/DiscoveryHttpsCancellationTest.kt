@@ -12,9 +12,22 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertTrue
+import org.junit.Assert.assertThrows
 import org.junit.Test
 
 class DiscoveryHttpsCancellationTest {
+    @Test
+    fun vimm404IsReportedAsUnavailableListing() {
+        val connection = NotFoundHttpsConnection()
+        val transport = HttpsVimmLairTransport(connectionFactory = { connection })
+
+        val error = assertThrows(VimmLairPageNotFoundException::class.java) {
+            runBlocking { transport.get(URI("https://vimm.net/vault/23719")) }
+        }
+
+        assertTrue(error.message!!.contains("no longer available"))
+    }
+
     @Test
     fun gameBoxJsonTransportDisconnectsWhenCancelled() = runBlocking {
         val connection = BlockingHttpsConnection()
@@ -70,6 +83,18 @@ class DiscoveryHttpsCancellationTest {
             closed = true
             disconnected.countDown()
         }
+        override fun usingProxy() = false
+        override fun connect() = Unit
+        override fun getCipherSuite(): String? = null
+        override fun getLocalCertificates() = null
+        override fun getServerCertificates() = null
+        override fun getPeerPrincipal() = null
+        override fun getLocalPrincipal() = null
+    }
+
+    private class NotFoundHttpsConnection : HttpsURLConnection(URL("https://vimm.net")) {
+        override fun getResponseCode() = HTTP_NOT_FOUND
+        override fun disconnect() = Unit
         override fun usingProxy() = false
         override fun connect() = Unit
         override fun getCipherSuite(): String? = null

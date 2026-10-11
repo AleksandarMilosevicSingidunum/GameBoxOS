@@ -1,5 +1,6 @@
 package com.gamebox.os.ui
 
+import android.view.MotionEvent
 import android.view.InputDevice
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -63,6 +64,14 @@ class RuntimeDeviceStatusTest {
     }
 
     @Test
+    fun controllerNameDropsAccessoryEndpointSuffix() {
+        assertEquals("Wireless Controller", controllerDisplayName("Wireless Controller Touchpad"))
+        assertEquals("Wireless Controller", controllerDisplayName("Wireless Controller Motion Sensors"))
+        assertEquals("Xbox Wireless Controller", controllerDisplayName("Xbox Wireless Controller"))
+        assertEquals("Game controller", controllerDisplayName("  "))
+    }
+
+    @Test
     fun powerLabelReportsBatteryPercentAndUsbCharging() {
         assertEquals(
             "73% · Charging over USB",
@@ -86,7 +95,23 @@ class RuntimeDeviceStatusTest {
     fun desktopMouseJoystickSourceIsNotMisreportedAsController() {
         assertTrue(isGameControllerSources(InputDevice.SOURCE_GAMEPAD))
         assertTrue(isGameControllerSources(InputDevice.SOURCE_JOYSTICK))
+        assertTrue(isGameControllerSources(InputDevice.SOURCE_GAMEPAD or InputDevice.SOURCE_KEYBOARD))
+        assertTrue(isGameControllerSources(InputDevice.SOURCE_GAMEPAD or InputDevice.SOURCE_MOUSE))
         assertFalse(isGameControllerSources(InputDevice.SOURCE_JOYSTICK or InputDevice.SOURCE_MOUSE))
+        assertFalse(isGameControllerSources(InputDevice.SOURCE_JOYSTICK or InputDevice.SOURCE_KEYBOARD))
+        assertTrue(
+            isGameControllerSources(
+                InputDevice.SOURCE_JOYSTICK or InputDevice.SOURCE_KEYBOARD,
+                hasStandardGamepadAxes = true,
+            ),
+        )
         assertFalse(isGameControllerSources(InputDevice.SOURCE_KEYBOARD))
+    }
+
+    @Test
+    fun genericDockAxisIsNotTreatedAsAStandardControllerAxis() {
+        assertTrue(isStandardGamepadMotionAxis(MotionEvent.AXIS_X))
+        assertTrue(isStandardGamepadMotionAxis(MotionEvent.AXIS_HAT_Y))
+        assertFalse(isStandardGamepadMotionAxis(MotionEvent.AXIS_GENERIC_1))
     }
 }

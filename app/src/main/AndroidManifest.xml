@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" xmlns:tools="http://schemas.android.com/tools">
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
@@ -13,6 +13,13 @@
         <package android:name="org.ppsspp.ppssppgold" />
         <package android:name="org.ppsspp.ppsspplegacy" />
         <package android:name="org.dolphinemu.dolphinemu" />
+        <package android:name="org.azahar_emu.azahar" />
+        <package android:name="com.explusalpha.NesEmu" />
+        <package android:name="com.explusalpha.Snes9xPlus" />
+        <package android:name="com.explusalpha.GbcEmu" />
+        <package android:name="com.explusalpha.GbaEmu" />
+        <package android:name="com.explusalpha.MdEmu" />
+        <package android:name="com.explusalpha.A2600Emu" />
         <package android:name="xyz.aethersx2.android" />
         <package android:name="com.github.stenzek.duckstation" />
         <package android:name="org.mupen64plusae.v3.fzurita" />
@@ -31,7 +38,7 @@
         <package android:name="com.google.android.documentsui" />
         <package android:name="com.android.chrome" />
     </queries>
-    <application android:name=".GameBoxApplication" android:allowBackup="true" android:label="GameBox" android:supportsRtl="true"
+    <application android:name=".GameBoxApplication" android:allowBackup="true" android:icon="@mipmap/ic_gamebox_launcher" android:roundIcon="@mipmap/ic_gamebox_launcher" android:label="GameBox" android:supportsRtl="true"
         android:theme="@android:style/Theme.Material.NoActionBar">
         <provider
             android:name="androidx.core.content.FileProvider"
@@ -43,12 +50,16 @@
                 android:resource="@xml/file_paths" />
         </provider>
         <service android:name=".companion.CompanionEndpointService" android:exported="false" android:foregroundServiceType="dataSync" />
-        <activity android:name=".MainActivity" android:exported="true" android:resizeableActivity="false" android:launchMode="singleTask" android:windowSoftInputMode="adjustResize" android:windowFullscreen="true" android:windowNoTitle="true" android:screenOrientation="landscape" android:enableOnBackInvokedCallback="true"
+        <receiver android:name=".importer.BrowserDownloadCompleteReceiver" android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.DOWNLOAD_COMPLETE" />
+            </intent-filter>
+        </receiver>
+        <activity android:name=".MainActivity" android:exported="true" android:launchMode="singleTask" android:windowSoftInputMode="adjustResize" android:windowFullscreen="true" android:windowNoTitle="true" android:enableOnBackInvokedCallback="true" tools:targetApi="tiramisu"
             android:configChanges="keyboard|keyboardHidden|navigation|orientation|screenLayout|screenSize|smallestScreenSize|uiMode">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
-                <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
             </intent-filter>
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -56,7 +67,8 @@
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
-        <activity android:name=".TvActivity" android:exported="false" android:resizeableActivity="false" android:launchMode="standard" android:windowSoftInputMode="adjustResize" android:windowFullscreen="true" android:windowNoTitle="true" android:screenOrientation="landscape" android:enableOnBackInvokedCallback="true"
+        <activity android:name=".ExternalDisplayActivity" android:exported="false" android:resizeableActivity="true" android:launchMode="standard" android:windowSoftInputMode="adjustResize" android:windowFullscreen="true" android:windowNoTitle="true" android:screenOrientation="landscape" android:enableOnBackInvokedCallback="true" tools:targetApi="tiramisu"
             android:configChanges="keyboard|keyboardHidden|navigation|orientation|screenLayout|screenSize|smallestScreenSize|uiMode" />
+        <activity android:name=".TrackedSourceBrowserActivity" android:exported="false" android:resizeableActivity="true" android:windowFullscreen="true" android:windowNoTitle="true" android:screenOrientation="landscape" android:configChanges="keyboard|keyboardHidden|navigation|orientation|screenLayout|screenSize|smallestScreenSize|uiMode" />
     </application>
 </manifest>

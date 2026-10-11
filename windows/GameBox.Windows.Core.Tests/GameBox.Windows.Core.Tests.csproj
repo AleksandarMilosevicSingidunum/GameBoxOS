@@ -7,6 +7,5 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\GameBox.Windows.Core\GameBox.Windows.Core.csproj" />
-    <ProjectReference Include="..\GameBox.Windows\GameBox.Windows.csproj" />
   </ItemGroup>
 </Project>

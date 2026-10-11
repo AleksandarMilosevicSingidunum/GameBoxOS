@@ -972,6 +972,19 @@ the prior settings. The separate Honor↔Windows live probe above validates the 
 against the Android endpoint. These checks still do not replace routed-network,
 long-transfer, or production-signed acceptance.
 
+## Companion transport confidentiality and server identity
+
+The Android companion endpoint now serves TLS using a persistent Android Keystore
+server key. Windows companion requests use HTTPS and pin that exact certificate's
+SHA-256 fingerprint; the fingerprint is shown in Android Settings and is required
+when pairing/saving a Windows device profile. Old profiles without a pin are not
+auto-reconnected and must be paired again. A focused instrumentation test passed on
+the physical Honor PGT-N19, verifying pinned HTTPS status and rejection of plaintext
+HTTP. The Windows core harness and Android unit/lint/APK gates pass. Routed LAN,
+large-transfer, Windows↔Honor live-pairing, and physical controller acceptance remain
+unverified. Request replay protection still uses in-memory nonce history, which resets
+on service restart.
+
 
 ## Nearest-neighbor controller focus recovery (UI-42)
 
@@ -1945,7 +1958,7 @@ Mode behavior remain separate hardware gates.
 
 TV controller-confirmation increment (2026-09-29): a focused TV test exposed
 that a focused safe-area chip did not react to a gamepad `BUTTON_A` event. The
-shared host now translates `BUTTON_A` to the Android TV confirmation key, and
+shared host now translates `BUTTON_A` to the TV-mode confirmation key, and
 the safe-area chips explicitly handle A/DPAD-center/Enter while focused. The
 dedicated TV test now activates 8% with `BUTTON_A`, verifies the visible active
 inset, and restores the prior preference. The combined Blueprint plus TV-host
@@ -2579,6 +2592,12 @@ file was selected. The picker rendered with Honor desktop chrome/taskbar, and re
 GameBox initially exposed those PC-mode controls until its fullscreen window control restored
 the borderless view. This proves physical-TV picker launch/return only, not a successful import.
 
+After installing the APK containing the keyless metadata fallback, opening Cave Story’s
+**Edit metadata** dialog on the same HDMI display showed a confirmed Wikidata match
+(`Q10195152`) despite the absent TheGamesDB key. This verifies the manual fallback result is
+surfaced in the physical TV UI; it does not constitute a TheGamesDB sync or automatic metadata
+enrichment acceptance test.
+
 The separate built-in legal Galaxy Patrol fixture completed a physical GameBox install through
 the authorized asset worker. Its managed file was
 `files/installed/retro/galaxy-patrol/content/galaxy-patrol.nes`, and on-device SHA-256 was
@@ -2603,3 +2622,4264 @@ preservation was not exercised on the physical device. The legal install → Lib
 handoff attempt → Home return → content-only uninstall → reinstall loop is now physically
 observed on TV; native gameplay, controller input, save persistence, and direct emulator exit
 remain open acceptance gates.
+
+### Shared fullscreen-window refactor checkpoint (1 October 2026)
+
+The repeated edge-to-edge window flags/insets behavior in `MainActivity` and `TvActivity` is
+now centralized in `display/BorderlessWindowPolicy.kt`; host lifecycle and exported-activity
+contracts remain distinct. The Android JVM suite and debug APK build pass. On the physical
+Honor HDMI display 3, the rebuilt app reached the dedicated `TvActivity` through the in-product
+**Show on TV** action. Honor initially hosted the activity as a titled PC freeform task; after
+the system maximize action, GameBox covered the full 1920×1080 display and the transient title
+chrome disappeared after settling. The OEM task/window mode is system-managed, so a fully
+automatic borderless launch on Honor Desktop Mode remains an explicit hardware acceptance
+item; the non-exported TV activity was not made externally launchable for testing.
+
+During the 1 October UI-polish pass, the new build's Home hero focus bloom was visible on
+the 1920×1080 Honor display. A subsequent fresh **Show on TV** launch again exposed Honor's
+PC-mode task-title overlay after the system maximize action, showing that OEM chrome behavior
+is not consistent across launches. The device then presented its locked-phone screen while
+opening Settings, so the new sound toggle and audible output were not physically verified.
+
+### Unlocked Honor TV UI follow-up (1 October 2026)
+
+After the user unlocked the Honor, the app was inspected again on the actual HDMI display
+(logical display 3, 1920×1080). GameBox Settings is active on that output and reports
+“External display detected · HDMI Screen · 1920×1080.” However, the capture still includes
+Honor desktop's PC-mode title bar and bottom taskbar; GameBox is therefore not currently
+borderless/full-screen immediately on this launch. Activating Honor's visible enter-full-screen
+window control and waiting about five seconds hid both the top desktop controls and bottom
+taskbar. A fresh HDMI capture then showed GameBox filling the 1920×1080 output without the
+desktop chrome or an added TV-safe inset. This confirms the physical-TV layout after the
+OEM fullscreen action, but not automatic borderless launch. The Settings page is a long
+combined scroll surface; the new UI sound preference was not reached reliably in this pass,
+so its physical state/persistence and audible feedback remain unverified. No changes were
+made to the Honor's app data or the connected emulator session during this check.
+
+### API-35 emulator Play Now and normal RetroArch exit (1 October 2026)
+
+On the API-35 emulator, Galaxy Patrol was installed through its GameBox details screen using
+the built-in legal fixture (`galaxy-patrol.nes`, 49,168 bytes). **Play Now** launched the real
+`com.retroarch/.browser.retroactivity.RetroActivityFuture`. RetroArch's Quick Menu identified
+version 1.22.2 and the loaded `FCEUmm` core, confirming the content reached the emulator
+adapter; the captured gameplay view was mostly black with on-screen controls and a small
+visible sprite, so visual/gameplay quality is not accepted by this result.
+
+One normal Android Back key did not leave RetroArch. Using RetroArch's own **Close Content**
+returned to its Main Menu, and its normal **Quit** action then returned foreground control to
+GameBox's Galaxy Patrol details screen. `com.retroarch` was no longer running after that
+normal app quit, and GameBox still reported the legal content installed. No force-stop, task
+kill, or synthetic GameBox relaunch was used. This closes the emulator's normal in-app
+exit/return path for this fixture; Android Back directly from gameplay remains an open
+adapter/platform behavior. A controller was not connected, and no save was created or
+recovered in this run, so controller input and save preservation remain open.
+
+The API-35 `TvActivityTest` class was rerun independently after that hardware-flow check:
+all 19 tests passed, including compact/wide TV navigation, game-card and action focus,
+authorized install, import/save/uninstall focus, Back dismissal, and safe-area controls. An
+earlier full-class attempt had 18/19 pass and failed only at the post-install Library-card
+assertion because two matching accessible nodes were present during the transition; the
+isolated test then passed on a fresh install and the complete rerun passed 19/19. Thus the
+first result is retained as an intermittent test assertion/timing observation rather than
+discarded. The connected-test task removed the target `com.gamebox.os` package from the AVD
+after completion; the debug APK was reinstalled and MainActivity relaunched afterward. This
+test-runner side effect reset emulator-local app data, so its prior legal fixture was not
+preserved across the suite run; the production Honor app/data was not involved.
+
+### Physical Honor + HDMI TV navigation and launch check (1 October 2026)
+
+The debug APK was rebuilt and installed with `adb install -r` on the unlocked physical Honor
+Magic6 Pro (PGT-N19), preserving the existing app data. The phone's built-in 2848×1312
+display and the connected HDMI display (logical display 3, 1920×1080) were captured
+independently; no emulator display was used for this check. From the phone's PC Hub, the
+visible **Show on TV** action launched GameBox on the HDMI output, returning the phone to the
+Honor desktop as expected for the two-display mode. The action was moved above the PC status
+cards because it had been clipped below the visible viewport on the wide PC Hub layout.
+
+On the physical TV, the Galaxy Patrol legal fixture's detail page opened and **Play Now**
+handed off to the installed `com.retroarch/.browser.retroactivity.RetroActivityFuture`.
+This verifies physical TV navigation through the GameBox game detail and emulator-launch
+handoff. It is not a gameplay pass: RetroArch appeared as a floating/windowed surface over
+GameBox, the Honor desktop taskbar reappeared, and the captured game output was predominantly
+black with touch controls and a few pixels visible. The TV's maximize/fullscreen control
+expanded GameBox itself to the display on a prior capture, but the RetroArch handoff did not
+retain that presentation. A controller was not connected. Follow-up acceptance must fix or
+configure the Honor freeform/window behavior for emulator launch, then verify visible gameplay
+and controller input on the physical TV; emulator-only evidence does not close these gates.
+
+The PC Hub button-order change compiled into the debug APK successfully. `git diff --check`
+reported no whitespace errors. The earlier 21/21 API-35 UI tests cover the download-tracking
+action/focus and TV activity suite; this physical session was used as separate device evidence.
+
+### Honor Desktop Mode fullscreen and emulator-return follow-up (1 October 2026)
+
+After the physical TV handoff, Android's task dump showed the Honor's HDMI task container in
+vendor mode `hw-pc-freeform`. RetroArch's `RetroActivityFuture` task was bounded to
+`Rect(192, 103 - 1344, 794)` on the 1920×1080 panel, while GameBox was a separate task on the
+same external display. This explains why immersive flags and full-display layout bounds alone
+did not make the emulator surface fullscreen. A normal Android Back input left RetroArch
+foreground; no process kill was used. The captured content still was not visually playable.
+
+GameBox now also requests Android's public `Activity.requestFullscreenMode(ENTER)` for an
+external-display activity on API 34+, with a callback for approval/rejection, in addition to
+the existing immersive window flags and external-display fullscreen launch hint. This compiled
+and the unit suite plus instrumentation-test compilation passed. On the Honor, a rebuilt APK
+was installed and the phone-to-TV flow repeated, but task dumps still showed
+`hw-pc-freeform`; the callback was not observed in the inspected log window. Therefore this
+change is not accepted as a fix for Honor's OEM mode, and the request path needs stronger
+runtime diagnostics or an OEM-specific/user-facing full-screen action. The actual emulator
+Back/exit → GameBox return, working gameplay, controller input, and TV fullscreen handoff
+remain open.
+
+### Compact-TV action-focus coverage (1 October 2026)
+
+Added compact-width Compose instrumentation coverage that checks focus and activation for
+the authorized **Import your copy** detail action, plus focusability for **Import save copy**
+and the uninstall confirmation action. The existing compact Vimm browser-tracking test also
+checks spoken semantics, focus, activation, and disabled waiting state. The expanded Android
+instrumentation sources compile; JVM unit tests and APK assembly pass. These new focus tests
+have not yet been executed on a runtime, and are not counted as passed. They were not run on
+the emulator or on the Honor phone display; next TV-device test scheduling must preserve the
+user's requirement to validate on the HDMI output rather than the phone screen.
+
+The physical TV Play Now check was repeated after this coverage change: the legal fixture
+again launched `RetroActivityFuture` in the same `hw-pc-freeform` bounds, with GameBox visible
+behind it and predominantly black game output. A normal Back and a long-press Back both left
+RetroArch foreground. No force-stop or process kill was used. The return-to-GameBox and actual
+playability gates therefore remain open on the Honor TV.
+
+### Physical Honor TV UI polish smoke pass (1 October 2026)
+
+Rebuilt and reinstalled the current debug APK on the unlocked PGT-N19 Honor. The app was
+opened on HDMI display 3 (1920×1080); no emulator was used for visual acceptance. On the TV
+output, Home rendered the wide Blueprint composition and focus bloom, Library rendered its
+console/filter rail, game cards, storage and saves panels, and Settings → Display reported
+`HDMI Screen · 1920×1080` with `TV safe area` set to **Off / 0%**. The screen navigation was
+performed by selecting Library and Settings on the TV output. The visible Honor Desktop Mode
+dock/taskbar and its window margins remain around the app, so the app-level immersive flags
+do not establish a truly borderless whole-panel surface on this OEM desktop mode. The UI
+screens rendered without a detected fatal exception in the inspected log window. This is a
+visual/navigation smoke pass only; it does not close the emulator gameplay, controller, or
+whole-screen deployment gates.
+
+While RetroArch was still foreground during the preceding launch investigation, a normal
+Escape key and F1 menu-toggle key did not return to GameBox; F1 only exposed RetroArch's
+touch-control overlay. The installed RetroArch task remained alive. It was not force-stopped
+or killed. GameBox was subsequently opened on the HDMI output through its exported launcher
+activity. Honor still placed that activity in its `hw-pc-freeform` task container, so an
+OEM/system-level fullscreen behavior change remains unresolved.
+
+### Honor HDMI 7z import and uninstall flow (1 October 2026)
+
+On the same unlocked Honor with its 1920×1080 HDMI output connected, the packaged 7z runtime
+test passed headlessly (`SevenZipRuntimeTest`: 1/1). The visual import path was then exercised
+on the TV surface using an explicitly synthetic, non-playable `.7z` fixture and the uninstalled
+legal Celeste Classic catalog entry. Android DocumentsUI opened on the HDMI display, the
+selected archive was extracted to `files/imports/homebrew/celeste/GameBox-TV-Fixture.rom`, and
+the game appeared installed. The source archive was initially retained: the app had called
+`ContentResolver.delete()` on a Storage Access Framework document URI. Source cleanup now uses
+`DocumentsContract.deleteDocument()` for document-provider URIs, retaining the existing
+DownloadManager/MediaStore deletion path for other content URIs. Repeating the same TV flow
+removed the original archive from Downloads while leaving the managed extracted payload in
+place. GameBox uninstall then reported one content file removed; the exact extracted path was
+verified absent and the catalog entry returned to not-installed. No commercial ROM was used
+or opened. This closes the physical Honor `.7z` picker → extraction → source cleanup → uninstall
+cleanup flow for this synthetic fixture; it does not prove playable game compatibility.
+
+The Honor documents picker and returning GameBox task were constrained to vendor
+`hw-pc-freeform` windows during this flow; after picker return, GameBox was visibly centered
+inside a smaller surface with the desktop shell/dock exposed. App-level fullscreen flags did
+not override that OEM behavior, so the panel-wide borderless UI gate remains open.
+
+### Honor HDMI fullscreen recovery retest (1 October 2026)
+
+Rebuilt and installed the current APK on the unlocked Honor, then used the PC Hub's actual
+**Show on TV** action. The dedicated `TvActivity` became the resumed HDMI activity in a
+`fullscreen` task with bounds `Rect(0, 0 - 1920, 1080)`; Home, Library, Store, game details,
+and the uninstall confirmation were navigated/captured directly from the physical TV output.
+The generated 58-byte Celeste fixture was removed through GameBox's own uninstall action, and
+the catalog returned to not-installed. No ROM/game binary was selected during this retest.
+
+Opening Android DocumentsUI from that TV flow changed the shared Honor task back to
+`hw-pc-freeform` (`Rect(192, 103 - 1344, 794)`). Its picker was visibly presented as a floating
+window over the PC Hub. The newly added focus-gain fullscreen retry has therefore not yet
+demonstrated recovery on this firmware: the task was still freeform in the available post-picker
+dump, and this run could not obtain a clean GameBox-focused callback/return observation. Using
+**Show on TV** again reliably started a new fullscreen `TvActivity`, which is the current
+workaround. Keep the focus-retry change provisional until a clean picker-dismiss → focus regain
+test proves the same task returns to full-screen; do not describe the complete picker flow as
+borderless or fixed. The Honor desktop dock/taskbar also remains visible over the bottom edge.
+
+The Android unit suite, Android-test Kotlin compilation, and debug APK assembly all passed
+after the focus-retry change. This was a physical-device smoke test only; no emulator was used.
+
+### Honor HDMI import progress and controller search (1 October 2026)
+
+Added an indeterminate progress bar with accessible live-region text while a local game copy is
+being imported and verified, both from Store discovery details and the authorized-copy details
+flow. Existing import/reimport workflows retain their busy indicators. The import indicator is
+implemented and compiled, but its visible in-progress state still needs a deliberately slow
+local-copy run on TV; an instantaneous or completed import is not evidence that the bar was seen.
+
+Added a TV search trigger and on-screen QWERTY keyboard for Store and Library. The keyboard
+supports D-pad focus movement and selection, delete, space, clear, Search, and B/Back close,
+without relying on the software IME or a physical keyboard. Build verification passed with
+`:app:testDebugUnitTest`, `:app:compileDebugAndroidTestKotlin`, and `:app:assembleDebug`.
+
+Installed the build on the physical Honor PGT-N19 and opened GameBox on its 1920×1080 HDMI
+display. From Home, a controller-equivalent X event opened Store; a second X opened the search
+keyboard. Display-targeted D-pad-down and select events moved focus to a letter, updated the
+query to `QZ`, and updated the filtered-results UI. The HDMI screenshot showed the keyboard
+and query update. This verifies the TV key-navigation path through Android key-event injection,
+not through a connected gamepad: `dumpsys input` listed a USB optical mouse but no controller.
+The Honor desktop dock/taskbar is still visible at the bottom; this pass does not close the
+whole-panel borderless/fullscreen issue. The new Compose keyboard instrumentation test source
+compiles but has not been run as an instrumentation test on hardware.
+
+### Honor dock-to-TV search retest (1 October 2026)
+
+The deployment target remains the Honor PGT-N19 in wired dock/desktop mode. A fresh display
+dump identified the physical HDMI sink as external display 3 at
+1920×1080/60 Hz. After installing the passing debug build, a display-targeted X key event
+navigated Home → Store and opened the controller search keyboard. D-pad-down, D-pad-right,
+and confirm entered `2`; the query and matching-title count changed on the TV output. B closed
+the keyboard and two LB events returned to Home. This is physical Honor/HDMI rendering with
+injected Android key events, not validation with an attached gamepad; the app status still
+reported no controller connected. The Honor desktop dock/taskbar remains over the lower edge.
+
+### Honor HDMI RetroArch normal-exit retest (1 October 2026)
+
+On the physical Honor HDMI display, opened installed Galaxy Patrol from Store details via
+Play Now and confirmed `com.retroarch/.browser.retroactivity.RetroActivityFuture` resumed
+with the FCEUmm overlay/game surface visible. Honor initially placed the emulator task in
+`hw-pc-freeform` bounds `Rect(192, 103 - 1344, 794)`, despite GameBox's fullscreen launch
+request. For this diagnostic only, Android's task-resize command expanded that exact
+RetroArch task to `Rect(0, 0 - 1920, 1080)`; this is not evidence that GameBox automatically
+maximizes third-party emulator windows. Using RetroArch's visible L3+R3 Quick Menu toggle,
+then **Close Content** and **Quit**, exited RetroArch normally with no force-stop. The top
+resumed activity returned to GameBox `MainActivity` on the 1920×1080 fullscreen task, and
+`pidof com.retroarch` returned no process. The installed Galaxy Patrol NES file and the
+pre-existing `/sdcard/RetroArch/states/FCEUmm/galaxy-patrol.state` remained present. The
+diagnostic resize task was removed when RetroArch quit; GameBox was restored to Home. This
+closes the normal-exit/return software path under maximized geometry, but automatic emulator
+fullscreen on Honor, physical gamepad input, and a newly-created save during this run remain
+open hardware gates.
+
+### Remove Android TV launcher identity; retain Honor HDMI output (1 October 2026)
+
+Removed `LEANBACK_LAUNCHER` from the phone app’s launcher manifest and renamed the
+non-exported `TvActivity` host to `ExternalDisplayActivity`. Updated the external-display
+unit/instrumentation coverage and the DeX CI selector; the packaged debug manifest now
+contains `MainActivity` and `ExternalDisplayActivity` and no Leanback launcher category.
+External-screen hosting remains available for the Honor dock-to-HDMI deployment and does not
+require an Android TV device. `MainActivity` now also requests immersive system-bar hiding
+when it runs on an external display.
+
+The focused external-display and Vimm JVM tests passed, Android-test sources compiled, and the
+debug APK assembled. On the physical Honor, GameBox was observed on HDMI display 3 at
+1920×1080. The running task was `MainActivity`, with fullscreen task bounds, rather than
+`ExternalDisplayActivity`; the Honor desktop dock/taskbar still overlays the bottom edge even
+after the MainActivity system-bar change. A window dump identified it as the visible `Dock`
+window owned by `com.hihonor.desktop.systemui`, at `[0,1037][1920,1080]`, separate from
+GameBox's app window. The direct ADB `--display 3` start returned OEM
+error code 98 despite the existing MainActivity remaining visible, so it is not counted as a
+successful direct-launch flow. The renamed host’s end-to-end launch and a truly unobstructed
+TV surface remain unverified; no Android TV emulator was used.
+
+### Honor external-display resizeability follow-up (1 October 2026)
+
+The external-display fullscreen request had previously logged Honor's
+`Trying to set root-task windowing-mode on a non-root-task` error while the
+activity task was identified as non-resizable. The dedicated
+`ExternalDisplayActivity` manifest entry now opts into resizeability so Honor's
+desktop window manager can promote that phone-owned task to fullscreen; the
+ordinary phone/Home activity remains unchanged. The debug APK and Android-test
+sources compiled, and the APK was installed in place on the physical PGT-N19
+without clearing app data. The device still showed the `MainActivity` root task
+on HDMI after installation, so the new host's fullscreen behavior has not yet
+been validated through GameBox's in-app **Show on TV** action. ADB's shell UID
+cannot directly launch the intentionally non-exported host; that denial is
+expected and is not counted as an app launch test.
+
+The external-display resizeability change was then exercised through the actual
+in-app route on Honor HDMI display 3 (1920×1080): MainActivity → PC Hub → **Show
+on TV**. The non-exported `ExternalDisplayActivity` became top-resumed, and
+ActivityTaskManager reported its task in fullscreen mode with bounds
+`Rect(0, 0 - 1920, 1080)`. The first fullscreen promotion callback was accepted.
+The redundant second request from `onResume` was removed; after rebuilding and
+installing in place, the same in-app route again produced fullscreen task bounds
+and a single accepted callback without the prior duplicate-request rejection.
+The physical screenshot is
+`honor-hdmi-fullscreen-retest.png` in the task visualization directory. It shows
+GameBox spanning the HDMI panel while the Honor-owned 43-pixel desktop dock
+remains overlaid at the bottom. Thus app fullscreen on the docked phone is now
+verified; hiding Honor's system dock is still an OEM/device-level open gate.
+The screenshot reports no connected controller, so no physical controller-input
+claim is made.
+
+### Honor HDMI Galaxy Patrol Play Now retest (1 October 2026)
+
+From the full-size `ExternalDisplayActivity` on HDMI display 3, opened the
+installed legal Galaxy Patrol fixture and selected **Play Now**. The real
+`com.retroarch/.browser.retroactivity.RetroActivityFuture` became top-resumed on
+the HDMI display, proving the current app's Play Now adapter still dispatches to
+the installed RetroArch package. However, ActivityTaskManager placed RetroArch
+in Honor's `hw-pc-freeform` mode at `Rect(192, 103 - 1344, 794)` on the
+1920×1080 display rather than fullscreen. The capture
+`honor-hdmi-retroarch-play-now.png` shows RetroArch's touch controls and part of
+the running homebrew game in a centered window, with GameBox details visible
+behind it. This is a physical launch/render attempt, not acceptance of the
+living-room play flow: fullscreen emulator presentation and physical-controller
+input remain open. The Honor status panel reported `Controller: Not connected`;
+no real-controller input is claimed.
+
+### Latest in-place install and HDMI UI check (1 October 2026)
+
+Rebuilt the current workspace with `:app:assembleDebug` (successful; Gradle
+reported all tasks up to date) and installed
+`app/build/outputs/apk/debug/app-debug.apk` using `adb install -r` on the
+connected PGT-N19; installation returned `Success` and preserved app data.
+The package reports `versionName=0.1.0`, `versionCode=1`. Started
+`com.gamebox.os/.MainActivity` on Honor HDMI display 3 and verified it became
+top-resumed. The captured 1920×1080 screen
+`honor-hdmi-latest-install-verify.png` in the task visualization directory
+shows the updated GameBox Home, Galaxy Patrol and Crisis Core library cards,
+and the Honor desktop dock overlapping the bottom of the app. This verifies
+post-install launch/rendering on the intended HDMI output only; it does not
+close the still-running RetroArch task, verify emulator exit/return, or provide
+controller-input evidence. No Android TV runtime was used.
+
+### Honor RetroArch task-mode diagnosis (1 October 2026)
+
+After bringing GameBox back to the HDMI foreground, inspected ActivityTaskManager
+without stopping either app. RetroArch remains a separate existing root task
+(`t2750`) in `hw-pc-freeform` at `[192,103][1344,794]`; GameBox is root task
+`t2751` in fullscreen at `[0,0][1920,1080]`. GameBox's current external-display
+handoff already requests display 3 and fullscreen through its ActivityOptions
+helper, while emulator intents carry `NEW_TASK | CLEAR_TOP`. The observed
+RetroArch root task is still the same task from the earlier Play Now attempt,
+so the next emulator-window investigation must distinguish reuse of that
+freeform task from behavior of a fresh launch. This is a diagnostic inference,
+not proof that task reuse is the sole cause. No device-global setting was
+changed, no task was force-stopped, and no emulator fullscreen fix is claimed.
+
+### Reimport source cleanup and archive regression coverage (1 October 2026)
+
+Audited the missing-file repair path and found that it restored verified content
+and preserved saves/history, but unlike new imports it did not remove the
+selected source document. Updated `ImportedGameReimportCard` to delete selected
+source files only after successful library registration and import-journal
+confirmation. If registration recovery is pending or Android denies deletion,
+the source is retained and the user-facing status says so. Extended the
+DocumentsUI MediaStore integration test to select a synthetic 7z archive
+containing a PSP ISO, assert the extracted ISO is placed at the managed path
+with its expected checksum, and assert the source archive is gone after
+successful reimport. The Android test compiles but was not run on the locked
+Honor.
+
+ZIP traversal filtering, 7z PSP extraction, console import policy, imported-game
+registration, and reimport identity JVM suites passed 15/15. Android-test Kotlin
+sources compiled and the rebuilt APK (`0.1.0`, versionCode 1) installed in place
+on the PGT-N19. This does not yet prove the UI deletion permission behavior
+through DocumentsUI on the projected Honor/TV; that physical flow remains
+open.
+
+### Honor RetroArch normal exit and launch-session recovery (1 October 2026)
+
+On the physical HDMI output, relaunched the legal Galaxy Patrol homebrew from
+GameBox. RetroArch appeared in Honor `hw-pc-freeform` rather than fullscreen.
+Opened RetroArch's on-screen Invader/Menu control, used **Close Content**, then
+scrolled its Main Menu and selected **Quit**. The official [Libretro Quick Menu
+guide](https://docs.libretro.com/guides/quick-menu/) describes this normal UI
+path. GameBox's Galaxy Patrol details screen regained focus on HDMI; the
+RetroArch task disappeared and `pidof com.retroarch` returned no process. This
+proves one physical normal-exit-and-return path, but not fullscreen gameplay or
+controller input.
+
+A read-only snapshot of GameBox's Room database immediately after that return
+showed a confirmed `pending_launch_session` still present and Galaxy Patrol's
+`lastPlayed` unchanged. This is direct evidence that Honor can keep the host
+resumed while RetroArch owns window focus, so the existing pause/resume-only
+callback did not finish the session. Added host-window-focus return handling
+and a regression test for a focus-only return; the focused launch/deferred
+session suites passed 15/15, Android-test Kotlin sources compiled, and the
+debug APK rebuilt successfully. The new APK was installed in place. The phone
+then locked before a fresh post-fix Play Now → RetroArch Quit pass could be
+run on HDMI; therefore session-journal completion and automatic save backup
+after this fix remain unverified on hardware. No physical controller was
+connected during this pass.
+
+### Compact action focus coverage (1 October 2026)
+
+Expanded Android UI-test sources to verify that all six compact managed-save
+actions expose click semantics and accept focus, missing-file reimport's
+**Locate files** action is spoken/clickable/focusable at 560 dp, and compact
+uninstall exposes a click action as well as focus. Existing compact tests cover
+authorized import and Vimm browser tracking. The updated Android-test Kotlin
+sources compile; the focused launch/deferred-return and archive-policy JVM
+suites passed 21/21. These Compose semantics tests have not been run on the
+locked Honor's HDMI display, so the physical focus/readability gate remains
+open.
+
+### Honor post-focus-fix launch-session verification (1 October 2026)
+
+With the Honor unlocked and HDMI sink on display 3 at 1920×1080, launched
+Galaxy Patrol from GameBox into the installed RetroArch. RetroArch was
+top-focused in its existing Honor `hw-pc-freeform` task. Used its visible
+**Close Content** command, then the Main Menu **Quit** command; did not
+force-stop either app. GameBox `MainActivity` regained window focus, and
+`pidof com.retroarch` returned no process. Captures record the normal RetroArch
+menu and GameBox screen beneath it; the current UI/task geometry still shows
+RetroArch windowed, with Honor's dock overlay at the bottom.
+
+A read-only snapshot of the GameBox Room database after return showed an empty
+`pending_launch_session` table and Galaxy Patrol updated to
+`lastPlayed=2026-10-01T17:45:50.079Z`, `minutesPlayed=49`. Before the launch,
+the table was empty and `lastPlayed` was `2026-10-01T17:27:19.586Z` with 46
+minutes, so this fresh run verifies that the window-focus return callback
+finalized the session and updated play history on the physical Honor. This
+does not prove automatic RetroArch fullscreen, a newly generated emulator
+save, or input from a physical controller; those remain separate acceptance
+gates.
+
+### Repository verification after the hardware return pass (1 October 2026)
+
+Ran `testDebugUnitTest`, `compileDebugAndroidTestKotlin`, and `assembleDebug`
+from the current workspace. The unit-test XML reports contain 609 tests across
+164 suites, with zero failures, zero errors, and one skipped test. The
+instrumentation sources compiled and the debug APK assembled; instrumentation
+was not executed by this command, and these build/test results are not
+additional physical-display evidence. `git diff --check` passed for the
+roadmap and audit updates.
+
+### Focused UI instrumentation on supporting API-35 emulator (1 October 2026)
+
+At the start of this follow-up the Honor reported `mDreamingLockscreen=true`;
+HDMI remained connected at 1920×1080. No locked-device interaction was
+attempted. On the separate `GameBox_API35(AVD) - 15` emulator, the Vimm/browser
+download-tracking instrumentation class passed 3/3. A second focused batch ran
+17 tests across compact save actions, reimport, uninstall, controller search,
+and import progress: 11 passed and 6 failed. Failures were the tests' direct
+focus requests for Locate files, uninstall, save actions, and the first search
+keyboard key, plus the save-card cloud callback assertion. The search test
+opens its controller keyboard by simulated touch before asserting initial
+focus, so its input setup does not faithfully model a gamepad. These failures
+are unresolved test/product questions, not TV acceptance evidence. Reproduce
+the interactions with key-event/controller input in the test harness, then
+rerun on an unlocked Honor docked to the TV; do not mark compact focus coverage
+complete based on source compilation.
+
+### Compact-focus test follow-up (1 October 2026)
+
+Moved the search keyboard's initial focus request into the `Dialog` window's
+composition and gave its first key an explicit focus target. Reworked the
+search test to send Android D-pad/center events, type a character, and dismiss
+the keyboard through **Finish search**. The isolated API-35 emulator test passed;
+it verified first-key focus, D-pad movement across key rows, activation, query
+update, and return to the search field. Compact import/reimport, uninstall,
+save, and browser actions now assert click/spoken semantics and the presence of
+their focus-request semantics. These component checks do not assert live focus
+state or replace hardware-controller navigation.
+
+The combined supporting-emulator batch passed 20/20 once. Repeated combined
+runs intermittently lost the Compose test hierarchy in unrelated later cases;
+the affected reimport class (4/4) and save-import confirmation test passed when
+run alone. One final batch left `com.gamebox.os.test` frozen with no test
+progress, so only that emulator test-runner package was stopped and the waiting
+Gradle invocation interrupted. Treat combined-run reliability as open; this is
+not Honor/TV failure evidence. The Honor remained locked during this follow-up.
+
+After these changes, `testDebugUnitTest`,
+`compileDebugAndroidTestKotlin`, and `assembleDebug` completed successfully;
+unit-test XML reports 609 tests, zero failures/errors, and one skipped.
+
+### Honor HDMI PPSSPP and controller state observed (1 October 2026)
+
+On a later read-only check the Honor was unlocked again and HDMI display 3 was
+active at 1920×1080/60 Hz. PPSSPP's `PpssppActivity` was foreground and its task
+was fullscreen with bounds `[0,0][1920,1080]`; the captured TV frame is
+`honor-ppsspp-current.png` in the task visualization directory. The Android
+input inventory also showed an external GAMEPAD/JOYSTICK entry with identifier
+`057e:2009` and key layout `Vendor_057e_Product_2009.kl`.
+
+This does not prove GameBox launched PPSSPP or that this game's input/save flow
+works through GameBox: a read-only Room snapshot showed no
+`pending_launch_session`, and no controller input was sent. The visible live
+game may contain unsaved progress, so no exit or navigation action was taken;
+the user was asked whether to exit it normally. If permitted, resume on the
+actual HDMI display and capture a fresh GameBox → PPSSPP launch before claiming
+the second-adapter gate.
+
+### Honor controller-status fix build and lock-screen observation (1 October 2026)
+
+Adjusted controller-source classification so a device exposing GAMEPAD along
+with KEYBOARD or MOUSE is still recognized as a controller; a JOYSTICK-only
+desktop accessory with keyboard/mouse sources remains rejected. Added unit
+cases for the mixed-source combinations. `testDebugUnitTest`,
+`compileDebugAndroidTestKotlin`, and `assembleDebug` succeeded. Unit-test XML
+reports total 609 tests, zero failures, zero errors, and one skipped test.
+Installed the APK in place on the physical PGT-N19, preserving app data, and
+started GameBox targeting the HDMI output.
+
+The post-install HDMI screenshot showed “Phone is locked, please unlock,” so the
+GameBox status card was obscured and its controller recognition could not be
+visually verified. Android still enumerated the external device `057e:2009`
+with GAMEPAD and JOYSTICK sources. No screen input, controller input, or PPSSPP
+exit was sent. The source fix has software evidence but is not marked as
+physically accepted; repeat the card check and actual D-pad/A/B navigation once
+the phone is unlocked.
+
+### API-35 DocumentsUI 7z reimport end-to-end test (1 October 2026)
+
+Ran `SystemDocumentPickerReimportTest.productionReimportCompletesThroughAndroidDocumentsUi`
+alone on `GameBox_API35(AVD) - 15` (API 35): 1/1 passed. The test creates a
+synthetic PSP `.7z` in Downloads, selects it through Android DocumentsUI,
+extracts a nested ISO into the managed PSP game path, verifies bytes and SHA-256,
+confirms library registration preserves the existing record, verifies the
+selected archive is removed only after success, and checks that staging,
+backup, and pending-registration artifacts are absent. This validates the
+integrated picker/archive lifecycle on the supporting emulator only; it does
+not close the requested Honor/TV import acceptance gate.
+
+### Focused compact-TV action and import feedback instrumentation (1 October 2026)
+
+On the API-35 supporting emulator, the isolated
+`BrowserDownloadTrackingActionTest` passed 3/3 (spoken/focusable browser
+tracking, authorized import action, and disabled waiting state),
+`PerGameSaveCardTest` passed 7/7, and `GameImportProgressIndicatorTest` passed
+1/1 (compact progress is visible and exposes indeterminate progress semantics).
+These runs add compact-layout component/integration evidence, not physical
+controller operation on the Honor.
+
+`ContentRemovalDialogTest` ran 3/4 successfully; its busy-state test initially
+failed before the first preview assertion because the Compose hierarchy was
+missing. Running that method alone passed 1/1, including single confirmation,
+busy-state action disabling, and completion. This is consistent with the
+previous combined-run Compose hierarchy instability; keep batch reliability
+open rather than calling the class clean as a single run. The Honor remained
+locked during this test session, so its controller-status card and physical
+D-pad/A/B operation remain pending.
+
+### API-35 content uninstall/reinstall safety and controller-search checks (1 October 2026)
+
+Ran `GeneralContentRemovalTest` alone on the supporting API-35 emulator: 3/3
+passed. It checks symlink target protection, fail-closed uninstall when save
+backup cannot be created, and a production-controller/Room multi-file disc
+uninstall followed by reimport. Synthetic fixtures verify owned content is
+removed, another game's content and the save survive, save backup is created,
+and favorite, description, play history, and minutes played remain intact.
+Ran `ControllerSearchKeyboardTest` alone: 1/1 passed; Android D-pad/center key
+events navigate the on-screen controller keyboard, enter a character, and
+return focus to search. These tests use the emulator's injected input path and
+synthetic content, not the physical Honor controller or the actual TV display.
+
+### API-35 legal homebrew Play Now and normal RetroArch return smoke test (1 October 2026)
+
+Installed the debug APK on `GameBox_API35(AVD) - 15` after its prior test-runner
+session had left the app uninstalled. On the live GameBox UI, an A-button event
+opened Galaxy Patrol details and an X-button event installed the bundled legal
+homebrew; the UI then showed `installed` and `Play Now`. X/A key events did not
+foreground RetroArch from the Play Now state, so I used the Play Now bounds
+reported by Android's accessibility dump for one emulator-only touch. This
+launched `com.retroarch/.browser.retroactivity.RetroActivityFuture`, with
+`launchedFromPackage=com.gamebox.os`. The captured emulator frame showed the
+Galaxy Patrol sprite rendered by RetroArch/FCEUmm. Therefore, the real app-to-
+RetroArch adapter and content handoff work on this supporting emulator, but
+this run did not prove controller activation of Play Now.
+
+Used RetroArch's on-screen Quick Menu → **Close Content** → Main Menu → **Quit**;
+did not force-stop the emulator. GameBox regained top focus, `pidof com.retroarch`
+returned no process, the Room `pending_launch_session` count was 0, and the
+Galaxy Patrol row was `INSTALLED` with `lastPlayed=2026-10-01T19:00:38.070Z` and
+`minutesPlayed=2`. This proves one supporting-emulator launch/normal-return
+session and journal finalization, not Honor/TV acceptance or real-controller
+play. The Honor was locked during that emulator run; hardware results are
+recorded separately below.
+
+### Unlocked Honor HDMI controller recognition and launcher frame (1 October 2026)
+
+On the actual PGT-N19 (Android 16 / MagicOS `10.0.0.163C431E5R2P2`) with the
+docked 1920×1080 HDMI display active, the unlocked GameBox Home screen is
+top-resumed on the external display. ActivityTaskManager reports GameBox in
+fullscreen mode with task bounds `[0,0][1920,1080]`. The
+controller status card now identifies `Nintendo Switch Pro Controller`,
+confirming the source-classification fix is visible on the physical TV. The
+capture also shows the Honor desktop taskbar overlaying the bottom of the
+GameBox footer, so app full-screen flags do not currently remove all OEM chrome.
+HONOR's [MagicOS 10 PC Mode guidance](https://www.honor.com/cn/support/content/zh-cn15900112/)
+describes per-window fullscreen controls but does not document an app API or
+setting to hide the global taskbar. I have not changed system-level display or
+PC Mode settings.
+An installed PSP game remained the Home hero; its emulator process was alive
+but backgrounded, and it was not opened or stopped.
+
+The controller input inventory maps the Nintendo controller to
+`/dev/input/event13` with D-pad and gamepad buttons. Two read-only `getevent`
+observation windows (about one minute total) on that device received no button
+events after requesting a physical D-pad Right then A press; each listener was
+stopped without injecting input. Do not count Android device enumeration or
+the connected status card as controller input/navigation evidence. The unlocked
+screenshot confirms status detection only; physical controls, Play Now, TV
+footer visibility, and end-to-end gameplay remain open. The capture is retained at
+`docs/evidence/honor-tv-controller-detected.png`.
+
+### Current continuation check (1 October 2026)
+
+Rechecked the connected PGT-N19: the external HDMI display is active at
+1920×1080/60 Hz (display ID 3), GameBox `MainActivity` remains resumed in a
+fullscreen task, and the Nintendo Switch Pro Controller is enumerated as
+`/dev/input/event13` with D-pad and gamepad button capabilities. A count-based
+passive listener remained live for about 40 seconds and emitted no events before
+it was manually stopped. This is not evidence that physical input fails; no
+controller press was observed during the window, so physical navigation remains
+unverified.
+
+As supporting software evidence only, ran
+`ControllerSearchKeyboardTest` on `GameBox_API35(AVD) - 15` (API 35) with
+`connectedDebugAndroidTest`; its single test passed (1/1). This confirms the
+on-screen search keyboard responds to Android test-injected navigation on the
+emulator, not that a physical controller works on the Honor/TV. The Honor
+session was not sent synthetic input, and no emulator or game process was
+stopped or relaunched during this check.
+
+### Fresh debug APK installed on Honor; screen lock prevented UI acceptance (1 October 2026)
+
+Rebuilt the current workspace with `:app:assembleDebug --rerun-tasks` (BUILD
+SUCCESSFUL, all 37 tasks executed) and installed
+`app/build/outputs/apk/debug/app-debug.apk` on the PGT-N19 using `adb install
+-r` (Success). The artifact SHA-256 is
+`4F91D3116509749C66E9DA80A9DA4DC8430AF230A6B80B53466A4AF551939E22`; package
+metadata reports version `0.1.0` / versionCode `1` / targetSdk `36`. This is a
+debug build, not a signed release.
+
+Started only `MainActivity` on Android HDMI display 3. Activity Manager showed
+the GameBox activity resumed, but the actual HDMI capture displayed HONOR's
+“Phone is locked, please unlock” screen, and HONOR Suite/notification shade
+retained top focus. Therefore the installation succeeded, but this did not
+visually verify the app UI or constitute a TV acceptance run. Evidence is
+`docs/evidence/honor-tv-after-install-locked.png`. No unlock attempt, synthetic
+input, app-data wipe, emulator interaction, or PPSSPP operation was performed.
+Resume Honor/TV UI testing after the user unlocks the phone.
+
+While hardware UI was unavailable, reran `testDebugUnitTest --rerun-tasks`
+against the rebuilt workspace: 609 tests, 0 failures, 0 errors, 1 skipped;
+Gradle reported BUILD SUCCESSFUL (25 tasks executed). The run emitted existing
+Kotlin warnings for deprecated fullscreen flags/SevenZFile APIs and nullable
+test-fixture assertions; these did not fail compilation or tests. The
+instrumentation results remain separate from this JVM suite and from physical
+Honor acceptance.
+
+On the next continuation check, the HDMI display was still active at
+1920×1080/60 Hz and a fresh capture again showed HONOR's locked-phone screen;
+GameBox's process existed but was not visually exposed above the lock screen.
+This confirms the current test gate remains the device unlock, not a GameBox
+crash. Latest capture from the current continuation:
+`docs/evidence/honor-tv-lock-recheck.png`.
+
+### Archive extraction failure cleanup regression (1 October 2026)
+
+Hardened `RomArchiveExtractor.extractIfArchive` so it removes the archive
+expansion directory if opening/reading fails, a byte/file limit is exceeded,
+or no supported payload is found, then rethrows the original error for the
+transaction layer to report. Ran `RomArchiveExtractorTest` with Gradle
+`--rerun-tasks`: 4/4 passed, including new oversized ZIP and corrupt ZIP cases
+that assert no earlier or partial files remain under staging. This is JVM
+unit evidence; DocumentsUI flow and physical Honor import behavior remain open.
+
+After that focused run, reran the full `testDebugUnitTest --rerun-tasks` suite
+against the same source tree: 611 tests, 0 failures, 0 errors, 1 skipped;
+BUILD SUCCESSFUL (25 tasks executed). The latest physical HDMI recheck still
+shows the Honor lock screen (`docs/evidence/honor-tv-lock-check-latest.png`),
+so these passing tests do not close the hardware gate. The debug APK installed
+before this extractor change has not yet been rebuilt/reinstalled with it.
+
+Rebuilt the workspace debug APK locally after the extractor change:
+`:app:assembleDebug` succeeded and produced SHA-256
+`4E53D93C4EFE44BB670603F2AE96248D4BF84540788B365EEAB1FA715E39054C`.
+The current HDMI capture remains locked, and Android reports
+`org.ppsspp.ppsspp` running (PID 11317). To protect the live emulator session,
+this newer APK has not been installed over the Honor's app yet. Install and
+resume hardware validation after the phone is unlocked and PPSSPP has been
+exited normally.
+
+Latest continuation recheck: the PGT-N19 remains connected to the 1920×1080
+HDMI display, the HDMI frame still shows the phone-lock prompt, and
+`org.ppsspp.ppsspp` remains alive. No input was sent and PPSSPP was not
+interrupted. Capture: `docs/evidence/honor-tv-session-recheck.png`.
+
+Following that check, a fresh read-only ADB inventory again found the Honor
+locked behind HONOR Suite and `org.ppsspp.ppsspp` alive as PID 11317. The
+external display remains 1920×1080 at 60 Hz. Latest HDMI-only screenshot:
+`docs/evidence/honor-tv-continuation-latest.png`.
+
+### Vimm discovery-platform/import-profile alignment (1 October 2026)
+
+The Vimm preset already contained explicit vault-slug mappings for all 33
+platform labels in `vimmLairSupportedPlatforms`, but several labels had no
+dedicated importer profile and consequently used the generic extension
+fallback. Added importer aliases/profiles for DS, WiiWare, Atari Jaguar/Lynx,
+Jaguar CD, Philips CD-i, Sega 32X, Virtual Boy, and TurboGrafx-CD. A new
+cross-layer regression asserts every Vimm preset platform resolves to a
+console-specific import profile and checks representative system formats.
+
+Format choices were checked against official Libretro documentation for
+[Virtual Boy](https://docs.libretro.com/library/beetle_vb/),
+[Jaguar/Jaguar CD](https://docs.libretro.com/library/virtual_jaguar/),
+[TurboGrafx-CD](https://docs.libretro.com/library/geargrafx/),
+[Sega 32X](https://docs.libretro.com/library/picodrive/), and
+[CD-i](https://docs.libretro.com/library/same_cdi/). These checks establish
+file-format/import recognition only; they do not claim that an emulator/core
+is installed or can launch each platform.
+
+`VimmLairDiscoverySourceTest` passed 26/26; the complete JVM suite passed
+612 tests, 0 failures, 0 errors, 1 skipped (`testDebugUnitTest --rerun-tasks`).
+The rebuilt local debug APK succeeded with SHA-256
+`8F238334956066ABE88756A094A290AED3614F705EE359B72821267F4AFB4C9B`. It
+has not been installed on the Honor: the phone remains locked and PPSSPP is
+still running, so the prior live game session is being preserved.
+
+### ZIP/7z containers accepted across console profiles (1 October 2026)
+
+Extended each known console profile to accept ZIP and 7z as source containers,
+while keeping console game-payload extensions separate. The extractor now uses
+only payload extensions for archive entries, so nested ZIP/7z files cannot be
+mistakenly registered as installed games. Added coverage that every Vimm
+preset console accepts both container types, PS2 still accepts its `.iso`
+payload, nested archives are rejected, and failed extraction leaves no staged
+files. This addresses the per-console gap in earlier PSP-only 7z evidence.
+
+The full JVM suite passed 613 tests, 0 failures, 0 errors, 1 skipped after this
+change; Gradle ran 25 tasks with `--rerun-tasks`. The local debug APK packages
+successfully with SHA-256
+`26CCA9C02B731C048579CF05F5244C771E758D1FA4848B79EF9A9AE6585E9E0A`. It has
+not been installed on the Honor because its lock screen is active and PPSSPP
+PID 11317 remains alive; actual DocumentsUI/TV import validation is open.
+
+Added a real synthetic `.7z` extraction case for a PS2 `.iso` payload in
+addition to the PSP fixture, and rejected nested archives at the extraction
+boundary. `RomArchiveExtractorTest` passed 6/6. Final full JVM rerun passed
+614 tests, 0 failures, 0 errors, 1 skipped. The packaged debug APK hash above
+remains the latest production-source build; the added test changes no APK code.
+
+### Controller/search/import UI verification continuation (1 October 2026)
+
+The connected Honor still reports the 1920×1080 HDMI presentation display and
+PPSSPP PID 11317; HONOR Suite is top-resumed. I left that emulator session
+untouched and ran software-only UI coverage on `GameBox_API35(AVD) - 15`.
+
+The controller search test was updated to use Compose's v2 test rule and an
+explicit AndroidJUnit4 runner. It passed by itself (1/1), including D-pad focus,
+virtual-key selection, query update, and closing the controller keyboard.
+`GameImportProgressIndicatorTest` passed by itself (1/1). The three
+`BrowserDownloadTrackingActionTest` cases passed in a filtered run. A run mixing
+those three classes reported missing Compose hierarchies for the later classes,
+so cross-class instrumentation stability is not yet proven.
+
+The filtered 103-test API-35 run was not green: it reported eight UI-test
+failures (including missing Compose hierarchies and two wide-layout assertions)
+and stopped advancing at test 100/103. The active Gradle test process and
+instrumentation runner were checked; after repeated unchanged test 100 status,
+that wedged run was interrupted. An isolated previously stalled save-card test
+passed (1/1). Do not count the broad run as a pass; isolate and repair the
+remaining suite regressions before treating API-35 UI coverage as complete.
+
+The wide-TV Play Now test no longer marks an arbitrary catalog row installed
+and assumes that is playable. It now requires the bundled Galaxy Patrol entry,
+verifies the authorized content before checking Play Now, and explicitly skips
+when the retained emulator catalog does not include that fixture. On the
+current retained emulator DB, Galaxy Patrol is absent, so this test skipped;
+the verified Play Now UI assertion still needs a clean fixture-backed run.
+
+For compact uninstall confirmation, migrated `ContentRemovalDialogTest` to the
+Compose v2 rule and reran the full class on API 35: 4/4 passed, including
+confirmation/cancel and busy-state disabling. Migrated `PerGameSaveCardTest`
+to the v2 rule as well; its class-level run remained unstable (one missing
+Compose hierarchy and then no progress), so I interrupted it after checking
+the active runner. The cloud-action method passed alone (1/1), as did the
+compact action accessibility test earlier in that class run. Keep complete
+managed-save class stability open; isolated passes do not substitute for it.
+
+### API-35 broad-suite failure triage and targeted retest (2 October 2026)
+
+The full Orchestrator run reached its terminal report: 104 tests, 1 skipped,
+4 failed. The failures were: a lifecycle test requiring `NOT_INSTALLED` even
+though startup reconciliation correctly returned `MISSING_FILES`; a wide-TV
+Play Now control not scrolled into view; no fallback/error status presented in
+the wide Blueprint Store layout; and a DocumentsUI reimport assertion made as
+soon as Room registration changed state, before the import transaction and UI
+message had settled. This broad run is a failure, not a pass.
+
+Addressed and reran those cases individually on `emulator-5554` (API 35), using
+explicit ADB serial selection so no connected hardware was targeted:
+
+- Lifecycle baseline now accepts either `NOT_INSTALLED` or reconciled
+  `MISSING_FILES`; the complete install → save/backup → uninstall → reinstall →
+  restore method passed (1/1).
+- Wide-TV Play Now test scrolls the production Details layout to the action;
+  verified Galaxy Patrol Play Now case passed (1/1).
+- Store now renders the same accessible offline/provider/error/success status
+  message on the wide Blueprint surface as on compact layouts. The case checks
+  each fallback/error status and the controller-accessible Refresh action; it
+  passed (1/1).
+- The DocumentsUI test waits for verified reimport completion, not only the
+  earlier Room state update. Game-file selection now requests read, write, and
+  persistable SAF grants; after verified registration GameBox takes/releases
+  the grant around source deletion. The real 7z → PSP ISO reimport passed (1/1),
+  including checksum/managed-path checks and confirmation that the selected
+  source document was removed and no transaction staging files remained.
+
+The full JVM suite was freshly rerun with `--rerun-tasks`: 614 tests, 0 failures,
+0 errors, 1 skipped. `git diff --check` reported no whitespace errors (only the
+repository's existing LF/CRLF notices).
+
+One filtered `connectedDebugAndroidTest` invocation unexpectedly fanned out to
+both the AVD and Honor because both were attached. Honor test processes crashed
+while HONOR Suite remained foreground; the Galaxy Patrol lifecycle test was
+skipped there. No controller input was sent. The subsequent read-only hardware
+check confirmed PPSSPP PID 11317 remains alive, HONOR Suite is still top-resumed,
+and the HDMI display remains 1920×1080 at 60 Hz. Do not send further tests to
+the Honor until it is unlocked and PPSSPP has been exited normally. All later
+instrumentation reruns were explicitly directed to `emulator-5554`.
+
+### Complete API-35 Orchestrator rerun after screenshot assertion repair (2 October 2026)
+
+The first emulator-only full rerun after the four prior repairs reached its
+terminal report with 105 tests executed, 2 skipped, and 1 failure. The remaining
+failure was `BlueprintScreenshotsTest.captureRealScreens`: it assumed the home
+hero always exposed an in-view “Install game” action. The selected hero's install
+state varies, and the test's purpose is to capture the production Details screen,
+not to assert a particular catalog action. Replaced that state/layout-dependent
+assertion with a wait for the stable “About this game” Details content.
+
+The focused screenshot test passed (1/1) on `emulator-5554`. Then the complete
+API-35 Orchestrator suite was rerun with `--rerun-tasks` and explicit
+`ANDROID_SERIAL=emulator-5554`. It finished successfully: **103 test cases, 0
+failures, 0 errors, 1 skipped**. The single skip was
+`SafSaveAdapterDeviceTest.configuredSaveRootRoundTripsARealDocument`, which
+requires a user-configured SAF document root. The suite includes the DocumentsUI
+7z reimport flow, lifecycle/save round-trip, wide-TV Store state and Play Now
+checks, controller-search and import-progress coverage, and the
+screenshot/navigation sweep. This closes the local API-35 full-suite gate, but
+not the fresh clean-CI gate or physical Honor Magic6 Pro + dock + TV/controller
+acceptance gate. The Honor was not selected as a test target.
+
+### Local non-device Android CI checks (2 October 2026)
+
+Revalidated the repository's non-device Android workflow checks locally:
+`python -m unittest scripts/test_android_version_code.py` passed 3/3; the
+authorized Galaxy Patrol catalog JSON, iNES header, exact 49,168-byte length,
+and pinned SHA-256 all matched; `testDebugUnitTest` passed 614 tests, 0 failures,
+0 errors, 1 skipped; and `assembleDebug` plus `assembleDebugAndroidTest` both
+completed successfully. APK hashes from this build:
+
+- Debug APK: `7DA46B31D067470CBC5BF60F77FD813CDBB252F97F28394014967EB39DE15A00`.
+- Instrumentation APK: `3C371AE3D0E771C7CF849A0B05574D0EAF082FA049453588C730C77E60A73D24`.
+
+These checks ran with local Gradle 9.7.1. The hosted Android workflow pins
+Gradle 9.5.0; no hosted run was triggered or inspected, so clean hosted-CI
+acceptance remains open. The connected Honor still reports `mWakefulness=Asleep`;
+no wake/input/app-launch action was taken while checking its state.
+
+### PPSSPP missing-emulator Settings UI coverage (2 October 2026)
+
+The API-35 emulator has RetroArch installed but no PPSSPP package. Added
+`GameSettingsPanelReadinessTest`, exercising the production PSP Game Settings
+composable and deriving the expected available/unavailable options from that
+device's actual PackageManager results. It verifies that missing PPSSPP is
+explained and every unavailable package choice is disabled; if an approved
+variant is installed on another test device, the same test verifies the
+installed/not-installed labels and enabled states for all three variants.
+The initial test draft incorrectly expected two chips, while the UI exposes
+three package variants in two rows; the corrected expectation uses live package
+state. The focused instrumentation test passed on `emulator-5554` (1/1).
+
+This is missing-adapter guidance evidence only; it does not validate PPSSPP
+installation, game launch, gameplay, return, or save recovery. The previous full
+API-35 aggregate at the time of this focused run had 103 cases/1 skip; a
+subsequent complete rerun including this test is recorded below.
+
+### Full API-35 suite including PPSSPP readiness UI test (2 October 2026)
+
+Reran `:app:connectedDebugAndroidTest --rerun-tasks` with
+`ANDROID_SERIAL=emulator-5554`. The Orchestrator completed successfully. The
+JUnit XML reports 104 test cases across 47 suites, 0 failures, 0 errors, and 1
+skip (`SafSaveAdapterDeviceTest.configuredSaveRootRoundTripsARealDocument`).
+`GameSettingsPanelReadinessTest` is included and passed (1/1). The Gradle console
+reported a different aggregate “finished” count than the XML; the JUnit XML is
+used as the authoritative case count. This is local API-35 emulator evidence,
+not a hosted-CI or physical Honor/TV result.
+
+### Honor Magic6 Pro HDMI playback/return spot check (2 October 2026)
+
+Tested the installed debug build on the actual Honor Magic6 Pro (PGT-N19) while
+docked to its physical 1920×1080 HDMI display (Android display 243; not either
+Android Studio screen-sharing display). From Home, the in-app **Show on TV**
+action opened `ExternalDisplayActivity` on HDMI; Android reported the activity
+focused with a 1920×1080 fullscreen task. The Android default Home chooser was
+opened and then cancelled; Honor Home remains the default.
+
+On that HDMI session, opened Store, installed the bundled legal Galaxy Patrol
+sample, and confirmed its installed state and **Play Now** action. Play Now
+started RetroArch's real `RetroActivityFuture` on display 243. Used RetroArch's
+own Quick Menu → Close Content → Quit path (no force-stop); GameBox's external
+host resumed on HDMI. Returning to GameBox Home showed Galaxy Patrol installed,
+under **Your collection**, and **Recently played: 1 game**. No GameBox crash was
+found in the inspected log window. This confirms the physical-device
+Store/install → emulator-activity launch → normal quit → host-return/session
+recording path.
+
+This does **not** yet pass actual gameplay: the captured RetroArch surface was
+mostly black with only a small partial sprite visible, and gameplay controls
+were not exercised. RetroArch also appeared as a desktop-sized window over
+GameBox rather than taking over the full HDMI surface; Android still reports
+the underlying desktop/freeform task and system bar. The dedicated GameBox
+external host itself did fill the TV viewport. No physical controller was
+connected, so controller input and search remain unverified. The phone locked
+once during the session; testing resumed only after a read-only check showed it
+awake and the keyguard hidden. Do not substitute the emulator results for these
+open physical gameplay, emulator-fullscreen, and controller gates.
+
+### Home screen extraction and current-build HDMI smoke (2 October 2026)
+
+As the first maintainability slice, moved Home setup, Home rendering, collection
+rails, status panel, and quick-launch tiles out of the 340,907-byte
+`GameBoxApp.kt` into `HomeScreen.kt`. Extracted Home selection rules into
+`HomePresentation.kt` so install filtering, recent-game hero selection, the
+legal sample fallback, and focus restoration can be tested without Compose.
+`GameBoxApp.kt` is now 329,202 bytes. Four new unit tests cover those selection
+rules. Gradle 9.7.1 passed `:app:testDebugUnitTest` (618 tests, 0 failures,
+0 errors, 1 skip), `:app:assembleDebug`, and `:app:assembleDebugAndroidTest`.
+
+Installed that build on the unlocked Honor, reopened `ExternalDisplayActivity`
+on the physical 1920×1080 HDMI display, and verified the updated Home screen
+still renders Galaxy Patrol as installed and recently played. The resulting
+settled HDMI frame still contains Honor's desktop taskbar; the launcher/default
+Home chooser remains unselected. The refactor is behavior-preserving and is
+only the first boundary extraction; Store/catalog, Details/import, Downloads,
+Settings, and app-hub separation remain future work. UI polish and the overall
+project refactor are not complete.
+
+### Primary navigation extraction and tab-cycle correction (2 October 2026)
+
+Moved the shared destination model, top navigation/header, animated tab control,
+and destination icon mapping from `GameBoxApp.kt` into `PrimaryNavigation.kt`.
+This gives the primary launcher navigation a separately testable boundary.
+The extraction exposed a shoulder-navigation bug: code indexed the filtered
+visible tabs using `Destination.ordinal`, even though Downloads is intentionally
+omitted from that row. Navigation now resolves the current index from the actual
+visible tab list; regression tests cover the complete Home → Library → Store →
+Media → PC → Settings cycle, wraparound, and recovery from Downloads.
+
+Gradle 9.7.1 passed `:app:testDebugUnitTest`,
+`:app:assembleDebugAndroidTest`, and `:app:assembleDebug`. The build was installed
+on the physical Honor, and 1920×1080 screenshots captured from HDMI showed the
+updated Home and Library/Store surfaces. The Honor desktop taskbar still overlays
+the bottom edge. HDMI-targeted D-pad events did not reliably advance the live
+tab after reinstall because the desktop shell retained top-resumed ownership;
+therefore the full physical shoulder-navigation path remains unverified even
+though the extracted navigation and cycle behavior are covered by passing unit
+tests. No phone-screen test is claimed.
+
+Follow-up Honor HDMI focus check: entered the PC tab through the app UI on
+display 243 and invoked its **Show on TV** action. `dumpsys activity` confirms
+`ExternalDisplayActivity` is the resumed and focused GameBox activity on HDMI.
+The captured 1920×1080 HDMI screenshot nevertheless shows the Honor desktop
+taskbar/navigation strip covering the bottom portion of GameBox. This directly
+contradicts the earlier impression that the dedicated host alone removes all
+system chrome. Window Manager reports the app window as fullscreen, filling
+`Rect(0, 0 - 1920, 1080)`, with status/navigation bars requested hidden; the
+remaining desktop taskbar is an Honor system surface, not reduced app bounds.
+The visual goal is still unmet on this device, and any further attempt to hide
+that shell-owned surface needs device-specific investigation.
+
+The pure download-controller action policy has also been moved into
+`DownloadControllerActions.kt`, separate from the downloads renderer, while
+retaining the existing action-plan regression tests. This keeps controller
+intent decisions independently testable as screen extraction continues.
+
+Media/PC shortcut declarations and their controller-label policy have now been
+extracted into `AppShortcutCatalog.kt`; the app-hub renderer consumes the same
+catalog, and Settings can continue referencing it without duplicating package
+metadata. After both extractions, Gradle 9.7.1 again passed
+`:app:testDebugUnitTest`, `:app:assembleDebugAndroidTest`, and
+`:app:assembleDebug`. The full launcher remains a large orchestration/UI file,
+so these are incremental boundaries, not completion of the requested refactor.
+
+### Downloads screen extraction (2 October 2026)
+
+Moved the complete Downloads screen and its metric card from `GameBoxApp.kt` to
+`DownloadsScreen.kt`. The extracted screen retains queued/active/paused/failed/
+completed actions, retry/cancel behavior, telemetry and capacity warnings,
+controller-action registration, initial-focus routing, and both compact and
+wide layouts. Shared byte/status label formatting now lives in
+`UiTextFormatters.kt`, and imports used only by the moved screen were removed
+from the app coordinator. The central file was reduced by about 21 KB by the
+screen move (from about 321 KB to 300 KB), before the additional formatter
+extraction. The full working-tree diff also contains earlier extractions.
+
+Gradle 9.7.1 passed all 621 JVM tests (0 failures/errors, 1 skipped),
+`:app:assembleDebugAndroidTest`, and `:app:assembleDebug`. The instrumentation
+test APK compiles, but the Honor became locked during this follow-up; its HDMI
+output displayed the device lock screen. No current-build UI behavior is claimed
+as reverified on hardware until the phone is unlocked and the TV host can be
+reopened.
+
+### Media and PC hub extraction (2 October 2026)
+
+Moved the Media/PC hub coordinator, Blueprint layouts, shortcut tiles, Moonlight
+status presentation, and launch-time formatting from `GameBoxApp.kt` into
+`AppHubScreen.kt`. The shortcut catalog remains in `AppShortcutCatalog.kt`; the
+shared controller hint used by the hub is now package-visible. Removed the
+hub-only imports from `GameBoxApp.kt`. This extraction moves roughly 540 lines
+and reduces the coordinator from 5,777 to 5,231 lines.
+
+Gradle 9.7.1 passed `:app:testDebugUnitTest`,
+`:app:assembleDebugAndroidTest`, and `:app:assembleDebug`. The connected Honor
+projection still displays “Phone is locked, please unlock,” so this build has
+not yet had a post-extraction visual check on the TV. Do not bypass the lock;
+resume HDMI verification once the user unlocks the phone.
+
+### Settings screen extraction (2 October 2026)
+
+Moved `SettingsScreen` and its settings-only navigation strip, status cards,
+action rows, and section heading into `SettingsScreen.kt`. Kept the shared
+settings action/status rows and the Blueprint library rail package-visible where
+the main quick-actions and Home/Library UI still consume them. Removed imports
+that became unused in `GameBoxApp.kt`. The coordinator is now 3,756 lines (down
+from 5,231 before this extraction).
+
+Gradle 9.7.1 passed `:app:testDebugUnitTest`,
+`:app:assembleDebugAndroidTest`, and `:app:assembleDebug`; the debug APK was
+installed to the Honor. A new HDMI capture still showed the phone-lock screen,
+so there is no post-extraction hardware visual confirmation. Keep the TV
+verification gate open until the user unlocks the phone and Settings is opened
+on the actual HDMI output.
+
+### Details screen extraction and storage cleanup (2 October 2026)
+
+Moved the complete game Details experience and its controller/download
+presentation helpers into `GameDetailsScreen.kt`, reducing `GameBoxApp.kt` from
+3,756 to 3,054 lines. Updated `ProductionInstallBoundaryTest` to scan all
+production UI source files, so the worker-backed transfer-action invariant
+continues to hold after screens are split into feature files. Documented the
+app-private on-device folder layout in the README, including imported games,
+managed installs, saves, backups, manifests, and catalog state.
+
+On the Honor, removed eight hash-verified duplicate Galaxy Patrol test fixtures
+from `Download/GameBox`, retaining the canonical fixture and `brickster.gbc`.
+The app-private tree contained the console-scoped imports and managed install
+content, with no staging/temp import directories to remove; app state and
+recovery manifests were preserved. The latest debug APK installed successfully
+with app data retained. The phone is currently locked, so no TV UI check was
+performed; resume HDMI testing after user unlock.
+
+Gradle 9.7.1 passed `:app:testDebugUnitTest` (621 tests, 0 failures, 0 errors,
+1 skipped), `:app:assembleDebugAndroidTest`, and `:app:assembleDebug`.
+
+### Store and Library screen extraction (2 October 2026)
+
+Continued reducing the shell coordinator by moving the Store console catalog,
+Blueprint catalog layout, refresh status, and discovery browse/results into
+`StoreCatalogScreen.kt`; the discovery title-detail/import/source flow and
+result cards now live in `DiscoveryDetailsScreen.kt`. Moved collection and
+Library screens into `LibraryScreens.kt`, keeping shared filter, focus, and
+Blueprint components available to both features. Removed imports no longer
+used by the affected screens. `GameBoxApp.kt` is now 1,044 lines, down from
+3,054 before this pass.
+
+Gradle 9.7.1 passed `:app:testDebugUnitTest` (621 tests, 0 failures, 0 errors,
+1 skipped), `:app:assembleDebugAndroidTest`, and `:app:assembleDebug`. The
+verified debug APK was reinstalled on the Honor with app data retained. The
+phone still reports the lock screen; do not claim a post-refactor TV visual or
+controller acceptance check until it is unlocked.
+
+### Settings Interface section extraction (2 October 2026)
+
+Moved the Interface controls (Media/PC shortcut visibility, UI sound effects,
+and reduce-motion preference) into `SettingsInterfaceSection.kt`. The section
+now receives only the current settings snapshot and repository; its coroutine
+scope and presentation remain local to the component. The rest of Settings
+retains its existing storage, controller, download, emulator, display, audio,
+network, save/cloud, and diagnostics behavior. `SettingsScreen.kt` is now 1,397
+lines (down from 1,506).
+
+Gradle 9.7.1 passed `:app:testDebugUnitTest` (621 tests, 0 failures, 0 errors,
+1 skipped), `:app:assembleDebugAndroidTest`, and `:app:assembleDebug`. Version
+0.1.0 was installed to the Honor with app data retained. The device remains
+locked, so TV UI/controller acceptance is still pending user unlock.
+
+### Settings storage section extraction (2 October 2026)
+
+Moved external game-library and emulator-save-root presentation into
+`SettingsStorageSection.kt`. The screen receives storage status, migration
+plan, layout mode, and explicit selection/forget/migrate callbacks; picker,
+permission, and migration-dialog side effects remain owned by `SettingsScreen`.
+`SettingsScreen.kt` is now about 1,306 lines (from 1,397 before this pass).
+
+Gradle 9.7.1 passed `:app:testDebugUnitTest`, `:app:assembleDebugAndroidTest`,
+and `:app:assembleDebug`. The verified build was reinstalled on the Honor with
+app data preserved. The device remains locked, so hardware display acceptance
+is still pending unlock.
+
+### Display and TV safe-area section extraction (2 October 2026)
+
+Moved the display/status cards and TV safe-area selector into
+`SettingsDisplaySection.kt`. The component receives runtime display/power
+status and a preference callback; directional-center/Enter activation,
+bring-into-view behavior, and Android Display settings navigation are
+preserved. `SettingsScreen.kt` is now 1,248 lines (from 1,306 before this pass).
+
+Gradle 9.7.1 passed `:app:testDebugUnitTest` (621 tests, 0 failures, 0 errors,
+1 skipped), `:app:assembleDebugAndroidTest`, and `:app:assembleDebug`. The
+verified build was installed on the Honor with app data retained. The phone
+remains locked, so actual-TV UI/controller confirmation is still pending.
+
+### Network and Companion settings extraction (2 October 2026)
+
+Moved network readiness/status and Windows Companion controls into
+`SettingsNetworkSection.kt`. The component now owns its pairing-secret display
+and restore/rotate lifecycle alongside network capability observation; the
+parent provides persisted settings and the Android network-settings action.
+`SettingsScreen.kt` is now 1,223 lines (from 1,248 before this pass).
+
+Gradle 9.7.1 passed `:app:testDebugUnitTest` (621 tests, 0 failures, 0 errors,
+1 skipped), `:app:assembleDebugAndroidTest`, and `:app:assembleDebug`. The
+verified build was installed on the Honor with app data retained. The TV
+interaction check remains pending while the phone is locked.
+
+### Cloud-save settings extraction (2 October 2026)
+
+Moved the full WebDAV/S3 configuration form, endpoint/region validation,
+credential presence check, secure save/clear actions, and transient form state
+into `SettingsCloudSaveSection.kt`. The section still delegates encrypted
+credential persistence to `SettingsRepository`; provider and endpoint values
+continue to follow the persisted settings snapshot. `SettingsScreen.kt` is now
+1,104 lines (from 1,223 before this pass).
+
+Gradle 9.7.1 passed `:app:testDebugUnitTest` (621 tests, 0 failures, 0 errors,
+1 skipped), `:app:assembleDebugAndroidTest`, and `:app:assembleDebug`. The
+verified build was installed to the Honor with app data preserved. Read-only
+window state still reports the device lock screen; TV interaction verification
+must wait for unlock.
+
+### Catalog and discovery settings extraction (2 October 2026)
+
+Moved authorized catalog transport/credential configuration, catalog
+connection testing, discovery-source editing/probing, and TheGamesDB key
+management into `SettingsCatalogSourcesSection.kt`. Provider form state and
+credential-availability effects now follow the component lifecycle. A shared
+message state is passed in because storage migration, notifications, and
+diagnostics also report status in this Settings area. `SettingsScreen.kt` is
+now 627 lines (from 1,104 before this pass).
+
+Gradle 9.7.1 passed `:app:testDebugUnitTest` (621 tests, 0 failures, 0 errors,
+1 skipped), `:app:assembleDebugAndroidTest`, and `:app:assembleDebug`. The
+verified APK was installed to the Honor with app data preserved. The device is
+still locked, so no TV visual/controller verification is claimed.
+
+### Developer diagnostics extraction and Honor storage cleanup (2 October 2026)
+
+Moved developer diagnostics, event collection, sanitized report generation,
+bundle export, and related developer-only simulations into
+`SettingsDeveloperDiagnosticsSection.kt`. `SettingsScreen.kt` now owns the
+remaining Settings navigation/layout and shared status state. The screen is
+522 lines and the diagnostics component is 161 lines.
+
+Forced a clean Gradle run of `:app:testDebugUnitTest`,
+`:app:assembleDebugAndroidTest`, and `:app:assembleDebug`: 621 unit tests,
+0 failures, 0 errors, 1 skipped; all requested build tasks succeeded. Installed
+the resulting debug APK to the Honor with `adb install -r`, preserving app data.
+
+On the Honor, removed 39 empty `GameBox-export-test-*` directories from
+`/sdcard/Download`; no files were inside them. Preserved all game archives and
+ROMs, existing GameBox content, the user photo, and the older APK. Verified the
+existing organized root at `/sdcard/Download/GameBoxOS`, containing per-system
+`Games` folders plus `Imports`, `Artwork`, `Metadata`, `SaveBackups`, `Exports`,
+`Installers`, and `Logs`. No game/save data was moved or deleted. The phone
+remains locked (`mDreamingLockscreen=true`), so TV-screen and controller testing
+must wait for unlock.
+
+### System overlay component extraction (2 October 2026)
+
+Moved the controller quick-actions dialog, system status dialog, profile
+switcher, and controller footer into `SystemOverlays.kt`. These living-room
+overlays now have a dedicated presentation boundary separate from top-level
+navigation and destination composition. `GameBoxApp.kt` is 936 lines (down
+from 1,076); `SystemOverlays.kt` is 162 lines.
+
+`:app:compileDebugKotlin` and `:app:testDebugUnitTest` succeeded; the suite
+remains at 621 tests, 0 failures, 0 errors, 1 skipped. Both debug app and
+instrumentation APKs assembled, and `git diff --check` passed. Installed the
+refreshed APK on the Honor with app data retained. The device remains locked,
+so this presentation-only extraction has not yet been visually verified on
+the TV.
+
+### Shared game-filter module extraction (2 October 2026)
+
+Moved the shared library/store `GameFilterBar`, game text/platform/metadata
+filtering, and configured-source failure messaging into `GameFilters.kt`.
+Store and Library continue to call the same implementations; existing unit
+coverage in `GameFilteringTest`, `StoreMetadataFilterTest`, and
+`ConfiguredSourceResultTest` exercises the extracted functions. The app
+coordinator is now 813 lines (from 936 before this pass); the new module is 136
+lines.
+
+Kotlin compilation and all 621 unit tests succeeded (0 failures, 0 errors, 1
+skipped). Both debug APKs assembled, and the refreshed app APK was installed on
+the Honor with app data preserved. The device is still locked; TV interaction
+testing remains pending.
+
+### Store console catalog extraction (2 October 2026)
+
+Moved Store console identities, display labels, metadata-provider platform names,
+normalized aliases, icons, and matching logic into `StoreConsole.kt`. Added
+regression tests covering the complete eight-entry Store map, all provider
+canonical names, normalized PSP aliases, cross-console rejection, and local-only
+Homebrew behavior. `StoreCatalogScreen.kt` now has 1,137 lines (from 1,160
+before this extraction).
+
+The full unit suite passes with 624 tests, 0 failures, 0 errors, and 1 skipped.
+The debug app and instrumentation APKs assembled, and `git diff --check` passed.
+Installed the resulting app APK on the Honor with app data preserved. The
+device still reports `mDreamingLockscreen=true`; no UI was launched and no TV
+visual result is claimed.
+
+### Game detail import component and duplicate-information cleanup (2 October 2026)
+
+Moved the authorized-copy file picker, filename/platform resolution, verified
+import, library registration/rollback, progress feedback, and source-file
+removal into `AuthorizedCopyImportCard.kt`. Import state now has a `finally`
+cleanup path, and coroutine cancellation is propagated rather than displayed as
+a regular failure. Removed the second redundant “About this game” block from
+the Details page; the existing presentation section already shows description
+and metadata. The Details coordinator is 633 lines (from 756 before this pass),
+with the new import component at 154 lines. Tightened the production screenshot
+test to require exactly one “About this game” heading.
+
+Gradle passed all 624 unit tests (0 failures, 0 errors, 1 skipped), and both
+debug app and instrumentation APKs assembled. The updated APK is installed on
+the Honor with app data retained. The phone still reports
+`mDreamingLockscreen=true`; instrumentation was built but not run on hardware,
+and no TV visual test is claimed.
+
+### Store discovery-action state holder (2 October 2026)
+
+Moved configured-source handling (Vimm search/detail hydration, JSON feed sync,
+web-source launch) and multi-console metadata sync out of `CatalogScreen` into
+`CatalogDiscoveryActions.kt`. This coordinator now owns observable search,
+selection, progress, message, and busy state; the composable delegates actions
+and remains responsible for screen navigation, filters, and focus. Async paths
+now restore the busy state in `finally`, surface unexpected failures, and
+propagate coroutine cancellation instead of converting it to a search error.
+`StoreCatalogScreen.kt` is 987 lines (down from 1,137); the new coordinator is
+213 lines.
+
+Gradle passed all 624 unit tests (0 failures, 0 errors, 1 skipped), and both
+debug app and instrumentation APKs assembled. `git diff --check` passed. The
+new APK was installed to the Honor with app data retained. It remains locked,
+so no application launch or TV interaction was attempted.
+
+### Emulator capability policy extraction (2 October 2026)
+
+Moved emulator capability data, console-to-emulator/core mapping, RetroArch
+core-path policy, and imported/managed-content launch descriptor construction
+into `EmulatorCapabilityRegistry.kt`. `GameLaunchController.kt` now focuses on
+Android package/content dispatch and the launch/return session lifecycle; it is
+586 lines (from 797), and the registry is 213 lines. Existing registry and
+launch tests continue to cover capability selection, imported content,
+emulator defaults, and handoff behavior.
+
+Gradle passed all 624 unit tests (0 failures, 0 errors, 1 skipped); the debug
+app and instrumentation APKs assembled, and `git diff --check` passed. Installed
+the updated APK on the Honor with app data preserved. The phone is still locked,
+so no launch or TV test was attempted.
+
+### Launch session-controller separation (2 October 2026)
+
+Moved launch UI state, play-session tracking, the `GameLaunchController`
+contract, and `DefaultGameLaunchController` into
+`DefaultGameLaunchController.kt`. `GameLaunchController.kt` now contains the
+Android `PackageGateway` contract and package/content dispatch adapter only
+(328 lines); session orchestration lives separately (267 lines). This keeps
+the emulator adapter isolated from game-state/session recovery while preserving
+the existing injectable gateway boundary.
+
+Gradle passed all 624 unit tests (0 failures, 0 errors, 1 skipped), and both
+debug app and instrumentation APKs assembled. The updated APK is installed on
+the Honor with app data preserved. The phone remains locked; hardware launch
+and TV-return validation are still pending.
+
+### Game-status component boundary (2 October 2026)
+
+Moved the reusable install-availability badge and accessible download progress
+indicator from `GameBoxApp.kt` into `GameStatusIndicators.kt`. Their install
+state labels, icon/color mapping, and screen-reader progress descriptions are
+unchanged; the app entry/composition file is now 741 lines (from 789 before this
+split).
+
+Gradle passed all 624 unit tests (0 failures, 0 errors, 1 skipped), and the
+debug app and instrumentation APKs assembled. The Honor reports an active
+1920×1080 HDMI display but is currently locked, so the build was not installed
+or visually tested on the TV during this pass.
+
+### App-hub shortcut semantics (2 October 2026)
+
+Blueprint media/PC shortcut tiles now expose a single button description that
+includes both the app name and readiness state (for example, “YouTube, Setup
+required”), in addition to their visible text and click action. The existing
+large-text tile layout test now asserts the merged accessibility description
+and action while retaining its bounds checks. The focused Compose test passed
+both font-scale cases (2/2) on the API-35 emulator; the Honor remains locked,
+so this is not TV visual acceptance.
+
+### Store discovery-card separation (2 October 2026)
+
+Moved the configured-source result card, discovery-game card, and discovery
+horizontal rail from `DiscoveryDetailsScreen.kt` into
+`DiscoveryGameComponents.kt`. This leaves the detail screen focused on selected
+game information, authorized-copy import, and browser handoff; the shared card
+file owns the discovery-only result presentation and focus/hover feedback. The
+detail screen is now 450 lines (from 575). Removed imports made obsolete by the
+move.
+
+Gradle passed all 624 unit tests (0 failures, 0 errors, 1 skipped), and both
+debug app and instrumentation APKs assembled. The Honor is still locked with
+HDMI connected, so no TV visual test was attempted.
+
+### Runtime compatibility and storage-capacity pass (2 October 2026)
+
+Replaced `InputStream.readNBytes` calls with bounded, API-compatible reads and
+added truncated/oversized stream coverage. External-display ID lookup now uses
+the window decor display where available and gates the newer Activity display
+API by platform version. Removed reflection into Android's hidden launch-window
+mode API while retaining the Honor-specific best-effort launch hint. Added the
+API-29 guard around MediaStore Downloads publication and localized lint
+suppression to the AndroidX controller-event dispatch overrides. Added a
+GameBox adaptive launcher icon.
+
+The remote download worker now asks Android StorageManager for allocatable
+space (including reclaimable cache) before rejecting a transfer, falling back
+to filesystem usable space if the storage query fails. This is isolated in
+`StorageAvailability.kt`; three tests cover success, fallback, and invalid
+negative values. The separate home-screen “used” percentage remains based on
+actual filesystem total/usable space because it represents a different metric.
+
+Verification: the full Android unit suite passed 629 tests (0 failures,
+0 errors, 1 skipped); debug assembly and lint passed with 0 lint errors,
+50 warnings, and 1 hint. The focused external-display activity instrumentation
+suite previously passed 19/19 on an API-35 emulator. These emulator results do
+not establish Honor/TV visual acceptance: the Honor is currently locked, so
+the latest changes were not installed or visually tested there.
+
+### Compose modifier API cleanup (2 October 2026)
+
+Standardized the optional modifier parameter name/order on the Settings storage,
+display, network, and cloud-save sections, and made the discovery source card's
+modifier the first optional argument. Updated the Settings screen call sites.
+This is behavior-preserving and makes these components consistent with Compose
+API conventions.
+
+Verification: full Android unit suite passed 629 tests (0 failures, 0 errors,
+1 skipped); `:app:lintDebug` passed with 0 errors, 45 warnings, and 1 hint. All
+five `ModifierParameter` warnings are cleared. No Honor/TV visual test was run
+while the connected phone remained locked.
+
+### AndroidX KTX modernization (2 October 2026)
+
+Replaced repeated `Uri.parse` calls with AndroidX `String.toUri()` at browser,
+document-tree, save-root, and package-settings boundaries. Converted encrypted
+secret and temporary launch-export preference mutations to the KTX
+`SharedPreferences.edit` block form; it retains the previous asynchronous
+`apply()` behavior and keeps each multi-operation update atomic within one edit.
+
+Verification: full Android unit suite passed 629 tests (0 failures, 0 errors,
+1 skipped); debug lint passed with 0 errors, 29 warnings, and 1 hint. All KTX
+lint warnings are cleared. No Honor/TV visual test was run while the connected
+phone remained locked.
+
+### Settings scroll-state observation (2 October 2026)
+
+Changed Settings section selection from reading the frequently changing scroll
+offset as a `LaunchedEffect` key to observing both scroll offset and measured
+section anchors through `snapshotFlow`. This avoids restarting the effect on
+each scroll update while preserving automatic section selection.
+
+Verification: full Android unit suite passed 629 tests (0 failures, 0 errors,
+1 skipped); lint passed with 0 errors, 28 warnings, and 1 hint. The
+`FrequentlyChangingValue` warning is cleared. Honor/TV interaction was not
+tested because the connected phone remains locked.
+
+### Store discovery progress state (2 October 2026)
+
+Changed the discovery action model's float progress from generic Compose state
+to `mutableFloatStateOf`, removing boxed float state while preserving all
+existing progress updates and observers.
+
+Verification: full Android unit suite passed 629 tests (0 failures, 0 errors,
+1 skipped); lint passed with 0 errors, 28 warnings, and no hints.
+
+### App Hub presentation extraction (2 October 2026)
+
+Moved the animated shortcut tile/card, PC streaming status panel, Moonlight hero,
+and launch-time formatting from `AppHubScreen.kt` into the dedicated
+`AppHubComponents.kt`. The App Hub screen dropped from 582 to 369 lines; launch,
+visibility, and controller behavior remain owned by the screen.
+
+Verification: full Android unit suite passed 629 tests (0 failures, 0 errors,
+1 skipped); debug instrumentation APK assembled; lint passed with 0 errors,
+28 warnings, and no hints. The 1× and 2× font-scale tile accessibility/layout
+instrumentation tests both passed on the API-35 emulator. This is not TV visual
+acceptance; Honor/TV testing remains pending while the phone is locked.
+
+### Store compact-path simplification (2 October 2026)
+
+Removed the unreachable desktop header branch from `CatalogScreen`: desktop
+mode returns through `BlueprintCatalogScreen` before the remaining compact
+layout. Removed the redundant compact checks/arguments in that path while
+keeping its direct console chips, authorized-game list, and discovery content.
+
+Verification: full Android unit suite passed 629 tests (0 failures, 0 errors,
+1 skipped); debug instrumentation APK assembled; lint passed with 0 errors,
+28 warnings, and no hints. The compact Store console-filter instrumentation
+test passed on API-35 emulator. This is not TV visual acceptance.
+
+### Game Details hero extraction (2 October 2026)
+
+Moved the artwork-backed details hero and wide-layout installation summary into
+`GameDetailsHero.kt`. The component receives game/presentation state and
+launch/install callbacks; Game Details retains ownership of controllers and
+their behavior. The primary action keeps its explicit TV focus target, now
+constructed within the hero from the screen-owned `FocusRequester`. The screen
+file is now 507 lines (from 621 before extraction).
+
+Verification: full Android unit suite passed 629 tests (0 failures, 0 errors,
+1 skipped); instrumentation APK assembled; lint passed with 0 errors,
+28 warnings, and no hints. Both deterministic hero instrumentation tests
+passed on API-35 emulator (Play invocation and active-install state). An
+existing whole-screen update-state test could not run to its assertions because
+the emulator catalog had no seeded record; this is a fixture/setup gap, not a
+passing test. No physical Honor/TV visual validation was possible while the
+phone remained locked.
+
+### Shared game-library presentation extraction (2 October 2026)
+
+Moved `BlueprintGameTile`, `GameRow`, the animated/accessibility-aware `GameCard`,
+and `GameScreenshotGallery` from `GameBoxApp.kt` into
+`GameLibraryComponents.kt`. Home/app-root code now keeps navigation and shared
+surface composition, while reusable artwork, focus, controller activation, and
+gallery rendering live together. The app file is 545 lines (from 742).
+
+Verification: full Android unit suite passed 629 tests (0 failures, 0 errors,
+1 skipped); instrumentation APK assembled; lint passed with 0 errors,
+28 warnings, and no hints. The four existing accessibility/controller-focus
+instrumentation tests passed on API-35 emulator. The Honor is locked and no HDMI
+display is currently attached, so this is not physical TV validation.
+
+### Honor Magic6 Pro TV-mode return (2 October 2026)
+
+The Honor Magic6 Pro was online and unlocked with the wired 1920×1080 HDMI
+display active as Android display 249. Installed the current debug build,
+opened GameBox from the TV desktop app drawer, and verified the app rendered on
+the HDMI screen. The in-product **Show on TV** action successfully launched
+`ExternalDisplayActivity` as the top-resumed activity on display 249. A real
+`KEYCODE_BUTTON_R1` event moved Home → Library, and the Library search overlay
+opened on HDMI; D-pad Select focused and entered the `Q` key, updating the
+visible query. The actual-HDMI capture is `docs/evidence/honor-tv-current.png`.
+
+The image also shows Honor Desktop Mode's persistent bottom taskbar covering
+the lowest strip of the app even though GameBox requests fullscreen. This is an
+OS-shell overlay and remains an unresolved end-deployment presentation issue.
+The Home screen currently shows **Finish console mode**; selecting GameBox as
+the device's default Home app is a system-level preference and was not changed
+during this test. The existing `/sdcard/Download/GameBoxOS` tree was retained;
+empty neighboring `GameBox` and `GameBoxOS-Legal` directories were also left
+untouched. Only the temporary screenshot created on-device for capture was
+removed.
+
+Verification: `:app:assembleDebug`, `:app:testDebugUnitTest`, and
+`:app:assembleDebugAndroidTest` succeeded; the two
+`ImportedSourceCleanupTest` cases passed on the physical Honor; `:app:lintDebug`
+passed with 0 errors, 28 warnings, and no hints. This validates the
+external-display launch, basic shoulder navigation, and controller-only
+search-key entry on this TV setup. It does not yet validate real Bluetooth
+controller pairing, Home-role/boot flow, emulator gameplay, or taskbar removal.
+
+### Vimm discovery transport boundary (2 October 2026)
+
+Moved the Vimm HTTP contract, bounded TTL/LRU page cache, cached wrapper, and
+HTTPS transport into `source/VimmLairTransport.kt`. The discovery source now
+focuses on provider operations, parsing, platform mapping, and result merging;
+network connection configuration and cache lifecycle are independently
+located. Visibility and public entry points remain unchanged.
+
+Verification: `:app:testDebugUnitTest` passed all 629 tests (0 failures,
+0 errors, 1 skipped); `:app:assembleDebug` succeeded; `:app:lintDebug` passed
+with 0 errors, 28 warnings, and no hints. Existing Vimm tests cover cache
+behavior, URL validation, parsing, platform matching, and cancellation. This
+increment changes organization only and does not claim a new Vimm live-network
+or TV-flow validation.
+
+### Vimm platform-search policy boundary (2 October 2026)
+
+Moved supported-console aliases, Vimm slug mapping, platform selection,
+multi-console aggregation, title ranking, and browse/detail URL construction
+into `source/VimmLairSearch.kt`. `VimmLairDiscoverySource.kt` is now a 108-line
+request coordinator for validation, transport calls, and parsing. The provider
+is organized around four explicit responsibilities: source orchestration,
+search policy, HTML parsing, and HTTPS/cache transport.
+
+Verification: all 629 unit tests passed (0 failures, 0 errors, 1 skipped),
+`:app:assembleDebug` succeeded, and `:app:lintDebug` passed with 0 errors, 28
+warnings, and no hints. Existing Vimm tests exercise platform mappings,
+multi-platform result behavior, ranking, and URL construction. No live network
+request was made.
+
+### Vimm HTML parser boundary (2 October 2026)
+
+Moved vault-listing and detail-page parsing, title cleanup, metadata-row
+extraction, HTML entity decoding, and artwork-host validation into
+`source/VimmLairHtmlParser.kt`. The coordinator is now 323 lines instead of
+roughly 590, with transport/cache and provider HTML concerns isolated in their
+own source files. Existing internal parser entry points were retained so the
+same fixtures and behavior continue to be exercised.
+
+Verification: all 629 JVM tests passed (0 failures, 0 errors, 1 skipped), and
+`:app:assembleDebug` succeeded. The existing suite includes Vimm listing/detail
+fixtures, malformed input, entity handling, metadata extraction, URL checks,
+deduplication, and rank behavior. No live Vimm request was made.
+
+### Shared settings UI primitives (2 October 2026)
+
+Moved the Settings section rail/icon mapping, status card, animated/focus-aware
+action row, and accessible section heading into `ui/SettingsChrome.kt`. These
+components are shared by settings sections and system overlays, so their visual
+and controller-focus behavior now has one implementation. `SettingsScreen.kt`
+dropped from 515 to 429 lines; section state and storage/picker workflows stay
+owned by the screen.
+
+Verification: all 629 JVM tests passed (0 failures, 0 errors, 1 skipped),
+`:app:assembleDebug` succeeded, and `:app:lintDebug` passed with 0 errors, 28
+warnings, and no hints. No behavior or theme values were intentionally changed;
+this is a component-boundary refactor.
+
+### Settings credential-store boundary (2 October 2026)
+
+Moved TheGamesDB API-key, catalog-provider, cloud-save, and companion-pairing
+secret handling out of `SettingsRepository` into
+`settings/SettingsCredentialStore.kt`. The new class owns secure key names,
+provider-specific credential mapping, dispatching secret I/O to `Dispatchers.IO`,
+and pairing-secret rotation. `SettingsRepository` retains its existing public
+methods as delegates and continues to own DataStore-backed configuration; no
+encrypted preference names or stored formats were changed.
+
+Verification: all 629 JVM tests passed (0 failures, 0 errors, 1 skipped),
+`:app:assembleDebug` succeeded, and `:app:lintDebug` passed with 0 errors, 28
+warnings, and no hints. The authenticated companion-service lifecycle test
+passed on the physical Honor (1/1), exercising pairing-secret use through the
+new boundary and restoring prior service settings afterward.
+
+### Configured discovery sources UI boundary (2 October 2026)
+
+Extracted configured-source actions, contextual guidance, and the results
+carousel from the compact Store layout into
+`ui/ConfiguredDiscoverySourcesSection.kt`. Source filtering, query/console state,
+navigation callbacks, semantics labels, and card presentation are unchanged;
+the Store screen continues to own catalog state and responsive layout.
+
+Verification: `:app:testDebugUnitTest`, `:app:assembleDebug`, and
+`:app:lintDebug` all succeeded. All 629 unit tests passed (0 failures, 0 errors,
+1 skipped); lint reported 0 errors, 28 warnings, and no hints. No new hardware
+interaction was performed for this component-boundary change.
+
+### TheGamesDB settings component boundary (2 October 2026)
+
+Extracted TheGamesDB metadata-key configuration from
+`SettingsCatalogSourcesSection.kt` into `SettingsTheGamesDbSection.kt`. The
+component now owns its temporary key-entry/configured state and lifecycle check,
+while preserving the existing secure repository operations and shared status
+message behavior. This reduces coupling between provider/source settings and
+metadata credentials without changing the screen flow.
+
+Verification: `:app:testDebugUnitTest`, `:app:assembleDebug`, and
+`:app:lintDebug` all succeeded. All 629 unit tests passed (0 failures, 0 errors,
+1 skipped); lint reported 0 errors, 28 warnings, and no hints. No new hardware
+interaction was performed for this organization-only change.
+
+For the Store UI boundary, focused Compose tests cover Vimm/JSON/web source
+activation, result-card activation, focus acquisition, and disabled actions while
+sync is in progress. The tests exposed that the configured-source buttons did
+not acquire focus reliably in the isolated controller-focused layout; explicit
+focusability was added and disabled actions are excluded from focus traversal.
+
+Verification: all 3 focused Compose tests passed on the API-35 emulator; the
+unit suite, debug APK, instrumentation APK, and lint also passed (lint: 0 errors,
+28 warnings). The Honor's instrumentation process crashed before returning any
+test result, including when running an existing `BrowserDownloadTrackingActionTest`,
+so hardware Compose assertions remain unverified on this attempt. The component
+tests passed on the emulator only; no TV visual validation is claimed.
+
+### Game discovery settings workflow boundary (2 October 2026)
+
+Moved the configured game-source workflow out of
+`SettingsCatalogSourcesSection.kt` into
+`SettingsGameDiscoverySourcesSection.kt`. The new component owns source-form
+state, preset selection, configured source management, Vimm probing, validation,
+and repository updates. The parent remains responsible for section order and
+catalog provider configuration; the metadata key workflow remains a separate
+component. Existing copy, preset values, validation, and repository calls were
+preserved.
+
+Verification: all 629 unit tests passed (0 failures, 0 errors, 1 skipped),
+`:app:assembleDebug`, `:app:assembleDebugAndroidTest`, and `:app:lintDebug` all
+succeeded. Lint reported 0 errors, 28 warnings, and no hints. This extraction did
+not receive a new hardware UI test; the prior Honor instrumentation crash and
+emulator-only focused Store test result remain as documented above.
+
+### Authorized catalog provider settings boundary (2 October 2026)
+
+Extracted HTTPS/WebDAV/S3 catalog configuration, credential-state handling,
+validation, secure save/clear behavior, and connection testing into
+`SettingsAuthorizedCatalogProviderSection.kt`. The former parent is now a
+35-line composition of the catalog, discovery-source, and metadata settings
+sections. Provider configuration state and its async lifecycle are local to
+the provider component; repository APIs, persisted values, feedback messages,
+and interaction order were preserved.
+
+Verification: all 629 unit tests passed (0 failures, 0 errors, 1 skipped),
+`:app:assembleDebug`, `:app:assembleDebugAndroidTest`, and `:app:lintDebug` all
+succeeded. Lint reported 0 errors, 28 warnings, and no hints. No new physical
+device UI run was made for this settings-only extraction.
+
+### Honor external-display fullscreen and taskbar clearance (2 October 2026)
+
+Physical-display inspection showed GameBox's normal launcher task on HDMI display
+249 was being placed in a 1152×691 Honor freeform window, despite the fullscreen
+window flags. The dedicated external-display host already retried Android's
+fullscreen request after focus; `MainActivity` now uses the same delayed retry
+on external-display focus instead of relying on a single resume-time request.
+External-display content also receives 44 dp of bottom clearance so its
+controller footer remains visible above Honor's persistent desktop taskbar;
+phone layout is unchanged.
+
+Verification on the Honor Magic6 Pro with the wired 1920×1080 display: after
+installing the updated debug build and launching GameBox on display 249, the
+activity task changed from freeform bounds 1152×691 to fullscreen bounds
+0,0–1920,1080. The captured image
+`docs/evidence/honor-tv-fullscreen-retry.png` records that full-bleed state; the
+follow-up `docs/evidence/honor-tv-safe-footer.png` confirms the controller
+footer now sits above the still-visible Honor taskbar. The taskbar itself is
+owned by the Honor shell and remains visible. The on-screen “Finish console
+mode” prompt also remains because GameBox has not been selected as the default
+Home app.
+
+Verification: 630 unit tests passed (0 failures, 0 errors, 1 skipped), both
+debug APKs assembled, and lint passed with 0 errors and 28 warnings. The Honor
+was used for installation and HDMI visual verification; no Bluetooth controller
+was connected during this check.
+
+### Game Details content panel and TV flow order (2 October 2026)
+
+Extracted the installation/launch actions, managed-save summary, and launch-state
+feedback into `GameDetailsContentPanel.kt`, leaving `GameDetailsScreen.kt` to
+own screen state and the hero/about/settings sections. The former is now 404
+lines; the extracted panel is 200 lines. Then reordered the detail flow so the
+game hero and primary Play/Install action appear before import/save-management
+cards, which had previously pushed the game's identity below the first TV
+viewport. Button conditions, callbacks, controller action plan, and save/import
+operations are unchanged.
+
+Verification: 630 unit tests passed (0 failures, 0 errors, 1 skipped),
+`:app:assembleDebug`, `:app:assembleDebugAndroidTest`, and `:app:lintDebug` all
+succeeded (0 lint errors, 28 warnings). Installed on the physical Honor and
+opened on the 1920×1080 HDMI display. The after image
+`docs/evidence/honor-tv-game-details-hero-first.png` shows the hero, status, and
+Install action at the top, with About and save-copy controls below and the
+controller footer clear of the desktop taskbar. The prior image
+`docs/evidence/honor-tv-game-details-panel.png` shows the former ordering.
+
+### Game content-removal boundary (2 October 2026)
+
+Moved game-owned content preview and uninstall orchestration from
+`DefaultSaveSafetyController` into `GameContentRemovalCoordinator`. The
+controller now delegates these operations while retaining cloud-save
+preflight and unrelated save-management behavior. The coordinator keeps the
+per-game mutation lock, save-operation gate, cancellation-safe I/O section,
+save backup and cloud acknowledgement requirements, internal/external file
+preflight, and partial-removal install-state recovery together at the content
+removal boundary.
+
+Verification: `:app:testDebugUnitTest`, `:app:assembleDebug`,
+`:app:assembleDebugAndroidTest`, and `:app:lintDebug` succeeded. The focused
+`GeneralContentRemovalTest` instrumentation suite passed on the emulator (3
+tests), covering cross-game symlink protection, imported multi-file
+uninstall/reimport with metadata retention, and aborting removal when save
+backup fails. The instrumentation was run against synthetic test data; no
+personal game files were touched. The connected Honor was available but was
+not used for this storage-focused instrumentation pass.
+
+### Shared Store console filters (2 October 2026)
+
+Consolidated the compact Store's duplicated console-chip rows into
+`StoreConsoleFilterRow`, so the selected-console behavior, brand marks, and
+per-console accessibility descriptions are consistent across the Store
+presentations. The compact row now also has the same accessible filter names
+as the TV/wide row. This is a presentation-only cleanup; discovery state,
+filter persistence, and selection callbacks remain owned by `CatalogScreen`.
+
+Verification: unit tests, debug and instrumentation APK builds, and lint all
+succeeded. The focused Compose test
+`BlueprintScreenshotsTest#compactStoreExposesDirectConsoleFilters` passed on
+the emulator (1 test). The Honor's wired external display was confirmed active
+at 1920×1080, but this compact-only row consolidation does not alter its wide
+catalog layout, so it was not redeployed for a redundant TV check.
+
+### Compact Store discovery presentation boundary (2 October 2026)
+
+Extracted the compact Store's discovery header, metadata status/sync feedback,
+console selection, configured-source results, and discovery-game list into
+`CompactCatalogDiscoverySection`. `CatalogScreen` continues to own settings,
+search/filter state, selection, repository observation, and navigation; the
+new section receives explicit values and callbacks and only renders them.
+This trims the stateful Store screen and gives its compact presentation a
+clearer separation without changing its content order or copy.
+
+Verification: unit tests, debug and instrumentation APK builds, and lint
+succeeded. `BlueprintScreenshotsTest#compactStoreExposesDirectConsoleFilters`
+passed on the emulator (1 test). The TV/wide Store does not use this compact
+section; existing Honor/TV screenshots remain the relevant wide-layout visual
+evidence.
+
+### Shared discovery-import registration mapping (2 October 2026)
+
+Both single-file and multi-disc imports now construct the Library registration
+through `importedGameRegistration`. The shared mapping keeps title identity,
+release year, favorite state, artwork, description, players, region, launch-file
+hash/MIME, and companion-file list consistent across both import paths. It
+also rejects a launch file that is not part of the verified import set before
+repository registration.
+
+Verification: `:app:testDebugUnitTest`, `:app:assembleDebug`,
+`:app:assembleDebugAndroidTest`, and `:app:lintDebug` succeeded. Two new unit
+tests passed for metadata/multi-file preservation and rejecting a detached
+launch file. No actual user game files were used for these tests.
+
+### Honor TV Home-to-Details controller navigation smoke (2 October 2026)
+
+Installed the verified current debug APK on the connected Honor Magic6 Pro and
+launched `MainActivity` on the wired HDMI display (logical display 249,
+1920×1080). Injected D-pad-down events moved focus from the Home hero into the
+Explore games row; the Home scrolled to reveal the focused card above the
+fixed GameBox footer. Select opened Galaxy Patrol details, and the controller
+Back key returned to Home. Captures are
+`docs/evidence/honor-tv-refactor-check.png`,
+`docs/evidence/honor-tv-dpad-down.png`,
+`docs/evidence/honor-tv-game-details-dpad.png`, and
+`docs/evidence/honor-tv-dpad-back.png`.
+
+This verifies app focus/scroll/selection behavior on the actual TV display.
+The Home status panel reported “Controller Not connected,” so D-pad and Back
+were Android key events injected through ADB, not input from a paired physical
+controller. No game was installed or launched. Temporary capture files were
+removed from the Honor after transfer.
+
+### TV details focus traversal and homebrew lifecycle (2 October 2026)
+
+Hardware testing exposed that D-pad traversal from the details hero did not
+bring lower controls into view. Removed the redundant explicit focus target
+wrapped around the Material primary-action button and applied the existing
+`bringFocusedControlIntoView` policy to details actions and managed-save
+actions. After installing the new debug APK on the Honor, repeated D-pad-down
+events from the details entry state scrolled the long page to its lower
+content/action section on the 1920×1080 HDMI display.
+
+Also completed an actual managed install/uninstall round trip using only the
+bundled Galaxy Patrol homebrew fixture. Before install, its exact app-private
+path was absent. GameBox installed the 49,168-byte asset; on-device `sha256sum`
+matched the pinned digest
+`97c1757ffd6a5bc1a591809b2b0f8988741f61f6abd82889c148ecae8a2f471f`. The
+uninstall preview reported one content file (49,168 bytes), no managed save
+copy requiring cloud protection, and that saves/backups/metadata/history would
+be retained. After confirming in GameBox, the success message reported one
+file removed and the exact app-private path was absent again. The screenshots
+are `docs/evidence/honor-tv-dpad-after-fix.png`,
+`docs/evidence/honor-tv-uninstall-action.png`,
+`docs/evidence/honor-tv-removal-dialog.png`, and
+`docs/evidence/honor-tv-homebrew-clean.png`.
+
+Verification: unit tests, debug and instrumentation APK assemblies, and lint
+passed after the focus change. This is actual Honor/HDMI evidence, not an
+emulator inference. No paired controller was connected: D-pad navigation was
+injected as Android key events and the uninstall confirmation was tapped, so
+physical controller pairing/button behavior remains unverified. Only the
+test-owned bundled fixture was removed; no user game files were touched.
+
+### Focused-scroll regression guard (2 October 2026)
+
+Added `FocusedControlScrollTest`, which constructs a controller-focusable
+scrolling column, requests focus on its last item, and asserts that the item is
+both focused and displayed after `bringFocusedControlIntoView` runs. The test
+passed on the emulator (1/1); unit tests, debug/instrumentation APK builds,
+and lint also passed. The actual Honor/HDMI D-pad smoke above independently
+confirmed details-page scrolling on the deployment display.
+
+Rechecked Honor input devices during this pass: HDMI remains active at
+1920×1080, but Android lists the external USB mouse/keyboard and no gamepad.
+Physical controller button/pairing coverage therefore remains pending a
+controller connection; automated and injected-key evidence are not represented
+as physical-controller verification.
+
+### Authorized-install terminal feedback (2 October 2026)
+
+Changed the authorized-copy details feedback so only queued/running installs
+show a progress bar and percentage. A successful result is shown only while
+the content is present; after removal, stale success text is suppressed. Added
+three Compose instrumentation cases covering active progress, installed
+success, and success-state cleanup after uninstall. The targeted suite passed
+on the API-35 emulator (3/3); unit tests, debug and instrumentation APK
+assemblies, and lint passed.
+
+Installed the resulting debug APK on the Honor and confirmed the HDMI display
+is connected at 1920×1080. The captured TV framebuffer currently shows the
+Honor lock screen (“Phone is locked, please unlock”), not GameBox, so this
+specific UI change could not receive an on-screen hardware check. Evidence:
+`docs/evidence/honor-tv-feedback-terminal-state.png`. The earlier unlocked
+Honor/TV lifecycle and focus tests remain valid; no lock-screen bypass was
+attempted. Resume hardware verification when the phone is unlocked.
+
+### Download queue card boundary and initial focus (2 October 2026)
+
+Extracted each transfer row from `DownloadsScreen` into `DownloadQueueItem`,
+leaving queue ordering, controller shortcuts, telemetry sampling, and initial
+focus orchestration with the screen. The extracted card owns the visual and
+action states for a single transfer. Added an explicit Compose focus target for
+the first actionable button and stopped applying its focus requester to
+Cancel; this keeps the initial controller target unambiguous while retaining
+the existing frame-retry behavior. Unavailable-source dismissal remains
+explicit and preserves the same transfer/install-state cleanup.
+
+Verification: Android unit tests, debug/instrumentation APK assemblies, and
+lint passed. Each of the three `DownloadsScreenStateTest` cases passed when run
+individually on the API-35 emulator, including Pause focus and empty-state Store
+navigation. One class-wide run passed the first two cases but the third lost
+its Compose hierarchy; rerunning that third case alone passed, so this runner
+interaction remains noted rather than counted as a clean class-wide pass. The
+latest APK has not had an unlocked Honor/TV visual check: at capture, the
+device displayed its lock screen. No phone data or game content was changed.
+
+### Discovery import workflow separation (2 October 2026)
+
+Moved single-file and multi-disc import orchestration out of
+`DiscoveryDetailsScreen` into `DiscoveryImportWorkflow`. The workflow now owns
+display-name lookup, the per-game mutation lock, verified import, Library
+registration, transaction confirmation/rollback, and source cleanup; the
+composable keeps progress/message state and launches the appropriate workflow
+operation. Unexpected coroutine failures now produce visible import feedback
+and always clear the busy state. `DiscoveryDetailsScreen` is down from 422 to
+309 lines, with the import transaction boundary in a separate 162-line file.
+
+Verification: Android unit tests, debug/instrumentation APK assemblies, and
+lint passed. `BrowserDownloadTrackingActionTest` passed (3/3) and
+`ExternalDisplayActivityTest#tvControllerFocusesAuthorizedCopyImportAction`
+passed (1/1) on the API-35 emulator. This exercises the discovery details
+surface and TV-style focus route, but is not actual-Honor visual verification;
+the Honor was locked during the latest framebuffer check. No test game or
+user-owned file was modified.
+
+### Cloud-save operation boundary (2 October 2026)
+
+Extracted cloud-specific preflight, provider/credential/endpoint validation,
+network gating, encrypted envelope upload/download, conflict preservation, and
+safe error formatting from `DefaultSaveSafetyController` into
+`ManagedCloudSaveOperations`. The controller now retains save-operation state,
+busy/gate behavior, and local import/backup/export/restore actions, while
+content removal continues to call the cloud uploader through its existing
+callback. The controller is now 274 lines (previously 404); cloud transport
+policy is isolated in a 165-line coordinator.
+
+Verification: unit tests, debug/instrumentation APK assemblies, and lint
+passed. `GeneralContentRemovalTest` passed on the API-35 emulator (3/3),
+including production controller cloud-preflight behavior and the explicit
+acknowledged local-backup removal path. The fixture uses synthetic save and
+game files inside a temporary test directory and does not touch user content.
+Also removed nullable-parent compiler warnings from the temporary test-file
+setup. Actual-Honor cloud configuration/transport remains unverified.
+
+### RetroArch export lifecycle separation (2 October 2026)
+
+Moved temporary MediaStore publication, duplicate-name-safe path resolution,
+persisted URI tracking, and cleanup into `RetroArchContentPublisher`. The
+Android package gateway now concentrates on verified content and emulator
+intent handoff, delegating the RetroArch-specific filesystem-path workaround.
+Kept the existing fixture publication entry point while routing it through the
+same publisher. `GameLaunchController.kt` is now 238 lines, with the publisher
+isolated in an 87-line component.
+
+Verification: unit tests, debug/instrumentation APK assemblies, and lint
+passed. `GalaxyPatrolExportTest` passed on the API-35 emulator (2/2), exercising
+real MediaStore duplicate-name handling and cleanup with synthetic test files.
+This validates the export lifecycle, not emulator launch on the Honor; actual
+device use of the path remains part of hardware verification.
+
+### Blueprint design-system component boundary (2 October 2026)
+
+Moved the reusable controller hint, rail, rail item, and panel primitives out
+of `GameBoxApp.kt` into `BlueprintSurfaces.kt`, where they sit alongside the
+shared Blueprint interaction and viewport components. Moved the tiny
+controller-label accessor alongside runtime-device status. `GameBoxApp.kt` is
+now 412 lines (previously 522) and retains the screen shell/navigation rather
+than reusable visual primitives.
+
+Verification: unit tests, debug/instrumentation APK assemblies, and lint
+passed. `BlueprintNavigationTest` passed (1/1), and the real-activity
+`BlueprintScreenshotsTest#captureRealScreens` passed (1/1) on the emulator,
+visiting Home, Details, Library, Store, Media, PC, Settings, and Downloads.
+This confirms emulator rendering/navigation after the component move, not a
+new actual-Honor/TV visual pass.
+
+### Library overview sidebar boundary (2 October 2026)
+
+Moved the wide Library's storage, local-save, and collection-summary panels out
+of `LibraryScreens.kt` into `LibraryOverviewSidebar.kt`. The screen retains
+summary and device-storage derivation and passes the values to the component;
+the component owns only the three vertically scrollable presentation panels.
+`LibraryScreens.kt` is now 381 lines (from 404), and the extracted component is
+63 lines.
+
+Verification: `:app:testDebugUnitTest`, `:app:assembleDebug`,
+`:app:assembleDebugAndroidTest`, and `:app:lintDebug` passed. The current debug
+APK was installed over the existing Honor installation and launched without
+clearing data. `BlueprintScreenshotsTest#captureRealScreens` also passed (1/1)
+on the API-35 emulator, covering the rendered app screens including Library.
+An initial touch attempt did not leave Home. On a follow-up check, the latest
+APK was installed on the Honor and an ADB-injected `KEYCODE_BUTTON_R1` moved
+the projected UI from Home to Library; the extracted storage and saves sidebar
+was visible. Screenshot evidence: `docs/evidence/honor-tv-root-input-check.png`.
+This verifies the actual-device rendering and root key-event path, but the
+shoulder input was injected rather than sent by a physical controller; the
+physical controller remained disconnected. `git diff --check` found no
+whitespace errors;
+Git emitted only LF/CRLF normalization warnings.
+
+### Settings preference mapping boundary (2 October 2026)
+
+Moved DataStore preference decoding into the pure `Preferences.toGameBoxSettings`
+mapper and moved stored preference-key declarations to
+`SettingsPreferenceKeys.kt`. The repository now focuses on DataStore flow and
+updates, configuration operations, and credential delegation; no preference
+names or product defaults changed. `SettingsRepository.kt` is now 310 lines
+(from 399), and the mapper is 52 lines.
+
+Added unit coverage for empty-store defaults and for normalization of invalid
+persisted provider status and out-of-range service ports. Both new tests passed.
+Verification: `:app:testDebugUnitTest`, `:app:assembleDebug`,
+`:app:assembleDebugAndroidTest`, and `:app:lintDebug` all passed. This is a
+data-layer refactor; it does not require a new hardware interaction check.
+
+### Root controller-input policy boundary (2 October 2026)
+
+Separated the root controller key mapping from `GameBoxApp` into
+`GameBoxRootInput.kt`. The app shell remains responsible for performing
+navigation and overlay state changes, while the new policy maps hardware key
+codes to explicit commands and directional sound effects. This makes the
+controller contract independently testable without Compose state or an
+attached controller.
+
+Added unit tests covering shoulder-tab changes, Start/Menu quick actions,
+Select status, X/Y actions, Back/B, unknown keys, and D-pad navigation sounds.
+Both tests passed. Verification: `:app:testDebugUnitTest`,
+`:app:assembleDebug`, `:app:assembleDebugAndroidTest`, and `:app:lintDebug`
+passed. A physical-controller hardware check remains unverified because no
+controller was connected.
+
+### Settings presentation boundaries and Honor projection check (2 October 2026)
+
+Extracted the controller, downloads, and emulator panels from `SettingsScreen`
+into `SettingsDeviceAndDownloadSections`, and moved its audio panel into the
+same focused presentation file. `SettingsScreen.kt` is now 370 lines (from
+421); it still owns repository state, permissions, system intents, migration,
+and navigation, while the extracted composables receive values and callbacks.
+
+Verification: `:app:testDebugUnitTest`, `:app:assembleDebug`,
+`:app:assembleDebugAndroidTest`, and `:app:lintDebug` all passed. Installed the
+debug APK over the existing app on the connected Honor (without clearing data)
+and opened Settings on its active projection. The visible Settings screen
+rendered with the expected TV-wide rail/content layout; screenshot evidence is
+`docs/evidence/honor-tv-settings-refactor.png`. This is a visual smoke check,
+not proof that every settings action works on hardware. The physical game
+controller was not connected. `git diff --check` reported no whitespace
+errors; Git printed only the repository's existing LF/CRLF normalization
+warnings.
+
+### Shared Library/Store filter state and controller-only search (2 October 2026)
+
+Consolidated the duplicated query/platform/genre/region/language/favorites
+state and persistence logic from Library and Store into
+`rememberGameFilters`. Their saved values remain isolated under the existing
+`library.*` and `store.*` keys. Added a Compose test that restores each
+namespace independently, changes Store values, and verifies only Store state
+was updated; `RememberedGameFiltersTest` passed (1/1).
+
+The Honor projection exposed that controller search was enabled only when
+Android reported a secondary display. Wide mirrored layouts can still be on
+the default display, so both Library and Store now enable the controller
+keyboard for wide (`!compact`) layouts. Also mapped actual Android
+`KEYCODE_BUTTON_A` to activation in the controller search trigger and keys, and
+`KEYCODE_BUTTON_B`/Back to dismissing the keyboard. `ControllerSearchKeyboardTest`
+passed (2/2) using gamepad key codes. The full unit suite, both APK assemblies,
+and lint passed.
+
+On the connected Honor, installed the APK without clearing data and verified
+the projected Home → Library → Store → Search → type → close route with
+ADB-injected R1, X, A, and B key events. A added the initially focused `Q` to
+the search (the Store showed no matches), and B returned to Store with the
+filter active. This is actual-device rendering and input dispatch, but the
+events were injected because no physical controller was connected. Evidence:
+`docs/evidence/honor-tv-controller-search-fixed.png` and
+`docs/evidence/honor-tv-controller-search-a-input.png`.
+
+### Import journal preflight invariant reuse (2 October 2026)
+
+Removed duplicate pending-import validation from `ImportRegistrationJournal`:
+`prepare` now constructs the transaction and calls the same schema/path/checksum
+validator used when reading or recovering a marker. Validation still occurs
+before the imports directory is created, so invalid input has no filesystem
+side effects. The journal is now 324 lines (from 340).
+
+Added a regression test confirming an unsafe traversal path is rejected before
+journal storage is created. All 9 `ImportRegistrationJournalTest` cases passed,
+as did the full unit suite, debug and instrumentation APK assemblies, and lint.
+
+### Responsive controller search keyboard on Honor TV output (2 October 2026)
+
+The prior Honor projection screenshot showed the final digit/letter and lower
+keyboard actions clipped. Made the controller keyboard adapt its width, key
+sizes, spacing, and height to the available display; the dialog scrolls to
+focused controls where needed. On short layouts it omits the optional keyboard
+hint so the complete action row remains in view. Added regression assertions
+for the `0` and `P` keys and visibility of the Finish search action.
+
+Verification: the full `:app:testDebugUnitTest`, `:app:assembleDebug`,
+`:app:assembleDebugAndroidTest`, and `:app:lintDebug` gate passed. The focused
+`ControllerSearchKeyboardTest` instrumentation suite passed 2/2 on the API-35
+emulator. Installed the build on the Honor without clearing app data and used
+the in-app **Show on TV** action to open the dedicated external-display host on
+the actual 1920x1080 output (Android display 249). Confirmed the complete
+keyboard/action row is visible and used display-targeted gamepad A/B events to
+type `Q` and close the keyboard. Evidence: `docs/evidence/honor-tv-controller-search-responsive.png`,
+`docs/evidence/honor-tv-controller-search-a-input.png`, and
+`docs/evidence/honor-tv-store-refactor.png`. Inputs were ADB-injected; no
+physical controller was connected. Honor Desktop Mode retains its own bottom
+launcher/taskbar outside GameBox's window policy, so this check does not prove
+that system-owned chrome can be suppressed.
+
+### Home dashboard surface-specific setup prompt (2 October 2026)
+
+The real external-display Home screenshot showed the phone's Android Home-role
+setup banner occupying the primary TV dashboard. Kept the prompt and its
+initial-focus behavior on the phone, but suppress both on the external-display
+surface where that phone-level role action is not relevant. The
+`HomeRoleStatusTest` policy check passes, and the full unit-test,
+debug/instrumentation assembly, and lint gate passed after the change. Updated
+the app in place on the Honor without clearing data, relaunched through PC
+Hub → Show on TV, and verified that Home now begins with Continue Playing and
+the hero card rather than the setup banner. Evidence:
+`docs/evidence/honor-tv-home-no-phone-setup.png`. The Honor desktop shell still
+owns its bottom system taskbar.
+
+### Root controller dispatch extraction (2 October 2026)
+
+Moved shell-level key-event dispatch out of the `GameBoxApp` layout chain into
+`Modifier.onGameBoxRootInput`. The root composable now supplies navigation,
+overlay, and fallback actions; key classification, repeat-safe navigation
+sounds, controller action dispatch, and back consumption live together at the
+input boundary. Existing pure mapping coverage remains in
+`GameBoxRootInputTest`.
+
+Verification: full unit tests, debug and instrumentation APK assembly, and
+lint passed; `ControllerSearchKeyboardTest` passed 2/2 on the emulator with the
+new build. The APK was installed on the Honor without clearing app data, but
+the phone locked before I could confirm this refactor's input route on the TV.
+No unlock attempt was made; the post-change hardware input check remains
+pending. Added `GameBoxRootInputModifierTest` to exercise the extracted
+modifier's tab, overlay, X/Y registry, and Back callbacks; it passed on the
+emulator together with both `ControllerSearchKeyboardTest` cases (3/3). The
+previously verified external-display screenshots document the pre-refactor
+visual state only.
+
+### Game-details save context extraction (2 October 2026)
+
+Moved per-game save-controller scope ownership, cleanup, managed-save summary
+collection, and summary wording out of `GameDetailsScreen` into
+`GameDetailsSaveContext`. The details screen now consumes one save context for
+the active controller and status text. A child coroutine scope is only created
+when a per-game controller is both enabled and configured; its lifecycle is
+still cancelled when the details composable leaves composition. Added unit
+coverage for empty, present, error, and still-inspecting save summaries.
+
+Verification: the full `:app:testDebugUnitTest`, `:app:assembleDebug`,
+`:app:assembleDebugAndroidTest`, and `:app:lintDebug` gate passed. Honor remains
+keyguard-locked, so no post-change TV rendering check was possible in this
+turn; device status was checked read-only, and no unlock attempt was made.
+
+### App-shell dependency wiring cleanup (2 October 2026)
+
+Changed `GameBoxApp` from eleven individually threaded repository/controller
+parameters to the existing `AppContainer` contract. It now obtains its
+dependencies from the same container used by `GameBoxHostActivity` and remembers
+the per-game save-controller factory there. This removes duplicated wiring at
+the Activity/Compose boundary without changing the dependency source or
+runtime ownership.
+
+Verification: full unit tests, debug and instrumentation APK assembly, and
+lint passed. On the emulator, `BlueprintNavigationTest`,
+`GameBoxRootInputModifierTest`, and `ControllerSearchKeyboardTest` passed (4/4),
+covering host navigation and controller behavior after the signature change.
+The Honor remains locked, so this app-shell change still needs a fresh
+external-display check when hardware is available.
+
+### Destination rendering boundary extraction (3 October 2026)
+
+Moved the Home/Library/Store/Downloads/Media/PC/Settings switch and selected
+game-details rendering out of `GameBoxApp` into `GameBoxDestinationContent`.
+The new route state/actions carry screen inputs and user intents explicitly;
+the app shell retains shared overlays, primary navigation, focus restoration,
+and host-level input. Preserved the Home-to-Store search-focus request/acknowledge
+handoff and remembered the save-controller factory at the route boundary.
+
+Verification: `:app:testDebugUnitTest`, `:app:assembleDebug`,
+`:app:assembleDebugAndroidTest`, and `:app:lintDebug` passed. On the emulator,
+`BlueprintNavigationTest`, `GameBoxRootInputModifierTest`, and
+`ControllerSearchKeyboardTest` passed (4/4) after the extraction. The Honor is
+still keyguard-locked, so the refactored route has not yet had a fresh TV
+hardware check.
+
+### Catalog refresh UI boundary and dead-state cleanup (3 October 2026)
+
+Moved the shared catalog refresh-status announcement and refresh-button
+accessibility description into `CatalogRefreshStatus.kt`, where both compact
+and wide catalog layouts consume the same semantics. Removed unused imports
+and the never-read `emptyCatalogActionFocusClaimed` state from
+`StoreCatalogScreen`; kept the compact Store and Blueprint wide layout because
+both are active branches of the same catalog route, not redundant screens.
+
+Verification: the full unit-test, debug/instrumentation APK assembly, and lint
+gate passed. `CatalogRefreshStateTest` passed on the emulator, confirming the
+refreshed shared announcement remains visible/actionable. The Honor is still
+keyguard-locked; no fresh hardware check was attempted.
+
+### Shared game-details action extraction (3 October 2026)
+
+Moved the shared secondary action, browser-download tracking action, and
+metadata metric composables into `GameDetailsActions.kt`. This gives discovery
+details and imported-game detail flows one implementation for TV/compact button
+semantics and metric styling, while reducing responsibilities in the details
+screen. Preserved the metric icon's 15 dp size during the move.
+
+Verification: `:app:testDebugUnitTest`, `:app:assembleDebug`,
+`:app:assembleDebugAndroidTest`, and `:app:lintDebug` all passed. The focused
+`BrowserDownloadTrackingActionTest` passed 3/3 on the emulator. It was also
+attempted on the connected Honor, but the locked keyguard prevented the Compose
+test Activity from exposing a hierarchy (3 harness failures before assertions
+could inspect the UI); those results are not a product pass. TV rendering on
+the Honor remains pending an unlocked session.
+
+### Non-blocking storage permission inspection (3 October 2026)
+
+Moved external-library and emulator-save-root document-provider inspection off
+the Settings composition/UI thread. Inspections now run on `Dispatchers.IO`,
+show an explicit accessible checking state while a URI is being checked or
+changed, and keep content migration disabled until the selected library is
+confirmed writable. SAF adopt/forget permission operations also run on IO so a
+slow provider cannot freeze the Settings screen.
+
+Verification: the full unit-test, debug/instrumentation APK assembly, and lint
+gate passed. `SettingsStorageInspectionTest` passed 1/1 on the emulator against
+the final rebuilt APK, verifying both loading announcements and the disabled
+migration action. The Honor remains keyguard-locked; this test was not counted
+as physical-device or TV-rendering evidence.
+
+Follow-up cleanup consolidated the two storage-root checks into the shared
+`rememberStorageStatus` helper so URI reset, IO dispatch, and loading behavior
+cannot drift between library and emulator-save settings. Extended
+`SettingsStorageInspectionTest` to assert the inspector executes off the main
+thread and that provider failures leave the loading state with a readable error;
+the focused class now passes 3/3 on the emulator. The full Gradle gate was
+rerun successfully after this cleanup.
+
+### Downloads controller callback stability (3 October 2026)
+
+Memoized the actionable download/game pairs and changed the controller-action
+effect to depend on the semantic action plan rather than the freshly-created
+list instance. A `rememberUpdatedState` reference keeps retry/pause/resume
+callbacks pointed at the latest actionable jobs without unregistering and
+reregistering controller handlers on byte-progress-only recompositions.
+
+Verification: the full unit-test, APK assembly, instrumentation compilation,
+and lint gate passed. `DownloadsScreenStateTest` passed 3/3 on the emulator,
+covering active, terminal, empty, and controller-focus behavior. The Honor is
+still keyguard-locked with HDMI attached, so this change has not been visually
+verified on the TV hardware.
+
+### Shared game-details artwork frame (3 October 2026)
+
+Extracted `GameArtworkHeroFrame` and adopted it in both owned-game and discovery
+details. The shared frame owns the rounded surface, artwork fallback, and
+readability gradient; each flow retains its own height, border tone, metadata,
+installation status, and import/play actions. This reduces duplicated hero
+painting while aligning the two core details surfaces.
+
+Verification: the full unit-test, debug/instrumentation APK assembly, and lint
+gate passed. `GameDetailsHeroTest` passed 2/2 on the emulator, preserving Play
+and install-state actions. The Honor is keyguard-locked, so this visual
+refinement still needs a real TV rendering check when the device is unlocked.
+
+Follow-up review corrected indentation left by the extraction in both hero
+content blocks. The full Gradle gate and `GameDetailsHeroTest` (2/2) were rerun
+successfully against the formatted source.
+
+### Throttled game-import progress notifications (3 October 2026)
+
+Added a shared byte-progress throttle for archive copying and ZIP/7z extraction.
+The import UI now receives updates at roughly MiB boundaries plus a final update
+for each file, rather than an event for every small archive read. The helper
+also rejects backwards byte counts, keeping determinate progress monotonic.
+
+Verification: the helper and its focused JVM tests compiled with the project's
+cached Kotlin 2.3.21 compiler and passed 3/3 using JUnit 4.13.2. The archive
+extractor and its test sources also compiled in isolation, and the new large-ZIP
+throttle case passed 1/1 when run alone. The complete standalone archive JUnit
+class still stalled after its first reported test, so no full archive-suite
+pass is claimed. The project-wide Gradle gate remains unavailable because the
+current Gradle cache lacks resolvable metadata for Android Gradle Plugin 9.3.0,
+despite the plugin JAR being present. Physical Honor-to-TV verification is still
+pending an unlocked device session.
+
+### Full-bleed external-display content insets (3 October 2026)
+
+The shared activity host previously applied Compose `safeDrawingPadding()` on
+both the phone and projected TV display. It now preserves system-safe padding on
+the phone but omits it for an external display, allowing the fullscreen TV host
+to lay out to the complete HDMI surface. The decision is isolated in the pure
+`HostContentInsetsPolicy` instead of being coupled to Activity/window code.
+
+Verification: the policy and its JVM test compiled with the cached Kotlin
+2.3.21 compiler and passed 1/1 under JUnit 4.13.2. Honor visual confirmation is
+still required. A read-only ADB check with the required process-launch permission
+found the Honor connected but keyguard-locked; Android currently exposes only
+the phone panel and an 800×1738 virtual screen-share display, not the 1920×1080
+HDMI sink. No TV screenshot or external-display runtime validation was collected.
+
+### Cooperative cancellation during local imports (3 October 2026)
+
+Large imports now check their coroutine cancellation at source-file and
+throttled-progress boundaries. Cancellation is rethrown instead of being
+converted to an ordinary failed-import result, allowing the import's existing
+staging cleanup to remove partial copies. Added an Android integration test
+that cancels a synthetic 4 MiB import at the first MiB progress update and
+checks that reading stops early and no staging or promoted game remains.
+
+Verification: source review confirms cancellation checks execute within the
+IO-bound copy/hash/extraction flow and that cancellation reaches the cleanup
+`finally` block. The changed importer sources compiled with the cached Kotlin
+2.3.21 compiler against the existing app classes and Android 36 SDK. The new
+Android integration test and full build remain unrun because the local Gradle
+cache cannot resolve the configured Android Gradle Plugin 9.3.0.
+
+Follow-up: added a controller-focusable Cancel action beside import progress in
+the authorized-copy and discovery flows. Those screens now retain the import
+Job, show a cancellation status, and let coroutine cancellation reach the
+staging cleanup path. Discovery registration rollback now runs in
+`NonCancellable` when cancellation arrives after files have been promoted, so
+the file transaction is reconciled before cancellation propagates. Reimport
+repair remains non-cancellable after its confirmed repair operation begins to
+preserve its existing finish-registration safety contract. Added a Compose test
+for the visible cancel action; it has not been run because the Gradle plugin
+resolution issue remains unresolved. The updated `DiscoveryImportWorkflow` and
+its same-module helper sources compiled with the cached Kotlin compiler against
+the existing app classes and Android 36 SDK. The new cancellation test source
+also compiles against cached AndroidX test artifacts, but was not executed;
+screen-level Compose sources and the Compose cancel-action test remain
+unverified.
+
+### Store catalog recomposition cost (3 October 2026)
+
+Memoized the Store's selected-console filter, metadata/favorite/install filters,
+sorting, and per-console title counts. Sync-progress and other unrelated state
+updates can now recompose the screen without repeating the catalog-wide
+filter/sort/count passes; the keys still invalidate each derived result when
+its source list, selected console, or relevant filter changes. This preserves
+the existing catalog presentation and controller focus flow.
+
+Verification: source review confirms each selector is keyed by every value it
+reads. Extracted the favorite/install/metadata filtering and rating/title sorting
+into pure selectors and added behavior tests; those sources compiled with the
+cached Kotlin compiler and passed 2/2 under JUnit against the existing app
+classes. The full unit/instrumentation/lint gate and Store rendering checks could
+not be rerun because Android Gradle Plugin 9.3.0 remains unresolved in the local
+Gradle setup. The shared Homebrew/Retro/Android/source-port platform policy test
+also passed 1/1 in isolation.
+
+Follow-up verification: compiled `BlueprintCatalogScreen.kt` together with its
+new selector and platform-policy sources using the cached Kotlin 2.3.21 compiler
+and Compose compiler plugin, Android 36 SDK, cached Compose artifacts, and the
+current app classes as a friend module. The focused source compile passed. This
+checks the screen's Kotlin/Compose source against its app dependencies, but does
+not replace the Gradle build, instrumentation suite, or on-device TV rendering
+check; those remain outstanding.
+
+### Settings spacing/comment cleanup (3 October 2026)
+
+Removed a duplicate KDoc on `rememberStorageStatus` and normalized the trailing
+spacing before developer diagnostics from two stacked spacers to one section
+gap. This removes an accidental oversized visual break without changing
+navigation, state, or actions.
+
+Verification: compiled the complete `SettingsScreen.kt` source with the cached
+Kotlin 2.3.21 and Compose compiler plugins, Android 36 SDK, current app classes,
+Compose classes, and cached AndroidX Activity/Core classes. The focused compile
+passed. Full Gradle/UI and Honor-to-TV checks are still separate outstanding
+gates.
+
+### Fresh full local Gradle gate (3 October 2026)
+
+The prior plugin-resolution blocker is no longer preventing a local build. With
+the cached Gradle 9.7.1 distribution, Android Studio's bundled JDK, and offline
+dependency resolution, the full local gate completed successfully:
+`testDebugUnitTest assembleDebug assembleDebugAndroidTest lintDebug`.
+
+Verification: 649 JVM tests completed with 0 failures, 0 errors, and 1 skipped;
+debug and instrumentation APKs were rebuilt, and instrumentation Kotlin sources
+compiled. Lint completed successfully and reported 29 warnings (including API,
+dependency-version, and storage-path notices); these are not lint errors. This
+does not establish a hosted-CI pass or a post-change instrumentation runtime
+pass. The Honor was connected during the check, but Android exposed only its
+1312×2848 built-in panel (currently off) and the 800×1738 Studio screen-sharing
+virtual display, not an HDMI TV display, so no TV rendering validation was
+possible.
+
+### Compose modifier API cleanup (3 October 2026)
+
+Changed `DownloadQueueItem` to accept an optional `FocusRequester` instead of a
+preassembled child modifier. The row now owns the focus-requester/focusable/
+bring-into-view chain applied to its primary action. Renamed the first modifier
+argument on `SettingsDeviceAndDownloadSections` to the conventional `modifier`.
+This makes the reusable composables' focus and layout contracts clearer while
+preserving which download action receives initial focus.
+
+Verification: reran the full offline Gradle gate after the changes. All 649 JVM
+tests passed (0 failures/errors, 1 skipped), debug and instrumentation APKs
+assembled, and instrumentation sources compiled. Lint completed with 29
+warnings, down from 31; no lint errors. No instrumented UI tests were run in
+this pass, and the Honor-to-TV surface is still unavailable for visual
+confirmation.
+
+### Downloads storage-capacity snapshot (3 October 2026)
+
+The Downloads screen now shares a single storage snapshot for capacity warnings,
+free-space labels, and the usage bar. It reads Android's allocatable-byte value
+off the UI thread and refreshes every 30 seconds while the screen is composed;
+download-progress recompositions no longer repeat filesystem-capacity queries.
+The value is temporarily presented as “Checking…” before the first query, and
+the worker's independent preflight remains authoritative before writing.
+
+Added JVM coverage for used-space fraction bounds and unknown totals. The full
+offline Gradle gate passed: 651 tests, 0 failures/errors, 1 skipped; both APKs
+assembled and instrumentation sources compiled. Lint warnings fell from 29 to
+25, including removal of four direct-`usableSpace` warnings from Downloads. The
+remaining 25 warnings are still to be triaged; no real-TV rendering test ran.
+Fresh ADB state after that build shows the Honor is awake, but Android still
+enumerates only its 1312×2848 built-in panel and the 800×1738 Studio
+screen-sharing virtual display; the docked TV is not exposed as an Android
+display in this session.
+
+### Shared Store/Library filter derivation (3 October 2026)
+
+Store and Library now use one `rememberFilteredGames` derivation keyed by the
+game list and every persisted filter value; the Library summary is also keyed
+only to its game list. This avoids repeating list filtering/counting during
+unrelated discovery, focus, or screen-state recompositions without changing the
+filter semantics.
+
+Verification: existing `GameFilteringTest` cases cover query, platform, genre,
+metadata, and favorite behavior. The full offline Gradle gate passed afterward:
+653 tests, 0 failures/errors, 1 skipped; APKs assembled, instrumentation sources
+compiled, and lint completed with 25 warnings. No on-device rendering check was
+available.
+
+### Settings SAF tree-picker lifecycle extraction (3 October 2026)
+
+Extracted the duplicated external-library and emulator-save document-tree
+launch/adopt/error lifecycle into `rememberStorageTreePicker`. Controllers still
+own persistence and permission handling; the helper centralizes external-
+display picker options, IO dispatch, coroutine scope, and flow-specific
+fallback messages. Added JVM coverage for successful controller messages and
+exception/fallback messaging.
+
+Verification: the full offline Gradle gate passed with 653 tests, 0 failures,
+0 errors, and 1 skipped; APK assembly, instrumentation source compilation, and
+lint succeeded with 25 warnings. Fresh ADB enumeration still shows only the
+Honor's 1312×2848 built-in screen and the 800×1738 Studio screen-share virtual
+display—no HDMI output—so real-TV picker behavior remains unverified.
+
+### Import progress delivery boundary (3 October 2026)
+
+Extracted progress-observer delivery from the importer transaction body into
+`RomImportProgressReporter`. It constructs the stage/file/byte event, checks
+the import coroutine context before notifying, propagates cancellation from
+both the context and observer, and keeps ordinary observer exceptions
+non-fatal. This preserves the import transaction while making its progress
+contract directly testable.
+
+Added four JVM tests for event delivery, ignored observer failures, propagated
+observer cancellation, and pre-cancelled import contexts. The full offline
+Gradle gate passed: 657 tests, 0 failures/errors, 1 skipped; APKs assembled,
+instrumentation sources compiled, and lint completed with 25 warnings. The
+Honor still exposes no HDMI display, so physical TV import-progress validation
+remains outstanding.
+
+### Shared ZIP/7z bounded archive writer (3 October 2026)
+
+Replaced duplicate ZIP and 7z file-write loops with one bounded writer that
+accepts each archive reader as a byte-chunk function. Both formats now use the
+same remaining-size enforcement, output write, and progress callback sequence;
+format-specific iteration and entry validation remain in their respective
+extractors.
+
+Verification: `RomArchiveExtractorTest` passed 7/7, covering both archive
+formats and existing safety cases. The full offline Gradle gate passed with 657
+tests, 0 failures/errors, 1 skipped; debug and instrumentation APK tasks,
+instrumentation source compilation, and lint succeeded (25 warnings remain).
+No on-device extraction flow was exercised in this pass.
+
+### Remembered catalog filter options (3 October 2026)
+
+`GameFilterBar` now derives platforms, genres, regions, and languages in one
+pass and remembers those option lists by the game list and extra discovery
+regions. Query, focus, and selection-state changes no longer rebuild the option
+sets, while the existing distinctness, case-insensitive region ordering, and
+extra-region behavior are preserved.
+
+Added `GameFilterOptionsTest` for sorting, deduplication, blank regions, and
+discovery-supplied regions. The full offline Gradle gate passed with 658 tests,
+0 failures/errors, 1 skipped; both APK tasks, instrumentation-source
+compilation, and lint succeeded (25 warnings remain). No physical-TV rendering
+check was available.
+
+### Shared storage presentation and typed app hubs (3 October 2026)
+
+Home, Library, Settings, diagnostics, and the system-status overlay now consume
+the shared 30-second storage-capacity snapshot used by Downloads. This removes
+separate `usableSpace` reads during UI recomposition and keeps the reported
+capacity consistent. PC and Media hub behavior is now selected by the typed
+`AppHubKind`, rather than comparisons against the localized/display title.
+
+### Borderless window policy modernization (3 October 2026)
+
+Removed deprecated `FLAG_FULLSCREEN` and `FLAG_FORCE_NOT_FULLSCREEN` usage.
+System bars remain hidden through `WindowInsetsControllerCompat`; the explicit
+no-limits window and display-cutout policy are unchanged. Instrumentation now
+asserts system-bar visibility rather than legacy flag bits.
+
+The offline Gradle gate passed after these changes: 658 tests, 0 failures,
+0 errors, and 1 skipped; app and instrumentation APKs assembled and lint
+reported 20 findings. The current APK and test APK were installed on the
+physical Honor with `adb install -r`, preserving app data. The two focused
+borderless-window and configuration-reapply instrumentation tests passed on
+the Honor. Current ADB display enumeration still exposes only the phone panel
+and Studio screen-sharing virtual display; these handset checks do not prove
+the projected TV layout or close the physical-TV acceptance gate.
+
+### Store discovery detail-route extraction (3 October 2026)
+
+Moved configured-source and catalog discovery detail rendering into
+`CatalogDetailsRoutes.kt`. `CatalogScreen` continues to own selected-result
+state, route persistence, favorite updates, and back transitions; search/filter
+orchestration no longer contains the detail presentation setup.
+
+Verification: the full offline Gradle gate passed with 658 JVM tests, 0
+failures/errors, and 1 skip; app and instrumentation APKs assembled and lint
+completed with 20 findings. The route extraction preserves the existing
+`DiscoveryDetailsScreen` and controller workflows. No TV display is currently
+exposed by the Honor, so this change has not been validated on the projected
+screen.
+
+### Store selection-state consolidation (3 October 2026)
+
+Added `StoreSelectionState` to keep the selected console and selected discovery
+detail together. Changing consoles now clears a stale selected discovery ID;
+reselecting the current console preserves it. Screen-state persistence is
+centralized in `rememberStoreSelectionState`, and focused JVM tests cover
+change, same-console selection, and clear/select transitions.
+
+The full offline Gradle gate passed with 661 JVM tests, 0 failures/errors, and
+1 skip; app and instrumentation APKs assembled, instrumentation sources
+compiled, and lint reported 20 findings. No TV display is exposed on the
+Honor in the current session, so this Store navigation refinement has not been
+verified on the projected screen.
+
+The same build was installed on the Honor with `adb install -r` and the focused
+`BlueprintScreenshotsTest.compactStoreExposesDirectConsoleFilters` was
+attempted. It failed before any Store assertion because Compose found no active
+hierarchy. Read-only device diagnostics showed the phone awake but on the
+lock-screen dream (`mDreamingLockscreen=true`), with `NotificationShade`
+focused, no focused app, and `MainActivity` destroyed by instrumentation. This
+is a locked-device test precondition, not evidence of a Store UI failure. The
+device was left locked; repeat after the user unlocks it. TV projection remains
+unavailable in ADB and is not validated by this handset attempt.
+
+### Settings storage lifecycle extraction (3 October 2026)
+
+Moved external-library and emulator-save SAF controller creation, asynchronous
+permission/status inspection, and document-tree picker actions into
+`rememberSettingsStorageManagement`. The Settings screen still owns storage
+permission removal and installed-content migration, preserving the boundary
+between lifecycle setup and destructive/user-confirmed operations.
+
+Verification: the full offline Gradle gate passed with 661 JVM tests, 0
+failures/errors, and 1 skip; app and instrumentation APKs assembled and lint
+completed with 20 findings. At the last ADB check, the Honor was lock-screened
+and Android did not expose the TV display; post-change Settings UI acceptance
+on hardware therefore remains open.
+
+### Bounded archive-source staging (3 October 2026)
+
+The importer now checks known ZIP/7z source sizes against the remaining
+transaction allowance before opening them, and applies the same limit while
+streaming sources whose size is unknown. `copyBoundedArchiveSource` removes
+partial staging output when the limit, read, or progress callback fails; the
+existing extracted-content ceiling and transaction rollback remain unchanged.
+
+Added two JVM tests for exact-limit copying/progress and oversized-source
+cleanup. The full offline Gradle gate passed with 663 tests, 0 failures/errors,
+and 1 skip; app and instrumentation APKs assembled and lint completed with 20
+findings. The last ADB check showed the Honor locked and no TV display, so
+on-device archive-import verification was not attempted.
+
+### Import progress cancellation stream boundary (3 October 2026)
+
+Moved initial copy-progress delivery ahead of opening the Android resolver
+stream. If the observer cancels or throws at the first event, no source stream
+has been acquired; later per-chunk callbacks remain inside `use` scopes so
+cancellation closes both source and staging streams. Added a test proving a
+progress-callback failure removes the temporary archive after copy.
+
+The full offline gate passed with 664 JVM tests, 0 failures/errors, and 1 skip;
+debug and instrumentation APKs assembled and lint completed with 20 findings.
+Physical import testing remains open while the Honor is locked and HDMI is not
+enumerated.
+
+### Installed-content migration confirmation accuracy (3 October 2026)
+
+Corrected the confirmation dialog: the migration copies each installed file to
+the selected SAF tree, verifies the destination, and then removes the internal
+source. The previous copy promised no files would be deleted, which contradicted
+`SafDocumentTreeCopyOperation(deleteSourceAfterVerification = true)`. The new
+message states the verified-delete condition and that game records/saves are
+kept; the Compose test assertion was updated accordingly.
+
+The full offline gate passed (664 JVM tests, 0 failures/errors, 1 skip), and
+both APKs assembled with the updated instrumentation test compiled; lint
+reported 20 findings. The Compose assertion was not run on the Honor because
+the handset was lock-screened, and was not substituted with emulator execution.
+
+### Installed-content migration scan recovery (3 October 2026)
+
+Kept installed-file planning on `Dispatchers.IO` and made scan failures an
+explicit state instead of leaving Settings indefinitely at “Scanning installed
+content…”. A failed scan now explains that files may be inaccessible, offers a
+retry action, and keeps migration confirmation disabled until a complete plan
+is available. Coroutine cancellation is rethrown so leaving Settings does not
+turn cancellation into a misleading scan failure.
+
+Verification: offline `testDebugUnitTest assembleDebug assembleDebugAndroidTest
+lintDebug` passed with 664 JVM tests (0 failures/errors, 1 skip); both APKs were
+assembled and the added instrumentation coverage compiled. Lint reported 20
+findings. The Compose recovery assertion has not been run on hardware. ADB now
+sees the Honor awake, but its keyguard is showing; the only other display is
+Studio's virtual screen-share display, not the projected TV. The device was not
+unlocked or altered for this check.
+
+### Settings navigation component extraction (3 October 2026)
+
+Moved the wide-layout Settings section rail out of `SettingsScreen` into the
+shared Settings chrome. Added an interaction test that checks the selected
+section semantics, confirms controller focus alone does not select a section,
+and verifies activation updates the selected destination. The phone remains
+keyguarded and no HDMI display is enumerated, so TV rendering remains
+unverified.
+
+Verification: the complete offline Gradle gate passed; the focused
+`SettingsSectionNavigationTest` also passed on the API-35 emulator (1/1). This
+is supporting software coverage, not Honor/TV acceptance.
+
+### Compact App Hub dead-layout removal (3 October 2026)
+
+The compact `AppHubScreen` path returned early to `BlueprintAppHubScreen` for
+wide layouts, but still retained a second wide-grid branch (`chunked(3)`) below
+that return. Since the remaining path is compact-only, simplified it to a
+single-column shortcut list and removed the unreachable responsive sizing and
+spacer branches. This preserves wide presentation in its dedicated screen and
+reduces duplicated layout logic.
+
+Verification: offline `testDebugUnitTest assembleDebug assembleDebugAndroidTest
+lintDebug` passed; the JVM suite remains at 664 tests (0 failures/errors,
+1 skip), and both APKs assembled. Lint reported 20 findings. The Honor remains
+awake but keyguarded; display enumeration shows only its built-in panel and
+Studio's virtual screen-share display, so the TV path was not exercised.
+
+### App Hub wide-layout boundary extraction (3 October 2026)
+
+Moved the wide PC/Media hub presentation into `AppHubWideScreen.kt`, leaving
+`AppHubScreen.kt` responsible for settings-derived visibility, launch
+coordination, controller actions, and the compact phone layout. This makes the
+wide launcher surface independently maintainable without changing its
+launch/status inputs.
+
+Verification: offline `testDebugUnitTest assembleDebug assembleDebugAndroidTest
+lintDebug` passed with 664 JVM tests (0 failures/errors, 1 skip); app and
+instrumentation APKs assembled and lint reported 20 findings. The Honor remains
+keyguarded with no HDMI display enumerated; the extracted wide layout still
+needs actual docked-TV visual and controller acceptance.
+
+### Android lint cleanup (3 October 2026)
+
+Guarded the API-33 notification permission launcher at its own call site and
+documented the RetroArch core-path lint suppression: that path must point into
+RetroArch's separate private app directory, not GameBox's `filesDir`. This
+removed both corresponding lint findings. Attempted to drop the adaptive-icon
+`v26` resource qualifier because lint calls it obsolete for this app's minimum
+SDK, but AAPT then failed to resolve the manifest's mipmap resource; restored
+the required qualifier and confirmed the app links again.
+
+Verification: offline `testDebugUnitTest assembleDebug assembleDebugAndroidTest
+lintDebug` passed with 664 tests (0 failures/errors, 1 skip), both APKs
+assembled, and lint findings decreased from 20 to 18. The remaining findings
+are newer dependency/SDK suggestions plus manifest/window-policy advisories;
+those were not changed without compatibility and docked-device validation.
+
+### Typed App Hub shortcut roles (3 October 2026)
+
+Added explicit `AppShortcutRole` values for the featured PC-streaming app and
+file manager. The wide hub now chooses the featured hero and file action by
+role rather than comparing visible title text, so display-name edits no longer
+silently change layout or remove actions. Added catalog unit coverage for the
+PC roles and standard media shortcuts.
+
+Verification: offline `testDebugUnitTest assembleDebug assembleDebugAndroidTest
+lintDebug` passed with 665 JVM tests (0 failures/errors, 1 skip); both APKs
+assembled and lint reported 18 findings. The wide Hub still lacks current
+Honor/TV visual acceptance because the phone is locked and HDMI is not exposed.
+
+### Role-derived PC streaming status (3 October 2026)
+
+Removed the remaining hardcoded `com.limelight` checks from Hub presentation
+state. Installed status and recent-session entries now derive from the
+featured-streaming shortcut role and that catalog item's package, allowing the
+identity to change without breaking UI status. Extracted this mapping into a
+pure presentation function and added tests for renamed/repackaged featured
+apps and for a hub with no featured streaming shortcut.
+
+Verification: offline `testDebugUnitTest assembleDebug assembleDebugAndroidTest
+lintDebug` passed with 667 tests (0 failures/errors, 1 skip); both APKs
+assembled, lint remained at 18 findings, and `git diff --check` passed. ADB
+still reports the Honor awake with its keyguard showing and no external HDMI
+display; TV presentation remains unverified.
+
+### ROM source-staging boundary extraction (3 October 2026)
+
+Moved per-source handling into `RomImportSourceStager`: it now owns safe
+archive/plain-file stream copying, bounded ZIP/7z extraction, per-file hashing,
+and progress reporting. `AuthorizedRomImporter` retains import-set validation,
+launch-file selection, reimport identity, registration journaling, atomic
+directory replacement, and rollback. The stager keeps the remaining-byte and
+remaining-file ceilings across sources and extracted archive entries.
+
+Verification: offline `testDebugUnitTest assembleDebug assembleDebugAndroidTest
+lintDebug` passed with 667 JVM tests (0 failures/errors, 1 skip); app and
+instrumentation APKs assembled, and lint reported 18 findings. Existing
+importer cancellation, bounded staging, extraction, identity, and registration
+tests all remain in the executed JVM suite. End-to-end SAF import on the
+docked-Honor/TV setup remains outstanding.
+
+### Registration journal I/O and transaction serialization (3 October 2026)
+
+`confirmRegistration` re-hashes the committed game files to verify their
+checksums before deleting backups; it previously did this synchronously on the
+calling coroutine, commonly the UI dispatcher. Confirmation and rollback are
+now suspend operations that serialize through the same importer mutex as
+imports/recovery and run on `Dispatchers.IO`. They execute non-cancellably so a
+cancel between Room registration and filesystem-journal completion cannot
+strand or roll back an already-registered game. Updated the reimport test's
+nullable parent-directory setup warnings as part of recompiling its API use.
+
+Verification: offline `testDebugUnitTest assembleDebug assembleDebugAndroidTest
+lintDebug` passed with 667 JVM tests (0 failures/errors, 1 skip), and both APKs
+assembled. `ReimportIdentityIntegrationTest` passed 1/1 on the API-35 emulator,
+covering import confirmation, failed identity replacement, and restore. This is
+not Honor/TV acceptance; the physical phone remains keyguarded and HDMI is not
+exposed.
+
+### Shared configured-source controls (3 October 2026)
+
+Extracted source-type semantics, icon selection, accessible action descriptions,
+and button behavior into `ConfiguredDiscoverySourceButton`. Both the compact
+discovery-source section and wide catalog now use that common control while
+retaining their own layout density. This removes duplicated Vimm / JSON-feed /
+external-web action behavior without changing the surrounding presentation.
+
+Verification: offline `testDebugUnitTest assembleDebug assembleDebugAndroidTest
+lintDebug` passed (667 JVM tests, 0 failures/errors, 1 skip; both APKs assembled;
+lint reported 11 warnings). `ConfiguredDiscoverySourcesSectionTest` passed 3/3
+on the API-35 emulator, covering source/result activation, Vimm controller
+focus, and disabled actions while syncing. `git diff --check` passed. This is
+not an actual-Honor/TV run; the hardware visual acceptance gate remains open.
+
+### Home dashboard presentation boundary (3 October 2026)
+
+Separated Home's platform and interaction coordinator (`HomeScreen`) from the
+dashboard presentation (`HomeDashboardContent`). Default-Home intent handling,
+controller quick actions, and storage/device state remain in the coordinator;
+empty-state, hero, collection, recent-games, quick-launch, and status layouts
+now live behind one presentation boundary. Home's coordinator is reduced from
+371 lines to 115, making the state/effect versus rendering split explicit.
+Quick-launch game-service labels now ellipsize instead of clipping at the
+two-line limit, preserving readability on narrow panels.
+
+Verification: offline `testDebugUnitTest assembleDebug assembleDebugAndroidTest
+lintDebug` passed with 667 JVM tests (0 failures/errors, 1 skip), app and
+instrumentation APKs assembled, and 11 lint warnings. `HomeQuickLaunchLayoutTest`
+passed 1/1 on the API-35 emulator, including 200% text bounds and action clicks;
+`git diff --check` passed. Actual Honor-on-TV appearance remains unverified.
+
+### Discovery import execution consolidation (3 October 2026)
+
+Single-file imports and multi-file disc-set imports in Discovery Details now
+share one coroutine lifecycle for progress, cancellation messaging, exception
+mapping, and cleanup. The existing single-file and multi-file operations retain
+their distinct workflow calls and source-removal behavior; this consolidates
+orchestration without changing those policies.
+
+Verification: offline `testDebugUnitTest assembleDebug assembleDebugAndroidTest
+lintDebug` passed (667 JVM tests, 0 failures/errors, 1 skip; both APKs assembled;
+11 lint warnings). `BrowserDownloadTrackingActionTest` passed 3/3 on the API-35
+emulator, covering tracking-action accessibility/state and the authorized
+import action. `git diff --check` passed. This is not end-to-end Honor/TV import
+verification; hardware acceptance remains open.
+
+### Discovery details source-link policy extraction (3 October 2026)
+
+Moved configured-source selection and URL resolution out of
+`DiscoveryDetailsScreen` into `configuredDetailsSourceLinks`. The policy now
+returns typed `ConfiguredSourceLink` values, keeps a direct source first,
+filters disabled, unsupported, and platform-incompatible sources, omits
+duplicate URLs, preserves Vimm browser-tracking metadata, and tolerates an
+unresolvable configured URL by excluding it. Two JVM cases cover ordering,
+filtering, URL deduplication, and Vimm fallback browse behavior.
+
+Verification: latest offline `testDebugUnitTest assembleDebug
+assembleDebugAndroidTest lintDebug` passed with 669 JVM tests (0
+failures/errors, 1 skip), both APKs assembled, and 11 lint warnings.
+`BrowserDownloadTrackingActionTest` passed 3/3 on the API-35 emulator;
+`git diff --check` passed. This remains emulator-only evidence, not a physical
+Honor/TV flow test.
+
+### Shared Back / controller-B dismissal policy (3 October 2026)
+
+Replaced the duplicated shell dismissal branches with `gameBoxBackTarget`, a
+single priority policy used by both Compose `BackHandler` and the root
+controller-B/back callback. The order remains quick actions, system status,
+profile switcher, selected game Details, then unhandled. Added JVM coverage for
+the full precedence chain.
+
+Verification: offline `testDebugUnitTest assembleDebug assembleDebugAndroidTest
+lintDebug` passed with 670 JVM tests (0 failures/errors, 1 skip), app and
+instrumentation APKs assembled, and 11 lint warnings. The focused
+`GameBoxRootInputModifierTest` passed 1/1 on the API-35 emulator; `git diff
+--check` passed. Android-TV-specific manifest/source declarations were searched
+and none remain; historical audit entries were retained as project history.
+This emulator check does not replace physical Honor/TV controller validation.
+
+### Controller footer clipping follow-up (3 October 2026)
+
+Reviewed the saved Honor HDMI screenshot and found the profile/controller status
+stack squeezed by the fixed 30dp footer height. The footer now has a 38dp
+minimum height, the profile label is single-line at 12sp, and controller status
+is single-line at 10sp with ellipsis rather than vertical clipping. Added a
+Compose bounds test asserting the status stays within the footer's visible
+semantics bounds.
+
+Verification: offline `testDebugUnitTest assembleDebug assembleDebugAndroidTest
+lintDebug` passed with 670 JVM tests (0 failures/errors, 1 skip), app and
+instrumentation APKs assembled, and 11 lint warnings. `ControllerFooterLayoutTest`
+passed 1/1 on the API-35 emulator; `git diff --check` passed. The screenshot
+that motivated this change predates it; a fresh physical Honor HDMI capture is
+still required to confirm projected layout.
+
+### Quick Actions controller entry focus (3 October 2026)
+
+The wide/living-room Quick Actions dialog now requests focus on its first
+controller action after the dialog frame is attached. Compact phone layout does
+not steal focus when opened by touch. `SettingsActionRow` accepts an optional
+focus requester while retaining its existing click behavior and focus
+animation.
+
+Verification: offline `testDebugUnitTest assembleDebug assembleDebugAndroidTest
+lintDebug` passed with 670 JVM tests (0 failures/errors, 1 skip), app and
+instrumentation APKs assembled, and 11 lint warnings. `QuickActionsInitialFocusTest`
+passed 1/1 on the API-35 emulator; `git diff --check` passed. Current read-only
+ADB state still shows the Honor locked with no external HDMI display exposed,
+so projected hardware focus remains unverified.
+
+### Adaptive phone-host orientation (3 October 2026)
+
+Removed the main handset Home activity's manifest-level landscape lock and
+`resizeableActivity=false`. The normal host can now follow handset orientation
+and Android's large-screen windowing; `ExternalDisplayActivity` still explicitly
+requests landscape for TV output and retains its fullscreen/borderless policy.
+The manifest test asserts that MainActivity reports
+`SCREEN_ORIENTATION_UNSPECIFIED` while the existing tests continue to verify
+Home registration and single-task reuse.
+
+Verification: offline `testDebugUnitTest assembleDebug assembleDebugAndroidTest
+lintDebug` passed with 670 JVM tests (0 failures/errors, 1 skip), app and
+instrumentation APKs assembled, and the 3-case `DefaultHomeRegistrationTest`
+passed on API-35. Lint decreased from 11 to 8 warnings. `git diff --check`
+passed. The external-display orientation remains explicit and lint still
+reports its Android-16 orientation warning intentionally; real Honor portrait
+and HDMI behavior require a fresh unlocked hardware run.
+
+### Catalog UI component boundaries (3 October 2026)
+
+Extracted the Store featured-game hero from `BlueprintCatalogScreen` into
+`CatalogFeaturedHero`, keeping its artwork fallback, text limits, disabled empty
+state, and discovery/installed details routing together. Its focused API-35
+Compose tests passed 2/2. Consolidated Vimm, JSON-feed, and external-web source
+buttons into `ConfiguredDiscoverySourceButton` for reuse by compact and wide
+catalog presentations; existing compact-catalog instrumentation tests cover
+accessible labels, controller focus, disabled syncing state, and activation.
+
+The post-consolidation full Gradle gate is not yet verified: Gradle could not
+initialize native services because it failed to load `native-platform.dll`.
+`git diff --check` passed. This emulator evidence does not verify the docked
+Honor/TV presentation, which remains blocked by the phone keyguard and absent
+HDMI display exposure in the latest device check.
+
+### Discovery import panel extraction (3 October 2026)
+
+Moved the discovery-detail copy-import guidance, accepted-format summary,
+progress/cancel controls, live status announcement, and multi-disc-set action
+into `DiscoveryImportSection`. The details screen now delegates this cohesive
+import UI instead of owning its presentation inline. Added Compose coverage for
+supported-format and disc-set routing, and for the integrated progress/cancel
+affordance. The shared cancel control's click callback remains covered by its
+existing direct interaction test.
+
+Verification: `GameImportProgressIndicatorTest` passed 5/5 on the API-35
+emulator after removing a redundant nested click assertion from the new
+integration test (the shared cancel action already has a direct click test).
+`git diff --check` passed. This does not replace an end-to-end import on the
+unlocked Honor phone projected to the TV; that hardware check is still open.
+
+### Library summary presentation boundary (3 October 2026)
+
+Extracted the compact collection summary card from `LibraryScreens.kt` into
+`LibrarySummaryCard`, making the counts, accessible aggregate label, playtime,
+and resume-game highlight a focused presentation component. The screen file is
+35 lines shorter; filters, controller actions, and game selection remain in the
+coordinator. Added a Compose test covering the summary semantics and resume
+selection.
+
+Verification: offline `testDebugUnitTest assembleDebug lintDebug
+connectedDebugAndroidTest` passed with 671 JVM tests (0 failures/errors, 1
+skipped), the focused API-35 `LibrarySummaryCardTest` passed 1/1, and lint
+reported 8 warnings. `git diff --check` passed. Physical Honor/TV layout
+remains unverified until the phone is unlocked and the projected display is
+available.
+
+### Game details tools presentation boundary (3 October 2026)
+
+Extracted the settings disclosure, metadata-edit entry point, and reduced-motion
+aware settings-panel visibility into `GameDetailsToolsSection`. This keeps the
+details coordinator responsible for state and callbacks while the component
+owns the paired tools UI and animation policy. The details screen is 22 lines
+shorter, with the button labels and 16dp icon sizing preserved. Added Compose
+coverage for the reduced-motion expansion path and metadata action semantics.
+
+Verification: offline `testDebugUnitTest assembleDebug lintDebug
+connectedDebugAndroidTest` passed with 671 JVM tests (0 failures/errors, 1
+skipped); focused API-35 `GameDetailsToolsSectionTest` passed 1/1; lint reported
+8 warnings; and `git diff --check` passed. Physical Honor HDMI input/focus
+acceptance remains outstanding.
+
+### Shared Basic-auth header construction (3 October 2026)
+
+Centralized Basic authorization header creation for catalog and cloud-save
+transports in `basicAuthorizationHeader`. Both clients now share UTF-8 encoding
+and omit authorization for incomplete credentials; removed their duplicated
+Base64 formatting and forced non-null assertions. Added unit coverage for a
+non-ASCII password and missing/blank credential cases.
+
+Verification: offline `testDebugUnitTest assembleDebug lintDebug` passed with
+672 JVM tests (0 failures/errors, 1 skipped), and lint reported 8 warnings.
+`git diff --check` passed. Catalog and cloud-save transport regression tests
+are included in the JVM suite.
+
+### Shared configured-source result rails (3 October 2026)
+
+Consolidated compact and wide Store layouts on `ConfiguredDiscoveryResultsRail`
+for the result count, source-result card mapping, and activation callback. Kept
+the compact 180×130dp and wide 156×132dp card sizes and existing typography.
+The compact configured-source component's duplicate rail markup is removed.
+
+Verification: offline `testDebugUnitTest assembleDebug lintDebug` passed with
+672 JVM tests (0 failures/errors, 1 skipped); all 3
+`ConfiguredDiscoverySourcesSectionTest` cases passed on the API-35 emulator;
+lint returned to 8 warnings after aligning the composable Modifier parameter;
+and `git diff --check` passed. The rail test covers accessible result-card
+activation; docked hardware focus still requires physical verification.
+
+### Atomic configured-source updates (3 October 2026)
+
+Changed `upsertGameSource` and `removeGameSource` to decode, transform, and
+persist the source list within a single DataStore edit transaction instead of
+reading a snapshot and writing it in a later transaction. This prevents
+overlapping updates from silently replacing one another. Added an API-35
+instrumentation regression that concurrently upserts two sources and restores
+the pre-test source list in `finally`.
+
+Verification: offline `testDebugUnitTest assembleDebug lintDebug
+connectedDebugAndroidTest` passed with 672 JVM tests (0 failures/errors, 1
+skipped); `SettingsRepositoryConcurrencyTest` passed 1/1 on API 35; lint
+reported 8 warnings; and `git diff --check` passed.
+
+### Store console and filter rail extraction (3 October 2026)
+
+Moved the wide Store's console list, favorites/metadata filters, sort and clear
+actions, and offline catalog summary into `CatalogConsoleFilterRail`. The
+screen coordinator still owns selected/filter state and supplies callbacks, so
+the extracted view does not introduce duplicate state. Preserved initial rail
+focus and DPAD-right handoff to the search/content column. Added an API-35
+Compose interaction test for console selection, scrolling to Favorites, and
+clear-filter dispatch.
+
+Verification: offline `testDebugUnitTest assembleDebug lintDebug` passed with
+672 JVM tests (0 failures/errors, 1 skipped); `CatalogConsoleFilterRailTest`
+passed 1/1 on API 35, including scroll-then-activate behavior; lint reported 8
+warnings; and `git diff --check` passed. Real controller behavior on the
+docked Honor/TV remains unverified.
+
+### Shared focus-scroll and scroll-restoration helpers (3 October 2026)
+
+Moved `Modifier.bringFocusedControlIntoView` and `restoredScrollState` out of
+the app shell into `UiFocusAndScroll.kt`. These shared behaviors are used
+across the Home, Library, Store, Downloads, Details, Settings, and App Hub
+surfaces; `GameBoxApp` no longer owns this reusable UI infrastructure. The
+helper implementations preserve the existing focus-triggered bring-into-view
+request and per-screen saved scroll key.
+
+Verification: offline `testDebugUnitTest assembleDebug lintDebug
+connectedDebugAndroidTest` passed with 672 JVM tests (0 failures/errors, 1
+skipped); `FocusedControlScrollTest` and `ScrollPositionRestorationTest` both
+passed on API 35; lint reported 8 warnings; and `git diff --check` passed.
+
+### Fail-safe external-content and save-sync null handling (3 October 2026)
+
+Removed forced non-null access from the RetroArch external-library publishing
+path by capturing the configured content store once and explicitly returning a
+handoff/content failure if it is unavailable. Simplified the save-sync
+remote-only branch to preserve its `UpToDate`/`Downloaded` outcomes without a
+non-null assertion. These retain the existing result contract while making
+failure handling explicit.
+
+Verification: offline `testDebugUnitTest assembleDebug assembleDebugAndroidTest
+lintDebug` passed with 672 JVM tests (0 failures/errors, 1 skipped), both APKs
+were assembled, lint reported 8 warnings, and `git diff --check` passed.
+
+### API 33 back-navigation lint scope (3 October 2026)
+
+Annotated both activities' `enableOnBackInvokedCallback` manifest attributes
+with `tools:targetApi="tiramisu"`, documenting that these intentionally use an
+API-33-only attribute while the app continues to support API 26+. Runtime
+behavior and minSdk are unchanged; the two misleading `UnusedAttribute`
+warnings are removed.
+
+Verification: offline `testDebugUnitTest assembleDebug assembleDebugAndroidTest
+lintDebug connectedDebugAndroidTest` passed with 672 JVM tests (0
+failures/errors, 1 skipped), both APKs assembled, and
+`DefaultHomeRegistrationTest` passed 3/3 on API 35. Lint decreased from 8 to 6
+warnings; the remaining fixed-landscape warning is for the intentional
+external-display activity. `git diff --check` passed.
+
+### Store rail state/action API consolidation (3 October 2026)
+
+Grouped `CatalogConsoleFilterRail`'s displayed values into
+`CatalogConsoleFilterState` and callbacks into `CatalogConsoleFilterActions`.
+The composable now exposes a smaller cohesive API instead of a long list of
+independent parameters, without moving filter ownership out of the Store
+coordinator. Updated the rail interaction test to use the same state/action
+contract.
+
+Verification: offline `testDebugUnitTest assembleDebug assembleDebugAndroidTest
+lintDebug connectedDebugAndroidTest` passed with 672 JVM tests (0
+failures/errors, 1 skipped); `CatalogConsoleFilterRailTest` passed 1/1 on API
+35; lint remained at 6 warnings; and `git diff --check` passed.
+
+### Catalog empty-state action focus consolidation (3 October 2026)
+
+Extracted the duplicated Sync/Refresh initial-focus modifier into
+`claimInitialCatalogActionFocus`. The selected action now receives an explicit
+focus target before its first layout focus request, and the shared claim state
+prevents the two controls from competing. Added tests for enabled and disabled
+initial-action focus behavior.
+
+Verification: `assembleDebug assembleDebugAndroidTest testDebugUnitTest lintDebug`
+succeeded; `CatalogActionFocusTest` passed 2/2 on the API 35 emulator; JVM tests
+passed (672 tests, 0 failures/errors, 1 skipped); lint reported 0 errors and 6
+existing warnings; and `git diff --check` passed. Instrumentation on the
+connected Honor reported no Compose hierarchy, so handset/TV behavior remains
+unverified.
+
+### Settings system shortcuts section extraction (3 October 2026)
+
+Moved the console-startup guidance and four Android system shortcuts out of
+`SettingsScreen` into `SettingsSystemSection`, leaving the screen coordinator
+responsible for mapping section actions to Android settings intents. The
+section retains the same Blueprint action-row components and copy. Added a
+Compose interaction test verifying all four callbacks and startup guidance.
+
+Verification: offline `testDebugUnitTest assembleDebug assembleDebugAndroidTest
+lintDebug` succeeded with 672 JVM tests (0 failures/errors, 1 skipped), both
+APK variants assembled, and lint reported 0 errors/6 warnings.
+`SettingsSystemSectionTest` passed 1/1 and `CatalogActionFocusTest` passed 2/2
+on the API 35 emulator. Honor instrumentation still cannot attach a Compose
+hierarchy; actual docked-TV behavior remains unverified. `git diff --check`
+passed.
+
+### Launcher backdrop component extraction (3 October 2026)
+
+Moved the root dark gradient and wide-layout ambient glows out of
+`GameBoxApp` into `BlueprintBackdrop`. Cached the static gradient brushes and
+preserved the existing palette, glow positions, and compact-mode suppression,
+separating presentation decoration from root navigation and input handling.
+
+Verification: offline `testDebugUnitTest assembleDebug assembleDebugAndroidTest
+lintDebug` succeeded (672 JVM tests, 0 failures/errors, 1 skipped; lint 0
+errors/6 warnings). The production `BlueprintScreenshotsTest.captureRealScreens`
+flow passed 1/1 on the API 35 emulator and captured Home, Details, Library,
+Store, Media, PC, Settings, and Downloads. Home and Settings captures were
+visually inspected. This remains emulator evidence, not wired-TV verification.
+`git diff --check` passed.
+
+### Game-session save backup wiring extraction (3 October 2026)
+
+Moved automatic managed-save and emulator-save backup/restore construction out
+of `DefaultAppContainer` into `GameSaveSessionBackups`. The container now
+provides the authorized SAF root and delegates session callbacks, while the
+component shares the emulator `SaveBackupService` and manifest store between
+backup and restore instead of constructing duplicate instances for identical
+paths. Existing storage policy and on-disk locations are unchanged.
+
+Verification: offline `testDebugUnitTest assembleDebug assembleDebugAndroidTest
+lintDebug` succeeded with 672 JVM tests (0 failures/errors, 1 skipped), both
+APK variants assembled, and lint reported 0 errors/6 warnings. The production
+`BlueprintScreenshotsTest.captureRealScreens` startup/navigation flow passed
+1/1 on the API 35 emulator. Actual phone/TV save-session behavior remains
+unverified while the Honor is locked and no wired display is enumerated.
+`git diff --check` passed.
+
+### Import registration recovery separation (3 October 2026)
+
+Separated startup reconciliation policy into `ImportRegistrationRecovery`;
+`ImportRegistrationJournal` now stays responsible for durable marker reads and
+writes, registered-byte comparison, confirmation, and rollback. The recovery
+coordinator retains the same cutoff handling, per-game conflict fail-closed
+behavior, and Room/filesystem consistency checks. Updated the journal recovery
+suite to exercise the new boundary.
+
+Verification: offline `testDebugUnitTest assembleDebug assembleDebugAndroidTest
+lintDebug` succeeded with 672 JVM tests (0 failures/errors, 1 skipped), both
+APK variants assembled, and lint reported 0 errors/6 warnings. The production
+`BlueprintScreenshotsTest.captureRealScreens` app-start/navigation flow passed
+1/1 on the API 35 emulator. Honor/TV recovery behavior remains unverified while
+the device is locked and no wired display is present. `git diff --check` passed.
+
+### Unused Compose Preview dependency removal (3 October 2026)
+
+Removed the app's direct Compose Tooling Preview dependency after confirming
+there are no `@Preview` functions or preview-package imports in source or tests.
+An initial attempt to remove Lifecycle Runtime KTX as well exposed its current
+role as a direct 2.10.0 version pin over Compose's 2.9.4 transitive artifacts;
+the older artifacts are not cached for offline builds, so the Lifecycle pin is
+retained intentionally.
+
+Verification: offline `testDebugUnitTest assembleDebug assembleDebugAndroidTest
+lintDebug` passed with 672 JVM tests (0 failures/errors, 1 skipped), both APK
+variants assembled, and lint reported 0 errors/6 warnings. `git diff --check`
+passed.
+
+### Home quick-launch tile height alignment (3 October 2026)
+
+The populated Home capture showed the Epic Games quick-launch tile taller than
+its neighbors because only its title wrapped. Reserved a two-line title slot
+for every quick-launch card and strengthened `HomeQuickLaunchLayoutTest` to
+assert equal tile heights at enlarged text while retaining its clipping and
+action checks.
+
+Verification: offline `testDebugUnitTest assembleDebug assembleDebugAndroidTest
+lintDebug` succeeded (672 JVM tests, 0 failures/errors, 1 skipped; lint 0
+errors/6 warnings). `HomeQuickLaunchLayoutTest` passed 1/1 and the production
+`BlueprintScreenshotsTest.captureRealScreens` flow passed 1/1 on the API 35
+emulator. The populated Home capture was visually inspected; all four
+quick-launch tiles now share a baseline and height. Honor/TV remains unavailable
+for direct validation. `git diff --check` passed.
+
+### Catalog provider graph extraction (3 October 2026)
+
+Moved catalog transport selection, configured/offline fallback, metadata
+enrichment, and TheGamesDB discovery wiring from `DefaultAppContainer` into
+`CatalogRuntime`. The app container now exposes the catalog runtime's provider
+and discovery components; the Room discovery DAO is resolved once and shared
+across the sync/repository pair. Provider ordering, credentials, and fallback
+behavior are unchanged.
+
+Verification: offline `testDebugUnitTest assembleDebug assembleDebugAndroidTest
+lintDebug` succeeded with 672 JVM tests (0 failures/errors, 1 skipped), both
+APK variants assembled, and lint reported 0 errors/6 warnings.
+`CatalogRefreshStateTest` passed 1/1 on the API 35 emulator, exercising
+fallback and error presentation through the production container.
+`git diff --check` passed; actual Honor/TV validation remains unavailable.
+
+### Room database runtime extraction (3 October 2026)
+
+Moved database startup from `DefaultAppContainer` into
+`GameBoxDatabaseRuntime`. The runtime preserves the critical ordering—create
+the pre-migration backup before building Room—and owns the complete migration
+list with the database builder. The container now obtains its database from
+that single infrastructure boundary.
+
+Verification: offline `testDebugUnitTest assembleDebug assembleDebugAndroidTest
+lintDebug` succeeded with 672 JVM tests (0 failures/errors, 1 skipped), both
+APK variants assembled, and lint reported 0 errors/6 warnings. The production
+`BlueprintScreenshotsTest.captureRealScreens` startup/navigation flow passed
+1/1 on the API 35 emulator. `git diff --check` passed; wired-Honor validation
+remains outstanding.
+
+### Console-style route transition policy (3 October 2026)
+
+Extracted route motion into `BlueprintScreenTransition`: primary tabs use a
+horizontal entrance in navigation order, including the Settings/Home wrap;
+game details and Downloads use vertical stack motion; unchanged routes do not
+translate; and reduced-motion mode bypasses the animated container. Added pure
+policy tests for forward/backward tabs, wraparound, detail open/close, Downloads,
+and unchanged routes.
+
+Verification: offline `testDebugUnitTest assembleDebug assembleDebugAndroidTest
+lintDebug` succeeded with 675 JVM tests (0 failures/errors, 1 skipped), both
+APK variants assembled, and lint reported 0 errors/6 warnings. The Honor is
+ADB-connected, but its keyguard is showing; Android currently exposes only the
+built-in display and Android Studio's virtual screen-sharing display, not the
+TV. Per the hardware-first requirement, no phone-screen or emulator screenshot
+is being presented as TV validation. `git diff --check` passed.
+
+### Library filter state boundary (3 October 2026)
+
+Simplified `BlueprintLibraryScreen` by passing the existing stable
+`RememberedGameFilters` state holder instead of unpacking each filter into a
+separate value/setter pair. The library rail, search field, metadata filters,
+and controller search dialog now update the shared screen state directly; the
+filter behavior and saved-state ownership are unchanged.
+
+Verification: offline `testDebugUnitTest assembleDebug assembleDebugAndroidTest
+lintDebug` succeeded with 675 JVM tests (0 failures/errors, 1 skipped), both
+APK variants assembled, and lint reported 0 errors/6 warnings.
+`git diff --check` passed. No on-device or TV UI run was possible: the connected
+Honor remained locked and Android exposed no physical external display.
+
+### Settings repository policy extraction (3 October 2026)
+
+Moved platform emulator-default key normalization/encoding and Moonlight host
+and port validation out of `SettingsRepository` into focused pure policy files.
+The DataStore repository now retains persistence orchestration while the
+existing preference mapper and Moonlight setup continue to use the same
+serialized format and validation rules. Added direct normalization, stable
+ordering, round-trip, and malformed-entry coverage for emulator defaults.
+
+Verification: offline `testDebugUnitTest assembleDebug assembleDebugAndroidTest
+lintDebug` succeeded with 677 JVM tests (0 failures/errors, 1 skipped), both
+APK variants assembled, and lint reported 0 errors/6 warnings.
+`git diff --check` passed. Hardware display validation remains outstanding while
+the Honor is locked and no TV display is exposed to Android.
+
+### Launch return feedback policy extraction (3 October 2026)
+
+Moved the mapping from recovered launch/save-backup outcomes to player-facing
+return messages out of `DefaultGameLaunchController` into
+`LaunchReturnMessage`. The controller now coordinates journal recovery and
+save-backup work; the policy owns the distinct messaging for interrupted
+handoffs, exceptions, absent saves, partial backups, and successful backups.
+Added direct tests for each outcome while preserving existing wording.
+
+Verification: offline `testDebugUnitTest assembleDebug assembleDebugAndroidTest
+lintDebug` succeeded with 681 JVM tests (0 failures/errors, 1 skipped), both
+APK variants assembled, and lint reported 0 errors/6 warnings.
+`git diff --check` passed. Honor-to-TV visual validation remains outstanding:
+the phone is locked and only its built-in and Studio virtual displays are
+currently visible to Android.
+
+### Shared controller activation primitive (3 October 2026)
+
+Centralized A/DPAD-center/Enter key-down activation and pointer-click wiring in
+`blueprintActivation`. Shared actions, game cards, and primary navigation now
+use the same activation behavior; cards and tabs retain their custom no-ripple
+focus visuals. Added policy tests distinguishing confirm keys from navigation
+and Back.
+
+Verification: offline `testDebugUnitTest assembleDebug assembleDebugAndroidTest
+lintDebug` succeeded with 683 JVM tests (0 failures/errors, 1 skipped), both APK
+variants assembled, and lint reported 0 errors/6 warnings. The production
+`BlueprintNavigationTest` passed 1/1 on the API 35 emulator. Honor is still
+locked and Android currently lists no physical TV display, so that emulator
+result is not counted as hardware validation. `git diff --check` passed.
+
+### Shared console UI palette tokens (3 October 2026)
+
+Added semantic GameBox theme tokens for the shared focus gradient, idle game
+card outline, and controller A/B hint colors. Library cards, discovery cards,
+app-hub hints, quick-action hints, and common focus surfaces now use the same
+theme values instead of repeating hex literals; service and console brand colors
+remain separate so their identities are preserved.
+
+Verification: offline `testDebugUnitTest assembleDebug assembleDebugAndroidTest
+lintDebug` succeeded with 687 JVM tests (0 failures/errors, 1 skipped), both APK
+variants assembled, and lint reported 0 errors/6 warnings. `git diff --check`
+passed. Honor-to-TV visual review remains pending while the phone is locked and
+Android does not expose the TV display.
+
+### Controller activation consistency pass (3 October 2026)
+
+Extended `blueprintActivation` / `onBlueprintActivation` to compatible Material
+buttons and chips in Downloads and Display settings, removing the last duplicated
+A/DPAD-center/Enter handlers in those screens. Existing Material click targets
+remain intact (no nested click semantics); navigation and game cards preserve
+their no-ripple focus treatment. The controller-search keyboard intentionally
+retains its A-only handler because its key contract differs.
+
+Verification: offline `testDebugUnitTest assembleDebug assembleDebugAndroidTest
+lintDebug` succeeded with 683 JVM tests (0 failures/errors, 1 skipped), both APK
+variants assembled, and lint reported 0 errors/6 warnings. The production
+`BlueprintNavigationTest` passed 1/1 on the API 35 emulator. The Honor remains
+locked with no physical TV display enumerated, so direct hardware behavior is
+still unverified. `git diff --check` passed.
+
+### Store wide-screen route contract (3 October 2026)
+
+Replaced `BlueprintCatalogScreen`'s large flat parameter list with three
+explicit bundles: catalog/filter presentation state, user actions, and focus
+requesters. The remembered filter state remains the single source for search,
+favorites, metadata filters, and persisted Store selections. Compact and wide
+Store routes now follow the same state/actions/focus boundary pattern.
+
+Verification: offline `testDebugUnitTest assembleDebug assembleDebugAndroidTest
+lintDebug` succeeded with 683 JVM tests (0 failures/errors, 1 skipped), both APK
+variants assembled, and lint reported 0 errors/6 warnings. Production
+`CatalogRefreshStateTest` passed 1/1 on the API 35 emulator, confirming the
+Store route still presents actionable fallback/error states. Honor/TV remains
+unavailable for direct verification while the phone is locked and no TV
+display is exposed. `git diff --check` passed.
+
+### Import transaction workspace boundary (3 October 2026)
+
+Moved canonical imports-root, console-scoped target, staging, backup, and
+expected-relative-prefix construction from `AuthorizedRomImporter.importSet`
+into `ImportTransactionWorkspace`. The helper validates the game id and
+canonical containment; workspace preparation creates the parent and staging
+directories before file staging begins. Added tests for the canonical PSP tree,
+temporary-path containment, directory preparation, and invalid ids.
+
+Verification: offline `testDebugUnitTest assembleDebug assembleDebugAndroidTest
+lintDebug` succeeded with 687 JVM tests (0 failures/errors, 1 skipped), both APK
+variants assembled, and lint reported 0 errors/6 warnings. The Home dashboard
+focus instrumentation test also passed 1/1 on the API 35 emulator. Honor-to-TV
+verification remains unavailable while the phone is locked and no TV display
+is exposed. `git diff --check` passed.
+
+### Layout-aware Home focus restoration (3 October 2026)
+
+Home previously restored the remembered game whenever it remained in the
+catalog, even if the wide dashboard did not render it (for example, an
+unplayed installed title after the first eight cards while a nonempty Recent
+row was visible). Home now chooses a restore target only among cards rendered
+by the active compact/wide layout, falling back to the hero when the remembered
+card is not present. Added tests for wide hidden-card fallback and compact
+full-collection restoration.
+
+Verification: offline `testDebugUnitTest assembleDebug assembleDebugAndroidTest
+lintDebug` succeeded with 685 JVM tests (0 failures/errors, 1 skipped), both APK
+variants assembled, and lint reported 0 errors/6 warnings. `git diff --check`
+passed. Direct Honor/TV confirmation remains outstanding while the device is
+locked and no physical external display is exposed.
+
+Follow-up UI verification: added `HomeDashboardFocusTest` to assert that the
+production dashboard composable focuses the visible hero and omits the
+remembered-but-hidden card in the wide layout. Instrumentation APK compilation
+and the test passed 1/1 on the API 35 emulator; this is not counted as
+Honor/TV validation.
+
+### Import transaction rule deduplication (3 October 2026)
+
+Unified the 64-file disc-set limit used by transaction validation and archive
+extraction, and removed duplicate game-id validation from `AuthorizedRomImporter`
+so `ImportTransactionWorkspace` is the single path/id authority. Workspace
+validation failures still return a user-actionable rejected import result.
+
+Verification: offline `testDebugUnitTest assembleDebug assembleDebugAndroidTest
+lintDebug` succeeded with 687 JVM tests (0 failures/errors, 1 skipped), both APK
+variants assembled, and lint reported 0 errors/6 warnings. The real importer
+cancellation/staging-cleanup instrumentation test passed 1/1 on the API 35
+emulator. Honor is locked and no TV display is exposed, so hardware validation
+remains outstanding. `git diff --check` passed.
+
+### Shared controller activation on discovery and app-hub tiles (3 October 2026)
+
+Moved Store discovery cards, configured-source result cards, and the two app-hub
+shortcut tile styles onto the shared `blueprintActivation` path. These tiles
+now use the same controller A / DPAD-center / Enter activation handling and UI
+click sound as other launcher actions while keeping their existing no-ripple
+visual treatment. Added `DiscoveryGameCardActivationTest` for gamepad-A
+activation and explicitly waits for Compose idleness before querying semantics.
+
+Verification: offline `testDebugUnitTest assembleDebug assembleDebugAndroidTest
+lintDebug` succeeded (687 JVM tests: 0 failures/errors, 1 skipped; both APKs
+assembled; lint 0 errors/6 warnings). Gradle's connected test passed the new
+activation test 1/1 on the API-35 emulator. On Honor PGT-N19, both the new test
+and an existing Compose UI test failed because the test activity exposed no
+Compose semantics hierarchy; the production source and test APK compile. The
+current display snapshot reports only the built-in screen and the remembered
+SMART TV as unavailable (`activeDisplay=null`), so this does not constitute
+TV-output validation. `git diff --check` passed.
+
+### Game-details controller activation (3 October 2026)
+
+Added shared gamepad-A / DPAD-center / Enter activation and UI click-sound
+handling to the Game Details Play and Install hero actions. Applied the same
+activation behavior to compact-layout secondary details actions, which had
+previously depended on Material's default key handling. Added a regression
+test that focuses Play Now and sends a gamepad-A key event, asserting exactly
+one launch callback.
+
+Verification: the full offline `testDebugUnitTest assembleDebug
+assembleDebugAndroidTest lintDebug` gate succeeded (687 JVM tests: 0 failures,
+0 errors, 1 skipped; both APKs assembled; lint 0 errors/6 warnings). Gradle's
+connected run passed all 3 `GameDetailsHeroTest` cases on the API-35 emulator,
+including the A-button action test. All 3 cases failed on Honor PGT-N19 before
+reaching assertions because that device's Compose test activity exposed no
+semantics hierarchy; this matches other Compose test failures on that device.
+The TV remains unavailable in the display snapshot recorded above.
+
+### Header quick-action controller activation (3 October 2026)
+
+Added the shared controller activation and preference-aware click feedback to
+the wide Home header's Search and Downloads icon buttons. This keeps the
+primary browse/search and download-activity entry points usable without a
+touchscreen. Added a navigation instrumentation case that requests focus on
+Search, sends gamepad A, and verifies selection changes to Store.
+
+Verification: offline `testDebugUnitTest assembleDebug assembleDebugAndroidTest
+lintDebug` succeeded with 687 JVM tests (0 failures/errors, 1 skipped), both
+APK variants assembled, and lint 0 errors/6 warnings. `BlueprintNavigationTest`
+passed 2/2 on the API-35 emulator. Both tests failed on Honor PGT-N19 before
+assertions because its Compose test host exposed no semantics hierarchy; the
+same device-side failure affects the pre-existing navigation test as well.
+No physical TV output was exposed during this run. `git diff --check` passed.
+
+### Download queue controller activation (3 October 2026)
+
+Unified controller-A / DPAD-center / Enter activation and click feedback for
+download Pause, Resume, Retry, Cancel, and unavailable-source dismissal. Removed
+an extra `focusable()` modifier from the primary action button wrapper so the
+Material button remains the single focus target. Added a test that focuses a
+paused transfer's Resume action and verifies gamepad A invokes resume exactly
+once.
+
+Verification: offline `testDebugUnitTest assembleDebug assembleDebugAndroidTest
+lintDebug` succeeded (687 JVM tests: 0 failures/errors, 1 skipped; both APKs
+assembled; lint 0 errors/6 warnings). The new resume test passed 1/1 on the
+API-35 emulator. On Honor PGT-N19 it failed before the assertion because the
+Compose test activity again exposed no semantics hierarchy. `git diff --check`
+passed.
+
+### Import-flow controller actions (3 October 2026)
+
+Added consistent controller activation and click feedback to the multi-file
+disc-set picker action and the import-progress Cancel action. These complete
+the controller path across single-file import, multi-disc import, progress,
+and cancellation. Added a gamepad-A regression test for opening the multi-file
+disc-set picker.
+
+Verification: offline `testDebugUnitTest assembleDebug assembleDebugAndroidTest
+lintDebug` succeeded with 687 JVM tests (0 failures/errors, 1 skipped), both
+APK variants assembled, and lint 0 errors/6 warnings. The full six-test
+`GameImportProgressIndicatorTest` suite passed on the API-35 emulator, including
+the new controller case. All six failed on Honor PGT-N19 before assertions due
+to the repeated missing Compose semantics hierarchy. `git diff --check` passed.
+
+### Discovery detail hero action boundary (3 October 2026)
+
+Extracted the discovery-detail Import / Favorite / Back cluster into
+`DiscoveryDetailsHeroActions`, retaining the compact full-width import button
+while removing duplicated inline layout and applying the shared controller
+activation and preference-aware click sound to each action. The import callback
+is also guarded against activation while an import is already in progress.
+Added a focused test that sends gamepad A to Import your copy and asserts one
+picker launch.
+
+Verification: offline `testDebugUnitTest assembleDebug assembleDebugAndroidTest
+lintDebug` succeeded (687 JVM tests: 0 failures/errors, 1 skipped; both APKs
+assembled; lint 0 errors/6 warnings). The new test passed 1/1 on the API-35
+emulator. The Honor run failed before assertions due to its missing Compose
+semantics hierarchy, consistent with the other UI suites. `git diff --check`
+passed.
+
+### Discovery external-link action consolidation (3 October 2026)
+
+Extracted duplicated legal/configured web-source buttons into
+`DiscoveryExternalLinkButton` and centralized the no-browser fallback message.
+The shared control uses the same focus-safe A/DPAD-center/Enter activation and
+sound path as launcher actions. Updated configured-source buttons to use that
+activation path too and removed an extra `focusable()` that duplicated the
+Material button's focus target; disabled source actions remain guarded.
+
+Verification: offline `testDebugUnitTest assembleDebug assembleDebugAndroidTest
+lintDebug` succeeded (687 JVM tests: 0 failures/errors, 1 skipped; both APKs
+assembled; lint 0 errors/6 warnings). All four configured-source UI tests
+passed on the API-35 emulator, including gamepad A for Vimm search and a legal
+external link. Honor PGT-N19 again failed before assertions because no Compose
+semantics hierarchy was exposed. `git diff --check` passed.
+
+### Library and Store filter-button controller integration (3 October 2026)
+
+Migrated Library Clear filters, Sort, and empty-library Browse Store controls,
+plus Store filter-rail Sort and Clear filters, to the shared Blueprint button
+wrappers. Extended the filter-rail test to focus Sort, send gamepad A, and
+assert that the sort action is called exactly once.
+
+Verification: offline `testDebugUnitTest assembleDebug assembleDebugAndroidTest
+lintDebug` succeeded (687 JVM tests: 0 failures/errors, 1 skipped; both APKs
+assembled; lint 0 errors/6 warnings). The Store filter-rail instrumentation
+test passed 1/1 on the API-35 emulator. Honor PGT-N19 failed before the UI
+assertion because no Compose semantics hierarchy was exposed. `git diff --check`
+passed.
+
+### Shared Blueprint action buttons on game lifecycle screens (3 October 2026)
+
+Introduced filled, outlined, and text `Blueprint` button wrappers that centralize
+preference-aware click sound, controller A / DPAD-center / Enter activation,
+and a guard against invoking disabled actions through key events. Adopted the
+wrappers in Game Details Install/Play/Pause/Favorite/Back/save/preparation
+actions, download Pause/Resume/Retry/Cancel/dismiss actions, discovery hero
+Import/Favorite/Back actions, and Game Details hero Install/Play. This removes
+repeated key and sound wiring while keeping Material styles intact.
+
+Verification: offline `testDebugUnitTest assembleDebug assembleDebugAndroidTest
+lintDebug` succeeded (687 JVM tests: 0 failures/errors, 1 skipped; both APKs
+assembled; lint 0 errors/6 warnings). All four `AuthorizedInstallFeedbackTest`
+cases passed on the API-35 emulator, including gamepad-A Install activation.
+Honor PGT-N19 failed the four tests before assertions because no Compose
+semantics hierarchy was exposed. `git diff --check` passed.
+
+### Honor HDMI UI pass and instrumentation safety (3 October 2026)
+
+Captured the live 1920×1080 HDMI surface from the Honor PGT-N19. GameBox renders
+the wide Home dashboard edge-to-edge with no app title bar, and Android accepted
+the external-display fullscreen request. Honor's desktop shelf remains OS-owned;
+the 44 dp bottom clearance is retained because removing it placed the controller
+footer underneath that shelf. After a fresh launch, the bundled catalog
+repopulated asynchronously; the earlier Welcome/empty screen was transient.
+
+Safety finding: `connectedDebugAndroidTest` crashed on this Honor and the Gradle
+test cleanup left `com.gamebox.os` uninstalled. ROM imports are stored below
+`Context.filesDir/imports`, so uninstalling the production package can remove
+app-private imports and its Room index. The current debug app has been
+reinstalled. Do not run connected instrumentation against the personal Honor
+installation again until tests use an isolated application ID or a backed-up
+test target. Continue manual UI checks on HDMI; run Compose instrumentation on
+an emulator or isolated test package. `assembleDebug` and
+`compileDebugAndroidTestKotlin` passed; the Honor instrumentation result is
+unverified because the test process crashed. A 1.08 GB personal 7z source still
+exists under `D:\GameBoxOS\games`; no game was copied or reimported during this
+recovery check.
+
+### Storage uninstall-safety guidance (3 October 2026)
+
+Added a visible warning to Settings → Storage explaining that imported games use
+app storage by default and that uninstalling GameBox removes that local storage.
+The guidance points users to the existing shared-library migration action.
+Added a storage-screen regression assertion. `assembleDebug`,
+`compileDebugAndroidTestKotlin`, and `lintDebug` passed offline (lint 0 errors,
+6 existing warnings). The Honor is not used for instrumentation while its test
+cleanup targets the production package.
+
+### Shared settings actions and refreshed Honor HDMI verification (3 October 2026)
+
+Extracted `runSettingsUiAction` for consistent busy cleanup, cancellation
+propagation, and visible error reporting, with JVM coverage for failure,
+fallback, and cancellation cases. Catalog, cloud-save, TheGamesDB, companion,
+and discovery-source settings now use it for asynchronous actions. Discovery
+source creation now clears the form only after repository persistence succeeds;
+probe cancellation is no longer swallowed.
+
+Verification: the local JVM suite (690 tests), debug APK, Android test-source
+compile, and lint passed offline. Updated the existing Honor installation with
+`adb install -r` (app data preserved) and used GameBox's PC Hub “Show on TV”
+action to present the app on the external display. Actual HDMI captures
+verified the wide Home and Settings screens at 1920×1080, plus inline red
+validation for saving Cloud Sync with an empty endpoint; this validation did not
+save settings or contact a service. Returned the TV to Home afterward. The app
+reports no connected controller; a synthetic DPAD event did not visibly move
+focus, so physical controller navigation remains unverified. The Home snapshot
+shows 0 installed games and 8 discoverable bundled titles. Honor's desktop
+shelf remains OS-owned at the bottom of the TV output.
+
+### Honor TV Vimm handoff and RetroArch DS launch (3 October 2026)
+
+On the Honor-to-TV setup, the imported Nintendo DS title initially exited from
+RetroArch with `System.exit(0)` rather than crashing GameBox. The DS core was
+missing. Installed the maintained `Nintendo - DS (melonDS DS)` core through
+RetroArch's own Core Downloader and changed GameBox's NDS launch profile to
+`melondsds_libretro_android.so`. After quitting a previously running RetroArch
+session through its menu, a cold GameBox launch reached the DS boot/title screen
+and the process remained alive. Re-launch into an already-running RetroArch
+process still needs a separate compatibility check; GameBox must not force-stop
+an active emulator session because that could lose unsaved progress.
+
+The old Vimm tracking action opened Chrome and guessed at another app's
+DownloadManager entries. Replaced it with an app-owned WebView browser that
+listens for a user-initiated, HTTPS download, accepts only the selected
+console's supported filename formats, queues an app-owned DownloadManager
+request, returns to the GameBox title, displays transfer progress, and invokes
+the existing verified import/source-cleanup workflow. External-browser links
+and manual file import remain available. The browser now requests fullscreen
+on Honor's external display and supports controller B navigation.
+
+Verified on the actual TV: Vimm metadata search, details navigation, the
+embedded Vimm page in a full-screen GameBox activity, and Back to GameBox.
+Did not activate Vimm's copyrighted Download button. The actual callback,
+download completion, and automatic import need a redistributable homebrew
+fixture on the same hardware. The Vimm details transport returned HTTP 404 for
+one searched listing even though WebView displayed the source page; stale
+details URL/transport compatibility remains open. Honor's desktop shelf remains
+visible because it is OS-owned.
+
+### Fresh cross-platform regression checkpoint (6 October 2026)
+
+Forced `testDebugUnitTest --rerun-tasks`: 212 suites, 779 tests, 0 failures,
+0 errors, 1 skipped. `compileDebugAndroidTestKotlin` and `assembleDebug` also
+passed. The Windows companion console test harness passed on the development
+PC via `dotnet run --project windows/GameBox.Windows.Core.Tests`.
+
+On the currently connected Honor PGT-N19, Android reports an enabled Bluetooth
+`Wireless Controller` gamepad and the physical HDMI display is 1920×1080/60.
+GameBox's TV Download Manager still reports Galaxy Patrol completed at
+48.0 KB/48.0 KB. A follow-up physical D-pad press produced `ABS_HAT0X`
+transitions on `/dev/input/event13`; the HDMI capture shows focus on PC while
+Home remains selected. The subsequent A-button prompt/capture did not provide
+a clearly correlated button event or screen activation (the available stream
+excerpt showed analog-axis motion), so physical A activation remains
+unverified here. Installed emulators remain PPSSPP, RetroArch, Dolphin, and
+Azahar; missing standalone console emulator coverage and a representative
+real gameplay/save round trip remain open. No game was launched and no
+personal game/save data was changed. Evidence:
+`docs/evidence/hardware-run-2026-10-06/honor-tv-physical-dpad-result.png`.
+
+### Explicit-emulator readiness for diagnostic catalog entries (6 October 2026)
+
+TV review found that Galaxy Patrol has an explicit RetroArch launch capability
+but the generic `Retro` catalog platform, so `GameSettingsPanel` showed no
+approved emulator choices. The registry now includes a title's explicit
+capability in its options, and the same RetroArch package-candidate helper is
+used by readiness detection and actual launch resolution. A regression test
+checks the generic-platform fixture and the standard-package fallback.
+The regression fixture was aligned to the catalog's exact `Retro` platform;
+the targeted `EmulatorSettingsTest` class passed all 17 tests afterward.
+
+Targeted emulator settings tests, Android-test Kotlin compilation, and APK
+assembly passed; the full Android JVM suite now reports 780 tests, 0 failures,
+0 errors, 1 skipped. Updated the existing Honor install in place and confirmed
+the TV Game Settings panel now exposes RetroArch and reports a compatible
+installed package. The app returned to the HONOR desktop after install; its
+per-app fullscreen mode was restored and the bottom Dock is hidden again.
+Evidence: `docs/evidence/hardware-run-2026-10-06/honor-tv-galaxy-emulator-settings.png`
+and `honor-tv-readiness-fullscreen-settled.png`. This does not verify the
+FCEUmm core or prove gameplay. ADB could not read RetroArch's private core
+directory, and no launch was attempted.
+
+The subsequent `lintDebug` run initially found a direct `FocusRequester()`
+construction inside `GameDetailsHeroTest` composition. Reused the test's
+existing `remember` pattern; `lintDebug` and `compileDebugAndroidTestKotlin`
+then both passed. Lint still reports 20 non-fatal warnings across the project.
+
+### Honor HDMI emulator launch follow-up (6 October 2026)
+
+Launched the bundled legal Galaxy Patrol fixture through GameBox on the
+physical 1920×1080 HDMI output. Android started `RetroActivityFuture`, but
+HONOR placed RetroArch in a `hw-pc-freeform` window at `[192,103]–[1344,794]`
+over GameBox and kept its Dock visible; the launch options alone do not defeat
+the OEM desktop policy. Used the RetroArch taskbar menu's **Open in full screen
+mode** action. Once settled, the game filled the TV, Dock/touch controls were
+not visible, and its ship/stars rendered. This is a per-app HONOR setting, so
+other emulators still need the same hardware setup. Evidence:
+`docs/evidence/hardware-run-2026-10-06/honor-tv-retroarch-fullscreen-settled.png`.
+
+One standard Back key left RetroArch foreground. Its HONOR Dock menu's normal
+Quit action returned to the existing GameBox MainActivity without a
+force-stop; controller/Back-based exit remains unverified. The controller
+later showed disconnected and raw input monitoring captured no physical button
+press, so gameplay input is not verified. No personal game or save data was
+touched. Exit evidence:
+`docs/evidence/hardware-run-2026-10-06/honor-tv-after-quit.png`.
+
+Updated the HONOR Dock guidance in Settings → Display to describe per-emulator
+fullscreen mode and the optional global taskbar path. The targeted
+`ExternalDisplayTaskbarGuidanceTest` and `assembleDebug` passed; installed with
+`adb install -r` preserving app data and visually confirmed the new guidance
+on the real TV. The reinstall reset GameBox's own HONOR Dock preference; the
+temporary taskbar pin was removed and the app was left on TV Home, but the Dock
+is visible. Global taskbar state was not changed. Evidence:
+`docs/evidence/hardware-run-2026-10-06/honor-tv-display-guidance.png`.
+
+### Honor controller reconnect check (6 October 2026)
+
+After the user reported reconnecting and pressing A, ADB again reached the
+physical PGT-N19 and the GameBox MainActivity was confirmed active on the
+1920×1080 HDMI display. The current live HDMI capture still shows the
+controller status as “Not connected.” Android's Input Manager lists only
+system keyboard/touch devices and no `GAMEPAD` or `JOYSTICK` device. The
+phone-panel capture had Azahar's first-run Data Folders page open; no folder was
+selected or permission granted, and GameBox was brought back to the foreground
+without force-stopping either app. Evidence:
+`docs/evidence/hardware-run-2026-10-06/honor-tv-live-after-controller-reconnect.png`.
+
+This means the reported A press is not proof of a connected gamepad or working
+GameBox input. Re-run the physical D-pad/A/B check once Android exposes the pad
+as an input device; do not “fix” GameBox's detection based only on the
+Honor-specific `vendor=0x2888` system input devices.
+
+A follow-up Bluetooth Manager snapshot confirms the `Wireless Controller` is
+bonded but its current connection state is `STATE_DISCONNECTED`. Historic HID
+connection log lines are not live connection proof. The current
+“Not connected” GameBox card therefore matches Android's present state rather
+than indicating a GameBox classification bug.
+
+### Current repository verification (6 October 2026)
+
+Ran the complete `testDebugUnitTest` suite and `lintDebug` using the cached
+Gradle 9.7.1 distribution and Android Studio JBR; both completed successfully.
+Lint emitted 20 SARIF findings, primarily target-SDK/dependency-version notices
+and project warnings; no lint error failed the task. These checks validate
+source/unit behavior only and do not replace the outstanding Honor controller
+or emulator gameplay checks.
+
+### HDMI UI navigation smoke check (6 October 2026)
+
+On the real Honor external display (1920×1080), injected Android key events
+targeted to logical display 334 moved focus right from Galaxy Patrol to Luigi's
+Mansion, A opened its details with Play Now focused (the game was not launched),
+and B returned to Home. X opened the Store's on-screen search keyboard and B
+closed it with an empty query. The user-facing status still reported the
+controller disconnected, so this confirms GameBox's HDMI key-event/UI paths
+under synthetic input only—not Bluetooth hardware/controller operation.
+Captures: `honor-tv-before-synthetic-input.png`,
+`honor-tv-after-synthetic-dpad-right.png`,
+`honor-tv-after-synthetic-confirm.png`,
+`honor-tv-after-synthetic-back.png`, `honor-tv-after-synthetic-search.png`,
+and `honor-tv-search-closed.png` in `docs/evidence/hardware-run-2026-10-06/`.
+
+### HDMI Download Manager route (6 October 2026)
+
+From Store, the Menu quick-action dialog was opened, Down was sent three times
+to focus Downloads, and A opened Download Manager on the physical TV. The
+screen showed an empty active queue, four completed records, three browser
+downloads marked “Added to Library,” Galaxy Patrol completed, and 437.1 GB
+free. This confirms the TV route and that existing persisted completion/import
+records are visible. No transfer was started; this does not re-verify browser
+download persistence through app exit/restart or a new DownloadManager-to-import
+flow. Evidence: `docs/evidence/hardware-run-2026-10-06/honor-tv-quick-actions.png`
+and `docs/evidence/hardware-run-2026-10-06/honor-tv-download-manager-route.png`.
+
+### Home-to-Vimm search and results (6 October 2026)
+
+Fixed the Home “Open Vimm Lair in GameBox” route: it now opens Store with the
+configured Vimm source focused, and activating that source with an empty query
+opens the controller keyboard. Submitting a non-empty query now actually runs
+Vimm discovery instead of only dismissing the keyboard. On the real Honor HDMI
+display, followed the Home CTA, entered `MARIO`, and verified 65 results
+grouped into console rows with artwork. No result details were opened and no
+download was started. This was exercised with HDMI-targeted synthetic/touch
+input; the Bluetooth controller is still reported disconnected, so physical
+controller input remains unverified. Evidence includes
+`honor-tv-home-vimm-route.png`, `honor-tv-vimm-keyboard.png`, and
+`honor-tv-vimm-fixed-results.png` in
+`docs/evidence/hardware-run-2026-10-06/`.
+
+The targeted unit test and `assembleDebug` passed, and the updated APK was
+installed in place on the Honor. A subsequent local `lintDebug` attempt could
+not initialize Gradle's Windows native library under the sandbox; `git
+diff --check` reported no whitespace errors (only existing line-ending
+warnings). No game files or user data were changed.
+
+### Vimm WebView controller focus follow-up (6 October 2026)
+
+The user reported that the Vimm page's Download control could not be pressed.
+On the physical Honor TV, Android exposed the Wireless Controller as a gamepad,
+but the tracked Vimm WebView was not focused when opened. Added explicit
+WebView focus on primary and popup creation, and translate gamepad D-pad
+directions to forward/reverse Tab navigation (keyboard arrows remain unchanged).
+Added a focused unit test for the direction mapping. `testDebugUnitTest`,
+`assembleDebug`, `lintDebug`, and `git diff --check` passed; the build was
+installed in place on the Honor. After install, GameBox reported the Wireless
+Controller connected and its Home-to-Store Vimm shortcut opened with focus.
+The final physical D-pad-to-web-control check remains unverified: a fresh Vimm
+search returned no results, so I could not reopen a game detail/browser page on
+the updated build. An existing Mario Party Advance Download Manager item showed
+0 B transferred; it was neither started nor cancelled during this test.
+
+### Quick Actions Downloads controller navigation (7 October 2026)
+
+Made the Quick Actions rows use explicit vertical focus order, so three D-pad
+Down presses from the default Search row focus Downloads, and Up reverses the
+sequence. Added a regression test for reaching Downloads and activating it.
+`testDebugUnitTest`, `assembleDebug`, and `lintDebug` passed; the APK was
+updated in place on Honor without clearing app data. Verified on the physical
+HDMI display by sending Menu, three D-pad Down, and A key events: Downloads
+visibly received focus and opened the Download Manager. The Android
+instrumentation runner crashed on Honor for the Compose instrumentation tests,
+so that regression test compiled but did not produce a passing runner result.
+No download was started or modified. Evidence:
+`docs/evidence/hardware-run-2026-10-07/honor-tv-quick-actions-downloads-focused.png`
+and `docs/evidence/hardware-run-2026-10-07/honor-tv-download-manager-opened.png`.
+
+### Downloads-first Quick Actions follow-up (7 October 2026)
+
+The user still could not reach Downloads reliably. Changed the initial Quick
+Actions focus from Search to Downloads, keeping the remaining actions below it.
+On the connected Honor HDMI display, Downloads showed the focus ring immediately
+after opening Menu; sending the controller-A key event opened Download Manager.
+This was a display-targeted synthetic Android key test, not a physical button
+press. `compileDebugAndroidTestKotlin` and `testDebugUnitTest` passed, and the
+updated APK was installed in place without clearing data. No transfer was
+started. The HONOR desktop dock remained visible at the bottom during this
+capture, so the taskbar-hidden/fullscreen requirement remains open. Evidence:
+`docs/evidence/hardware-run-2026-10-07/honor-tv-downloads-first-focused.png`
+and `docs/evidence/hardware-run-2026-10-07/honor-tv-downloads-first-activated.png`.
+
+### HONOR Dock fullscreen behavior for GameBox (7 October 2026)
+
+On the Honor PGT-N19 HDMI display, GameBox already occupied the complete
+1920×1080 Android window, but HONOR's Dock overlaid the bottom edge. Opening
+GameBox's Dock menu and selecting **Open in full screen mode** hid the Dock;
+Download Manager remained full-bleed after Back → Menu → A. A subsequent
+`adb install -r` and app relaunch made the Dock visible again, so the OEM
+per-app setting must be re-applied after this update/relaunch path. No global
+taskbar setting was changed. Updated Display settings guidance now includes
+GameBox itself. JVM tests, Android-test compilation, and APK assembly passed;
+the updated build was installed in place. Current HDMI session is left on Home
+with HONOR's Dock visible. Evidence:
+`docs/evidence/hardware-run-2026-10-07/honor-tv-download-manager-no-dock.png`
+and `docs/evidence/hardware-run-2026-10-07/honor-tv-after-update-dock-returned.png`.
+
+### Quick Actions D-pad traversal follow-up (7 October 2026)
+
+Removed Quick Actions' per-row Up/Down interception so Compose performs normal
+vertical focus traversal; Downloads remains first and receives initial focus.
+Added an instrumentation regression test for Down to Home and Up back to
+Downloads. `testDebugUnitTest` and `compileDebugAndroidTestKotlin` passed, and
+the APK was installed in place on the Honor without clearing data or running
+AndroidX Orchestrator. The current device check shows Azahar foreground on the
+HDMI session, so no controller keys were sent and live navigation remains
+unverified. The root GameBox input handler returns false for D-pad arrows, so it
+does not consume these navigation events.
+
+### Honor controller/display recheck (7 October 2026)
+
+The next read-only device check now enumerates `Wireless Controller` and
+`Wireless Controller Touchpad` as gamepad-capable input devices; Android reports
+controller number 1 and 85% battery. The HDMI surface remains active at
+1920×1080, and the external activity stack still has Azahar foreground. This
+confirms the controller is paired/connected at the Android input layer, but
+does not prove GameBox receives physical events or that Quick Actions navigates
+correctly. No keys were injected while Azahar was foreground.
+`lintDebug` also passed on the same source state (0 errors, 21 existing
+warnings).
+
+### Quick Actions actual-HDMI smoke test (7 October 2026)
+
+On the active 1920×1080 Honor TV, opened GameBox from the idle desktop. The
+Downloads item received initial focus; one synthetic D-pad Down moved focus to
+Home. After reopening Quick Actions, synthetic D-pad Center on the focused
+Downloads row opened Download Manager, which showed an empty queue. The TV
+status changed to `Not connected` for the controller during the run. A
+synthetic `BUTTON_A` did not activate Downloads; because the physical pad was
+not connected at that point, this does not establish a physical-A defect.
+Reverse Up traversal was not confirmed. This is hardware-display software-input
+evidence, not physical-controller acceptance; no transfer was started. Current
+captures:
+`docs/evidence/hardware-run-2026-10-07/honor-tv-download-manager-quick-actions-focus-followup.png`
+and `docs/evidence/hardware-run-2026-10-07/honor-tv-download-manager-final.png`.
+
+### Quick Actions HDMI navigation check (7 October 2026)
+
+Launched GameBox on the idle Honor HDMI desktop (1920×1080). With Menu injected
+to the external display, the Downloads row visibly received initial focus.
+One injected D-pad Down moved focus to Home. An injected `KEYCODE_BUTTON_A`
+did not activate the row; after reopening Quick Actions, injected
+`KEYCODE_DPAD_CENTER` did open Download Manager. GameBox showed the controller
+as disconnected during this sequence, so this verifies the real-TV software
+focus/action route only, not physical Bluetooth A/D-pad behavior. The attempted
+Up capture did not show the dialog, so reverse navigation is not counted as
+verified. The manager showed an empty queue; no transfer was started. Evidence:
+`docs/evidence/hardware-run-2026-10-07/honor-tv-downloads-first-focused.png`,
+`docs/evidence/hardware-run-2026-10-07/honor-tv-download-manager-quick-actions-focus-followup.png`,
+and `docs/evidence/hardware-run-2026-10-07/honor-tv-download-manager-opened-after-dpad-center.png`.
+
+### Late archive-corruption cleanup regression (7 October 2026)
+
+Added a ZIP fixture with a valid first game file and a corrupt later DEFLATED
+entry. The test proves extraction fails and removes the entire staging output,
+including the already-written first file. `RomArchiveExtractorTest` passes;
+the full JVM suite passes with 783 tests across 213 suites, 0 failures, 0
+errors, and 1 skip. `git diff --check` reports no whitespace errors (only the
+repository's existing LF-to-CRLF notices). This covers the corruption/rollback
+software case; physical DocumentsUI import and storage-failure scenarios remain
+open.
+
+### SAF permission-revocation recovery (7 October 2026)
+
+The shared source-staging boundary now treats `SecurityException` while opening
+a selected document as unavailable, allowing the UI to ask the user to select
+the file again rather than displaying a generic import failure. A unit test
+proves this path leaves no staged files. Full gate passed: 784 JVM tests across
+214 suites, 0 failures/errors, 1 skip; Android-test Kotlin compilation, lint
+(0 errors, 21 warnings), and APK assembly also passed. The new APK was not
+installed because no controller was connected; physical SAF grant-revocation
+behavior remains unverified.
+
+### Make Downloads directly reachable in the main navigation (7 October 2026)
+
+Downloads is now included in the top-level tab sequence as well as the existing
+header and Quick Actions shortcuts. This gives controller users another direct
+route to Download Manager when Quick Actions focus/input is unreliable. The
+Honor input-device check at the time of the report showed no active Bluetooth
+controller, so physical controller acceptance still needs a connected-pad test.
+
+### Downloads navigation verified on actual Honor HDMI (9 October 2026)
+
+On the Honor PGT-N19 and 1920×1080 HDMI display, used the PC Hub's **Show on
+TV** action to start GameBox on the external display. The current Android
+logical display ID was 3 (the old ID 334 was stale); sending input to 334 had
+no effect. With the correct ID, spaced synthetic R1 key events visibly moved
+Home → Library → Downloads, where Download Manager rendered its empty queue.
+The standard Menu key opened Quick Actions with Downloads initially focused,
+and synthetic A closed the dialog back to Download Manager. HONOR's per-app
+**Open in full screen mode** option hid the bottom dock and transient title
+controls; the settled 1920×1080 capture shows the full-screen manager. Evidence:
+`docs/evidence/hardware-run-2026-10-09/honor-tv-downloads-fullscreen.png`,
+`docs/evidence/hardware-run-2026-10-09/honor-tv-quick-actions-downloads-focused.png`,
+and `docs/evidence/hardware-run-2026-10-09/honor-tv-quick-actions-downloads-activated.png`.
+Android reported only keyboard/DPAD input and GameBox displayed `Not connected`,
+so this is actual-TV synthetic-input coverage, not physical Bluetooth-controller
+acceptance. No download was started.
+
+### Game-details Vimm action routing verified on actual Honor HDMI (9 October 2026)
+
+Fixed the game-details **Download** action to set the same pending Vimm-search
+request as the Home shortcut before opening Store. Previously it requested
+generic Store search, which could show the general search keyboard instead of
+focusing Vimm Lair. Targeted `GameBoxUiStateTest` and `PrimaryNavigationTest`
+passed, and `assembleDebug` succeeded. Installed on the Honor and verified the
+TV flow: Galaxy Patrol details → Store with **Search Vimm's Lair** focused → A
+opens the controller keyboard → B submits a Vimm search, which completed with
+zero matches. The synthetic D-pad text-entry attempt produced the accidental
+query `CELWQRW`, so this verifies handoff and search submission, not query
+correction/accuracy. Only metadata search ran; no game result was opened or
+downloaded. Bluetooth controller remained disconnected, so physical-pad
+acceptance of the Details action is still open.
+
+### Full unit suite and UI-test compilation follow-up (9 October 2026)
+
+The full JVM suite initially caught a stale transition assertion: Downloads had
+been promoted into the primary tab sequence, but its test still expected the
+old vertical-stack motion. Updated the assertion to match the current tab
+contract (Home → Downloads moves horizontally). Re-ran the full suite: 784
+tests across 214 suites, 0 failures/errors, 1 skip; Android UI-test Kotlin
+compilation also succeeded. The Honor HDMI screen was checked afterward and
+remained full-screen with the Store search keyboard closed. Follow-up actual-TV
+testing of the Vimm vault page is recorded below.
+
+### Vimm webpage Download focus verified on actual Honor HDMI (9 October 2026)
+
+The Vimm vault page contained many links before its Download control, so the
+browser's ordinary tab traversal made controller navigation impractical. The
+Vimm-only page-finished handler now focuses and scrolls the exact Download
+control into view (it does not activate it). On the Honor PGT-N19 HDMI screen,
+the Download button showed the focus outline on arrival; one synthetic D-pad
+Down moved focus to Play Online, and D-pad Up returned it to Download. This
+confirms the web page focus path, but not physical Bluetooth-controller input.
+Evidence: `docs/evidence/hardware-run-2026-10-09/honor-tv-vimm-download-focused.png`.
+The page was God of War: Chains of Olympus; the copyrighted Download control was
+not activated and no game binary was downloaded. Full suite: 784 JVM tests
+across 214 suites, 0 failures/errors, 1 skip; Android UI-test Kotlin compilation
+and APK assembly passed. HONOR full-screen mode was restored for the browser.
+
+### Vimm controller A activation verified on actual Honor HDMI (9 October 2026)
+
+Found a remaining WebView input gap: although the Download button received DOM
+focus and Android translated controller A to D-pad-center, A did not reliably
+activate a focused webpage control. Vimm pages now consume the controller A
+press and click the active DOM element on key-up; other hosts retain the native
+key path. Installed the updated APK on the Honor PGT-N19 and tested on the
+1920×1080 wired TV display: opened the God of War: Chains of Olympus vault page,
+moved focus from Download to the safe **More...** link, and sent synthetic
+gamepad A. The link expanded the vault metadata (MD5/SHA-1 appeared), confirming
+the page-control activation path. D-pad Down then focused Download again. The
+copyrighted Download control was not activated and no file transfer occurred.
+HONOR's per-app **Open in full screen mode** was reapplied; the settled TV
+capture shows the Download control focused with no dock/taskbar or window bar.
+Evidence: `docs/evidence/hardware-run-2026-10-09/honor-tv-vimm-controller-a-safe-control.png`
+and `docs/evidence/hardware-run-2026-10-09/honor-tv-vimm-download-focused.png`.
+Verification: 784 JVM tests, 0 failures/errors, 1 skipped; Android UI-test
+Kotlin compilation and debug APK assembly passed; `lintDebug` passed with 0
+errors and 23 warnings. The physical Bluetooth pad was
+still disconnected, so controller acceptance used injected gamepad key events.
+
+After the test page was left with Download focused, a later TV observation
+showed a God of War browser transfer in GameBox's Download Manager at 194.8 MB
+of 1.0 GB (18%, 0 B/s), and the footer identified a Wireless Controller. I did
+not activate Download or interact with that transfer; who started it is
+unconfirmed. The app has surfaced it in the durable queue, but completion,
+verification, and import were not tested. The user was notified and asked to
+confirm whether the transfer was intentional. Evidence:
+`docs/evidence/hardware-run-2026-10-09/honor-tv-browser-download-queued-observed.png`.
+
+### PPSSPP full-screen presentation verified on actual Honor HDMI (9 October 2026)
+
+Observed the active PPSSPP game on the wired 1920×1080 Honor TV output after
+selecting HONOR's per-app **Open in full screen mode** action. The settled
+capture has no app title bar, no HONOR dock/taskbar, and no PPSSPP touch-button
+overlay; the game retains its native aspect ratio with side bars. A small
+PPSSPP menu affordance remains at the top center. No gameplay input was sent.
+This verifies presentation only, not the physical controller or long-session
+stability. Evidence: `docs/evidence/hardware-run-2026-10-09/honor-tv-ppsspp-fullscreen.png`.
+
+### Follow-up host verification limitation (9 October 2026)
+
+On the first sandboxed attempt, Android Studio's SDK `adb.exe` could not start
+its local server on TCP 5037. A fresh Gradle gate likewise failed to initialize
+its Windows native services because sandbox access to Gradle's native-cache
+lock was denied. Both were resolved by allowing the test process access to its
+existing Gradle/ADB host state; details and the successful host rerun follow.
+No UI input was sent during the read-only device inspection.
+
+### Host-side verification rerun (9 October 2026)
+
+After granting the build process access to Gradle's existing native cache, the
+offline verification gate completed successfully. Then forced test execution
+and Android-test Kotlin recompilation: 784 tests across 214 suites, 0 failures,
+0 errors, 1 skipped; `compileDebugAndroidTestKotlin` passed. The full gate also
+reported `lintDebug` and `assembleDebug` successful (the latter tasks were
+up-to-date). Compiler emitted existing nullable-`File` warnings in test code.
+This remains host-side evidence; it does not replace the outstanding physical
+controller and live-TV session checks.
+
+### Current Store/Vimm entry observed on actual Honor HDMI (9 October 2026)
+
+ADB read-only inspection now confirms the Honor PGT-N19 HDMI display is active
+at 1920×1080 and GameBox is showing Store with PSP selected, God of War:
+Chains of Olympus art/details, and the **Search Vimm's Lair** source entry.
+Android's input service currently enumerates **Wireless Controller Touchpad**
+with gamepad/joystick sources, and GameBox's footer says **Wireless
+Controller**. No key event was sent; this does not prove physical-button
+navigation or Download activation. Evidence:
+`docs/evidence/hardware-run-2026-10-09/honor-tv-store-vimm-entry-readonly.png`.
+The latest 1,200 Android error-log lines had no matching GameBox/emulator fatal
+exception or ANR entries; this is only a recent-log spot check, not a soak test.
+
+### Vimm search-to-details and completed queue observed on actual Honor HDMI (9 October 2026)
+
+On the 1920×1080 HDMI display, synthetic gamepad D-pad Right/Down moved visible
+focus through Store controls to **Search Vimm's Lair**. Synthetic A opened the
+search; the results appeared under PSP with three matches. Focus traversal from
+the Vimm source action landed on the rightmost card; D-pad Left twice focused
+the first match, and synthetic A opened its GameBox details. After the details
+settled, they reported that a temporary download had been verified, moved, and
+added to the Library. The details also reported that extra source details could
+not be loaded. Activating the view-only **View Download Manager** action showed
+0 active, 0 queued/paused, and 1 completed browser download marked **Added to
+Library** / **Ready**. Its UI filename is a Europe/Australia `.7z` variant,
+different from the USA archive in the local test-games folder.
+
+This appears to be the previously observed transfer that was already around
+18% before this test. I did not start, retry, pause, cancel, open, or launch
+that item; who initiated it is still unknown. No Vimm webpage Download control
+was activated. The test proves Store search/result/details and completed-queue
+visibility on TV using injected gamepad events, not physical-controller
+acceptance or the Download click itself. Evidence:
+`docs/evidence/hardware-run-2026-10-09/honor-tv-vimm-search-results.png`.
+GameBox's footer alternated between
+**Wireless Controller** and **Not connected** during the checks, so physical
+connection stability also remains open. Evidence:
+`docs/evidence/hardware-run-2026-10-09/honor-tv-vimm-first-result-focused.png`,
+`docs/evidence/hardware-run-2026-10-09/honor-tv-vimm-result-details-settled.png`,
+and `docs/evidence/hardware-run-2026-10-09/honor-tv-vimm-download-manager-completed.png`.
+
+### Vimm controller Download follow-up (9 October 2026)
+
+Addressed the reported controller failure in two places. Game Details now has an
+explicit D-pad Down route from its primary action to the Vimm **Download**
+entry, with an Android UI test covering focus and A activation. In
+`TrackedSourceBrowserActivity`, removed the Vimm-only JavaScript `.click()`
+interception for controller A; A is now translated to native D-pad-center
+activation so WebView handles the focused control as a real key activation,
+which is required for sites that gate downloads on trusted user gestures.
+
+Installed the rebuilt APK on the Honor PGT-N19 and tested on its HDMI output.
+Injected D-pad Down focused the Vimm button, and A opened Store. Using only the
+on-screen controller keyboard, D-pad, and A, entered `CRASH`, selected PSP,
+searched Vimm, and received 10 PSP metadata results with box art. No webpage
+Download control was activated and no transfer was started or changed. The
+physical Bluetooth controller showed **Not connected** after the reinstall, so
+these were injected-key tests. The in-app Vimm webpage's native A-to-Download
+activation remains unverified on live hardware; no copyrighted binary was
+downloaded. Evidence:
+`docs/evidence/hardware-run-2026-10-09/honor-tv-vimm-download-action-focus-2026-10-09.png`,
+`docs/evidence/hardware-run-2026-10-09/honor-tv-vimm-cta-store-open-2026-10-09.png`,
+`docs/evidence/hardware-run-2026-10-09/honor-tv-controller-search-query-2026-10-09.png`,
+and `docs/evidence/hardware-run-2026-10-09/honor-tv-vimm-metadata-results-2026-10-09.png`.
+
+Host gate passed after the change: unit tests, Android UI-test Kotlin
+compilation, `lintDebug`, and `assembleDebug`. Reinstalling reset HONOR's
+per-app fullscreen preference; maximizing removed the window bar, but the
+bottom HONOR taskbar remains visible. The previous completed browser transfer
+was not touched.
+
+### Vimm download-button report follow-up (9 October 2026)
+
+The Honor remains connected to the 1920x1080 HDMI display. Android currently
+enumerates the Bluetooth Wireless Controller as a GAMEPAD/JOYSTICK device.
+GameBox was on Downloads during this check, showing a Vimm-related browser
+transfer (`Crash of the Titans`, PSP, 7%, 50.0 MB of 703.4 MB) in the Browser
+downloads section. This indicates that a Vimm download was accepted and tracked
+by GameBox at some point; I did not initiate, pause, cancel, or otherwise
+interact with that transfer. I therefore did not retry a protected game
+download. This is not a physical-controller acceptance test, and it does not
+prove which input started the transfer or that the user can reliably focus the
+Download control. Evidence: `docs/evidence/hardware-run-2026-10-09/honor-tv-vimm-download-manager-active-observed-2026-10-09.png`.
+
+Source review confirms browser arrows are translated to forward/reverse Tab,
+and controller A to native DPAD_CENTER before WebView dispatch. Existing tests
+cover those mappings and Game Details focus routing; they do not cover focus
+and activation on Vimm's live page. No source changes were made this turn.
+
+Repeated the offline `testDebugUnitTest` task with `--rerun-tasks`; it completed
+successfully (25 tasks executed). On the following HDMI screenshot, the already
+active browser transfer had advanced to **Verifying & importing**, extracting
+archive file 1/1 at 73%. This independently verifies that the transfer is
+present in GameBox's Browser downloads UI and the automatic archive-import
+pipeline is progressing. No button event was sent by ADB during this step, and
+the user has not yet confirmed the requested physical D-pad press. I did not
+launch or otherwise test this commercial game. Evidence:
+`docs/evidence/hardware-run-2026-10-09/honor-tv-browser-import-progress-observed-2026-10-09.png`.
+
+### Browser-import completion recheck (9 October 2026)
+
+A later read-only capture of the same Honor HDMI Downloads screen shows no
+active or queued transfers, Completed = 2, and the Crash of the Titans browser
+record marked **Added to Library**. The God of War: Chains of Olympus browser
+record is also present as **Added to Library**. This confirms those imports
+reached GameBox's completed-list UI; it does not prove source-archive cleanup,
+content integrity, or emulator compatibility. I did not launch or modify
+either title. The completed state and titles are visible in
+`docs/evidence/hardware-run-2026-10-09/honor-tv-vimm-import-completed-observed-2026-10-09.png`.
+
+The gamepad continues to enumerate on Android, but the passive event listener
+received no input during the most recent ~25-second listen window. The user has
+not confirmed that a physical press occurred in that interval. A/B navigation
+and controller-only confirmation therefore remain unverified.
+
+### Galaxy Patrol legal gameplay and emulator display check (9 October 2026)
+
+On the physical Honor HDMI output, opened the bundled MIT-attributed Galaxy
+Patrol fixture from its Home collection card, confirmed the installed state,
+and launched it from the focused **Play Now** action. Android's resumed window
+was `com.retroarch/.browser.retroactivity.RetroActivityFuture`; the HDMI image
+rendered the ROM's `GAME OVER` screen. A passive listener on the paired
+Wireless Controller's `/dev/input/event13` observed actual `ABS_HAT0X` /
+`ABS_HAT0Y` transitions and button events while RetroArch was foreground.
+This confirms device-level input events and a real RetroArch launch, but it is
+not a complete mapping/gameplay acceptance test: the screen did not show a
+meaningful game session or a button-correlated state transition.
+
+Applied HONOR's visible per-app **Open in full screen mode** option for
+RetroArch. After it settled, the TV capture showed the game filling the HDMI
+surface with neither HONOR Dock nor RetroArch touch controls visible. This is
+an OEM per-app setting, not an app-controlled mode. Android Back did not exit
+RetroArch. Brought the existing GameBox activity forward, then used HONOR's
+normal taskbar **Quit** menu for RetroArch; GameBox returned to Galaxy Patrol
+details, and the RetroArch taskbar menu subsequently reported **Start in
+Windowed Mode**, confirming the fullscreen preference persisted. This is a
+manual OEM exit, not a controller-only return. Evidence:
+`docs/evidence/hardware-run-2026-10-09/honor-tv-galaxy-patrol-fullscreen-no-overlay.png`
+and
+`docs/evidence/hardware-run-2026-10-09/honor-tv-galaxy-patrol-returned-to-gamebox.png`.
+
+The user was asked for a physical B press on Galaxy Patrol details, but the
+passive listener received no event during that observation window. Do not
+claim physical GameBox B/back navigation or a controller-only emulator exit.
+
+### TV focus route into GameBox's Vimm entry (9 October 2026)
+
+On the external Honor HDMI display, GameBox visibly moved focus from Galaxy
+Patrol's **Play Now** action to its Vimm **Download** action after one
+synthetic D-pad Down. Synthetic D-pad Center on that action opened Store with
+**Search Vimm's Lair** focused. This confirms the in-app details-to-Store
+controller route on the TV; it does not test the physical controller or the
+live Vimm webpage's Download control. No title was opened or downloaded.
+Evidence:
+`docs/evidence/hardware-run-2026-10-09/honor-tv-vimm-focus-synthetic-dpad.png`
+and
+`docs/evidence/hardware-run-2026-10-09/honor-tv-vimm-search-entry-synthetic-a.png`.
+Selecting the focused source entry opened GameBox's controller search
+keyboard, and synthetic B closed it back to Store. That covers this
+in-app text-entry/back route, not WebView navigation or its Download control.
+Evidence:
+`docs/evidence/hardware-run-2026-10-09/honor-tv-search-keyboard-open-synthetic-a.png`
+and
+`docs/evidence/hardware-run-2026-10-09/honor-tv-search-keyboard-closed-synthetic-b.png`.
+
+### Vimm preset and selectable console names cross-check (10 October 2026)
+
+Added an assertion that every platform in the user-requested Vimm default
+preset has a matching selectable Store filter. The existing source tests also
+verify the preset order, each supported Vimm vault slug/import profile, and
+the explicit no-mapping state for 3DS and Switch; Settings explains why those
+two are skipped. The focused `StoreConsoleTest` suite passed (4 tests, 0
+failures). This closes the preset-to-filter drift check, not the separate
+live-browser/download/import acceptance gate.
+
+Android's current input inventory did not list a Bluetooth gamepad, matching
+GameBox's **Not connected** indicator. A targeted Honor instrumentation run
+was built successfully with one Gradle worker and a 3 GB heap after the
+default 2 GB build exhausted memory, but Compose tests launched on the phone's
+default display rather than the external TV. That run was stopped and is not
+counted as TV acceptance. The fresh offline JVM unit suite passed (25 tasks
+executed). Physical controller input and Vimm WebView Download activation
+remain unverified.
+
+### Synthetic GAMEPAD-source Vimm search on the external TV (10 October 2026)
+
+Android exposes a shell input source that labels injected keys as GAMEPAD, so
+I used it on the external HDMI display to exercise GameBox's gamepad-specific
+event path despite the Bluetooth controller being absent. GAMEPAD A opened
+the Vimm source search; D-pad/A entered `CAVE`; A on **Search** completed a
+lookup across the configured consoles. The screen reported **10 results**
+grouped by console. No result was activated and no file was downloaded. This
+verifies the Store keyboard and configured-source search path with synthetic
+events, not a physical controller or the live Vimm WebView Download control.
+Evidence:
+`docs/evidence/hardware-run-2026-10-10/honor-tv-vimm-search-keyboard-gamepad-a.png`,
+`docs/evidence/hardware-run-2026-10-10/honor-tv-vimm-keyboard-gamepad-typed-c.png`,
+and
+`docs/evidence/hardware-run-2026-10-10/honor-tv-vimm-search-results-cave.png`.
+
+### Tracked WebView controller event-source normalization (10 October 2026)
+
+The reported failure is after the Vimm button is visibly focused. The browser
+previously translated controller A to Enter but retained the original GAMEPAD
+event source. It now translates D-pad movement to Tab and A to D-pad Center,
+normalizing translated events to Android's keyboard source while preserving
+timing, repeat, device ID, scan code, flags and meta state.
+The tracked WebView instrumentation regression now creates a GAMEPAD A event,
+passes it through the same conversion used by `TrackedSourceBrowserActivity`,
+asserts the keyboard source, and checks that focused `_blank` download activation
+retains WebView's trusted-popup signal.
+
+The current full gate passes: 792 JVM tests (one skipped), Android-test Kotlin
+compilation, APK assembly, and lint (0 errors, 24 warnings). The APK was
+installed over the existing Honor app without clearing data. The WebView
+regression has not completed on-device: the Honor went asleep during the
+instrumentation run, HDMI is disconnected, and no GAMEPAD/JOYSTICK is
+enumerated. A redistributable download and physical A-button test remain
+outstanding.
+
+### Exact game ownership during uninstall (10 October 2026)
+
+`GameOwnedContentUninstaller` previously accepted a recorded import path if the
+selected game ID appeared anywhere in the directory chain. A malformed entry
+could therefore reference `imports/other/<selected-game-id>/...`. Validation
+now accepts only the legacy `imports/<game>/...` shape or the managed
+`imports/<known-console>/<game>/...` shape. A regression confirms that an
+invalid later entry prevents deletion of every file in the manifest. Focused
+and full JVM tests pass, along with instrumentation compilation, APK assembly,
+and lint. External SAF uninstall behavior and the full save-preserving
+reinstall journey still need device validation.
+
+### Tracked browser external-display sizing (10 October 2026)
+
+The tracked source browser was explicitly declared non-resizable even though
+the dedicated external-display host is resizable. Changed the browser manifest
+entry to resizable and added a JVM manifest-contract test. The debug merged
+manifest reports `android:resizeableActivity="true"`; all 791 Android JVM tests
+pass, Android-test Kotlin compilation and APK assembly pass, and lint reports
+zero errors (26 warnings). Installed the update over the existing Honor app
+without clearing data. Actual Honor fullscreen/window-chrome acceptance is
+still pending because the phone is asleep and HDMI is not connected.
+
+### Partial uninstall state after mixed-storage failure (10 October 2026)
+
+External-library migration can leave a game with some content still in private
+storage and some already migrated to SAF. Uninstall removes the private files
+first. If SAF deletion then fails before deleting its first file, the external
+error previously reported zero removed files, so the coordinator could leave
+the game marked Installed despite the already-removed private files.
+
+`ContentRemovalFailed` now computes the aggregate files removed before and
+during the failing stage. `GameContentRemovalCoordinator` uses that total to set
+`MISSING_FILES` and report the accurate partial count, so the existing recovery
+and retry path remains available. Added regression coverage for the aggregate
+count. All 792 Android JVM tests pass; Android-test compilation, APK assembly,
+and lint pass (0 errors, 24 warnings). Installed the APK in place without
+clearing data. A real SAF-provider failure and reinstall round-trip remain
+unverified on hardware.
+
+### Windows companion core verification (10 October 2026)
+
+The installed .NET 8 SDK/runtime is available even though `dotnet` is not on
+PATH. Ran the current-source `GameBox.Windows.Core.Tests` console harness with
+Windows targeting enabled; it passed. Its default `%TEMP%` location was denied
+by the workspace sandbox, so the test process used the existing workspace
+`tmp` directory and cleaned its per-run test tree. This covers core checks only;
+the Windows UI and live Honor-to-PC companion flows remain outside this test.
+
+### Vimm controller download focus (10 October 2026)
+
+The Vimm WebView focus script previously selected a control using only the
+first nonempty label. Ordinary button text therefore masked a more useful
+`aria-label` such as “Download game”. It now checks visible text, input value,
+ARIA label and title separately, and assigns `tabindex=0` to a matching custom
+role-button so browser Tab navigation can reach it. A representative local
+WebView instrumentation test passes on Honor PGT-N19. The debug APK is
+installed in place with app data preserved. This does not prove physical
+controller activation or the live Vimm-to-Download-Manager handoff; the
+external TV display is currently off and the controller is unavailable.
+
+### Remove unused TheGamesDB metadata scraper (10 October 2026)
+
+`CatalogRuntime` enriches game rows through Wikidata and Libretro thumbnails;
+the old `TheGamesDbMetadataClient`/parser was not wired into that runtime. Removed
+that dead per-game scraper and its parser/cancellation tests, and moved the
+generic provider-candidate/search contracts into `GameMetadataSearchClient.kt`.
+Corrected README claims to match the wiring. The separate optional TheGamesDB
+catalog-sync UI/runtime remains because there is not yet a verified replacement
+for its cached title catalog; it may still contribute provider fields to rows it
+syncs, so the broader migration is not complete. Android JVM tests pass 783/783
+with one skip; Android-test Kotlin compilation, lint, and APK assembly pass. The
+APK was installed on Honor in place; TV visual/source acceptance remains pending.

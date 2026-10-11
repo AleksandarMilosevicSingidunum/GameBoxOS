@@ -20,6 +20,24 @@ class ImportRegistrationJournalTest {
     val temporary = TemporaryFolder()
 
     @Test
+    fun unsafePendingRecordIsRejectedBeforeCreatingJournalStorage() {
+        val files = temporary.newFolder("files")
+        val journal = ImportRegistrationJournal(files)
+
+        val result = runCatching {
+            journal.prepare(
+                gameId = GameId("unsafe-game"),
+                transactionId = UUID.randomUUID().toString(),
+                hadExistingTarget = false,
+                files = listOf(PendingImportFile("unsafe-game/../outside.iso", "a".repeat(64))),
+            )
+        }
+
+        assertTrue(result.isFailure)
+        assertFalse(File(files, "imports").exists())
+    }
+
+    @Test
     fun unregisteredNewImportIsRemovedOnRecovery() = runBlocking {
         val files = temporary.newFolder("files")
         val imports = File(files, "imports").apply { mkdirs() }
@@ -38,7 +56,7 @@ class ImportRegistrationJournalTest {
             resolve("game.iso").writeText("new")
         }
 
-        val report = journal.reconcile { null }
+        val report = ImportRegistrationRecovery(journal).reconcile { null }
 
         assertEquals(1, report.rolledBack)
         assertEquals(0, report.failures)
@@ -68,7 +86,7 @@ class ImportRegistrationJournalTest {
             resolve("game.iso").writeText("new")
         }
 
-        val report = journal.reconcile { null }
+        val report = ImportRegistrationRecovery(journal).reconcile { null }
 
         assertEquals(1, report.rolledBack)
         assertEquals("old", target.resolve("game.iso").readText())
@@ -115,7 +133,7 @@ class ImportRegistrationJournalTest {
         )
         assertTrue(journal.matchesRegisteredGame(pending, registered))
 
-        val report = journal.reconcile { registered }
+        val report = ImportRegistrationRecovery(journal).reconcile { registered }
 
         assertEquals(1, report.confirmed)
         assertEquals("new", target.resolve("game.iso").readText())
@@ -155,7 +173,7 @@ class ImportRegistrationJournalTest {
             ),
         )
 
-        val report = journal.reconcile { registered }
+        val report = ImportRegistrationRecovery(journal).reconcile { registered }
 
         assertEquals(1, report.failures)
         assertEquals(0, report.rolledBack)
@@ -186,7 +204,7 @@ class ImportRegistrationJournalTest {
             resolve("game.iso").writeText("new")
         }
 
-        val report = journal.reconcile { null }
+        val report = ImportRegistrationRecovery(journal).reconcile { null }
 
         assertEquals(1, report.rolledBack)
         assertEquals("old", target.resolve("game.iso").readText())
@@ -212,7 +230,7 @@ class ImportRegistrationJournalTest {
             resolve("game.iso").writeText("new")
         }
 
-        val report = journal.reconcile { null }
+        val report = ImportRegistrationRecovery(journal).reconcile { null }
 
         assertEquals(1, report.failures)
         assertEquals(1, journal.pending().size)
@@ -239,7 +257,8 @@ class ImportRegistrationJournalTest {
             listOf(PendingImportFile("current-game/game.iso", sha256("current"))),
         )
 
-        val report = journal.reconcile(gameLookup = { null }, createdBeforeMillis = 1_500L)
+        val report = ImportRegistrationRecovery(journal)
+            .reconcile(gameLookup = { null }, createdBeforeMillis = 1_500L)
 
         assertEquals(1, report.rolledBack)
         assertEquals(listOf("current-game"), journal.pending().map { it.gameId })
@@ -263,7 +282,7 @@ class ImportRegistrationJournalTest {
             listOf(PendingImportFile("same-game/b.iso", "e".repeat(64))),
         )
 
-        val report = journal.reconcile { null }
+        val report = ImportRegistrationRecovery(journal).reconcile { null }
 
         assertEquals(2, report.failures)
         assertEquals(2, journal.pending().size)

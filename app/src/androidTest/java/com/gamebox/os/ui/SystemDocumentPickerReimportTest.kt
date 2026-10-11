@@ -7,10 +7,16 @@ import android.os.Environment
 import android.os.SystemClock
 import android.provider.MediaStore
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -28,6 +34,7 @@ import com.gamebox.os.domain.GameId
 import com.gamebox.os.domain.InstallState
 import com.gamebox.os.importer.AuthorizedRomImporter
 import com.gamebox.os.importer.RomImportPolicy
+import org.apache.commons.compress.archivers.sevenz.SevenZOutputFile
 import java.io.File
 import java.nio.file.Files
 import java.security.MessageDigest
@@ -44,6 +51,7 @@ import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -64,7 +72,15 @@ class SystemDocumentPickerReimportTest {
         val database = Room.inMemoryDatabaseBuilder(app, GameBoxDatabase::class.java).build()
         val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
         val fileName = "gamebox-picker-" + UUID.randomUUID().toString().take(8) + ".iso"
+        val archiveName = fileName.removeSuffix(".iso") + ".7z"
         val payload = "synthetic owned game bytes for Android DocumentsUI".toByteArray()
+        val payloadFile = root.resolve(fileName).apply { writeBytes(payload) }
+        val archiveFile = root.resolve(archiveName)
+        SevenZOutputFile(archiveFile).use { sevenZip ->
+            sevenZip.putArchiveEntry(sevenZip.createArchiveEntry(payloadFile, "nested/$fileName"))
+            sevenZip.write(payload)
+            sevenZip.closeArchiveEntry()
+        }
         val hash = sha256(payload)
         val gameId = GameId("picker-e2e-" + UUID.randomUUID().toString().take(8))
         val retained = Game(
@@ -103,8 +119,8 @@ class SystemDocumentPickerReimportTest {
 
             val resolver = app.contentResolver
             val values = ContentValues().apply {
-                put(MediaStore.MediaColumns.DISPLAY_NAME, fileName)
-                put(MediaStore.MediaColumns.MIME_TYPE, "application/octet-stream")
+                put(MediaStore.MediaColumns.DISPLAY_NAME, archiveName)
+                put(MediaStore.MediaColumns.MIME_TYPE, "application/x-7z-compressed")
                 put(
                     MediaStore.MediaColumns.RELATIVE_PATH,
                     Environment.DIRECTORY_DOWNLOADS,
@@ -114,7 +130,7 @@ class SystemDocumentPickerReimportTest {
             sharedDocument = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)
             assertNotNull("Could not create the document-picker fixture", sharedDocument)
             resolver.openOutputStream(requireNotNull(sharedDocument), "w")!!.use { output ->
-                output.write(payload)
+                output.write(archiveFile.readBytes())
             }
             values.clear()
             values.put(MediaStore.MediaColumns.IS_PENDING, 0)
@@ -123,19 +139,21 @@ class SystemDocumentPickerReimportTest {
             val importer = AuthorizedRomImporter(context)
             compose.setContent {
                 MaterialTheme {
-                    ImportedGameReimportCard(
-                        game = retained,
-                        importer = importer,
-                        repository = repository,
-                        enabled = true,
-                    )
+                    Column(Modifier.verticalScroll(rememberScrollState())) {
+                        ImportedGameReimportCard(
+                            game = retained,
+                            importer = importer,
+                            repository = repository,
+                            enabled = true,
+                        )
+                    }
                 }
             }
 
             compose.onNodeWithText("Locate files").assertIsDisplayed().performClick()
 
             val device = UiDevice.getInstance(InstrumentationRegistry.getInstrumentation())
-            val document = waitForDocument(device, fileName)
+            val document = waitForDocument(device, archiveName)
             document.click()
 
             // Some DocumentsUI builds return a single item immediately even when
@@ -148,13 +166,25 @@ class SystemDocumentPickerReimportTest {
             compose.waitUntil(timeoutMillis = 20_000) {
                 repository.game(gameId)?.state == InstallState.INSTALLED
             }
-            compose.onNodeWithText(
-                "Content verified and restored. Existing saves and history retained."
-            ).assertIsDisplayed()
+            // Repository registration completes before transaction/source
+            // cleanup and the busy flag settle. Wait for the final user-facing
+            // result, not merely the earlier catalog state transition.
+            compose.waitUntil(timeoutMillis = 20_000) {
+                compose.onAllNodesWithText("Content verified and restored.", substring = true)
+                    .fetchSemanticsNodes().isNotEmpty()
+            }
+            compose.onNodeWithText("Content verified and restored.", substring = true)
+                .performScrollTo()
+                .assertIsDisplayed()
 
             val installed = root.resolve(RomImportPolicy.managedRelativePath(gameId, fileName, "PSP"))
             assertArrayEquals(payload, installed.readBytes())
             assertEquals(hash, repository.game(gameId)?.localContentSha256)
+            assertTrue(
+                "Successfully reimported source should be removed",
+                resolver.query(requireNotNull(sharedDocument), null, null, null, null)
+                    ?.use { it.count == 0 } ?: true,
+            )
             assertFalse(
                 root.resolve("imports").listFiles().orEmpty().any { entry ->
                     entry.name.startsWith(".staging-" + gameId.value + "-") ||

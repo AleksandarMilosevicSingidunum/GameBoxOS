@@ -3,6 +3,7 @@ package com.gamebox.os.storage
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import androidx.core.net.toUri
 import androidx.documentfile.provider.DocumentFile
 import com.gamebox.os.settings.SettingsRepository
 
@@ -29,7 +30,7 @@ class EmulatorSaveStorageController(
         if (uriString.isNotBlank()) {
             runCatching {
                 applicationContext.contentResolver.releasePersistableUriPermission(
-                    Uri.parse(uriString),
+                    uriString.toUri(),
                     Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION,
                 )
             }
@@ -44,7 +45,7 @@ class EmulatorSaveStorageController(
                 message = "No emulator save root selected",
             )
         }
-        val uri = runCatching { Uri.parse(uriString) }.getOrNull()
+        val uri = runCatching { uriString.toUri() }.getOrNull()
             ?: return ExternalStorageStatus(ExternalStorageState.INVALID, message = "Stored save root is invalid")
         if (uri.scheme != "content") {
             return ExternalStorageStatus(ExternalStorageState.INVALID, message = "Stored save root is not a document tree")

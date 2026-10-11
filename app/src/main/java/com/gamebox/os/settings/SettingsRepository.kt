@@ -3,32 +3,25 @@ package com.gamebox.os.settings
 import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
-import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
-import androidx.datastore.preferences.core.floatPreferencesKey
-import androidx.datastore.preferences.core.longPreferencesKey
-import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import com.gamebox.os.catalog.CatalogCredentials
 import com.gamebox.os.catalog.CatalogProviderConfig
 import com.gamebox.os.catalog.CatalogTransport
-import com.gamebox.os.catalog.ProviderHealth
-import com.gamebox.os.catalog.ProviderHealthStatus
 import com.gamebox.os.source.GameSourceConfig
 import com.gamebox.os.source.decodeGameSourceConfigs
+import com.gamebox.os.source.defaultVimmLairGameSource
 import com.gamebox.os.source.encodeGameSourceConfigs
-import java.security.SecureRandom
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 
 private val Context.gameBoxDataStore: DataStore<Preferences> by preferencesDataStore(name = "gamebox_settings")
 
 data class GameBoxSettings(
     val safeAreaPercent: Float = 0f,
     val reducedMotion: Boolean = false,
+    val uiSoundEffectsEnabled: Boolean = true,
     val focusDebugOverlayEnabled: Boolean = false,
     val developerLayoutMode: DeveloperLayoutMode = DeveloperLayoutMode.AUTO,
     val catalogFailureSimulation: CatalogFailureSimulation = CatalogFailureSimulation.LIVE,
@@ -38,7 +31,6 @@ data class GameBoxSettings(
     val downloadsUnmeteredOnly: Boolean = true,
     val catalogSeededAtEpochMs: Long? = null,
     val catalogRefreshedAtEpochMs: Long? = null,
-    val theGamesDbHealth: ProviderHealth = ProviderHealth(),
     val catalogUrl: String = "",
     val catalogTransport: String = "HTTPS",
     val catalogBucket: String = "",
@@ -60,107 +52,19 @@ data class GameBoxSettings(
 )
 
 class SettingsRepository(private val context: Context) {
-    private val secretStore = AndroidKeystoreSecretStore(context.applicationContext)
-    val settings: Flow<GameBoxSettings> = context.gameBoxDataStore.data.map { preferences ->
-        GameBoxSettings(
-            safeAreaPercent = preferences[SAFE_AREA] ?: 0f,
-            reducedMotion = preferences[REDUCED_MOTION] ?: false,
-            focusDebugOverlayEnabled = preferences[FOCUS_DEBUG_OVERLAY] ?: false,
-            developerLayoutMode = DeveloperLayoutMode.fromStored(preferences[DEVELOPER_LAYOUT_MODE]),
-            catalogFailureSimulation = CatalogFailureSimulation.fromStored(preferences[CATALOG_FAILURE_SIMULATION]),
-            activeProfileName = preferences[ACTIVE_PROFILE] ?: "Local player",
-            showUnavailableGames = preferences[SHOW_UNAVAILABLE] ?: true,
-            showUnavailableShortcuts = preferences[SHOW_UNAVAILABLE_SHORTCUTS] ?: true,
-            downloadsUnmeteredOnly = preferences[DOWNLOADS_UNMETERED_ONLY] ?: true,
-            catalogSeededAtEpochMs = preferences[CATALOG_SEEDED_AT],
-            catalogRefreshedAtEpochMs = preferences[CATALOG_REFRESHED_AT],
-            theGamesDbHealth = ProviderHealth(
-                status = runCatching {
-                    ProviderHealthStatus.valueOf(
-                        preferences[THEGAMESDB_HEALTH_STATUS] ?: ProviderHealthStatus.NOT_CONFIGURED.name
-                    )
-                }.getOrDefault(ProviderHealthStatus.NOT_CONFIGURED),
-                lastAttemptAtMillis = preferences[THEGAMESDB_LAST_ATTEMPT],
-                lastSuccessAtMillis = preferences[THEGAMESDB_LAST_SUCCESS],
-                latencyMillis = preferences[THEGAMESDB_LATENCY],
-                retryAfterMillis = preferences[THEGAMESDB_RETRY_AFTER],
-                message = preferences[THEGAMESDB_HEALTH_MESSAGE],
-            ),
-            catalogUrl = preferences[CATALOG_URL] ?: "",
-            catalogTransport = preferences[CATALOG_TRANSPORT] ?: "HTTPS",
-            catalogBucket = preferences[CATALOG_BUCKET] ?: "",
-            catalogPrefix = preferences[CATALOG_PREFIX] ?: "",
-            catalogRegion = preferences[CATALOG_REGION] ?: "us-east-1",
-            gameSources = decodeGameSourceConfigs(preferences[GAME_SOURCES]),
-            externalLibraryUri = preferences[EXTERNAL_LIBRARY_URI] ?: "",
-            emulatorSaveRootUri = preferences[EMULATOR_SAVE_ROOT_URI] ?: "",
-            cloudSaveProvider = preferences[CLOUD_SAVE_PROVIDER] ?: "WEBDAV",
-            cloudSaveEndpoint = preferences[CLOUD_SAVE_ENDPOINT] ?: "",
-            cloudSaveRegion = preferences[CLOUD_SAVE_REGION] ?: "us-east-1",
-            companionEnabled = preferences[COMPANION_ENABLED] ?: false,
-            companionPort = (preferences[COMPANION_PORT] ?: 49_500).coerceIn(10_240, 65_535),
-            moonlightHost = preferences[MOONLIGHT_HOST] ?: "",
-            moonlightPort = (preferences[MOONLIGHT_PORT] ?: 47_984).coerceIn(1, 65_535),
-            platformEmulatorDefaults = decodePlatformDefaults(preferences[PLATFORM_EMULATOR_DEFAULTS]),
-            recentShortcutLaunches = decodeShortcutLaunchHistory(preferences[RECENT_SHORTCUT_LAUNCHES]),
-            hiddenShortcutPackages = decodeHiddenShortcutPackages(preferences[HIDDEN_SHORTCUT_PACKAGES]),
-        )
-    }
+    private val credentialStore = SettingsCredentialStore(context)
+    val settings: Flow<GameBoxSettings> = context.gameBoxDataStore.data.map(Preferences::toGameBoxSettings)
 
-    suspend fun theGamesDbApiKey(): String? = withContext(Dispatchers.IO) {
-        secretStore.get(THEGAMESDB_API_KEY)
-    }
-
-    suspend fun hasTheGamesDbApiKey(): Boolean = withContext(Dispatchers.IO) {
-        secretStore.contains(THEGAMESDB_API_KEY)
-    }
-
-    suspend fun setTheGamesDbApiKey(value: String?) = withContext(Dispatchers.IO) {
-        secretStore.put(THEGAMESDB_API_KEY, value)
-    }
-
-    suspend fun cloudSaveCredentials(provider: String): CatalogCredentials? = withContext(Dispatchers.IO) {
-        when (provider.uppercase()) {
-            "WEBDAV" -> CatalogCredentials(
-                username = secretStore.get(CLOUD_SAVE_USERNAME),
-                password = secretStore.get(CLOUD_SAVE_PASSWORD),
-            ).takeIf(CatalogCredentials::hasBasicAuth)
-            "S3" -> CatalogCredentials(
-                accessKey = secretStore.get(CLOUD_SAVE_ACCESS_KEY),
-                secretKey = secretStore.get(CLOUD_SAVE_SECRET_KEY),
-            ).takeIf(CatalogCredentials::hasS3Auth)
-            else -> null
-        }
-    }
+    suspend fun cloudSaveCredentials(provider: String): CatalogCredentials? =
+        credentialStore.cloudSaveCredentials(provider)
 
     suspend fun hasCloudSaveCredentials(provider: String): Boolean =
-        cloudSaveCredentials(provider) != null
+        credentialStore.cloudSaveCredentials(provider) != null
 
     suspend fun setCloudSaveCredentials(provider: String, identity: String?, secret: String?) =
-        withContext(Dispatchers.IO) {
-            when (provider.uppercase()) {
-                "WEBDAV" -> {
-                    secretStore.put(CLOUD_SAVE_USERNAME, identity)
-                    secretStore.put(CLOUD_SAVE_PASSWORD, secret)
-                    secretStore.put(CLOUD_SAVE_ACCESS_KEY, null)
-                    secretStore.put(CLOUD_SAVE_SECRET_KEY, null)
-                }
-                "S3" -> {
-                    secretStore.put(CLOUD_SAVE_ACCESS_KEY, identity)
-                    secretStore.put(CLOUD_SAVE_SECRET_KEY, secret)
-                    secretStore.put(CLOUD_SAVE_USERNAME, null)
-                    secretStore.put(CLOUD_SAVE_PASSWORD, null)
-                }
-                else -> require(false) { "Unsupported cloud save provider" }
-            }
-        }
+        credentialStore.setCloudSaveCredentials(provider, identity, secret)
 
-    suspend fun clearCloudSaveCredentials() = withContext(Dispatchers.IO) {
-        secretStore.put(CLOUD_SAVE_USERNAME, null)
-        secretStore.put(CLOUD_SAVE_PASSWORD, null)
-        secretStore.put(CLOUD_SAVE_ACCESS_KEY, null)
-        secretStore.put(CLOUD_SAVE_SECRET_KEY, null)
-    }
+    suspend fun clearCloudSaveCredentials() = credentialStore.clearCloudSaveCredentials()
 
     suspend fun setCloudSaveConfiguration(provider: String, endpoint: String, region: String) {
         require(provider.uppercase() in setOf("WEBDAV", "S3")) { "Unsupported cloud save provider" }
@@ -171,20 +75,11 @@ class SettingsRepository(private val context: Context) {
         }
     }
 
-    suspend fun companionPairingSecret(): String? = withContext(Dispatchers.IO) {
-        secretStore.get(COMPANION_PAIRING_SECRET)
-    }
+    suspend fun companionPairingSecret(): String? = credentialStore.companionPairingSecret()
 
-    suspend fun rotateCompanionPairingSecret(): String = withContext(Dispatchers.IO) {
-        val secret = ByteArray(32).also { SecureRandom().nextBytes(it) }
-            .joinToString("") { "%02x".format(it.toInt() and 0xff) }
-        secretStore.put(COMPANION_PAIRING_SECRET, secret)
-        secret
-    }
+    suspend fun rotateCompanionPairingSecret(): String = credentialStore.rotateCompanionPairingSecret()
 
-    suspend fun clearCompanionPairingSecret() = withContext(Dispatchers.IO) {
-        secretStore.put(COMPANION_PAIRING_SECRET, null)
-    }
+    suspend fun clearCompanionPairingSecret() = credentialStore.clearCompanionPairingSecret()
 
     suspend fun setCompanionConfiguration(enabled: Boolean, port: Int = 49_500) {
         require(port in 10_240..65_535) { "Companion port must be between 10240 and 65535" }
@@ -288,55 +183,23 @@ class SettingsRepository(private val context: Context) {
             )
             else -> CatalogTransport.Https(current.catalogUrl)
         }
-        val credentialKey = when (current.catalogTransport.uppercase()) {
-            "WEBDAV" -> CATALOG_WEBDAV_CREDENTIALS.takeIf { catalogCredentials(it) != null }
-            "S3" -> CATALOG_S3_CREDENTIALS
-            else -> CATALOG_HTTPS_CREDENTIALS.takeIf { catalogCredentials(it) != null }
+        val configuredCredentialKey = credentialStore.catalogCredentialKey(current.catalogTransport)
+        val credentialKey = configuredCredentialKey.takeIf {
+            current.catalogTransport.equals("S3", ignoreCase = true) ||
+                credentialStore.catalogCredentials(it) != null
         }
         return CatalogProviderConfig(transport, credentialKey)
     }
 
-    fun catalogCredentials(key: String): CatalogCredentials? = when (key) {
-        CATALOG_WEBDAV_CREDENTIALS, CATALOG_HTTPS_CREDENTIALS -> CatalogCredentials(
-            username = secretStore.get(CATALOG_USERNAME),
-            password = secretStore.get(CATALOG_PASSWORD),
-        ).takeIf(CatalogCredentials::hasBasicAuth)
-        CATALOG_S3_CREDENTIALS -> CatalogCredentials(
-            accessKey = secretStore.get(CATALOG_ACCESS_KEY),
-            secretKey = secretStore.get(CATALOG_SECRET_KEY),
-        ).takeIf(CatalogCredentials::hasS3Auth)
-        else -> null
-    }
+    fun catalogCredentials(key: String): CatalogCredentials? = credentialStore.catalogCredentials(key)
 
-    suspend fun hasCatalogCredentials(transport: String): Boolean = withContext(Dispatchers.IO) {
-        catalogCredentials(catalogCredentialKey(transport)) != null
-    }
+    suspend fun hasCatalogCredentials(transport: String): Boolean =
+        credentialStore.hasCatalogCredentials(transport)
 
     suspend fun setCatalogCredentials(transport: String, identity: String?, secret: String?) =
-        withContext(Dispatchers.IO) {
-            when (transport.uppercase()) {
-                "S3" -> {
-                    secretStore.put(CATALOG_ACCESS_KEY, identity)
-                    secretStore.put(CATALOG_SECRET_KEY, secret)
-                    secretStore.put(CATALOG_USERNAME, null)
-                    secretStore.put(CATALOG_PASSWORD, null)
-                }
-                "HTTPS", "WEBDAV" -> {
-                    secretStore.put(CATALOG_USERNAME, identity)
-                    secretStore.put(CATALOG_PASSWORD, secret)
-                    secretStore.put(CATALOG_ACCESS_KEY, null)
-                    secretStore.put(CATALOG_SECRET_KEY, null)
-                }
-                else -> require(false) { "Unsupported catalog transport" }
-            }
-        }
+        credentialStore.setCatalogCredentials(transport, identity, secret)
 
-    suspend fun clearCatalogCredentials() = withContext(Dispatchers.IO) {
-        secretStore.put(CATALOG_USERNAME, null)
-        secretStore.put(CATALOG_PASSWORD, null)
-        secretStore.put(CATALOG_ACCESS_KEY, null)
-        secretStore.put(CATALOG_SECRET_KEY, null)
-    }
+    suspend fun clearCatalogCredentials() = credentialStore.clearCatalogCredentials()
 
     suspend fun setCatalogConfiguration(
         transport: String,
@@ -363,27 +226,29 @@ class SettingsRepository(private val context: Context) {
     suspend fun setGameSources(sources: List<GameSourceConfig>) {
         val encoded = encodeGameSourceConfigs(sources)
         context.gameBoxDataStore.edit { preferences ->
-            if (sources.isEmpty()) preferences.remove(GAME_SOURCES)
-            else preferences[GAME_SOURCES] = encoded
+            preferences[GAME_SOURCES] = encoded
         }
     }
 
     suspend fun upsertGameSource(source: GameSourceConfig) {
-        val current = settings.first().gameSources
-            .filterNot { it.id.equals(source.id, ignoreCase = true) }
-        setGameSources(current + source)
+        updateGameSources { current ->
+            current.filterNot { it.id.equals(source.id, ignoreCase = true) } + source
+        }
     }
 
     suspend fun removeGameSource(id: String) {
-        setGameSources(
-            settings.first().gameSources.filterNot { it.id.equals(id, ignoreCase = true) }
-        )
+        updateGameSources { current -> current.filterNot { it.id.equals(id, ignoreCase = true) } }
     }
 
-    private fun catalogCredentialKey(transport: String): String = when (transport.uppercase()) {
-        "S3" -> CATALOG_S3_CREDENTIALS
-        "WEBDAV" -> CATALOG_WEBDAV_CREDENTIALS
-        else -> CATALOG_HTTPS_CREDENTIALS
+    private suspend fun updateGameSources(
+        transform: (List<GameSourceConfig>) -> List<GameSourceConfig>,
+    ) {
+        context.gameBoxDataStore.edit { preferences ->
+            val current = preferences[GAME_SOURCES]?.let(::decodeGameSourceConfigs)
+                ?: listOf(defaultVimmLairGameSource())
+            val updated = transform(current)
+            preferences[GAME_SOURCES] = encodeGameSourceConfigs(updated)
+        }
     }
 
     suspend fun setSafeAreaPercent(value: Float) {
@@ -406,6 +271,10 @@ class SettingsRepository(private val context: Context) {
 
     suspend fun setReducedMotion(value: Boolean) {
         context.gameBoxDataStore.edit { it[REDUCED_MOTION] = value }
+    }
+
+    suspend fun setUiSoundEffectsEnabled(value: Boolean) {
+        context.gameBoxDataStore.edit { it[UI_SOUND_EFFECTS] = value }
     }
 
     suspend fun setFocusDebugOverlayEnabled(value: Boolean) {
@@ -445,110 +314,4 @@ class SettingsRepository(private val context: Context) {
         context.gameBoxDataStore.edit { it[CATALOG_SEEDED_AT] = epochMs }
     }
 
-    suspend fun setTheGamesDbHealth(health: ProviderHealth) {
-        context.gameBoxDataStore.edit { preferences ->
-            preferences[THEGAMESDB_HEALTH_STATUS] = health.status.name
-            health.lastAttemptAtMillis?.let { preferences[THEGAMESDB_LAST_ATTEMPT] = it }
-                ?: preferences.remove(THEGAMESDB_LAST_ATTEMPT)
-            // A failed refresh must not erase the last known successful contact.
-            health.lastSuccessAtMillis?.let { preferences[THEGAMESDB_LAST_SUCCESS] = it }
-            health.latencyMillis?.let { preferences[THEGAMESDB_LATENCY] = it }
-                ?: preferences.remove(THEGAMESDB_LATENCY)
-            health.retryAfterMillis?.let { preferences[THEGAMESDB_RETRY_AFTER] = it }
-                ?: preferences.remove(THEGAMESDB_RETRY_AFTER)
-            health.message?.take(200)?.let { preferences[THEGAMESDB_HEALTH_MESSAGE] = it }
-                ?: preferences.remove(THEGAMESDB_HEALTH_MESSAGE)
-        }
-    }
-
-    private companion object {
-        val SAFE_AREA = floatPreferencesKey("safe_area_percent")
-        val REDUCED_MOTION = booleanPreferencesKey("reduced_motion")
-        val FOCUS_DEBUG_OVERLAY = booleanPreferencesKey("focus_debug_overlay")
-        val DEVELOPER_LAYOUT_MODE = stringPreferencesKey("developer_layout_mode")
-        val CATALOG_FAILURE_SIMULATION = stringPreferencesKey("catalog_failure_simulation")
-        val ACTIVE_PROFILE = stringPreferencesKey("active_profile")
-        val SHOW_UNAVAILABLE = booleanPreferencesKey("show_unavailable_games")
-        val SHOW_UNAVAILABLE_SHORTCUTS = booleanPreferencesKey("show_unavailable_shortcuts")
-        val DOWNLOADS_UNMETERED_ONLY = booleanPreferencesKey("downloads_unmetered_only")
-        val CATALOG_SEEDED_AT = longPreferencesKey("catalog_seeded_at_epoch_ms")
-        val CATALOG_REFRESHED_AT = longPreferencesKey("catalog_refreshed_at_epoch_ms")
-        val THEGAMESDB_HEALTH_STATUS = stringPreferencesKey("thegamesdb_health_status")
-        val THEGAMESDB_LAST_ATTEMPT = longPreferencesKey("thegamesdb_last_attempt")
-        val THEGAMESDB_LAST_SUCCESS = longPreferencesKey("thegamesdb_last_success")
-        val THEGAMESDB_LATENCY = longPreferencesKey("thegamesdb_latency")
-        val THEGAMESDB_RETRY_AFTER = longPreferencesKey("thegamesdb_retry_after")
-        val THEGAMESDB_HEALTH_MESSAGE = stringPreferencesKey("thegamesdb_health_message")
-        val CATALOG_URL = stringPreferencesKey("catalog_url")
-        val CATALOG_TRANSPORT = stringPreferencesKey("catalog_transport")
-        val CATALOG_BUCKET = stringPreferencesKey("catalog_bucket")
-        val CATALOG_PREFIX = stringPreferencesKey("catalog_prefix")
-        val CATALOG_REGION = stringPreferencesKey("catalog_region")
-        val GAME_SOURCES = stringPreferencesKey("game_sources")
-        val EXTERNAL_LIBRARY_URI = stringPreferencesKey("external_library_uri")
-        val EMULATOR_SAVE_ROOT_URI = stringPreferencesKey("emulator_save_root_uri")
-        val CLOUD_SAVE_PROVIDER = stringPreferencesKey("cloud_save_provider")
-        val CLOUD_SAVE_ENDPOINT = stringPreferencesKey("cloud_save_endpoint")
-        val CLOUD_SAVE_REGION = stringPreferencesKey("cloud_save_region")
-        val COMPANION_ENABLED = booleanPreferencesKey("companion_enabled")
-        val COMPANION_PORT = androidx.datastore.preferences.core.intPreferencesKey("companion_port")
-        val MOONLIGHT_HOST = stringPreferencesKey("moonlight_host")
-        val MOONLIGHT_PORT = androidx.datastore.preferences.core.intPreferencesKey("moonlight_port")
-        val PLATFORM_EMULATOR_DEFAULTS = stringPreferencesKey("platform_emulator_defaults")
-        val RECENT_SHORTCUT_LAUNCHES = stringPreferencesKey("recent_shortcut_launches")
-        val HIDDEN_SHORTCUT_PACKAGES = stringPreferencesKey("hidden_shortcut_packages")
-        const val THEGAMESDB_API_KEY = "thegamesdb_api_key"
-        const val CATALOG_USERNAME = "catalog_username"
-        const val CATALOG_PASSWORD = "catalog_password"
-        const val CATALOG_ACCESS_KEY = "catalog_access_key"
-        const val CATALOG_SECRET_KEY = "catalog_secret_key"
-        const val CATALOG_HTTPS_CREDENTIALS = "catalog-https"
-        const val CATALOG_WEBDAV_CREDENTIALS = "catalog-webdav"
-        const val CATALOG_S3_CREDENTIALS = "catalog-s3"
-        const val CLOUD_SAVE_USERNAME = "cloud_save_username"
-        const val CLOUD_SAVE_PASSWORD = "cloud_save_password"
-        const val CLOUD_SAVE_ACCESS_KEY = "cloud_save_access_key"
-        const val CLOUD_SAVE_SECRET_KEY = "cloud_save_secret_key"
-        const val COMPANION_PAIRING_SECRET = "companion_pairing_secret"
-    }
-}
-
-
-internal fun normalizePlatformKey(platform: String): String =
-    platform.lowercase().filter(Char::isLetterOrDigit)
-
-internal fun encodePlatformDefaults(defaults: Map<String, String>): String =
-    defaults.entries.sortedBy { it.key }.joinToString("\n") { (platform, packageName) ->
-        platform + "\t" + packageName
-    }
-
-internal fun decodePlatformDefaults(value: String?): Map<String, String> =
-    value.orEmpty().lineSequence().mapNotNull { line ->
-        val separator = line.indexOf('\t')
-        if (separator <= 0 || separator == line.lastIndex) null
-        else line.substring(0, separator) to line.substring(separator + 1)
-    }.filter { (platform, packageName) ->
-        platform.all(Char::isLetterOrDigit) &&
-            packageName.all { it.isLetterOrDigit() || it == '.' || it == '_' }
-    }.toMap()
-
-
-internal fun normalizeMoonlightHost(value: String): String {
-    val trimmed = value.trim()
-    val bracketed = trimmed.startsWith('[') || trimmed.endsWith(']')
-    require(!bracketed || (trimmed.startsWith('[') && trimmed.endsWith(']'))) {
-        "IPv6 address brackets are incomplete"
-    }
-    val normalized = if (bracketed) trimmed.substring(1, trimmed.lastIndex) else trimmed
-    require(normalized.isNotEmpty() && normalized.length <= 253 &&
-        normalized.none(Char::isWhitespace) &&
-        normalized.none { it == '/' || it == '\\' || it == '?' || it == '#' || it == '@' }) {
-        "Enter a host name or IP address without a scheme or path"
-    }
-    return normalized
-}
-
-internal fun requireMoonlightPort(value: Int): Int {
-    require(value in 1..65_535) { "Moonlight port must be between 1 and 65535" }
-    return value
 }

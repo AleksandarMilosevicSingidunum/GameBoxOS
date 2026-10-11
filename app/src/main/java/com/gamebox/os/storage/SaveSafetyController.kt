@@ -2,26 +2,14 @@ package com.gamebox.os.storage
 
 import android.content.Context
 import android.net.Uri
-import android.net.ConnectivityManager
-import android.net.NetworkCapabilities
-import com.gamebox.os.catalog.AwsSignatureV4Signer
 import com.gamebox.os.data.GameRepository
 import com.gamebox.os.data.local.SaveRecordDao
 import com.gamebox.os.data.local.SaveRecordEntity
 import com.gamebox.os.domain.GameId
 import com.gamebox.os.domain.Game
-import com.gamebox.os.content.GameContentPolicy
-import com.gamebox.os.content.GameMutationGate
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import kotlinx.coroutines.NonCancellable
-import com.gamebox.os.domain.InstallState
-import com.gamebox.os.download.AuthorizedHomebrewDownload
-import com.gamebox.os.save.CloudSaveEndpointPolicy
-import com.gamebox.os.save.CloudSaveEnvelopeCodec
-import com.gamebox.os.save.CloudSaveProvider
-import com.gamebox.os.save.CloudSaveSyncRequest
-import com.gamebox.os.save.HttpsCloudSaveTransportClient
 import com.gamebox.os.settings.SettingsRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -30,11 +18,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import java.io.File
-import java.io.ByteArrayInputStream
-import java.nio.file.Files
-import java.nio.file.StandardCopyOption
-import kotlinx.coroutines.flow.first
 
 data class SaveSafetyState(
     val saveRecordPresent: Boolean = false,
@@ -120,6 +103,25 @@ class DefaultSaveSafetyController(
         savesRoot,
         applicationContext.filesDir.resolve("save-backups")
     )
+    private val cloudSaveOperations = ManagedCloudSaveOperations(
+        context = applicationContext,
+        saveRecordDao = saveRecordDao,
+        settingsRepository = settingsRepository,
+        gameId = gameId,
+        savesRoot = savesRoot,
+        backupService = backupService,
+    )
+    private val contentRemoval = GameContentRemovalCoordinator(
+        context = applicationContext,
+        saveRecordDao = saveRecordDao,
+        gameRepository = gameRepository,
+        gameId = gameId,
+        savesRoot = savesRoot,
+        backupService = backupService,
+        externalContent = externalContent,
+        uploadCloudSave = cloudSaveOperations::upload,
+        safeCloudError = cloudSaveOperations::safeError,
+    )
     private val operation = MutableStateFlow(SaveOperation())
     private val busy = MutableStateFlow(false)
     override fun observeBusy(): StateFlow<Boolean> = busy
@@ -167,127 +169,15 @@ class DefaultSaveSafetyController(
 
     override fun observeState(): StateFlow<SaveSafetyState> = state
 
-    override fun contentRemovalPreview(game: Game): ContentRemovalPreview {
-        require(game.id == gameId) { "Content controller does not belong to this game" }
-        val manifest = contentManifest(game)
-        val internal = GameOwnedContentUninstaller(applicationContext.filesDir).preview(manifest)
-        val externalPaths = externalOnlyPaths(manifest)
-        val external = if (externalPaths.isEmpty()) ContentRemovalPreview(0, 0) else {
-            requireNotNull(externalContent) {
-                "External game content is recorded but no external library is configured"
-            }.preview(game.id.value, externalPaths)
-        }
-        return ContentRemovalPreview(internal.bytes + external.bytes, internal.files + external.files)
-    }
+    override fun contentRemovalPreview(game: Game): ContentRemovalPreview = contentRemoval.preview(game)
 
-    override suspend fun cloudBackupPreflight(game: Game): CloudBackupPreflight = withContext(Dispatchers.IO) {
-        require(game.id == gameId) { "Content controller does not belong to this game" }
-        val record = saveRecordDao.getByGameId(game.id.value)
-            ?: return@withContext CloudBackupPreflight(
-                CloudBackupPreflightStatus.NOT_REQUIRED,
-                "No managed save copy requires cloud protection.",
-            )
-        requireSavePathForGame(game.id.value, record.relativePath)
-        runCatching { cloudAccess() }.fold(
-            onSuccess = {
-                CloudBackupPreflight(
-                    CloudBackupPreflightStatus.READY,
-                    "Cloud backup is configured and will be verified before content removal.",
-                )
-            },
-            onFailure = {
-                CloudBackupPreflight(
-                    CloudBackupPreflightStatus.ACKNOWLEDGEMENT_REQUIRED,
-                    "Cloud backup is unavailable: ${safeCloudError(it)}. A verified local backup is still required.",
-                )
-            },
-        )
-    }
+    override suspend fun cloudBackupPreflight(game: Game): CloudBackupPreflight =
+        cloudSaveOperations.preflight(game)
 
-    override suspend fun uninstallContent(game: Game): String = uninstallContent(game, false)
+    override suspend fun uninstallContent(game: Game): String = contentRemoval.uninstall(game, false)
 
-    override suspend fun uninstallContent(game: Game, allowWithoutCloudBackup: Boolean): String {
-        val saveOperationKey = savesRoot.canonicalPath + ":" + gameId.value
-        require(SaveOperationGate.acquire(saveOperationKey)) {
-            "A save operation is already running for this game"
-        }
-        return try {
-            GameMutationGate.withGameLock(game.id.value) {
-                withContext(Dispatchers.IO + NonCancellable) {
-        require(game.id == gameId) { "Content controller does not belong to this game" }
-        val current = requireNotNull(gameRepository.game(game.id)) { "Game is no longer in the library" }
-        require(current.state in setOf(InstallState.INSTALLED, InstallState.UPDATE_AVAILABLE, InstallState.MISSING_FILES)) {
-            "Wait for installation or download operations to finish"
-        }
-        val manifest = contentManifest(current)
-        require(manifest == contentManifest(game)) { "Game content changed; reopen the confirmation" }
-        val saveRecord = saveRecordDao.getByGameId(game.id.value)
-        val backupCreated = saveRecord?.let { record ->
-            requireSavePathForGame(game.id.value, record.relativePath)
-            val backupResult = backupService.createBackup(record.relativePath)
-            require(backupResult == BackupResult.SUCCESS) {
-                backupResultMessage("Pre-uninstall backup", backupResult).message
-                    ?: "Pre-uninstall backup failed; content was not removed"
-            }
-            true
-        } ?: false
-        val cloudBackupCreated = saveRecord?.let { record ->
-            val upload = runCatching { uploadCloudSaveNow(record.relativePath, record.updatedAtMillis) }
-            requireCloudBackupOrAcknowledgement(
-                uploadSucceeded = upload.isSuccess,
-                allowWithoutCloudBackup = allowWithoutCloudBackup,
-                failureReason = upload.exceptionOrNull()?.let(::safeCloudError) ?: "operation failed safely",
-            )
-        } ?: false
-        val externalPaths = externalOnlyPaths(manifest)
-        // Resolve every required external file before deleting any internal content.
-        if (externalPaths.isNotEmpty()) {
-            requireNotNull(externalContent) {
-                "External game content is unavailable; reconnect the selected library and retry"
-            }.preview(game.id.value, externalPaths)
-        }
-        try {
-            val internalRemoved = GameOwnedContentUninstaller(applicationContext.filesDir).uninstall(manifest)
-            val externalRemoved = if (externalPaths.isEmpty()) 0 else {
-                requireNotNull(externalContent).uninstall(game.id.value, externalPaths)
-            }
-            val removed = internalRemoved + externalRemoved
-            gameRepository.setInstallStateAndAwait(game.id, InstallState.NOT_INSTALLED)
-            buildString {
-                append("$removed content file(s) removed. ")
-                if (backupCreated) append("Verified save backup created. ")
-                if (cloudBackupCreated) append("Cloud save uploaded and verified. ")
-                else if (saveRecord != null) append("Cloud backup unavailable; explicitly continued with verified local backup. ")
-                append("Saves, backups, metadata and history retained.")
-            }
-        } catch (error: ContentRemovalFailed) {
-            if (error.removedFiles > 0) gameRepository.setInstallStateAndAwait(game.id, InstallState.MISSING_FILES)
-            throw IllegalStateException("Content removal stopped after ${error.removedFiles} file(s). Saves were not touched; retry to remove remaining content.", error)
-        }
-                }
-            }
-        } finally {
-            SaveOperationGate.release(saveOperationKey)
-        }
-    }
-
-    private fun externalOnlyPaths(manifest: ContentRemovalManifest): List<String> =
-        manifest.relativePaths.filter { path ->
-            path.startsWith("installed/") && !applicationContext.filesDir.resolve(path).isFile
-        }.map { it.removePrefix("installed/") }
-
-    private fun contentManifest(game: Game): ContentRemovalManifest {
-        val primary = game.localContentRelativePath
-        val paths = if (primary != null) {
-            (listOf(primary) + game.localContentFiles.map { it.relativePath }).distinct().map { "imports/$it" }
-        } else if (game.id.value == "galaxy-patrol") {
-            listOf("installed/" + AuthorizedHomebrewDownload.RELATIVE_PATH)
-        } else {
-            require(game.expectedSha256 != null) { "No managed game content is recorded" }
-            listOf("installed/" + GameContentPolicy.describe(game.id.value, game.platform, game.sourceUrl).relativePath)
-        }
-        return ContentRemovalManifest(game.id.value, paths)
-    }
+    override suspend fun uninstallContent(game: Game, allowWithoutCloudBackup: Boolean): String =
+        contentRemoval.uninstall(game, allowWithoutCloudBackup)
 
     override fun importInitialSave(uri: Uri) {
         launchSaveOperation {
@@ -351,11 +241,11 @@ class DefaultSaveSafetyController(
             val relativePath = state.value.relativePath ?: return@launchSaveOperation noSave("Cloud upload")
             operation.value = SaveOperation("Uploading encrypted-credential cloud save…")
             val result = runCatching {
-                uploadCloudSaveNow(relativePath, state.value.updatedAtMillis)
+                cloudSaveOperations.upload(relativePath, state.value.updatedAtMillis)
             }
             operation.value = result.fold(
                 onSuccess = { SaveOperation("Cloud save uploaded and verified") },
-                onFailure = { SaveOperation("Cloud upload failed: " + safeCloudError(it), false) },
+                onFailure = { SaveOperation("Cloud upload failed: " + cloudSaveOperations.safeError(it), false) },
             )
         }
     }
@@ -364,40 +254,7 @@ class DefaultSaveSafetyController(
         launchSaveOperation {
             val relativePath = state.value.relativePath ?: (gameId.value + "/save.dat")
             operation.value = SaveOperation("Downloading and verifying cloud save…")
-            val result = runCatching {
-                val cloud = cloudAccess()
-                val request = CloudSaveSyncRequest(
-                    gameId = gameId.value,
-                    endpoint = cloud.endpoint,
-                    payloadBytes = 0L,
-                    credentialKey = "cloud-save",
-                )
-                val encoded = cloud.client.download(request, cloud.credentials)
-                val remote = CloudSaveEnvelopeCodec.decode(gameId.value, encoded)
-                val saveFile = resolveSave(relativePath)
-                val localPayload = saveFile.takeIf(File::isFile)?.readBytes()
-                val conflictPreserved = localPayload != null &&
-                    CloudSaveEnvelopeCodec.sha256(localPayload) != remote.payloadSha256
-                if (conflictPreserved) preserveConflict(localPayload)
-                val importResult = backupService.importBackup(
-                    relativePath,
-                    ByteArrayInputStream(remote.payload),
-                    CloudSaveEnvelopeCodec.MAX_RAW_PAYLOAD_BYTES.toLong(),
-                )
-                require(importResult == BackupResult.SUCCESS) {
-                    backupResultMessage("Cloud download", importResult).message ?: "Cloud save import failed safely"
-                }
-                require(backupService.restore(relativePath) == BackupResult.SUCCESS) { "Cloud save restore failed safely" }
-                saveRecordDao.upsert(
-                    SaveRecordEntity(
-                        gameId.value,
-                        relativePath,
-                        remote.updatedAtMillis,
-                        remote.payload.size.toLong(),
-                    )
-                )
-                conflictPreserved
-            }
+            val result = runCatching { cloudSaveOperations.downloadAndRestore(relativePath) }
             operation.value = result.fold(
                 onSuccess = { conflictPreserved ->
                     SaveOperation(
@@ -405,7 +262,7 @@ class DefaultSaveSafetyController(
                         else "Cloud save downloaded and verified"
                     )
                 },
-                onFailure = { SaveOperation("Cloud download failed: " + safeCloudError(it), false) },
+                onFailure = { SaveOperation("Cloud download failed: " + cloudSaveOperations.safeError(it), false) },
             )
         }
     }
@@ -430,83 +287,6 @@ class DefaultSaveSafetyController(
     private fun noSave(action: String) {
         operation.value = SaveOperation("$action failed: no save record", false)
     }
-
-    private suspend fun uploadCloudSaveNow(relativePath: String, updatedAtMillis: Long) {
-        val cloud = cloudAccess()
-        val saveFile = resolveSave(relativePath)
-        require(saveFile.isFile) { "Save file is missing" }
-        require(saveFile.length() <= CloudSaveEnvelopeCodec.MAX_RAW_PAYLOAD_BYTES) {
-            "Save exceeds the 15 MiB cloud payload limit"
-        }
-        val payload = saveFile.readBytes()
-        val envelope = CloudSaveEnvelopeCodec.encode(
-            gameId.value,
-            updatedAtMillis.coerceAtLeast(0L),
-            payload,
-        )
-        val request = CloudSaveSyncRequest(
-            gameId = gameId.value,
-            endpoint = cloud.endpoint,
-            payloadBytes = envelope.size.toLong(),
-            credentialKey = "cloud-save",
-            expectedSha256 = CloudSaveEnvelopeCodec.sha256(envelope),
-        )
-        cloud.client.upload(request, envelope, cloud.credentials)
-    }
-
-    private suspend fun cloudAccess(): CloudAccess {
-        require(networkAvailable()) { "Network is offline; try again when connected" }
-        val settings = settingsRepository.settings.first()
-        val provider = runCatching { CloudSaveProvider.valueOf(settings.cloudSaveProvider.uppercase()) }
-            .getOrElse { throw IllegalArgumentException("Cloud save provider is invalid") }
-        require(settings.cloudSaveEndpoint.isNotBlank()) { "Configure a cloud save endpoint in Settings" }
-        val endpoint = CloudSaveEndpointPolicy.objectUri(settings.cloudSaveEndpoint, gameId.value)
-        val region = CloudSaveEndpointPolicy.requireRegion(provider, settings.cloudSaveRegion)
-        val credentials = settingsRepository.cloudSaveCredentials(provider.name)
-            ?: throw IllegalArgumentException("Configure cloud save credentials in Settings")
-        val signer = if (provider == CloudSaveProvider.S3) AwsSignatureV4Signer(region) else null
-        return CloudAccess(endpoint, credentials, HttpsCloudSaveTransportClient(s3Signer = signer))
-    }
-
-    private fun resolveSave(relativePath: String): File {
-        return resolveGameSave(savesRoot, gameId.value, relativePath)
-    }
-
-    private fun preserveConflict(payload: ByteArray) {
-        val root = applicationContext.filesDir.resolve("save-conflicts").canonicalFile
-        val directory = root.resolve(gameId.value).canonicalFile
-        require(directory.path.startsWith(root.path + File.separator))
-        check(directory.mkdirs() || directory.isDirectory)
-        val destination = directory.resolve("local-${System.currentTimeMillis()}.save")
-        val partial = directory.resolve(destination.name + ".partial")
-        partial.writeBytes(payload)
-        runCatching {
-            Files.move(
-                partial.toPath(), destination.toPath(),
-                StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING,
-            )
-        }.getOrElse {
-            Files.move(partial.toPath(), destination.toPath(), StandardCopyOption.REPLACE_EXISTING)
-        }
-    }
-
-    private fun networkAvailable(): Boolean {
-        val manager = applicationContext.getSystemService(ConnectivityManager::class.java) ?: return false
-        val network = manager.activeNetwork ?: return false
-        val capabilities = manager.getNetworkCapabilities(network) ?: return false
-        return capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) &&
-            capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
-    }
-
-    private fun safeCloudError(error: Throwable): String =
-        error.message?.replace(Regex("https://\\S+"), "remote endpoint")?.take(180)
-            ?: "operation failed safely"
-
-    private data class CloudAccess(
-        val endpoint: java.net.URI,
-        val credentials: com.gamebox.os.catalog.CatalogCredentials,
-        val client: HttpsCloudSaveTransportClient,
-    )
 
     private fun record(relativePath: String, sizeBytes: Long): SaveRecordEntity {
         requireSavePathForGame(gameId.value, relativePath)

@@ -1,31 +1,55 @@
 package com.gamebox.os.ui
 
+import android.view.KeyEvent
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.ui.input.InputMode
+import androidx.compose.ui.platform.LocalInputModeManager
+import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performSemanticsAction
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.platform.app.InstrumentationRegistry
+import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
 class MetadataFilterControlsTest {
-    @get:Rule val composeRule = createComposeRule()
+    @get:Rule
+    val compose = createComposeRule()
 
-    @Test fun removedSelectionCanBeClearedThenNewMetadataSelected() {
-        val selected = mutableStateOf<String?>("US")
-        val values = mutableStateOf(listOf("US"))
-        composeRule.setContent {
-            MetadataFilterControl("Region", values.value, selected.value) { selected.value = it }
+    @Test
+    fun gamepadACyclesFocusedFilterFromAllToFirstAvailableValue() {
+        lateinit var inputModeManager: androidx.compose.ui.input.InputModeManager
+        var selectedGenre: String? = null
+        compose.setContent {
+            inputModeManager = LocalInputModeManager.current
+            MaterialTheme {
+                val selected = remember { mutableStateOf<String?>(null) }
+                MetadataFilterControl(
+                    label = "Genre",
+                    values = listOf("Adventure", "Racing"),
+                    selected = selected.value,
+                    onSelected = {
+                        selected.value = it
+                        selectedGenre = it
+                    },
+                )
+            }
         }
-        composeRule.runOnIdle { values.value = emptyList() }
-        composeRule.onNodeWithText("Region: US").performClick()
-        composeRule.onNodeWithText("Region: All").assertExists()
-        composeRule.runOnIdle { values.value = listOf("EU") }
-        composeRule.onNodeWithText("Region: All").performClick()
-        composeRule.onNodeWithText("Region: EU").assertExists()
-        composeRule.onNodeWithText("Region: EU").performClick()
-        composeRule.onNodeWithText("Region: All").assertExists()
+
+        compose.runOnIdle { inputModeManager.requestInputMode(InputMode.Keyboard) }
+        compose.onNodeWithText("Genre: All")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .assertIsFocused()
+        InstrumentationRegistry.getInstrumentation().sendKeyDownUpSync(KeyEvent.KEYCODE_BUTTON_A)
+
+        compose.runOnIdle { assertEquals("Adventure", selectedGenre) }
+        compose.onNodeWithText("Genre: Adventure").assertIsFocused()
     }
 }

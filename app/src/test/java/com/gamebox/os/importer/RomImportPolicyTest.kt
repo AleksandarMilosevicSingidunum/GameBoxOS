@@ -1,6 +1,8 @@
 package com.gamebox.os.importer
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class RomImportPolicyTest {
@@ -27,7 +29,19 @@ class RomImportPolicyTest {
 
     @Test
     fun pspAuthorizedCopyAcceptsSevenZipArchive() {
-        assertEquals(true, "7z" in RomImportPolicy.supportedExtensions("PSP"))
+        assertTrue("7z" in RomImportPolicy.supportedExtensions("PSP"))
         assertEquals("application/x-7z-compressed", RomImportPolicy.mimeType("game.7z"))
+    }
+
+    @Test
+    fun everyVimmPresetConsoleAcceptsSevenZipButNotAsARegisteredGameFile() {
+        listOf(
+            "Dreamcast", "Game Boy Advance", "Game Boy Color", "GameCube", "N64", "NES",
+            "PS1", "PS2", "PS3", "PSP", "SNES", "Wii", "WiiWare", "Xbox",
+            "Xbox 360", "DS", "3DS", "Switch",
+        ).forEach { platform ->
+            assertTrue("$platform should accept a 7z archive", "7z" in RomImportPolicy.supportedExtensions(platform))
+            assertFalse("$platform must extract, not register, a 7z container", "7z" in RomImportPolicy.supportedGameExtensions(platform))
+        }
     }
 }

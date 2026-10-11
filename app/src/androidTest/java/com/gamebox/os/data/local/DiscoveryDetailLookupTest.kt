@@ -4,6 +4,8 @@ import android.content.Context
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.gamebox.os.data.RoomCatalogDiscoveryRepository
+import com.gamebox.os.domain.GameId
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.*
@@ -34,9 +36,14 @@ class DiscoveryDetailLookupTest {
             assertFalse(db.catalogDiscoveryDao().observeGames(null, "", 250, 0).first().any { it.id == "game-300" })
             db.close()
             db = open()
-            val restored = requireNotNull(db.catalogDiscoveryDao().observeGame("game-300").first())
-            assertEquals(rows.last(), restored)
-            assertNull(db.catalogDiscoveryDao().observeGame("missing").first())
+            val repository = RoomCatalogDiscoveryRepository(db.catalogDiscoveryDao())
+            val restored = requireNotNull(repository.observeGame(GameId("game-300")).first())
+            assertEquals("game-300", restored.id.value)
+            assertEquals("game-300", restored.title)
+            assertEquals("psp", restored.platformId)
+            assertEquals("EU", restored.region)
+            assertEquals(listOf("https://example.test/a.jpg", "https://example.test/b.jpg"), restored.screenshots)
+            assertNull(repository.observeGame(GameId("missing")).first())
         } finally {
             db.close()
             context.deleteDatabase(name)

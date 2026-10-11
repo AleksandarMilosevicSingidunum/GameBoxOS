@@ -17,6 +17,7 @@ import android.os.Handler
 import android.os.Looper
 import android.view.Display
 import android.view.InputDevice
+import android.view.MotionEvent
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
@@ -95,6 +96,9 @@ internal data class RuntimeDeviceStatus(
 internal val LocalRuntimeDeviceStatus = staticCompositionLocalOf { RuntimeDeviceStatus() }
 
 @Composable
+internal fun connectedControllerLabel(): String = LocalRuntimeDeviceStatus.current.controllerLabel
+
+@Composable
 internal fun rememberRuntimeDeviceStatus(): RuntimeDeviceStatus {
     val context = LocalContext.current.applicationContext
     var revision by remember { mutableIntStateOf(0) }
@@ -153,8 +157,14 @@ internal fun rememberRuntimeDeviceStatus(): RuntimeDeviceStatus {
 private fun readRuntimeDeviceStatus(context: Context): RuntimeDeviceStatus {
     val controllers = InputDevice.getDeviceIds().asSequence()
         .mapNotNull(InputDevice::getDevice)
-        .filter { isGameControllerSources(it.sources) }
-        .map { it.name.takeIf(String::isNotBlank) ?: "Game controller" }
+        .filter { device ->
+            val hasStandardGamepadAxes = device.motionRanges.any { range ->
+                range.source and InputDevice.SOURCE_CLASS_JOYSTICK == InputDevice.SOURCE_CLASS_JOYSTICK &&
+                    isStandardGamepadMotionAxis(range.axis)
+            }
+            isGameControllerSources(device.sources, hasStandardGamepadAxes)
+        }
+        .map { controllerDisplayName(it.name) }
         .distinct()
         .sorted()
         .toList()
@@ -246,19 +256,36 @@ internal fun externalDisplayStatusLabel(names: List<String>): String {
     return names.size.toString() + " external displays"
 }
 
-/**
- * Desktop accessories can advertise a joystick source alongside keyboard/mouse
- * sources. They must not be shown as game controllers in the TV status panel.
- */
-internal fun isGameControllerSources(sources: Int): Boolean {
-    val gamepadOrJoystick =
-        sources and InputDevice.SOURCE_GAMEPAD == InputDevice.SOURCE_GAMEPAD ||
-            sources and InputDevice.SOURCE_JOYSTICK == InputDevice.SOURCE_JOYSTICK
+internal fun isGameControllerSources(
+    sources: Int,
+    hasStandardGamepadAxes: Boolean = false,
+): Boolean {
+    val gamepad = sources and InputDevice.SOURCE_GAMEPAD == InputDevice.SOURCE_GAMEPAD
+    val joystick = sources and InputDevice.SOURCE_JOYSTICK == InputDevice.SOURCE_JOYSTICK
     val keyboardOrMouse =
         sources and InputDevice.SOURCE_KEYBOARD == InputDevice.SOURCE_KEYBOARD ||
             sources and InputDevice.SOURCE_MOUSE == InputDevice.SOURCE_MOUSE
-    return gamepadOrJoystick && !keyboardOrMouse
+    // Desktop docks sometimes combine a mouse/keyboard with a generic joystick
+    // interface. Keep those out, but allow merged HID controllers that expose
+    // standard stick/hat axes even when their descriptor also includes a keyboard.
+    return gamepad || joystick && (!keyboardOrMouse || hasStandardGamepadAxes)
 }
+
+internal fun isStandardGamepadMotionAxis(axis: Int): Boolean = axis in setOf(
+    MotionEvent.AXIS_X,
+    MotionEvent.AXIS_Y,
+    MotionEvent.AXIS_Z,
+    MotionEvent.AXIS_RX,
+    MotionEvent.AXIS_RY,
+    MotionEvent.AXIS_RZ,
+    MotionEvent.AXIS_HAT_X,
+    MotionEvent.AXIS_HAT_Y,
+)
+
+/** Some Bluetooth pads expose one merged Android device named after an accessory endpoint. */
+internal fun controllerDisplayName(rawName: String): String = rawName.trim()
+    .replace(Regex("(?i)\\s+(touchpad|motion sensors)$"), "")
+    .ifBlank { "Game controller" }
 
 internal fun networkTransport(capabilities: NetworkCapabilities?): GameBoxNetworkTransport = when {
     capabilities == null -> GameBoxNetworkTransport.NONE

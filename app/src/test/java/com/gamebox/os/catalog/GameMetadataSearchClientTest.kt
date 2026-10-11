@@ -33,19 +33,22 @@ class GameMetadataSearchClientTest {
     }
 
     @Test
-    fun stopsAfterFirstProviderWithCandidates() = runBlocking {
+    fun includesCandidatesFromIndependentProviders() = runBlocking {
         val requests = mutableListOf<String>()
         val client = GameMetadataSearchClient(
             listOf(
                 GameMetadataCandidateProvider {
                     requests += "primary"
-                    listOf(MetadataMatchCandidate("42", "Galaxy Patrol"))
+                    listOf(MetadataMatchCandidate("42", "Galaxy Patrol", provider = "TEST"))
                 },
-                GameMetadataCandidateProvider { requests += "fallback"; emptyList() },
+                GameMetadataCandidateProvider {
+                    requests += "fallback"
+                    listOf(MetadataMatchCandidate("Q123", "Galaxy Patrol", provider = "WIKIDATA"))
+                },
             ),
         )
 
-        assertEquals("THE_GAMES_DB", client.findCandidates(game).single().provider)
-        assertEquals(listOf("primary"), requests)
+        assertEquals(listOf("TEST", "WIKIDATA"), client.findCandidates(game).map { it.provider })
+        assertEquals(listOf("primary", "fallback"), requests)
     }
 }

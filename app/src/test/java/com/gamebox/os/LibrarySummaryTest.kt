@@ -28,6 +28,16 @@ class LibrarySummaryTest {
         assertNull(summarizeLibrary(emptyList()).resumeGame)
     }
 
+    @Test fun resumeGameMustBeLocallyPlayable() {
+        val summary = summarizeLibrary(listOf(
+            game("installed", InstallState.INSTALLED, 20, false, "2026-08-01T10:00:00Z"),
+            game("queued", InstallState.QUEUED, 10, false, "2026-08-03T10:00:00Z"),
+            game("missing", InstallState.MISSING_FILES, 5, false, "2026-08-02T10:00:00Z"),
+        ))
+
+        assertEquals("installed", summary.resumeGame?.id?.value)
+    }
+
     private fun game(id: String, state: InstallState, minutes: Int, favorite: Boolean, lastPlayed: String?) =
         Game(GameId(id), id, "Retro", 2020, "Action", 1, state, lastPlayed, minutes, favorite)
 }

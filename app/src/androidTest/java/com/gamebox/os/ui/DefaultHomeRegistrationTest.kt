@@ -45,4 +45,18 @@ class DefaultHomeRegistrationTest {
             activityInfo.launchMode == ActivityInfo.LAUNCH_SINGLE_TASK,
         )
     }
+
+    @Test
+    fun handsetHomeHostCanAdaptToPortraitAndResizableWindows() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val activityInfo = context.packageManager.getActivityInfo(
+            ComponentName(context, MainActivity::class.java),
+            0,
+        )
+
+        assertTrue(
+            "The phone host should adapt to its available orientation",
+            activityInfo.screenOrientation == ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED,
+        )
+    }
 }

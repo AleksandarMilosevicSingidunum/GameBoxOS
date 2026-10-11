@@ -29,6 +29,16 @@ class GameContentPolicyTest {
     }
 
     @Test
+    fun storesWiiWareDownloadsAsWadByDefaultAndWhenTheUrlHasNoExtension() {
+        val fromUrl = GameContentPolicy.describe("wiiware-demo", "WiiWare", "https://cdn.example/download?id=123")
+        val default = GameContentPolicy.describe("another-wiiware-demo", "WiiWare", null)
+
+        assertEquals("remote/wiiware-demo/content.wad", fromUrl.relativePath)
+        assertEquals("application/x-wii-wad", fromUrl.mimeType)
+        assertEquals("remote/another-wiiware-demo/content.wad", default.relativePath)
+    }
+
+    @Test
     fun substitutesSafePlatformDefaultForUnknownOrHostileSuffixes() {
         val psp = GameContentPolicy.describe(
             gameId = "portable-game",
@@ -94,6 +104,68 @@ class GameContentPolicyTest {
         assertEquals("remote/demo/content.pce", GameContentPolicy.describe("demo", "PC Engine", "https://cdn.example/demo.pce").relativePath)
         assertEquals("remote/demo/content.ws", GameContentPolicy.describe("demo", "WonderSwan", "https://cdn.example/demo.ws").relativePath)
         assertEquals("remote/demo/content.a26", GameContentPolicy.describe("demo", "Atari 2600", "https://cdn.example/demo.a26").relativePath)
+    }
+
+    @Test
+    fun everyStandaloneEmulatorPlatformGetsANativeRemoteContentExtension() {
+        val extensions = mapOf(
+            "NES" to "nes",
+            "Famicom" to "nes",
+            "Nintendo Entertainment System" to "nes",
+            "GB" to "gb",
+            "Nintendo Game Boy" to "gb",
+            "Game Boy Color" to "gbc",
+            "Nintendo Game Boy Color" to "gbc",
+            "PS1" to "chd",
+            "Sony PlayStation" to "chd",
+            "N64" to "z64",
+            "Dreamcast" to "chd",
+            "Sega Dreamcast" to "chd",
+            "PSP" to "iso",
+            "Sony PlayStation Portable" to "iso",
+            "PS2" to "iso",
+            "Sony PlayStation 2" to "iso",
+            "GameCube" to "rvz",
+            "Nintendo GameCube" to "rvz",
+            "Wii" to "rvz",
+            "WiiWare" to "wad",
+            "3DS" to "3ds",
+            "SNES" to "sfc",
+            "Super Nintendo Entertainment System" to "sfc",
+            "Game Boy Advance" to "gba",
+            "Nintendo Game Boy Advance" to "gba",
+            "DS" to "nds",
+            "DSi" to "nds",
+            "Genesis" to "md",
+            "Sega Genesis" to "md",
+            "Master System" to "sms",
+            "Sega Master System" to "sms",
+            "Game Gear" to "gg",
+            "Sega Game Gear" to "gg",
+            "Atari 2600" to "a26",
+        )
+        val registry = EmulatorCapabilityRegistry()
+
+        extensions.forEach { (platform, expectedExtension) ->
+            val game = Game(
+                id = GameId("content-${platform.lowercase().filter(Char::isLetterOrDigit)}"),
+                title = "Content policy check",
+                platform = platform,
+                year = 2000,
+                genre = "Test",
+                sizeMb = 1,
+                state = InstallState.INSTALLED,
+                sourceUrl = "https://cdn.example/content.$expectedExtension",
+                expectedSha256 = "a".repeat(64),
+            )
+
+            assertEquals("$platform should have an approved emulator", true, registry.hasApprovedAdapter(game))
+            val content = GameContentPolicy.describe(game.id.value, platform, game.sourceUrl)
+            val capability = requireNotNull(registry.forGame(game))
+            assertEquals("$platform should not be stored as generic content.bin", expectedExtension, content.fileExtension)
+            assertEquals("Downloader and launcher must agree on $platform path", content.relativePath, capability.contentRelativePath)
+            assertEquals("Downloader and launcher must agree on $platform MIME type", content.mimeType, capability.mimeType)
+        }
     }
 
     @Test

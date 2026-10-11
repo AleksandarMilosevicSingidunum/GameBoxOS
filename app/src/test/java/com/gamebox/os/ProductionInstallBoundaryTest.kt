@@ -14,11 +14,16 @@ class ProductionInstallBoundaryTest {
     }
 
     @Test fun productionUiUsesWorkerControllerForTransferActions() {
-        val source = File("src/main/java/com/gamebox/os/ui/GameBoxApp.kt").readText()
+        val uiSources = File("src/main/java/com/gamebox/os/ui")
+            .walkTopDown()
+            .filter { it.isFile && it.extension == "kt" }
+            .map(File::readText)
+            .toList()
+        val source = uiSources.joinToString("\n")
         assertFalse(source.contains("Next test stage"))
         assertFalse(source.contains("repository.pauseOrResume"))
         assertFalse(source.contains("downloadRepository.resume"))
-        assertTrue(source.contains("remoteDownloadController.pause(game)"))
-        assertTrue(source.contains("remoteDownloadController.resume(game)"))
+        assertTrue(source.contains("remoteDownloadController.pause("))
+        assertTrue(source.contains("remoteDownloadController.resume("))
     }
 }

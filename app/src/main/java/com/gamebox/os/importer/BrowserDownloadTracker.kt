@@ -3,94 +3,93 @@ package com.gamebox.os.importer
 import android.app.DownloadManager
 import android.content.Context
 import android.net.Uri
-import com.gamebox.os.domain.normalizeCatalogTitle
+import android.os.Environment
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeout
+import java.io.File
+import java.io.IOException
 
-data class BrowserDownloadCandidate(
-    val uri: Uri,
-    val displayName: String,
+data class BrowserDownloadCandidate(val uri: Uri, val displayName: String)
+data class BrowserDownloadProgress(
+    val downloadedBytes: Long,
+    val totalBytes: Long,
+    val percent: Int?,
+    val paused: Boolean = false,
 )
 
-/**
- * Observes downloads created by the Android/browser download stack. It does not
- * create a network request; the caller still owns the legal-download decision
- * and passes the completed local URI to AuthorizedRomImporter.
- */
+internal fun hasRecoverableStagedDownload(stagedFile: File): Boolean =
+    stagedFile.isFile && stagedFile.length() > 0L
+
+/** Watches only the DownloadManager request that GameBox itself queued. */
 class BrowserDownloadTracker(context: Context) {
     private val applicationContext = context.applicationContext
     private val downloadManager = applicationContext.getSystemService(DownloadManager::class.java)
 
-    fun findCompletedDownload(
-        title: String,
-        platform: String?,
-        startedAtMillis: Long,
-    ): BrowserDownloadCandidate? {
-        val query = DownloadManager.Query().setFilterByStatus(DownloadManager.STATUS_SUCCESSFUL)
-        return runCatching {
-            downloadManager.query(query)?.use { cursor ->
-                val idColumn = cursor.getColumnIndex(DownloadManager.COLUMN_ID)
-                val timestampColumn = cursor.getColumnIndex(DownloadManager.COLUMN_LAST_MODIFIED_TIMESTAMP)
-                val titleColumn = cursor.getColumnIndex(DownloadManager.COLUMN_TITLE)
-                val uriColumn = cursor.getColumnIndex(DownloadManager.COLUMN_LOCAL_URI)
-                var candidate: BrowserDownloadCandidate? = null
-                while (candidate == null && cursor.moveToNext()) {
-                    val timestamp = if (timestampColumn >= 0) cursor.getLong(timestampColumn) else 0L
-                    if (timestamp < startedAtMillis) continue
-                    val id = if (idColumn >= 0) cursor.getLong(idColumn) else continue
-                    val localUri = if (uriColumn >= 0) cursor.getString(uriColumn)?.let(Uri::parse) ?: continue else continue
-                    val displayName = displayName(localUri, id)
-                    val managerTitle = if (titleColumn >= 0) cursor.getString(titleColumn).orEmpty() else ""
-                    if (!matchesTitle(title, displayName, managerTitle)) continue
-                    if (runCatching { RomImportPolicy.safeFileName(displayName, platform) }.isFailure) continue
-                    candidate = BrowserDownloadCandidate(localUri, displayName)
-                }
-                candidate
-            }
-        }.getOrNull()
-    }
-
     suspend fun awaitCompletedDownload(
-        title: String,
-        platform: String?,
-        startedAtMillis: Long,
-        timeoutMillis: Long = 30 * 60_000L,
-    ): BrowserDownloadCandidate? {
-        var candidate: BrowserDownloadCandidate? = null
-        withTimeoutOrNull(timeoutMillis) {
-            while (candidate == null) {
-                candidate = findCompletedDownload(title, platform, startedAtMillis)
-                if (candidate == null) delay(POLL_INTERVAL_MILLIS)
+        id: Long,
+        stagedName: String,
+        displayName: String,
+        onProgress: (BrowserDownloadProgress) -> Unit,
+        timeoutMillis: Long = 60 * 60_000L,
+    ): BrowserDownloadCandidate = withTimeout(timeoutMillis) {
+        require(stagedName.matches(Regex("[0-9a-f-]{36}\\.[a-z0-9]+"))) {
+            "Invalid download staging name"
+        }
+        val directory = applicationContext.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)
+            ?: throw IOException("App download storage is unavailable")
+        val stagedFile = File(directory, stagedName)
+        while (true) {
+            val state = withContext(Dispatchers.IO) { query(id) }
+            if (state == null) {
+                // Android can prune a completed DownloadManager row while the
+                // app-owned staged file is still present. Recover that completion
+                // instead of marking it failed and making the user start over.
+                if (hasRecoverableStagedDownload(stagedFile)) {
+                    return@withTimeout BrowserDownloadCandidate(Uri.fromFile(stagedFile), displayName)
+                }
+                throw IOException("Download disappeared from Android's queue before a staged file was available")
             }
+            when (state.status) {
+                DownloadManager.STATUS_SUCCESSFUL -> {
+                    if (!stagedFile.isFile) throw IOException("Completed download file is missing")
+                    return@withTimeout BrowserDownloadCandidate(Uri.fromFile(stagedFile), displayName)
+                }
+                DownloadManager.STATUS_FAILED -> throw IOException("Android download failed (code ${state.reason})")
+            }
+            onProgress(
+                BrowserDownloadProgress(
+                    downloadedBytes = state.downloadedBytes,
+                    totalBytes = state.totalBytes,
+                    percent = if (state.totalBytes > 0) {
+                        (state.downloadedBytes * 100 / state.totalBytes).coerceIn(0, 99).toInt()
+                    } else null,
+                    paused = state.status == DownloadManager.STATUS_PAUSED,
+                ),
+            )
+            delay(1_000L)
         }
-        return candidate
+        @Suppress("UNREACHABLE_CODE")
+        throw IllegalStateException("Download polling stopped")
     }
 
-    private fun displayName(uri: Uri, downloadId: Long): String = runCatching {
-        applicationContext.contentResolver.query(
-            uri,
-            arrayOf(android.provider.OpenableColumns.DISPLAY_NAME),
-            null,
-            null,
-            null,
-        )?.use { cursor ->
-            val index = cursor.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
-            if (index >= 0 && cursor.moveToFirst()) cursor.getString(index) else null
-        }
-    }.getOrNull()?.takeIf { it.isNotBlank() }
-        ?: "download-$downloadId"
-
-    private fun matchesTitle(title: String, displayName: String, managerTitle: String): Boolean {
-        val normalizedTitle = normalizeCatalogTitle(title)
-        if (normalizedTitle.isBlank()) return false
-        val haystack = normalizeCatalogTitle(displayName + " " + managerTitle)
-        if (haystack.contains(normalizedTitle)) return true
-        val tokens = normalizedTitle.split(Regex("[^a-z0-9]+"))
-            .filter { it.length >= 4 }
-        return tokens.isNotEmpty() && tokens.count(haystack::contains) >= (tokens.size + 1) / 2
+    private fun query(id: Long): State? = downloadManager.query(
+        DownloadManager.Query().setFilterById(id),
+    )?.use { cursor ->
+        if (!cursor.moveToFirst()) return@use null
+        State(
+            status = cursor.getInt(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_STATUS)),
+            reason = cursor.getInt(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_REASON)),
+            totalBytes = cursor.getLong(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_TOTAL_SIZE_BYTES)),
+            downloadedBytes = cursor.getLong(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR)),
+        )
     }
 
-    private companion object {
-        const val POLL_INTERVAL_MILLIS = 1_000L
-    }
+    private data class State(
+        val status: Int,
+        val reason: Int,
+        val totalBytes: Long,
+        val downloadedBytes: Long,
+    )
 }

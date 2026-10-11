@@ -27,6 +27,16 @@ class DeferredHostReturnTest {
         assertFalse(events.take())
     }
 
+    @Test fun returnAfterLaunchPreparationFinishesLater() {
+        val events = DeferredHostReturn()
+        events.arm()
+        events.onPaused()
+        assertFalse(events.take())
+        events.onResumed()
+        assertTrue(events.take())
+        assertFalse(events.take())
+    }
+
     @Test fun leavingAgainInvalidatesAnEarlierReturn() {
         val events = DeferredHostReturn()
         events.arm()

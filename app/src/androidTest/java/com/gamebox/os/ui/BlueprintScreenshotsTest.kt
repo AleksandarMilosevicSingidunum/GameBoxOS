@@ -10,10 +10,17 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.gamebox.os.MainActivity
 import com.gamebox.os.GameBoxApplication
+import com.gamebox.os.download.AssetDownloadWorker
+import com.gamebox.os.download.AuthorizedDownloadState
+import com.gamebox.os.download.AuthorizedHomebrewDownload
+import com.gamebox.os.download.InstalledContentStatus
+import com.gamebox.os.download.InstalledContentValidator
+import com.gamebox.os.domain.GameId
 import com.gamebox.os.domain.InstallState
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
+import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -39,11 +46,10 @@ class BlueprintScreenshotsTest {
         }
         capture("01-home")
         hero.onFirst().performClick()
-        if (rule.activity.resources.configuration.screenWidthDp >= 900) {
-            // The TV Details hero keeps the primary authorized-install action in
-            // the right-side installation panel instead of below the fold.
-            rule.onAllNodesWithText("Install game").onLast().assertIsDisplayed()
+        rule.waitUntil(5_000) {
+            rule.onAllNodesWithText("About this game").fetchSemanticsNodes().isNotEmpty()
         }
+        assertEquals(1, rule.onAllNodesWithText("About this game").fetchSemanticsNodes().size)
         capture("02-game-details")
         listOf("Library", "Store", "Media", "PC", "Settings").forEachIndexed { index, title ->
             val tab = rule.onNodeWithContentDescription("$title tab")
@@ -67,6 +73,16 @@ class BlueprintScreenshotsTest {
                         .performSemanticsAction(SemanticsActions.RequestFocus)
                         .assertIsFocused()
                     "Settings" -> {
+                        rule.onNodeWithContentDescription("Storage settings section").assertIsSelected()
+                        rule.onNodeWithText("Interface").assertIsNotDisplayed()
+                        rule.onNodeWithContentDescription("System settings section").performClick()
+                        rule.onNodeWithText("Interface").assertIsDisplayed()
+                        rule.onNodeWithText("UI sound effects").performScrollTo().assertIsDisplayed()
+                        rule.onNodeWithContentDescription("Developer settings section").performClick()
+                        rule.onNodeWithText("Developer and diagnostics").assertIsDisplayed()
+                        rule.onNodeWithContentDescription("Focus diagnostics overlay")
+                            .performScrollTo().assertIsDisplayed()
+                        rule.onNodeWithContentDescription("Display settings section").performClick()
                         rule.onNodeWithText("Display").performScrollTo().assertIsDisplayed()
                         rule.onAllNodes(hasContentDescription("TV safe area", substring = true))
                             .onFirst()
@@ -151,10 +167,43 @@ class BlueprintScreenshotsTest {
         }
         val app = InstrumentationRegistry.getInstrumentation().targetContext.applicationContext as GameBoxApplication
         val repository = app.container.gameRepository
-        val target = repository.observeGames().value.firstOrNull()
-            ?: error("Installed-state coverage requires a seeded catalog record")
+        val targetId = GameId("galaxy-patrol")
+        org.junit.Assume.assumeTrue(
+            "Play-ready coverage requires the bundled Galaxy Patrol fixture in this catalog",
+            repository.observeGames().value.any { it.id == targetId },
+        )
+        val target = repository.game(targetId) ?: error("Galaxy Patrol disappeared during TV setup")
+        val installedContent = app.filesDir.resolve(AssetDownloadWorker.INSTALL_ROOT)
+            .resolve(AuthorizedHomebrewDownload.RELATIVE_PATH)
+        val validator = InstalledContentValidator(app.filesDir.resolve(AssetDownloadWorker.INSTALL_ROOT))
+        val validContentBefore = validator.validate(
+            AuthorizedHomebrewDownload.RELATIVE_PATH,
+            AuthorizedHomebrewDownload.SHA256,
+        ) == InstalledContentStatus.VERIFIED
         val originalState = target.state
+        org.junit.Assume.assumeTrue(
+            "Refusing to replace a non-verified pre-existing Galaxy Patrol install",
+            validContentBefore || !installedContent.exists(),
+        )
         try {
+            if (!validContentBefore) {
+                app.container.authorizedDownloadController.cancel()
+                runBlocking {
+                    repository.setInstallStateAndAwait(target.id, InstallState.NOT_INSTALLED)
+                }
+                val previousWorkId = app.container.authorizedDownloadController.observeState().value.workId
+                app.container.authorizedDownloadController.install()
+                rule.waitUntil(120_000) {
+                    val current = app.container.authorizedDownloadController.observeState().value
+                    current.status == AuthorizedDownloadState.Status.SUCCEEDED &&
+                        current.workId != previousWorkId &&
+                        installedContent.isFile &&
+                        validator.validate(
+                            AuthorizedHomebrewDownload.RELATIVE_PATH,
+                            AuthorizedHomebrewDownload.SHA256,
+                        ) == InstalledContentStatus.VERIFIED
+                }
+            }
             runBlocking { repository.setInstallStateAndAwait(target.id, InstallState.INSTALLED) }
             val installedTarget = runBlocking {
                 withTimeout(5_000) {
@@ -180,8 +229,10 @@ class BlueprintScreenshotsTest {
             rule.waitUntil(5_000) {
                 rule.onAllNodesWithText("Play Now").fetchSemanticsNodes().isNotEmpty()
             }
-            rule.onNodeWithText("Play Now").assertIsDisplayed()
+            rule.onNodeWithText("Play Now").performScrollTo().assertIsDisplayed()
         } finally {
+            app.container.authorizedDownloadController.cancel()
+            if (!validContentBefore) installedContent.delete()
             runBlocking { repository.setInstallStateAndAwait(target.id, originalState) }
         }
     }

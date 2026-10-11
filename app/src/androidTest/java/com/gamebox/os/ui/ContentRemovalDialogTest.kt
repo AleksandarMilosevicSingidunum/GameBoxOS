@@ -1,10 +1,13 @@
 package com.gamebox.os.ui
 
+import android.view.KeyEvent
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.*
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.platform.app.InstrumentationRegistry
 import com.gamebox.os.GameBoxApplication
 import com.gamebox.os.domain.Game
 import com.gamebox.os.domain.GameId
@@ -23,6 +26,27 @@ import org.junit.runner.RunWith
 class ContentRemovalDialogTest {
     @get:Rule val compose = createComposeRule()
     private val game = Game(GameId("dialog-test"), "Dialog Test", "PSP", 2000, "Test", 1, InstallState.INSTALLED)
+
+    @Test fun uninstallConfirmationIsFocusableForCompactTVInput() {
+        val app = ApplicationProvider.getApplicationContext<GameBoxApplication>()
+        val controller = object : SaveSafetyController by app.container.saveSafetyController {
+            override fun contentRemovalPreview(game: Game) = ContentRemovalPreview(7, 1)
+            override suspend fun cloudBackupPreflight(game: Game) = CloudBackupPreflight(
+                CloudBackupPreflightStatus.NOT_REQUIRED,
+                "No managed save copy requires cloud protection.",
+            )
+            override suspend fun uninstallContent(game: Game): String =
+                error("Focus-only test must not uninstall content")
+        }
+        compose.setContent { MaterialTheme { ContentRemovalDialog(game, controller) {} } }
+        compose.waitUntil(5_000) {
+            compose.onAllNodesWithText("1 content file(s), 7 bytes").fetchSemanticsNodes().isNotEmpty()
+        }
+
+        compose.onNodeWithText("Uninstall content")
+            .assertHasClickAction()
+            .assert(SemanticsMatcher.keyIsDefined(SemanticsActions.RequestFocus))
+    }
 
     @Test fun invalidPreviewCannotConfirmAndCancelDoesNotDelete() {
         val app = ApplicationProvider.getApplicationContext<GameBoxApplication>()
@@ -67,7 +91,10 @@ class ContentRemovalDialogTest {
         compose.waitUntil(5_000) {
             compose.onAllNodesWithText("1 content file(s), 7 bytes").fetchSemanticsNodes().isNotEmpty()
         }
-        compose.onNodeWithText("Uninstall content").assertIsEnabled().performClick()
+        compose.onNodeWithText("Uninstall content")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+        InstrumentationRegistry.getInstrumentation()
+            .sendKeyDownUpSync(KeyEvent.KEYCODE_BUTTON_A)
         compose.onNodeWithText("Uninstall content").assertIsNotEnabled()
         compose.onNodeWithText("Cancel").assertIsNotEnabled()
         compose.runOnIdle {
@@ -100,8 +127,13 @@ class ContentRemovalDialogTest {
                 .fetchSemanticsNodes().isNotEmpty()
         }
         compose.onNodeWithText("Uninstall content").assertIsNotEnabled()
-        compose.onNode(isToggleable()).performClick()
-        compose.onNodeWithText("Uninstall content").assertIsEnabled().performClick()
+        compose.onNodeWithContentDescription("Acknowledge local backup because cloud backup is unavailable")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+        InstrumentationRegistry.getInstrumentation().sendKeyDownUpSync(KeyEvent.KEYCODE_BUTTON_A)
+        compose.onNodeWithText("Uninstall content").assertIsEnabled()
+        compose.runOnIdle { assertFalse("A on the acknowledgement must not also confirm removal", allowedWithoutCloud) }
+        compose.onNodeWithText("Uninstall content").performSemanticsAction(SemanticsActions.RequestFocus)
+        InstrumentationRegistry.getInstrumentation().sendKeyDownUpSync(KeyEvent.KEYCODE_BUTTON_A)
         compose.waitUntil(5_000) {
             compose.onAllNodesWithText("Close").fetchSemanticsNodes().isNotEmpty()
         }

@@ -81,3 +81,38 @@ and fill color changes snap without interpolation, and Settings section
 navigation scrolls directly to its destination. Focus borders, selected states,
 and non-color semantic labels remain available, so reducing motion does not
 remove navigation feedback.
+
+## Living-room feedback polish (1 October 2026)
+
+Settings → Interface → **UI sound effects** controls subtle system click feedback
+for GameBox actions and directional controller/keyboard navigation. GameBox uses
+Android's native `SoundEffectConstants`, so device-level sound-effect preferences
+remain authoritative and no proprietary console sounds are bundled. The Home hero
+also gains a restrained blue/violet focus bloom; it is disabled by Reduce motion.
+
+## Durable Download Manager import progress (4 October 2026)
+
+Tracked browser transfers retain import stage, byte totals, and current file
+position in the durable download record. During verification or archive
+extraction, Download Manager rows show the real reported stage and determinate
+progress when a total is known, instead of switching to a generic spinner after
+the network transfer ends. Physical-TV spacing/readability and a live import
+remain hardware acceptance checks.
+
+## Download Manager couch-distance legibility (4 October 2026)
+
+The Download Manager raises its supporting and status copy to 12sp and gives the
+wide-layout status rail more room. This targets readability of transfer state,
+progress, and storage notes at TV distance while leaving actual TV-scale review
+to the physical-display acceptance pass.
+
+## Blueprint-scale Home composition (4 October 2026)
+
+The wide Home follows the supplied 1920×1080 proportions more closely, tuned
+against the Honor Desktop rendering scale observed on HDMI (~1.5× logical dp):
+212dp Continue Playing hero, 200dp status column, 116×140dp collection cards,
+198×105dp recently played cards, and a 100dp minimum quick-launch tile. Compact
+Home keeps its phone-specific sizing. Unit tests, Android-test Kotlin
+compilation, lint, and debug APK assembly passed. The corrected APK was installed,
+but the Honor then locked; the HDMI display showed “Phone is locked, please
+unlock,” so corrected-layout acceptance on the physical TV remains pending.

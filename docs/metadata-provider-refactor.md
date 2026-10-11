@@ -11,9 +11,11 @@ The enrichment path no longer depends on a TheGamesDB API key or on Vimm page ma
 4. Cache the result for the current process so a catalog refresh does not repeatedly query
    the same title.
 
-TheGamesDB remains available for the explicit **Find TheGamesDB match** editor flow and for
-existing catalog-discovery synchronization, but it is no longer the automatic enrichment
-dependency. Vimm remains a discovery/navigation source and is not treated as a metadata API.
+The metadata editor's explicit **Find metadata match** flow now asks Wikidata and Libretro
+for candidates; the user must confirm a result before provider metadata changes. The
+obsolete TheGamesDB API-key catalog sync, health tracking, and request/parser code have
+been removed. Existing Room platform IDs are retained so upgrades do not discard cached
+catalog data. Vimm remains a discovery/navigation source and is not treated as a metadata API.
 
 Wikidata and Wikimedia Commons are public services, so production clients must continue to
 use bounded HTTPS requests, exact-title matching, cancellation, and graceful fallback. A

@@ -57,11 +57,81 @@ class GameDetailPresentationTest {
         )
 
         assertEquals("No description is available for this title.", library.description)
+        assertFalse(library.hasDescription)
+        assertFalse(library.hasAboutContent)
+        assertFalse(discovery.hasDescription)
+        assertNull(library.releaseLabel)
         assertTrue(discovery.description.contains("legal copy"))
     }
 
     @Test
-    fun detailsUsesTheSelectedGamesApprovedCore() {
+    fun libraryDetailsMergeKeylessProviderScreenshotsWithoutDuplicates() {
+        val game = Game(
+            GameId("local-psp"), "Local PSP Game", "PSP", 2007, "RPG", 1,
+            InstallState.INSTALLED,
+        )
+        val cached = DiscoveryGame(
+            id = game.id,
+            title = game.title,
+            platformId = "psp",
+            region = null,
+            releaseDate = null,
+            description = null,
+            players = null,
+            rating = null,
+            coverUrl = null,
+            backgroundUrl = null,
+            logoUrl = null,
+            screenshots = listOf("https://images.example/cached.jpg"),
+            favorite = false,
+        )
+
+        val detail = GameDetailPresentation.from(
+            game,
+            cached,
+            additionalScreenshots = listOf(
+                "https://images.example/provider.jpg",
+                "https://images.example/cached.jpg",
+            ),
+        )
+
+        assertEquals(
+            listOf("https://images.example/cached.jpg", "https://images.example/provider.jpg"),
+            detail.screenshots,
+        )
+    }
+
+    @Test
+    fun libraryDetailsUseCachedProviderDescriptionBeforeShowingEmptyState() {
+        val game = Game(
+            GameId("local-description"), "Local Description", "PSP", 2007, "RPG", 1,
+            InstallState.INSTALLED,
+        )
+        val cached = DiscoveryGame(
+            id = game.id,
+            title = game.title,
+            platformId = "psp",
+            region = null,
+            releaseDate = null,
+            description = "Cached provider description.",
+            players = null,
+            rating = null,
+            coverUrl = null,
+            backgroundUrl = null,
+            logoUrl = null,
+            screenshots = emptyList(),
+            favorite = false,
+        )
+
+        val detail = GameDetailPresentation.from(game, cached)
+
+        assertEquals("Cached provider description.", detail.description)
+        assertTrue(detail.hasDescription)
+        assertTrue(detail.hasAboutContent)
+    }
+
+    @Test
+    fun detailsDoesNotShowRetroArchCoreGuidanceForStandaloneConsoleEmulator() {
         val gbc = Game(
             GameId("brickster"), "Brickster", "Game Boy Color", 2020, "Puzzle", 1,
             InstallState.INSTALLED,
@@ -70,10 +140,7 @@ class GameDetailPresentationTest {
             localContentMimeType = "application/x-gameboy-color-rom",
         )
 
-        assertEquals(
-            "Nintendo - Game Boy / Color (Gambatte)",
-            GameDetailPresentation.requiredEmulatorCore(gbc),
-        )
+        assertNull(GameDetailPresentation.requiredEmulatorCore(gbc))
     }
 
     @Test

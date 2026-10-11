@@ -25,10 +25,14 @@ internal class DeferredHostReturn {
 
     @Synchronized fun take(): Boolean {
         val result = returned
+        if (result) clear()
+        return result
+    }
+
+    @Synchronized fun clear() {
         armed = false
         paused = false
         returned = false
-        return result
     }
 }
 

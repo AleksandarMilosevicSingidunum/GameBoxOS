@@ -13,6 +13,9 @@
             <Setter Property="Foreground" Value="{StaticResource TextBrush}"/>
             <Setter Property="FontFamily" Value="Segoe UI"/>
         </Style>
+        <Style TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{StaticResource TextBrush}"/>
+        </Style>
         <Style TargetType="Button">
             <Setter Property="Background" Value="{StaticResource PanelBrush}"/>
             <Setter Property="Foreground" Value="{StaticResource TextBrush}"/>
@@ -26,6 +29,17 @@
             <Setter Property="Foreground" Value="{StaticResource TextBrush}"/>
             <Setter Property="BorderBrush" Value="#34445A"/>
             <Setter Property="Padding" Value="12,8"/>
+        </Style>
+        <Style TargetType="ComboBox">
+            <Setter Property="Background" Value="#202B3A"/>
+            <Setter Property="Foreground" Value="#17212F"/>
+            <Setter Property="BorderBrush" Value="#34445A"/>
+            <Setter Property="Padding" Value="8,6"/>
+        </Style>
+        <Style TargetType="ComboBoxItem">
+            <Setter Property="Background" Value="#202B3A"/>
+            <Setter Property="Foreground" Value="#17212F"/>
+            <Setter Property="Padding" Value="8,6"/>
         </Style>
     </Application.Resources>
 </Application>

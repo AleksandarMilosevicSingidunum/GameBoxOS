@@ -7,10 +7,20 @@ object RomImportPolicy {
         val label: String,
         val aliases: Set<String>,
         val extensions: Set<String>,
+        val gameExtensions: Set<String>,
     )
 
-    private fun profile(label: String, aliases: Set<String>, vararg extensions: String) =
-        FormatProfile(label, aliases.map(::normalizePlatform).toSet(), extensions.toSet())
+    private val archiveContainerExtensions = setOf("zip", "7z")
+
+    private fun profile(label: String, aliases: Set<String>, vararg extensions: String): FormatProfile {
+        val gameExtensions = extensions.toSet() - archiveContainerExtensions
+        return FormatProfile(
+            label = label,
+            aliases = aliases.map(::normalizePlatform).toSet(),
+            extensions = gameExtensions + archiveContainerExtensions,
+            gameExtensions = gameExtensions,
+        )
+    }
 
     private val profiles = listOf(
         profile("Nintendo Entertainment System", setOf("NES", "Famicom", "Nintendo Entertainment System"), "nes", "unf", "unif", "fds", "zip", "7z"),
@@ -19,10 +29,10 @@ object RomImportPolicy {
         profile("Game Boy", setOf("GB", "Game Boy", "Nintendo Game Boy"), "gb", "sgb", "zip", "7z"),
         profile("Game Boy Color", setOf("GBC", "Game Boy Color", "Nintendo Game Boy Color"), "gbc", "sgb", "zip", "7z"),
         profile("Game Boy Advance", setOf("GBA", "Game Boy Advance", "Nintendo Game Boy Advance"), "gba", "agb", "zip", "7z"),
-        profile("Nintendo DS", setOf("NDS", "Nintendo DS"), "nds", "dsi", "zip", "7z"),
+        profile("Nintendo DS", setOf("DS", "NDS", "Nintendo DS"), "nds", "dsi", "zip", "7z"),
         profile("Nintendo 3DS", setOf("3DS", "Nintendo 3DS"), "3ds", "cci", "cxi", "cia", "3dsx"),
         profile("Nintendo GameCube", setOf("GameCube", "Nintendo GameCube"), "iso", "gcm", "rvz", "gcz", "wia", "ciso"),
-        profile("Nintendo Wii", setOf("Wii", "Nintendo Wii"), "iso", "wbfs", "rvz", "gcz", "wia", "wad", "ciso"),
+        profile("Nintendo Wii", setOf("Wii", "Nintendo Wii", "WiiWare", "Nintendo WiiWare"), "iso", "wbfs", "rvz", "gcz", "wia", "wad", "ciso"),
         profile("Nintendo Wii U", setOf("Wii U", "Nintendo Wii U"), "wud", "wux", "wua", "rpx"),
         profile("Nintendo Switch", setOf("Switch", "Nintendo Switch"), "xci", "xcz", "nsp", "nsz", "nca", "nro", "nso"),
         profile("PlayStation", setOf("PS1", "PSX", "PlayStation", "Sony PlayStation"), "cue", "bin", "chd", "pbp", "ccd", "img", "sub", "wav", "mdf", "mds"),
@@ -39,8 +49,13 @@ object RomImportPolicy {
         profile("Xbox", setOf("Xbox", "Microsoft Xbox"), "iso", "xbe"),
         profile("Xbox 360", setOf("Xbox 360", "Microsoft Xbox 360"), "iso", "xex"),
         profile("PC Engine / TurboGrafx-16", setOf("PC Engine", "TurboGrafx 16", "TurboGrafx-16"), "pce", "sgx", "cue", "bin", "chd", "zip", "7z"),
+        profile("PC Engine CD / TurboGrafx-CD", setOf("PC Engine CD", "TurboGrafx CD", "TurboGrafx-CD", "NEC PC Engine CD"), "pce", "sgx", "hes", "cue", "bin", "img", "iso", "chd", "mmi", "zip", "7z"),
+        profile("Philips CD-i", setOf("CD-i", "Philips CD-i", "CDi"), "chd", "iso", "zip", "7z"),
         profile("Neo Geo", setOf("Neo Geo", "SNK Neo Geo", "Neo Geo Pocket", "Neo Geo Pocket Color"), "zip", "7z", "ngp", "ngc"),
-        profile("Atari", setOf("Atari 2600", "Atari 5200", "Atari 7800", "Atari Jaguar", "Atari Lynx"), "a26", "a52", "a78", "j64", "jag", "lnx", "zip", "7z"),
+        profile("Atari", setOf("Atari 2600", "Atari 5200", "Atari 7800", "Jaguar", "Atari Jaguar", "Lynx", "Atari Lynx"), "a26", "a52", "a78", "j64", "jag", "rom", "abs", "cof", "prg", "lnx", "zip", "7z"),
+        profile("Atari Jaguar CD", setOf("Jaguar CD", "Atari Jaguar CD"), "cue", "bin", "cdi", "zip", "7z"),
+        profile("Sega 32X", setOf("Sega 32X", "32X"), "32x", "bin", "gen", "smd", "md", "cue", "iso", "chd", "zip", "7z"),
+        profile("Nintendo Virtual Boy", setOf("Virtual Boy", "Nintendo Virtual Boy"), "vb", "vboy", "bin", "zip", "7z"),
         profile("WonderSwan", setOf("WonderSwan", "WonderSwan Color"), "ws", "wsc", "zip", "7z"),
         profile("Arcade", setOf("Arcade", "MAME"), "zip", "7z", "chd"),
         profile("Homebrew", setOf("Homebrew"), "zip", "7z", "rom", "elf", "dol", "nro", "3dsx", "wad", "apk"),
@@ -51,6 +66,9 @@ object RomImportPolicy {
 
     fun profileLabel(platform: String?): String =
         profileFor(platform)?.label ?: platform?.trim()?.takeIf(String::isNotEmpty) ?: "Unknown platform"
+
+    /** True when a console has a dedicated allowlist rather than the generic extension fallback. */
+    internal fun hasKnownPlatformProfile(platform: String?): Boolean = profileFor(platform) != null
 
     /**
      * Catalogs may use a broad platform such as Retro or Homebrew before a user
@@ -65,13 +83,17 @@ object RomImportPolicy {
         val extension = fileName.substringAfterLast('.', "").lowercase()
         if (extension.isBlank()) return profileLabel(platform)
         val candidates = profiles.filter { profile ->
-            profile.label !in setOf("Retro", "Homebrew") && extension in profile.extensions
+            profile.label !in setOf("Retro", "Homebrew") && extension in profile.gameExtensions
         }
         return candidates.singleOrNull()?.label ?: profileLabel(platform)
     }
 
     fun supportedExtensions(platform: String?): Set<String> =
         profileFor(platform)?.extensions ?: knownExtensions
+
+    /** Game payload formats only; ZIP and 7z are wrappers and must not be registered as ROMs. */
+    internal fun supportedGameExtensions(platform: String?): Set<String> =
+        profileFor(platform)?.gameExtensions ?: knownExtensions - archiveContainerExtensions
 
     fun supportedExtensionsLabel(platform: String?, limit: Int = 12): String {
         require(limit > 0)
@@ -84,12 +106,23 @@ object RomImportPolicy {
         supportedExtensions(platform).any { it in setOf("cue", "gdi", "mds", "ccd") }
 
     fun safeFileName(value: String, platform: String? = null): String {
+        return safeFileNameAgainst(value, platform, supportedExtensions(platform))
+    }
+
+    internal fun safeArchiveContentFileName(value: String, platform: String? = null): String {
+        return safeFileNameAgainst(value, platform, supportedGameExtensions(platform))
+    }
+
+    private fun safeFileNameAgainst(
+        value: String,
+        platform: String?,
+        supported: Set<String>,
+    ): String {
         val name = value.trim().substringAfterLast('/').substringAfterLast('\\')
         require(name.length in 1..180) { "Invalid import filename" }
         require(name.none { it.code < 32 }) { "Invalid import filename" }
         require(name != "." && name != "..") { "Invalid import filename" }
         val extension = name.substringAfterLast('.', "").lowercase()
-        val supported = supportedExtensions(platform)
         require(extension in supported) {
             val shownExtension = extension.takeIf(String::isNotEmpty)?.let { ".$it" } ?: "Files without an extension"
             "$shownExtension is not supported for ${profileLabel(platform)}. Supported formats: " +

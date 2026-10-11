@@ -27,7 +27,7 @@ object CompanionStatusRoute {
         val safeName = deviceName.companionJsonEscape()
         return CompanionHttpResponse(
             200,
-            """{"protocolVersion":1,"deviceName":"$safeName","status":"ready"}""",
+            """{"protocolVersion":${CompanionProtocol.VERSION},"deviceName":"$safeName","status":"ready"}""",
         )
     }
 }

@@ -27,7 +27,7 @@ class ReimportIdentityIntegrationTest {
         try {
             val id = GameId("identity-test")
             val originalBytes = "original synthetic game bytes".toByteArray()
-            val source = root.resolve("source/game.iso").apply { parentFile.mkdirs(); writeBytes(originalBytes) }
+            val source = root.resolve("source/game.iso").apply { parentFile?.mkdirs(); writeBytes(originalBytes) }
             val importer = AuthorizedRomImporter(context)
             val sources = listOf(RomImportSource(Uri.fromFile(source), "game.iso"))
             val initialResult = importer.importSet(id, sources, "PSP")
@@ -47,7 +47,7 @@ class ReimportIdentityIntegrationTest {
             }
             val installed = root.resolve(initial.launchFile.relativePath)
             val save = root.resolve("saves/identity-test/progress.sav").apply {
-                parentFile.mkdirs(); writeText("synthetic saved progress")
+                parentFile?.mkdirs(); writeText("synthetic saved progress")
             }
             source.writeText("different game bytes")
             val rejected = importer.importSet(id, sources, "PSP", expected)

@@ -17,18 +17,26 @@ data class GameDetailPresentation(
     val region: String?,
     val ratingLabel: String?,
     val description: String,
+    val hasDescription: Boolean,
     val coverUrl: String?,
     val heroUrl: String?,
     val screenshots: List<String>,
     val favorite: Boolean,
     val installed: Boolean,
     val source: GameDetailSource,
-) {
+ ) {
+    val hasAboutContent: Boolean
+        get() = hasDescription || region != null || ratingLabel != null
+
     companion object {
         fun requiredEmulatorCore(game: Game): String? =
             EmulatorCapabilityRegistry().forGame(game)?.requiredCore
 
-        fun from(game: Game, discovery: DiscoveryGame? = null): GameDetailPresentation {
+        fun from(
+            game: Game,
+            discovery: DiscoveryGame? = null,
+            additionalScreenshots: List<String> = emptyList(),
+        ): GameDetailPresentation {
             // Do not reuse the old identity's gallery after an explicit metadata rematch.
             val cached = discovery?.takeIf { it.id == game.id && game.metadataExternalId == null }
             return GameDetailPresentation(
@@ -43,11 +51,13 @@ data class GameDetailPresentation(
                 if (rating % 1.0 == 0.0) rating.toInt().toString() else "%.1f".format(rating)
             },
             description = game.description?.takeIf(String::isNotBlank)
+                ?: cached?.description?.takeIf(String::isNotBlank)
                 ?: "No description is available for this title.",
+            hasDescription = !game.description.isNullOrBlank() || !cached?.description.isNullOrBlank(),
             coverUrl = game.artworkUrl,
             heroUrl = game.metadataOverrides.artworkUrl ?: cached?.backgroundUrl
                 ?: cached?.screenshots?.firstOrNull() ?: game.artworkUrl,
-            screenshots = cached?.screenshots?.distinct().orEmpty(),
+            screenshots = (cached?.screenshots.orEmpty() + additionalScreenshots).distinct(),
             favorite = game.favorite,
             installed = game.state in setOf(InstallState.INSTALLED, InstallState.UPDATE_AVAILABLE),
             source = GameDetailSource.LIBRARY,
@@ -68,6 +78,7 @@ data class GameDetailPresentation(
                 },
                 description = game.description?.takeIf(String::isNotBlank)
                     ?: "Discover this title and import your own legal copy to play.",
+                hasDescription = !game.description.isNullOrBlank(),
                 coverUrl = game.coverUrl,
                 heroUrl = game.backgroundUrl ?: game.screenshots.firstOrNull() ?: game.coverUrl,
                 screenshots = game.screenshots.distinct(),

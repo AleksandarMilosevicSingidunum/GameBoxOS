@@ -15,6 +15,29 @@ object GameContentPolicy {
     )
 
     private val policies = mapOf(
+        "nes" to PlatformPolicy(
+            defaultExtension = "nes",
+            extensions = mapOf(
+                "nes" to "application/x-nes-rom",
+                "unf" to "application/x-unif",
+                "unif" to "application/x-unif",
+                "fds" to "application/x-fds",
+            ),
+        ),
+        "gb" to PlatformPolicy(
+            defaultExtension = "gb",
+            extensions = mapOf(
+                "gb" to "application/x-gameboy-rom",
+                "sgb" to "application/x-gameboy-rom",
+            ),
+        ),
+        "gbc" to PlatformPolicy(
+            defaultExtension = "gbc",
+            extensions = mapOf(
+                "gbc" to "application/x-gameboy-color-rom",
+                "sgb" to "application/x-gameboy-color-rom",
+            ),
+        ),
         "ps1" to PlatformPolicy(
             defaultExtension = "chd",
             extensions = mapOf(
@@ -172,6 +195,10 @@ object GameContentPolicy {
                 "ciso" to "application/x-compressed-iso",
             ),
         ),
+        "wiiware" to PlatformPolicy(
+            defaultExtension = "wad",
+            extensions = mapOf("wad" to "application/x-wii-wad"),
+        ),
         "3ds" to PlatformPolicy(
             defaultExtension = "3ds",
             extensions = mapOf(
@@ -221,16 +248,25 @@ object GameContentPolicy {
     )
 
     private val aliases = mapOf(
+        "famicom" to "nes",
+        "nintendoentertainmentsystem" to "nes",
+        "nintendogameboy" to "gb",
+        "gameboycolor" to "gbc",
+        "nintendogameboycolor" to "gbc",
         "playstation" to "ps1",
         "sonyplaystation" to "ps1",
         "playstation2" to "ps2",
         "sonyplaystation2" to "ps2",
         "playstationportable" to "psp",
+        "ds" to "nds",
+        "dsi" to "nds",
         "nintendods" to "nds",
         "gameboyadvance" to "gba",
         "nintendogameboyadvance" to "gba",
         "supernintendo" to "snes",
+        "supernintendoentertainmentsystem" to "snes",
         "superfamicom" to "snes",
+        "segagenesis" to "genesis",
         "segamegadrive" to "megadrive",
         "segamastersystem" to "mastersystem",
         "segagamegear" to "gamegear",

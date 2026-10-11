@@ -1,260 +1,54 @@
 package com.gamebox.os.launch
 
+import android.app.Activity
 import android.app.ActivityOptions
 import android.content.ClipData
-import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
-import android.provider.MediaStore
 import android.os.Environment
+import android.os.Handler
+import android.os.Looper
 import android.view.Display
 import com.gamebox.os.display.toGameBoxFullscreenLaunchBundle
 import androidx.core.content.FileProvider
-import com.gamebox.os.content.GameContentPolicy
-import com.gamebox.os.data.GameRepository
-import com.gamebox.os.domain.Game
 import com.gamebox.os.domain.GameId
-import com.gamebox.os.domain.InstallState
 import com.gamebox.os.domain.LocalContentFile
 import com.gamebox.os.download.Sha256Verifier
 import com.gamebox.os.download.VerificationResult
-import com.gamebox.os.storage.ExternalGameContent
 import com.gamebox.os.storage.ExternalLibraryContentStore
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import kotlinx.coroutines.runBlocking
-import java.util.concurrent.atomic.AtomicBoolean
-import java.util.concurrent.ConcurrentHashMap
 import java.io.File
-
-data class EmulatorCapability(
-    val id: String,
-    val gameId: GameId,
-    val packageName: String,
-    val contentRelativePath: String,
-    val mimeType: String,
-    val expectedSha256: String,
-    val graphicsProfile: String = "Balanced",
-    val requiredCore: String? = null,
-    val retroArchCoreFileName: String? = null,
-    val contentRoot: EmulatorContentRoot = EmulatorContentRoot.INSTALLED,
-    val companionFiles: List<LocalContentFile> = emptyList(),
-)
-
-enum class EmulatorContentRoot(val directoryName: String) {
-    INSTALLED("installed"),
-    IMPORTS("imports"),
-}
-
-/** Stable path required by RetroArch's exported Android launcher activity. */
-internal fun retroArchCorePath(packageName: String, coreFileName: String): String {
-    require(packageName.startsWith("com.retroarch")) { "RetroArch package is required" }
-    require(coreFileName.endsWith("_libretro_android.so")) { "Android libretro core is required" }
-    return "/data/data/$packageName/cores/$coreFileName"
-}
-
-class EmulatorCapabilityRegistry(
-    private val capabilities: List<EmulatorCapability> = listOf(
-        EmulatorCapability(
-            id = "retroarch-aarch64-galaxy-patrol",
-            gameId = GameId("galaxy-patrol"),
-            packageName = "com.retroarch.aarch64",
-            contentRelativePath = "retro/galaxy-patrol/content/galaxy-patrol.nes",
-            mimeType = "application/x-nes-rom",
-            expectedSha256 = "97c1757ffd6a5bc1a591809b2b0f8988741f61f6abd82889c148ecae8a2f471f",
-            requiredCore = "Nintendo - NES / Famicom (FCEUmm)",
-            retroArchCoreFileName = "fceumm_libretro_android.so",
-        )
-    )
-) {
-    private data class RetroArchPlatformProfile(
-        val requiredCore: String,
-        val coreFileName: String,
-    )
-
-    private fun retroArchProfile(platform: String): RetroArchPlatformProfile? {
-        return when (platform.lowercase().filter(Char::isLetterOrDigit)) {
-            "nes", "famicom", "nintendoentertainmentsystem" -> RetroArchPlatformProfile(
-                requiredCore = "Nintendo - NES / Famicom (FCEUmm)",
-                coreFileName = "fceumm_libretro_android.so",
-            )
-            "gb", "gameboy", "nintendogameboy",
-            "gbc", "gameboycolor", "nintendogameboycolor" -> RetroArchPlatformProfile(
-                requiredCore = "Nintendo - Game Boy / Color (Gambatte)",
-                coreFileName = "gambatte_libretro_android.so",
-            )
-            "snes", "superfamicom", "supernintendo", "supernintendoentertainmentsystem" ->
-                RetroArchPlatformProfile(
-                    requiredCore = "Nintendo - SNES / SFC (Snes9x)",
-                    coreFileName = "snes9x_libretro_android.so",
-                )
-            "gba", "gameboyadvance", "nintendogameboyadvance" -> RetroArchPlatformProfile(
-                requiredCore = "Nintendo - Game Boy Advance (mGBA)",
-                coreFileName = "mgba_libretro_android.so",
-            )
-            "genesis", "megadrive", "segagenesis", "segamegadrive" -> RetroArchPlatformProfile(
-                requiredCore = "Sega - MS/GG/MD/CD (Genesis Plus GX)",
-                coreFileName = "genesis_plus_gx_libretro_android.so",
-            )
-            "n64", "nintendo64" -> RetroArchPlatformProfile(
-                requiredCore = "Nintendo - Nintendo 64 (Mupen64Plus-Next)",
-                coreFileName = "mupen64plus_next_gles3_libretro_android.so",
-            )
-            "nds", "nintendods", "dsi" -> RetroArchPlatformProfile(
-                requiredCore = "Nintendo - Nintendo DS (melonDS)",
-                coreFileName = "melonds_libretro_android.so",
-            )
-            "ps1", "psx", "playstation", "sonyplaystation" -> RetroArchPlatformProfile(
-                requiredCore = "Sony - PlayStation (PCSX-ReARMed)",
-                coreFileName = "pcsx_rearmed_libretro_android.so",
-            )
-            "dreamcast", "segadreamcast" -> RetroArchPlatformProfile(
-                requiredCore = "Sega - Dreamcast (Flycast)",
-                coreFileName = "flycast_libretro_android.so",
-            )
-            "mastersystem", "segamastersystem", "gamegear", "segagamegear" ->
-                RetroArchPlatformProfile(
-                    requiredCore = "Sega - MS/GG/MD/CD (Genesis Plus GX)",
-                    coreFileName = "genesis_plus_gx_libretro_android.so",
-                )
-            "pcengine", "turbografx16" -> RetroArchPlatformProfile(
-                requiredCore = "NEC - PC Engine / SuperGrafx / CD (Beetle PCE FAST)",
-                coreFileName = "mednafen_pce_fast_libretro_android.so",
-            )
-            "wonderswan", "wonderswancolor" -> RetroArchPlatformProfile(
-                requiredCore = "Bandai - WonderSwan / Color (Beetle Cygne)",
-                coreFileName = "mednafen_wswan_libretro_android.so",
-            )
-            "atari2600" -> RetroArchPlatformProfile(
-                requiredCore = "Atari - 2600 (Stella)",
-                coreFileName = "stella_libretro_android.so",
-            )
-            else -> null
-        }
-    }
-
-    fun readinessMessage(game: Game): String? = forGame(game)?.let { capability ->
-        capability.requiredCore?.let { core ->
-            "Install RetroArch (standard, ARM64, or RA32) and the $core core before launching this game."
-        }
-    }
-
-    fun displayName(packageName: String): String = when (packageName) {
-        "com.retroarch.aarch64", "com.retroarch", "com.retroarch.ra32" -> "RetroArch"
-        "org.ppsspp.ppsspp", "org.ppsspp.ppssppgold", "org.ppsspp.ppsspplegacy" -> "PPSSPP"
-        "org.dolphinemu.dolphinemu" -> "Dolphin"
-        "xyz.aethersx2.android" -> "AetherSX2"
-        "com.github.stenzek.duckstation" -> "DuckStation"
-        "org.mupen64plusae.v3.fzurita" -> "M64Plus FZ"
-        "com.flycast.emulator" -> "Flycast"
-        else -> packageName.substringAfterLast(".")
-    }
-
-    /** Makes otherwise identical RetroArch choices unambiguous in game settings. */
-    fun optionDisplayName(packageName: String): String = when (packageName) {
-        "com.retroarch.aarch64" -> "RetroArch ARM64"
-        "com.retroarch" -> "RetroArch standard"
-        "com.retroarch.ra32" -> "RetroArch RA32"
-        else -> displayName(packageName)
-    }
-
-    fun optionsFor(game: Game): List<String> = when (game.platform.lowercase().filter(Char::isLetterOrDigit)) {
-        in retroArchPlatformAliases -> retroArchPackages
-        "psp", "playstationportable", "sonyplaystationportable" ->
-            listOf("org.ppsspp.ppsspp", "org.ppsspp.ppssppgold", "org.ppsspp.ppsspplegacy")
-        "ps1", "psx", "playstation", "sonyplaystation" -> listOf("com.github.stenzek.duckstation", "com.retroarch.aarch64")
-        "n64", "nintendo64" -> listOf("org.mupen64plusae.v3.fzurita", "com.retroarch.aarch64")
-        "dreamcast", "segadreamcast" -> listOf("com.flycast.emulator", "com.retroarch.aarch64")
-        "gamecube", "nintendogamecube", "wii", "nintendowii" -> listOf("org.dolphinemu.dolphinemu")
-        "ps2", "playstation2", "sonyplaystation2" -> listOf("xyz.aethersx2.android")
-        else -> emptyList()
-    }
-
-    private val retroArchPackages = listOf("com.retroarch.aarch64", "com.retroarch", "com.retroarch.ra32")
-    private val retroArchPlatformAliases = setOf(
-        "retro", "homebrew", "nes", "famicom", "nintendoentertainmentsystem",
-        "snes", "superfamicom", "supernintendo", "supernintendoentertainmentsystem",
-        "gb", "gameboy", "nintendogameboy", "gbc", "gameboycolor", "nintendogameboycolor",
-        "gba", "gameboyadvance", "nintendogameboyadvance", "nds", "nintendods",
-        "mastersystem", "segamastersystem", "gamegear", "segagamegear",
-        "genesis", "megadrive", "segagenesis", "segamegadrive", "segacd", "megacd",
-        "saturn", "segasaturn", "pcengine", "turbografx16", "neogeo", "snkneogeo",
-        "neogeopocket", "neogeopocketcolor", "atari", "atari2600", "atari5200",
-        "atari7800", "atarijaguar", "atarilynx", "wonderswan", "wonderswancolor", "arcade", "mame",
-    )
-
-    fun forGame(gameId: GameId): EmulatorCapability? = capabilities.firstOrNull { it.gameId == gameId }
-
-    fun forGame(game: Game, platformDefaultPackage: String? = null): EmulatorCapability? {
-        val explicit = capabilities.firstOrNull { it.gameId == game.id }
-        val importedPath = game.localContentRelativePath
-        val importedChecksum = game.localContentSha256
-        val importedMimeType = game.localContentMimeType
-        val platformProfile = retroArchProfile(game.platform)
-        if (importedPath != null && importedChecksum != null && importedMimeType != null) {
-            val packageName = game.emulatorPackage?.takeIf { it in optionsFor(game) }
-                ?: platformDefaultPackage?.takeIf { it in optionsFor(game) }
-                ?: explicit?.packageName
-                ?: optionsFor(game).firstOrNull()
-                ?: return null
-            return EmulatorCapability(
-                id = "imported-" + game.id.value,
-                gameId = game.id,
-                packageName = packageName,
-                contentRelativePath = importedPath,
-                mimeType = importedMimeType,
-                expectedSha256 = importedChecksum,
-                graphicsProfile = game.graphicsProfile,
-                requiredCore = explicit?.requiredCore ?: platformProfile?.requiredCore,
-                retroArchCoreFileName = explicit?.retroArchCoreFileName ?: platformProfile?.coreFileName,
-                contentRoot = EmulatorContentRoot.IMPORTS,
-                companionFiles = game.localContentFiles.filterNot { file ->
-                    file.relativePath == importedPath
-                },
-            )
-        }
-        explicit?.let { return it }
-        val checksum = game.expectedSha256 ?: return null
-        val packageName = game.emulatorPackage?.takeIf { it in optionsFor(game) }
-            ?: platformDefaultPackage?.takeIf { it in optionsFor(game) }
-            ?: optionsFor(game).firstOrNull() ?: return null
-        val content = GameContentPolicy.describe(
-            gameId = game.id.value,
-            platform = game.platform,
-            sourceUrl = game.sourceUrl,
-        )
-        return EmulatorCapability(
-            id = "platform-" + game.id.value,
-            gameId = game.id,
-            packageName = packageName,
-            contentRelativePath = content.relativePath,
-            mimeType = content.mimeType,
-            expectedSha256 = checksum,
-            graphicsProfile = game.graphicsProfile,
-            requiredCore = explicit?.requiredCore ?: retroArchProfile(game.platform)?.requiredCore,
-            retroArchCoreFileName = explicit?.retroArchCoreFileName ?: retroArchProfile(game.platform)?.coreFileName,
-        )
-    }
-}
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 
 enum class GatewayResult {
     LAUNCHED, EMULATOR_UNAVAILABLE, CONTENT_MISSING, VERIFICATION_FAILED, HANDOFF_REJECTED
 }
 
+internal fun hasRetroArchCoreContract(capability: EmulatorCapability): Boolean =
+    !capability.packageName.startsWith("com.retroarch") ||
+        (!capability.requiredCore.isNullOrBlank() &&
+            capability.retroArchCoreFileName?.matches(Regex("[a-z0-9_]+_libretro_android\\.so")) == true)
+
 internal fun externalDisplayLaunchId(displayId: Int?): Int? =
     displayId?.takeIf { it > Display.DEFAULT_DISPLAY }
 
-internal fun startIntentOnDisplay(context: Context, intent: Intent, displayId: Int?) {
+internal fun startIntentOnDisplay(
+    context: Context,
+    intent: Intent,
+    displayId: Int?,
+    sourceActivity: Activity? = null,
+) {
     val targetDisplayId = externalDisplayLaunchId(displayId)
-    if (targetDisplayId == null) {
+    val activity = sourceActivity?.takeUnless { it.isFinishing || it.isDestroyed }
+    if (activity != null) {
+        // This path is called from the preparation IO dispatcher. Start from the
+        // live TV Activity on its main thread and keep the emulator in that task;
+        // HONOR otherwise promotes NEW_TASK launches to freeform and Dolphin's
+        // delayed game Activity start is rejected during the task hand-off.
+        intent.removeFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        startFromHostActivity(activity, intent, targetDisplayId)
+    } else if (targetDisplayId == null) {
         context.startActivity(intent)
     } else {
         val options = ActivityOptions.makeBasic().apply {
@@ -264,6 +58,37 @@ internal fun startIntentOnDisplay(context: Context, intent: Intent, displayId: I
     }
 }
 
+private fun startFromHostActivity(activity: Activity, intent: Intent, targetDisplayId: Int?) {
+    fun start() {
+        check(!activity.isFinishing && !activity.isDestroyed) { "GameBox host Activity is no longer available" }
+        if (targetDisplayId == null) {
+            activity.startActivity(intent)
+        } else {
+            val options = ActivityOptions.makeBasic().apply {
+                launchDisplayId = targetDisplayId
+            }
+            activity.startActivity(intent, options.toGameBoxFullscreenLaunchBundle())
+        }
+    }
+
+    if (Looper.myLooper() == Looper.getMainLooper()) {
+        start()
+        return
+    }
+    val completed = CountDownLatch(1)
+    var failure: Throwable? = null
+    Handler(Looper.getMainLooper()).post {
+        try {
+            start()
+        } catch (error: Throwable) {
+            failure = error
+        } finally {
+            completed.countDown()
+        }
+    }
+    check(completed.await(10, TimeUnit.SECONDS)) { "Timed out starting the emulator from the TV Activity" }
+    failure?.let { throw it }
+}
 interface PackageGateway {
     fun launch(capability: EmulatorCapability, preparation: LaunchPreparation = LaunchPreparation()): GatewayResult
     fun launchOnDisplay(
@@ -271,6 +96,12 @@ interface PackageGateway {
         preparation: LaunchPreparation = LaunchPreparation(),
         displayId: Int? = null,
     ): GatewayResult = launch(capability, preparation)
+    fun launchOnDisplayFromActivity(
+        capability: EmulatorCapability,
+        preparation: LaunchPreparation,
+        displayId: Int?,
+        sourceActivity: Activity,
+    ): GatewayResult = launchOnDisplay(capability, preparation, displayId)
     fun cleanupLaunchedContent() = Unit
 }
 
@@ -279,24 +110,9 @@ class AndroidPackageGateway(
     private val verifier: Sha256Verifier = Sha256Verifier(),
     private val externalContent: ExternalLibraryContentStore? = null,
 ) : PackageGateway {
-    private val temporaryPublishedPreference = context.getSharedPreferences(
-        "gamebox_launch_exports",
-        Context.MODE_PRIVATE,
-    )
-    private val temporaryPublishedPreferenceKey = "uris"
-    private val temporaryPublishedContent = ConcurrentHashMap.newKeySet<Uri>()
+    private val retroArchContentPublisher = RetroArchContentPublisher(context)
 
-    override fun cleanupLaunchedContent() {
-        val persisted = temporaryPublishedPreference
-            .getStringSet(temporaryPublishedPreferenceKey, emptySet())
-            .orEmpty()
-            .mapNotNull { raw -> runCatching { Uri.parse(raw) }.getOrNull() }
-        (temporaryPublishedContent.toList() + persisted).distinct().forEach { uri ->
-            runCatching { context.contentResolver.delete(uri, null, null) }
-            temporaryPublishedContent.remove(uri)
-        }
-        temporaryPublishedPreference.edit().remove(temporaryPublishedPreferenceKey).apply()
-    }
+    override fun cleanupLaunchedContent() = retroArchContentPublisher.cleanup()
 
     override fun launch(capability: EmulatorCapability, preparation: LaunchPreparation): GatewayResult =
         launchInternal(capability, preparation, displayId = null)
@@ -305,12 +121,20 @@ class AndroidPackageGateway(
         capability: EmulatorCapability,
         preparation: LaunchPreparation,
         displayId: Int?,
-    ): GatewayResult = launchInternal(capability, preparation, displayId)
+    ): GatewayResult = launchInternal(capability, preparation, displayId, sourceActivity = null)
+
+    override fun launchOnDisplayFromActivity(
+        capability: EmulatorCapability,
+        preparation: LaunchPreparation,
+        displayId: Int?,
+        sourceActivity: Activity,
+    ): GatewayResult = launchInternal(capability, preparation, displayId, sourceActivity)
 
     private fun launchInternal(
         capability: EmulatorCapability,
         preparation: LaunchPreparation,
         displayId: Int?,
+        sourceActivity: Activity? = null,
     ): GatewayResult {
         preparation.checkActive()
         // A previous emulator session may have been interrupted before the
@@ -320,8 +144,14 @@ class AndroidPackageGateway(
         cleanupLaunchedContent()
         val resolvedPackage = resolvePackageName(capability.packageName)
             ?: return GatewayResult.EMULATOR_UNAVAILABLE
+        val externalContentStore = externalContent
         val launcherIntent = context.packageManager.getLaunchIntentForPackage(resolvedPackage)
             ?: return GatewayResult.EMULATOR_UNAVAILABLE
+        // RetroActivityFuture starts native code immediately. Launching it without
+        // a known core contract can crash or strand the external display on black.
+        if (resolvedPackage.startsWith("com.retroarch") && !hasRetroArchCoreContract(capability)) {
+            return GatewayResult.HANDOFF_REJECTED
+        }
         val installRoot = context.filesDir.resolve(capability.contentRoot.directoryName).canonicalFile
         val rootPrefix = installRoot.path + File.separator
         val approvedFiles = listOf(
@@ -332,19 +162,18 @@ class AndroidPackageGateway(
             )
         ) + capability.companionFiles
         val contentUris = mutableListOf<android.net.Uri>()
-        var primaryLocalFile: File? = null
-        var primaryExternalContent: ExternalGameContent? = null
-        approvedFiles.forEachIndexed { index, approved ->
+        val retroArchSources = mutableListOf<RetroArchContentSource>()
+        approvedFiles.forEach { approved ->
             val local = File(installRoot, approved.relativePath).canonicalFile
             if (!local.path.startsWith(rootPrefix)) return GatewayResult.CONTENT_MISSING
             val external = if (!local.isFile && capability.contentRoot == EmulatorContentRoot.INSTALLED) {
-                externalContent?.content(capability.gameId.value, approved.relativePath)
+                externalContentStore?.content(capability.gameId.value, approved.relativePath)
             } else null
             val verified = when {
                 local.isFile -> local.inputStream().use {
                     verifier.verify(it, approved.sha256, preparation::checkActive)
                 }
-                external != null -> requireNotNull(externalContent).open(external).use {
+                external != null -> (externalContentStore ?: return GatewayResult.CONTENT_MISSING).open(external).use {
                     verifier.verify(it, approved.sha256, preparation::checkActive)
                 }
                 else -> return GatewayResult.CONTENT_MISSING
@@ -356,10 +185,18 @@ class AndroidPackageGateway(
                 requireNotNull(external).uri
             }
             contentUris += contentUri
-            if (index == 0) {
-                primaryLocalFile = local.takeIf(File::isFile)
-                primaryExternalContent = external
+            val sourceOpener: () -> java.io.InputStream = if (local.isFile) {
+                { local.inputStream() }
+            } else {
+                val content = requireNotNull(external)
+                val contentStore = externalContentStore ?: return GatewayResult.CONTENT_MISSING
+                { contentStore.open(content) }
             }
+            retroArchSources += RetroArchContentSource(
+                relativePath = approved.relativePath,
+                mimeType = approved.mimeType,
+                openSource = sourceOpener,
+            )
         }
         val uri = contentUris.first()
         val plan = EmulatorIntentPolicy.plan(
@@ -374,22 +211,13 @@ class AndroidPackageGateway(
                 retroArchCorePath(resolvedPackage, coreFileName)
             },
         )
-        // RetroArch's native external launcher does not reliably consume a
-        // FileProvider content URI. Publish the verified primary file to the
-        // Downloads collection for the duration of the session and hand RetroArch
-        // the absolute path it expects. The copy is removed when GameBox resumes.
+        // RetroArch's native launcher expects a filesystem path. Publish every
+        // verified file in a descriptor-backed disc set together: CUE/GDI files
+        // refer to their tracks by sibling filename, so exporting only the
+        // descriptor can make RetroArch hang while resolving absent tracks.
         val retroArchRom = if (resolvedPackage.startsWith("com.retroarch")) {
-            val fileName = capability.contentRelativePath.substringAfterLast('/').ifBlank {
-                capability.gameId.value + ".rom"
-            }
-            primaryLocalFile?.let { local ->
-                publishContentForRetroArch(local, fileName, capability.mimeType)
-            } ?: primaryExternalContent?.let { external ->
-                publishContentForRetroArch(
-                    fileName = fileName,
-                    mimeType = capability.mimeType,
-                ) { externalContent!!.open(external) }
-            } ?: return GatewayResult.HANDOFF_REJECTED
+            retroArchContentPublisher.publishSet(retroArchSources, capability.contentRelativePath)
+                ?: return GatewayResult.HANDOFF_REJECTED
         } else {
             uri.toString()
         }
@@ -399,11 +227,18 @@ class AndroidPackageGateway(
                 // resolver rejects a wildcard MIME for a content URI even
                 // though its manifest advertises */*. Preserve the verified
                 // game MIME so ISO/CSO/PBP paths resolve on real builds.
+                // Azahar's official vanilla APK advertises only
+                // application/octet-stream for content:// ACTION_VIEW.
                 .setDataAndType(
                     uri,
-                    capability.mimeType,
+                    if (resolvedPackage == "org.azahar_emu.azahar") {
+                        "application/octet-stream"
+                    } else capability.mimeType,
                 )
                 .setPackage(resolvedPackage)
+                .apply {
+                    plan.activityClassName?.let { setClassName(resolvedPackage, it) }
+                }
             EmulatorIntentStyle.LAUNCHER_EXTRAS -> {
                 val baseIntent = plan.activityClassName?.let { activityClassName ->
                     Intent().setClassName(resolvedPackage, activityClassName)
@@ -441,7 +276,7 @@ class AndroidPackageGateway(
             return GatewayResult.HANDOFF_REJECTED
         }
         return preparation.dispatch { runCatching {
-            startIntentOnDisplay(context, intent, displayId)
+            startIntentOnDisplay(context, intent, displayId, sourceActivity)
             GatewayResult.LAUNCHED
         }.getOrElse {
             // Some RetroArch Android builds expose a launcher activity but reject
@@ -454,7 +289,7 @@ class AndroidPackageGateway(
                     addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_GRANT_READ_URI_PERMISSION)
                 }
                 runCatching {
-                    startIntentOnDisplay(context, fallback, displayId)
+                    startIntentOnDisplay(context, fallback, displayId, sourceActivity)
                     GatewayResult.LAUNCHED
                 }.getOrDefault(GatewayResult.HANDOFF_REJECTED)
             } else {
@@ -477,302 +312,16 @@ class AndroidPackageGateway(
     internal fun publishGalaxyPatrolForRetroArch(
         source: File,
         relativePath: String = "Download/GameBox"
-    ): String? = publishContentForRetroArch(
+    ): String? = retroArchContentPublisher.publish(
         source = source,
         fileName = "galaxy-patrol.nes",
         mimeType = "application/x-nes-rom",
         relativePath = relativePath,
     )
 
-    private fun publishContentForRetroArch(
-        source: File,
-        fileName: String,
-        mimeType: String,
-        relativePath: String = "Download/GameBox",
-    ): String? = publishContentForRetroArch(fileName, mimeType, relativePath) { source.inputStream() }
-
-    private fun publishContentForRetroArch(
-        fileName: String,
-        mimeType: String,
-        relativePath: String = "Download/GameBox",
-        openSource: () -> java.io.InputStream,
-    ): String? = runCatching {
-        val values = ContentValues().apply {
-            put(MediaStore.Downloads.DISPLAY_NAME, fileName)
-            put(MediaStore.Downloads.MIME_TYPE, mimeType)
-            put(MediaStore.Downloads.RELATIVE_PATH, relativePath)
-            put(MediaStore.Downloads.IS_PENDING, 1)
-        }
-        val collection = MediaStore.Downloads.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY)
-        val published = context.contentResolver.insert(collection, values) ?: return@runCatching null
-        try {
-            context.contentResolver.openOutputStream(published, "w")?.use { output ->
-                openSource().use { input -> input.copyTo(output) }
-            } ?: throw java.io.IOException("Cannot write exported game")
-            values.clear()
-            values.put(MediaStore.Downloads.IS_PENDING, 0)
-            check(context.contentResolver.update(published, values, null, null) == 1) {
-                "Cannot publish exported game"
-            }
-            // MediaStore may rename a duplicate display name. RetroArch needs the
-            // actual filesystem path, not a guessed path to a previous export.
-            @Suppress("DEPRECATION")
-            val exportedPath = context.contentResolver.query(
-                published, arrayOf(MediaStore.MediaColumns.DATA), null, null, null
-            )?.use { cursor ->
-                if (cursor.moveToFirst()) cursor.getString(0) else null
-            }
-            check(!exportedPath.isNullOrBlank() && File(exportedPath).isAbsolute) {
-                "Exported game has no filesystem path"
-            }
-            temporaryPublishedContent += published
-            val tracked = temporaryPublishedPreference
-                .getStringSet(temporaryPublishedPreferenceKey, emptySet())
-                .orEmpty()
-                .toMutableSet()
-                .apply { add(published.toString()) }
-            temporaryPublishedPreference.edit()
-                .putStringSet(temporaryPublishedPreferenceKey, tracked)
-                .apply()
-            exportedPath
-        } catch (error: Exception) {
-            context.contentResolver.delete(published, null, null)
-            throw error
-        }
-    }.getOrNull()
-
     private fun resolvePackageName(requested: String): String? {
-        val candidates = if (requested == "com.retroarch.aarch64") {
-            listOf("com.retroarch.aarch64", "com.retroarch", "com.retroarch.ra32")
-        } else listOf(requested)
-        return candidates.firstOrNull {
+        return emulatorPackageCandidates(requested).firstOrNull {
             context.packageManager.getLaunchIntentForPackage(it) != null
         }
-    }
-}
-
-data class LaunchUiState(
-    val status: Status = Status.IDLE,
-    val gameId: GameId? = null,
-    val message: String? = null
-) {
-    enum class Status {
-        IDLE, PREPARING, LAUNCHED, RETURNED, SESSION_ERROR, EMULATOR_UNAVAILABLE, UNSUPPORTED, NOT_INSTALLED,
-        CONTENT_MISSING, VERIFICATION_FAILED, HANDOFF_REJECTED
-    }
-}
-
-class ReturnTracker(private val nowMillis: () -> Long = System::currentTimeMillis) {
-    private var pending: Pair<GameId, Long>? = null
-
-    fun started(gameId: GameId) {
-        pending = gameId to nowMillis()
-    }
-
-    fun returned(): PlaySession? {
-        val (gameId, startedAt) = pending ?: return null
-        pending = null
-        val endedAt = nowMillis().coerceAtLeast(startedAt)
-        return PlaySession(gameId, startedAt, endedAt)
-    }
-}
-
-data class PlaySession(val gameId: GameId, val startedAtMillis: Long, val endedAtMillis: Long) {
-    val minutesPlayed: Int
-        get() = ((endedAtMillis - startedAtMillis) / 60_000L).toInt().coerceAtLeast(0)
-}
-
-interface GameLaunchController {
-    fun observeState(): StateFlow<LaunchUiState>
-    fun launch(game: Game)
-    fun launchOnDisplay(game: Game, displayId: Int?) = launch(game)
-    fun onHostResumed()
-    fun onHostPaused() {}
-    fun cancelPreparation() {}
-}
-
-class DefaultGameLaunchController(
-    private val registry: EmulatorCapabilityRegistry,
-    private val gateway: PackageGateway,
-    private val repository: GameRepository,
-    private val returnTracker: ReturnTracker = ReturnTracker(),
-    private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate),
-    private val sessionJournal: LaunchSessionJournal? = null,
-    private val platformEmulatorDefault: suspend (String) -> String? = { null },
-    private val backupAfterSession: suspend (GameId) -> com.gamebox.os.storage.GameSaveBackupResult? = { null },
-    private val restoreBeforeSession: suspend (GameId) -> com.gamebox.os.storage.GameSaveRestoreResult? = { null },
-) : GameLaunchController {
-    private val state = MutableStateFlow(LaunchUiState())
-    private val preparing = AtomicBoolean(false)
-    private val recovering = AtomicBoolean(false)
-    private val deferredHostReturn = DeferredHostReturn()
-    private var waitingForExternalReturn = false
-    @Volatile private var activePreparation: LaunchPreparation? = null
-
-    override fun observeState(): StateFlow<LaunchUiState> = state.asStateFlow()
-
-    override fun launch(game: Game) = launchOnDisplay(game, displayId = null)
-
-    override fun launchOnDisplay(game: Game, displayId: Int?) {
-        if (state.value.status == LaunchUiState.Status.SESSION_ERROR || waitingForExternalReturn ||
-            recovering.get() || !preparing.compareAndSet(false, true)) return
-        val preparation = LaunchPreparation()
-        activePreparation = preparation
-        update(game.id, LaunchUiState.Status.PREPARING, "Preparing game; checking installed content")
-        scope.launch {
-            try {
-                launchPrepared(game, preparation, displayId)
-            } catch (cancelled: CancellationException) {
-                update(game.id, LaunchUiState.Status.IDLE, "Launch cancelled")
-                throw cancelled
-            } catch (_: Exception) {
-                if (sessionJournal != null && preparation.isCommitted()) {
-                    update(game.id, LaunchUiState.Status.SESSION_ERROR,
-                        "Session tracking was interrupted. Recover session history before launching another game.")
-                } else {
-                    update(game.id, LaunchUiState.Status.HANDOFF_REJECTED,
-                        "Could not prepare or open this game. Check storage access and try again.")
-                }
-            } finally {
-                activePreparation = null
-                preparing.set(false)
-                if (deferredHostReturn.take()) onHostResumed()
-            }
-        }
-    }
-
-    override fun cancelPreparation() {
-        activePreparation?.cancel()
-    }
-
-    private suspend fun launchPrepared(game: Game, preparation: LaunchPreparation, displayId: Int?) {
-        preparation.checkActive()
-        if (game.state !in setOf(InstallState.INSTALLED, InstallState.UPDATE_AVAILABLE)) {
-            update(game.id, LaunchUiState.Status.NOT_INSTALLED, "Install and verify before launching")
-            return
-        }
-        val capability = registry.forGame(game, platformEmulatorDefault(game.platform))
-        if (capability == null) {
-            update(game.id, LaunchUiState.Status.UNSUPPORTED, "No approved adapter for this title")
-            return
-        }
-        val restored = restoreBeforeSession(game.id)
-        if (restored != null && restored.failedCount > 0) {
-            update(
-                game.id,
-                LaunchUiState.Status.HANDOFF_REJECTED,
-                restored.message ?: "A configured emulator save could not be restored; launch was stopped",
-            )
-            return
-        }
-        var ticket: String? = null
-        preparation.beforeDispatch {
-            ticket = runBlocking { sessionJournal?.begin(game.id.value) }
-            deferredHostReturn.arm()
-        }
-        val result = withContext(Dispatchers.IO) { gateway.launchOnDisplay(capability, preparation, displayId) }
-        if (result == GatewayResult.LAUNCHED) {
-            ticket?.let { sessionJournal?.confirm(it) }
-        } else {
-            ticket?.let { sessionJournal?.abandon(it) }
-        }
-        when (result) {
-            GatewayResult.LAUNCHED -> {
-                returnTracker.started(game.id)
-                waitingForExternalReturn = true
-                update(game.id, LaunchUiState.Status.LAUNCHED, "Verified content handed to emulator")
-            }
-            GatewayResult.EMULATOR_UNAVAILABLE -> update(
-                game.id,
-                LaunchUiState.Status.EMULATOR_UNAVAILABLE,
-                "Install the approved emulator package: ${capability.packageName}"
-            )
-            GatewayResult.CONTENT_MISSING -> {
-                repository.setInstallState(game.id, InstallState.MISSING_FILES)
-                update(game.id, LaunchUiState.Status.CONTENT_MISSING, "Verified content is missing; reinstall it")
-            }
-            GatewayResult.VERIFICATION_FAILED -> {
-                repository.setInstallState(game.id, InstallState.FAILED)
-                update(game.id, LaunchUiState.Status.VERIFICATION_FAILED, "Content changed after installation; reinstall it")
-            }
-            GatewayResult.HANDOFF_REJECTED -> update(
-                game.id,
-                LaunchUiState.Status.HANDOFF_REJECTED,
-                buildHandoffRejectedMessage(capability)
-            )
-        }
-    }
-
-    override fun onHostPaused() {
-        deferredHostReturn.onPaused()
-    }
-
-    override fun onHostResumed() {
-        if (preparing.get()) {
-            deferredHostReturn.onResumed()
-            return
-        }
-        gateway.cleanupLaunchedContent()
-        if (sessionJournal != null) {
-            if (preparing.get() || !recovering.compareAndSet(false, true)) return
-            scope.launch {
-                try {
-                    val session = sessionJournal.finish()
-                    waitingForExternalReturn = false
-                    returnTracker.returned()
-                    if (session == null && state.value.status == LaunchUiState.Status.SESSION_ERROR) {
-                        state.value = LaunchUiState()
-                    }
-                    session?.let {
-                        val returnedGameId = GameId(it.gameId)
-                        val backupAttempt = if (it.launchConfirmed) {
-                            runCatching { backupAfterSession(returnedGameId) }
-                        } else {
-                            Result.success(null)
-                        }
-                        val backup = backupAttempt.getOrNull()
-                        val message = when {
-                            !it.launchConfirmed ->
-                                "Recovered an interrupted handoff; no playtime was added"
-                            backupAttempt.isFailure ->
-                                "Returned to GameBox; time away recorded. Automatic save backup failed safely; use Save controls to retry."
-                            backup == null ->
-                                "Returned to GameBox; time away recorded"
-                            backup.failedCount > 0 || backup.message != null ->
-                                "Returned to GameBox; time away recorded. " +
-                                    (backup.message ?: "Automatic save backup was incomplete; the previous complete snapshot was retained.")
-                            backup.artifacts.isEmpty() ->
-                                "Returned to GameBox; time away recorded. No managed save was found to back up."
-                            else ->
-                                "Returned to GameBox; time away recorded. Backed up ${backup.successfulCount} save artifact(s)."
-                        }
-                        update(returnedGameId, LaunchUiState.Status.RETURNED, message)
-                    }
-                } catch (cancelled: CancellationException) {
-                    throw cancelled
-                } catch (_: Exception) {
-                    state.value = state.value.copy(status = LaunchUiState.Status.SESSION_ERROR,
-                        message = "Could not recover session history. Your pending session is retained; retry before launching another game.")
-                } finally {
-                    recovering.set(false)
-                }
-            }
-            return
-        }
-        if (!waitingForExternalReturn) return
-        waitingForExternalReturn = false
-        val session = returnTracker.returned() ?: return
-        repository.recordPlaySession(session.gameId, session.endedAtMillis, session.minutesPlayed)
-        update(session.gameId, LaunchUiState.Status.RETURNED, "Returned safely; play session recorded")
-    }
-
-    private fun buildHandoffRejectedMessage(capability: EmulatorCapability): String {
-        val coreHint = capability.requiredCore?.let { " Verify that the $it core is installed and selected." } ?: ""
-        return "The approved " + registry.displayName(capability.packageName) +
-            " handoff was rejected. Open the emulator and load the installed game manually." + coreHint
-    }
-
-    private fun update(gameId: GameId, status: LaunchUiState.Status, message: String) {
-        state.value = LaunchUiState(status, gameId, message)
     }
 }

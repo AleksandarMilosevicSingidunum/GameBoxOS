@@ -2,6 +2,7 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="GameBox Windows Companion" Width="1120" Height="720"
+        Background="{StaticResource BackgroundBrush}" Foreground="{StaticResource TextBrush}"
         MinWidth="760" MinHeight="520" WindowStartupLocation="CenterScreen">
     <Grid Margin="28">
         <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
@@ -59,6 +60,7 @@
                         <PasswordBox x:Name="DeviceSecretBox" AutomationProperties.Name="GameBox pairing secret"/>
                         <TextBox x:Name="DevicePortBox" Grid.Column="1" Text="49500" Margin="8,0,0,0" AutomationProperties.Name="GameBox device port"/>
                     </Grid>
+                    <TextBox x:Name="DeviceCertificateBox" Margin="0,8,0,0" AutomationProperties.Name="GameBox TLS SHA-256 certificate fingerprint" ToolTip="Copy the TLS SHA-256 fingerprint from GameBox Settings"/>
                     <Grid Margin="0,8,0,0">
                         <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
                         <Button Content="Check and remember device" Click="CheckDevice_Click" AutomationProperties.Name="Authenticate, check, and securely remember GameBox device"/>
@@ -66,7 +68,7 @@
                         <Button x:Name="ForgetDeviceButton" Grid.Column="2" Content="Forget" Click="ForgetDevice_Click" IsEnabled="False" Margin="8,0,0,0" AutomationProperties.Name="Forget protected GameBox pairing"/>
                     </Grid>
                     <ComboBox x:Name="DiscoveredDevicesBox" DisplayMemberPath="DeviceName" SelectionChanged="DiscoveredDevice_SelectionChanged" Margin="0,8,0,0" Visibility="Collapsed" AutomationProperties.Name="Discovered GameBox devices"/>
-                    <TextBlock x:Name="DeviceStatusText" Foreground="#9EADC0" TextWrapping="Wrap" Margin="0,6,0,0" AutomationProperties.LiveSetting="Polite" Text="Enter the pairing secret shown in GameBox Settings. After a successful check it is encrypted for this Windows user with DPAPI."/>
+                    <TextBlock x:Name="DeviceStatusText" Foreground="#9EADC0" TextWrapping="Wrap" Margin="0,6,0,0" AutomationProperties.LiveSetting="Polite" Text="Enter the pairing secret and TLS SHA-256 fingerprint shown in GameBox Settings. The device certificate is pinned and the pairing secret is protected for this Windows user with DPAPI."/>
                     <TextBlock Text="DEVICE PREFERENCES" Foreground="{StaticResource AccentBrush}" FontWeight="Bold" Margin="0,14,0,4"/>
                     <CheckBox x:Name="ReducedMotionDeviceCheck" Content="Reduce interface motion" IsEnabled="False" Margin="0,3"/>
                     <CheckBox x:Name="ShowUnavailableGamesDeviceCheck" Content="Show unavailable games" IsEnabled="False" Margin="0,3"/>

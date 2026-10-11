@@ -1,7 +1,5 @@
 package com.gamebox.os.data
 
-import com.gamebox.os.catalog.CatalogSyncResult
-import com.gamebox.os.catalog.TheGamesDbCatalogSync
 import com.gamebox.os.data.local.CatalogDiscoveryDao
 import com.gamebox.os.domain.GameId
 import com.gamebox.os.domain.normalizeCatalogTitle
@@ -37,12 +35,9 @@ interface CatalogDiscoveryRepository {
         offset: Int = 0,
     ): Flow<List<DiscoveryGame>>
 
-    /** Optional exact cached detail lookup; Room provides the production implementation. */
-    fun observeGame(gameId: GameId): Flow<DiscoveryGame?> = kotlinx.coroutines.flow.flowOf(null)
+    fun observeGame(gameId: GameId): Flow<DiscoveryGame?>
 
     fun observePlatforms(): Flow<List<DiscoveryPlatform>>
-    suspend fun syncPlatform(platformName: String): CatalogSyncResult
-
     suspend fun syncConfiguredSource(source: GameSourceConfig): ConfiguredDiscoverySyncResult =
         ConfiguredDiscoverySyncResult.Unsupported
 
@@ -51,7 +46,6 @@ interface CatalogDiscoveryRepository {
 
 class RoomCatalogDiscoveryRepository(
     private val dao: CatalogDiscoveryDao,
-    private val sync: TheGamesDbCatalogSync,
     private val configuredSync: GameBoxJsonDiscoverySync = GameBoxJsonDiscoverySync(dao),
 ) : CatalogDiscoveryRepository {
     override fun observeGames(
@@ -72,9 +66,6 @@ class RoomCatalogDiscoveryRepository(
 
     override fun observePlatforms(): Flow<List<DiscoveryPlatform>> =
         dao.observePlatforms().map { rows -> rows.map { DiscoveryPlatform(it.id, it.name) } }
-
-    override suspend fun syncPlatform(platformName: String): CatalogSyncResult =
-        sync.syncPlatform(platformName)
 
     override suspend fun syncConfiguredSource(source: GameSourceConfig): ConfiguredDiscoverySyncResult =
         configuredSync.sync(source)

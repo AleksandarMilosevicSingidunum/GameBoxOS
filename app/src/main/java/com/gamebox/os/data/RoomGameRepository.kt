@@ -26,6 +26,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.CancellationException
 
 class RoomGameRepository(
     private val dao: GameDao,
@@ -33,7 +34,8 @@ class RoomGameRepository(
     private val catalogProvider: CatalogProvider,
     private val scope: CoroutineScope,
     private val onCatalogSeeded: suspend (Long) -> Unit,
-    private val onCatalogRefreshed: suspend (Long) -> Unit
+    private val onCatalogRefreshed: suspend (Long) -> Unit,
+    private val enrichGameMetadata: suspend (Game) -> Game = { it },
 ) : GameRepository {
     private val installStateWrites = Mutex()
     private val games: StateFlow<List<Game>> = combine(
@@ -58,6 +60,7 @@ class RoomGameRepository(
                 dao.upsertAll(snapshot.games.map { it.copy(state = InstallState.NOT_INSTALLED).toEntity() })
                 onCatalogSeeded(System.currentTimeMillis())
             }
+            scope.launch { enrichCatalogMetadata() }
         }
     }
 
@@ -80,6 +83,7 @@ class RoomGameRepository(
                     CatalogFallbackReason.REMOTE_FAILURE -> CatalogRefreshState.REMOTE_FALLBACK
                     CatalogFallbackReason.NONE -> CatalogRefreshState.SUCCESS
                 }
+                scope.launch { enrichCatalogMetadata() }
             } catch (_: Exception) {
                 refreshState.value = CatalogRefreshState.ERROR
             }
@@ -88,7 +92,44 @@ class RoomGameRepository(
 
     override suspend fun registerImportedGame(imported: ImportedGameRegistration) {
         val existing = dao.getById(imported.id.value)?.toDomain()
-        dao.upsert(mergeImportedGame(existing, imported).toEntity())
+        val registered = mergeImportedGame(existing, imported)
+        dao.upsert(registered.toEntity())
+        scope.launch { enrichMetadata(registered.id.value) }
+    }
+
+    private suspend fun enrichCatalogMetadata() {
+        dao.getAllOnce().forEach { enrichMetadata(it.id) }
+    }
+
+    private suspend fun enrichMetadata(id: String) {
+        val current = dao.getById(id)?.toDomain() ?: return
+        val enriched = try {
+            enrichGameMetadata(current)
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (_: Exception) {
+            null
+        } ?: return
+        if (enriched == current) return
+        dao.applyMetadataEnrichmentIfUnchanged(
+            id = id,
+            expectedYear = current.providerYear,
+            expectedGenre = current.providerGenre,
+            expectedArtworkUrl = current.providerArtworkUrl,
+            expectedDescription = current.providerDescription,
+            expectedProvider = current.metadataProvider,
+            expectedExternalId = current.metadataExternalId,
+            expectedMatchedAtMillis = current.metadataMatchedAtMillis,
+            year = enriched.providerYear.takeIf { it != 0 && it != current.providerYear },
+            genre = enriched.providerGenre.takeIf { it != current.providerGenre },
+            artworkUrl = enriched.providerArtworkUrl.takeIf { it != current.providerArtworkUrl },
+            description = enriched.providerDescription.takeIf { it != current.providerDescription },
+            provider = enriched.metadataProvider.takeIf { it != current.metadataProvider },
+            externalId = enriched.metadataExternalId.takeIf { it != current.metadataExternalId },
+            matchedAtMillis = enriched.metadataMatchedAtMillis.takeIf {
+                it != current.metadataMatchedAtMillis
+            },
+        )
     }
 
     override suspend fun forgetMissingImportedContent(id: GameId): Boolean =

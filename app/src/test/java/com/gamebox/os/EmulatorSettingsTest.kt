@@ -4,6 +4,8 @@ import com.gamebox.os.domain.Game
 import com.gamebox.os.domain.GameId
 import com.gamebox.os.domain.InstallState
 import com.gamebox.os.launch.EmulatorCapabilityRegistry
+import com.gamebox.os.launch.EmulatorReadinessPolicy
+import com.gamebox.os.launch.emulatorPackageCandidates
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
@@ -29,7 +31,7 @@ class EmulatorSettingsTest {
             InstallState.INSTALLED, expectedSha256 = "abc"
         )
         assertEquals(
-            "com.retroarch.aarch64",
+            "com.github.stenzek.duckstation",
             registry.forGame(ps1, "com.retroarch.aarch64")?.packageName
         )
     }
@@ -61,14 +63,39 @@ class EmulatorSettingsTest {
     }
 
     @Test
-    fun unknownOverrideFallsBackToPlatformDefault() {
+    fun unknownOverrideFallsBackToStandalonePlatformDefault() {
         val retro = Game(GameId("retro-demo"), "Retro Demo", "Retro", 2020, "Action", 1, InstallState.INSTALLED,
             emulatorPackage = "com.example.untrusted", expectedSha256 = "abc")
-        assertEquals("com.retroarch.aarch64", registry.forGame(retro)?.packageName)
+        assertNull(registry.forGame(retro))
     }
 
     @Test
-    fun nesGamesCarryTheValidatedRetroArchCoreContract() {
+    fun galaxyPatrolUsesStandaloneNesEmuByDefault() {
+        val fixture = Game(
+            GameId("galaxy-patrol"), "Galaxy Patrol", "Retro", 2018, "Arcade", 1,
+            InstallState.INSTALLED,
+        )
+
+        val options = registry.optionsFor(fixture)
+        assertEquals(listOf("com.explusalpha.NesEmu"), options)
+        val installed = options.filter { option ->
+            emulatorPackageCandidates(option).any { it == "com.explusalpha.NesEmu" }
+        }.toSet()
+        val readiness = EmulatorReadinessPolicy.evaluate(
+            approvedOptions = options,
+            selectedPackage = null,
+            installedPackages = installed,
+            displayName = registry::displayName,
+        )
+
+        assertEquals("com.explusalpha.NesEmu", readiness.selectedPackage)
+        assertEquals(listOf("com.explusalpha.NesEmu"), readiness.installedOptions)
+        assertEquals(listOf("com.retroarch.aarch64", "com.retroarch", "com.retroarch.ra32"),
+            emulatorPackageCandidates("com.retroarch.aarch64"))
+    }
+
+    @Test
+    fun nesGamesUseStandaloneEmulatorWithoutRetroArchCore() {
         val nes = Game(
             GameId("nes-import"), "NES Import", "NES", 2020, "Action", 1,
             InstallState.INSTALLED,
@@ -78,13 +105,13 @@ class EmulatorSettingsTest {
         )
 
         val capability = requireNotNull(registry.forGame(nes))
-        assertEquals("com.retroarch.aarch64", capability.packageName)
-        assertEquals("Nintendo - NES / Famicom (FCEUmm)", capability.requiredCore)
-        assertEquals("fceumm_libretro_android.so", capability.retroArchCoreFileName)
+        assertEquals("com.explusalpha.NesEmu", capability.packageName)
+        assertNull(capability.requiredCore)
+        assertNull(capability.retroArchCoreFileName)
     }
 
     @Test
-    fun gbcImportsCarryTheGambatteRetroArchCoreContract() {
+    fun gbcImportsUseStandaloneEmulatorWithoutRetroArchCore() {
         val gbc = Game(
             GameId("gbc-import"), "Brickster", "Game Boy Color", 2020, "Adventure", 1,
             InstallState.INSTALLED,
@@ -94,39 +121,90 @@ class EmulatorSettingsTest {
         )
 
         val capability = requireNotNull(registry.forGame(gbc))
-        assertEquals("com.retroarch.aarch64", capability.packageName)
-        assertEquals("Nintendo - Game Boy / Color (Gambatte)", capability.requiredCore)
-        assertEquals("gambatte_libretro_android.so", capability.retroArchCoreFileName)
+        assertEquals("com.explusalpha.GbcEmu", capability.packageName)
+        assertNull(capability.requiredCore)
+        assertNull(capability.retroArchCoreFileName)
     }
 
     @Test
-    fun additionalRetroPlatformsCarryDeterministicCoreContracts() {
-        val cases = listOf(
-            Triple("SNES", "Nintendo - SNES / SFC (Snes9x)", "snes9x_libretro_android.so"),
-            Triple("GBA", "Nintendo - Game Boy Advance (mGBA)", "mgba_libretro_android.so"),
-            Triple("Genesis", "Sega - MS/GG/MD/CD (Genesis Plus GX)", "genesis_plus_gx_libretro_android.so"),
-            Triple("N64", "Nintendo - Nintendo 64 (Mupen64Plus-Next)", "mupen64plus_next_gles3_libretro_android.so"),
-            Triple("NDS", "Nintendo - Nintendo DS (melonDS)", "melonds_libretro_android.so"),
-            Triple("PS1", "Sony - PlayStation (PCSX-ReARMed)", "pcsx_rearmed_libretro_android.so"),
-            Triple("Dreamcast", "Sega - Dreamcast (Flycast)", "flycast_libretro_android.so"),
-            Triple("Master System", "Sega - MS/GG/MD/CD (Genesis Plus GX)", "genesis_plus_gx_libretro_android.so"),
-            Triple("PC Engine", "NEC - PC Engine / SuperGrafx / CD (Beetle PCE FAST)", "mednafen_pce_fast_libretro_android.so"),
-            Triple("WonderSwan", "Bandai - WonderSwan / Color (Beetle Cygne)", "mednafen_wswan_libretro_android.so"),
-            Triple("Atari 2600", "Atari - 2600 (Stella)", "stella_libretro_android.so"),
+    fun supportedVimmConsolesPreferStandaloneEmulators() {
+        val cases = mapOf(
+            "PS1" to "com.github.stenzek.duckstation",
+            "N64" to "org.mupen64plusae.v3.fzurita",
+            "Dreamcast" to "com.flycast.emulator",
+            "PSP" to "org.ppsspp.ppsspp",
+            "PS2" to "xyz.aethersx2.android",
+            "GameCube" to "org.dolphinemu.dolphinemu",
+            "Wii" to "org.dolphinemu.dolphinemu",
+            "WiiWare" to "org.dolphinemu.dolphinemu",
+            "3DS" to "org.azahar_emu.azahar",
+            "NES" to "com.explusalpha.NesEmu",
+            "SNES" to "com.explusalpha.Snes9xPlus",
+            "GBA" to "com.explusalpha.GbaEmu",
+            "Game Boy Color" to "com.explusalpha.GbcEmu",
+            "DS" to "me.magnum.melonds",
+            "Genesis" to "com.explusalpha.MdEmu",
+            "Master System" to "com.explusalpha.MdEmu",
+            "Game Gear" to "com.explusalpha.MdEmu",
+            "Atari 2600" to "com.explusalpha.A2600Emu",
         )
 
-        cases.forEachIndexed { index, (platform, core, fileName) ->
+        cases.forEach { (platform, packageName) ->
             val game = Game(
-                GameId("retro-core-$index"), "Retro Core $platform", platform, 2020, "Action", 1,
+                GameId("standalone-${platform.filter(Char::isLetterOrDigit).lowercase()}"),
+                "Standalone $platform", platform, 2020, "Action", 1,
                 InstallState.INSTALLED,
-                localContentRelativePath = "retro-core-$index/game.rom",
+                localContentRelativePath = "standalone/game.rom",
                 localContentSha256 = "c".repeat(64),
                 localContentMimeType = "application/octet-stream",
             )
             val capability = requireNotNull(registry.forGame(game))
-            assertEquals(core, capability.requiredCore)
-            assertEquals(fileName, capability.retroArchCoreFileName)
+            assertEquals(packageName, capability.packageName)
+            assertNull(capability.requiredCore)
+            assertNull(capability.retroArchCoreFileName)
         }
+    }
+
+    @Test
+    fun standaloneEmulatorsDoNotReceiveRetroArchCorePaths() {
+        listOf("PS1", "N64", "Dreamcast").forEachIndexed { index, platform ->
+            val game = Game(
+                GameId("standalone-$index"), "Standalone $platform", platform, 2020,
+                "Action", 1, InstallState.INSTALLED,
+                emulatorPackage = when (platform) {
+                    "PS1" -> "com.github.stenzek.duckstation"
+                    "N64" -> "org.mupen64plusae.v3.fzurita"
+                    else -> "com.flycast.emulator"
+                },
+                localContentRelativePath = "standalone-$index/game.rom",
+                localContentSha256 = "d".repeat(64),
+                localContentMimeType = "application/octet-stream",
+            )
+            val capability = requireNotNull(registry.forGame(game))
+            assertNull(capability.requiredCore)
+            assertNull(capability.retroArchCoreFileName)
+        }
+    }
+
+    @Test
+    fun wiiWareUsesDolphinInsteadOfAnUnmappedRetroArchCore() {
+        val game = Game(GameId("wiiware-demo"), "WiiWare Demo", "WiiWare", 2020,
+            "Arcade", 1, InstallState.INSTALLED, expectedSha256 = "abc")
+        assertEquals(listOf("org.dolphinemu.dolphinemu"), registry.optionsFor(game))
+    }
+
+    @Test
+    fun threeDsUsesAzaharWithoutInventingARetroArchCore() {
+        val game = Game(GameId("three-ds-demo"), "3DS Demo", "3DS", 2020,
+            "Arcade", 1, InstallState.INSTALLED,
+            localContentRelativePath = "three-ds-demo/game.3ds",
+            localContentSha256 = "a".repeat(64),
+            localContentMimeType = "application/octet-stream")
+        assertEquals(listOf("org.azahar_emu.azahar"), registry.optionsFor(game))
+        val capability = requireNotNull(registry.forGame(game))
+        assertEquals("org.azahar_emu.azahar", capability.packageName)
+        assertNull(capability.requiredCore)
+        assertNull(capability.retroArchCoreFileName)
     }
 
     @Test
@@ -137,9 +215,11 @@ class EmulatorSettingsTest {
     }
     @Test
     fun selectedGraphicsProfileReachesLaunchCapability() {
-        val game = Game(GameId("retro-profile"), "Retro Profile", "Retro", 2020, "Action", 1, InstallState.INSTALLED,
+        val game = Game(GameId("ps1-profile"), "PS1 Profile", "PS1", 2020, "Action", 1, InstallState.INSTALLED,
             graphicsProfile = "Performance", expectedSha256 = "abc")
-        assertEquals("Performance", registry.forGame(game)?.graphicsProfile)
+        val capability = requireNotNull(registry.forGame(game))
+        assertEquals("Performance", capability.graphicsProfile)
+        assertEquals("com.github.stenzek.duckstation", capability.packageName)
     }
     @Test
     fun unknownGraphicsProfileFallsBackToBalanced() {

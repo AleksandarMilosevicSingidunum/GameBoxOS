@@ -4,11 +4,9 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -62,8 +60,11 @@ fun MoonlightHostProbePanel(
                 Modifier.weight(0.45f), label = { Text("Port") }, singleLine = true,
             )
         }
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Button(onClick = {
+        MoonlightHostProbeActions(
+            probing = probing,
+            canCheck = !probing && host.isNotBlank(),
+            canClear = !probing && (host.isNotBlank() || settings.moonlightHost.isNotBlank()),
+            onCheckAndSave = {
                 val port = portText.toIntOrNull() ?: 0
                 probing = true
                 scope.launch {
@@ -78,23 +79,17 @@ fun MoonlightHostProbePanel(
                         probing = false
                     }
                 }
-            }, enabled = !probing && host.isNotBlank(),
-                modifier = Modifier.semantics { contentDescription = "Check and save PC host" }) {
-                if (probing) CircularProgressIndicator() else Text("Check and save host")
-            }
-            TextButton(
-                enabled = !probing && (host.isNotBlank() || settings.moonlightHost.isNotBlank()),
-                onClick = {
-                    scope.launch {
-                        settingsRepository.clearMoonlightHost()
-                        host = ""
-                        portText = "47984"
-                        result = null
-                        configurationMessage = "Saved PC host cleared."
-                    }
-                },
-            ) { Text("Clear saved host") }
-        }
+            },
+            onClear = {
+                scope.launch {
+                    settingsRepository.clearMoonlightHost()
+                    host = ""
+                    portText = "47984"
+                    result = null
+                    configurationMessage = "Saved PC host cleared."
+                }
+            },
+        )
         configurationMessage?.let { Text(it) }
         result?.let { status ->
             Text(
@@ -106,6 +101,29 @@ fun MoonlightHostProbePanel(
             if (status.state == HostReachability.UNREACHABLE) {
                 Text("The address remains saved. Check that the PC is awake and on the same network, then retry.")
             }
+        }
+    }
+}
+
+@Composable
+internal fun MoonlightHostProbeActions(
+    probing: Boolean,
+    canCheck: Boolean,
+    canClear: Boolean,
+    onCheckAndSave: () -> Unit,
+    onClear: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Row(modifier, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        BlueprintButton(
+            onClick = onCheckAndSave,
+            enabled = canCheck,
+            modifier = Modifier.semantics { contentDescription = "Check and save PC host" },
+        ) {
+            if (probing) CircularProgressIndicator() else Text("Check and save host")
+        }
+        BlueprintTextButton(onClick = onClear, enabled = canClear) {
+            Text("Clear saved host")
         }
     }
 }

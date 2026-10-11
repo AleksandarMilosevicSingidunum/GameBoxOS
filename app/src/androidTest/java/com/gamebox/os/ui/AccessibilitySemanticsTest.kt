@@ -13,6 +13,7 @@ import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.unit.dp
@@ -54,6 +55,17 @@ class AccessibilitySemanticsTest {
         composeRule.onNodeWithContentDescription("TV Focus, PSP, installed")
             .performSemanticsAction(SemanticsActions.RequestFocus)
             .assertIsFocused()
+    }
+
+    @Test
+    fun homeGameSectionIsExposedAsScreenReaderHeading() {
+        composeRule.setContent {
+            HomeGameSection("Your games", emptyList(), null, {}, compact = false, open = {})
+        }
+
+        composeRule.onNodeWithText("Your games").assert(
+            SemanticsMatcher.expectValue(SemanticsProperties.Heading, Unit),
+        )
     }
 
     @Test

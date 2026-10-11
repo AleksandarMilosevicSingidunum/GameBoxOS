@@ -3,13 +3,14 @@ package com.gamebox.os.importer
 import android.content.Context
 import android.net.Uri
 import com.gamebox.os.domain.GameId
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import java.io.File
-import java.nio.file.Files
-import java.nio.file.StandardCopyOption
 import java.util.UUID
 
 data class RomImportSource(val uri: Uri, val displayName: String)
@@ -52,6 +53,7 @@ class AuthorizedRomImporter(
     private val applicationContext = context.applicationContext
     private val transactionRecovery = ImportTransactionRecovery(applicationContext.filesDir)
     private val registrationJournal = ImportRegistrationJournal(applicationContext.filesDir)
+    private val registrationRecovery = ImportRegistrationRecovery(registrationJournal)
     @Volatile private var startupRecoveryFailed = false
 
     init {
@@ -78,12 +80,14 @@ class AuthorizedRomImporter(
         source: Uri,
         displayName: String,
         platform: String? = null,
+        onProgress: (RomImportProgress) -> Unit = {},
     ): RomImportResult {
         return when (
             val result = importSet(
                 gameId = gameId,
                 sources = listOf(RomImportSource(source, displayName)),
                 platform = platform,
+                onProgress = onProgress,
             )
         ) {
             is RomImportSetResult.Imported -> RomImportResult.Imported(
@@ -103,95 +107,75 @@ class AuthorizedRomImporter(
         sources: List<RomImportSource>,
         platform: String? = null,
         expectedFiles: List<com.gamebox.os.domain.LocalContentFile>? = null,
+        onProgress: (RomImportProgress) -> Unit = {},
     ): RomImportSetResult = importTransactionMutex.withLock {
         withContext(Dispatchers.IO) {
+        val importCoroutineContext = currentCoroutineContext()
+        importCoroutineContext.ensureActive()
         recoverBeforeMutation(gameId)?.let { return@withContext RomImportSetResult.Failed(it) }
         if (sources.isEmpty()) return@withContext RomImportSetResult.Rejected("Select at least one game file")
-        if (sources.size > 64) return@withContext RomImportSetResult.Rejected("A disc set may contain at most 64 files")
+        if (sources.size > MAX_DISC_SET_FILES) {
+            return@withContext RomImportSetResult.Rejected("A disc set may contain at most $MAX_DISC_SET_FILES files")
+        }
         val safeNames = runCatching {
             sources.map { RomImportPolicy.safeFileName(it.displayName, platform) }
         }.getOrElse { return@withContext RomImportSetResult.Rejected(it.message ?: "Invalid game file") }
         if (safeNames.map(String::lowercase).distinct().size != safeNames.size) {
             return@withContext RomImportSetResult.Rejected("The selected disc set contains duplicate filenames")
         }
-        val id = gameId.value
-        if (!id.matches(Regex("[a-z0-9][a-z0-9-]{0,95}"))) {
-            return@withContext RomImportSetResult.Rejected("Invalid game id")
-        }
-        val expectedPrefix = "imports/${RomImportPolicy.platformDirectory(platform)}/$id/"
-        val root = applicationContext.filesDir.resolve("imports").canonicalFile
-        // New imports live in the stable console-scoped tree created at app
-        // startup: imports/<console>/<game-id>/. Keep the physical promotion
-        // directory identical to the path recorded in the database so launch,
-        // re-import, companion transfer, and content removal address the same
-        // files.
-        val targetDirectory = root.resolve(RomImportPolicy.platformDirectory(platform))
-            .resolve(id)
-            .canonicalFile
-        val rootPrefix = root.path + File.separator
-        if (!targetDirectory.path.startsWith(rootPrefix)) {
-            return@withContext RomImportSetResult.Rejected("Import path escaped app storage")
-        }
-        root.mkdirs()
         val transactionId = UUID.randomUUID().toString()
-        val staging = root.resolve(".staging-$id-$transactionId").canonicalFile
-        val backup = root.resolve(".backup-$id-$transactionId").canonicalFile
-        if (!staging.path.startsWith(rootPrefix) || !backup.path.startsWith(rootPrefix)) {
-            return@withContext RomImportSetResult.Rejected("Import transaction path escaped app storage")
+        val workspace = try {
+            ImportTransactionWorkspace.create(
+                filesDirectory = applicationContext.filesDir,
+                gameId = gameId,
+                platform = platform,
+                transactionId = transactionId,
+            )
+        } catch (error: IllegalArgumentException) {
+            return@withContext RomImportSetResult.Rejected(error.message ?: "Invalid import path")
+        } catch (error: Exception) {
+            return@withContext RomImportSetResult.Failed(
+                error.message?.take(200) ?: "Import storage is unavailable",
+            )
         }
-        require(targetDirectory.parentFile?.isDirectory == true || targetDirectory.parentFile?.mkdirs() == true) {
-            "Import console directory is unavailable"
-        }
-        staging.mkdirs()
+        // The promoted directory matches the recorded imports/<console>/<id>
+        // path so launch, re-import, transfer, and removal share one location.
+        val expectedPrefix = workspace.expectedRelativePrefix
+        val targetDirectory = workspace.targetDirectory
+        val staging = workspace.stagingDirectory
+        val backup = workspace.backupDirectory
         var pendingRegistration: PendingImportTransaction? = null
         try {
+            workspace.prepareDirectories()
+            val sourceSizes = sources.map { sourceSizeBytes(it.uri) }
+            importCoroutineContext.ensureActive()
+            val progressReporter = RomImportProgressReporter(
+                coroutineContext = importCoroutineContext,
+                observer = onProgress,
+            )
+            val sourceStager = RomImportSourceStager(
+                maxBytes = maxBytes,
+                progress = progressReporter,
+            )
             var totalBytes = 0L
             val stagedFiles = mutableListOf<ImportedRomFile>()
             sources.zip(safeNames).forEachIndexed { index, (source, safeName) ->
-                val input = applicationContext.contentResolver.openInputStream(source.uri)
-                    ?: return@withContext RomImportSetResult.SourceUnavailable
-                val archive = safeName.substringAfterLast('.', "").lowercase() in setOf("zip", "7z")
-                if (archive) {
-                    val archiveFile = staging.resolve(".source-$index.$safeName")
-                    input.use { stream -> archiveFile.outputStream().buffered().use { stream.copyTo(it, DEFAULT_BUFFER_SIZE) } }
-                    val extracted = requireNotNull(RomArchiveExtractor.extractIfArchive(
-                        source = archiveFile,
-                        staging = staging,
-                        platform = platform,
-                        maxFiles = 64 - stagedFiles.size,
-                        maxBytes = (maxBytes - totalBytes).coerceAtLeast(1L),
-                    ))
-                    extracted.forEach { item ->
-                        val destination = staging.resolve(item.displayName)
-                        Files.move(item.file.toPath(), destination.toPath(), StandardCopyOption.REPLACE_EXISTING)
-                        val hashes = destination.inputStream().use { stream -> RomHasher.hash(stream, (maxBytes - totalBytes).coerceAtLeast(1L)) }
-                        totalBytes += hashes.sizeBytes
-                        stagedFiles += ImportedRomFile(
-                            relativePath = expectedPrefix + item.displayName,
-                            hashes = hashes,
-                            mimeType = RomImportPolicy.mimeType(item.displayName),
-                        )
-                    }
-                    archiveFile.delete()
-                    staging.resolve("archive-content").deleteRecursively()
-                } else {
-                    val stagedFile = staging.resolve(safeName)
-                    val remaining = (maxBytes - totalBytes).coerceAtLeast(1L)
-                    val hashes = input.use { stream ->
-                        stagedFile.outputStream().buffered().use { output ->
-                            RomHasher.hash(stream, remaining) { buffer, count ->
-                                output.write(buffer, 0, count)
-                            }
-                        }
-                    }
-                    totalBytes += hashes.sizeBytes
-                    require(totalBytes <= maxBytes) { "Disc set exceeds the configured import limit" }
-                    stagedFiles += ImportedRomFile(
-                        relativePath = expectedPrefix + safeName,
-                        hashes = hashes,
-                        mimeType = RomImportPolicy.mimeType(safeName),
-                    )
-                }
+                importCoroutineContext.ensureActive()
+                val importedFiles = sourceStager.stage(
+                    openInputStream = { applicationContext.contentResolver.openInputStream(source.uri) },
+                    safeName = safeName,
+                    sourceSize = sourceSizes[index],
+                    sourceIndex = index + 1,
+                    sourceCount = sources.size,
+                    stagedFileCount = stagedFiles.size,
+                    bytesAlreadyStaged = totalBytes,
+                    platform = platform,
+                    staging = staging,
+                    expectedPrefix = expectedPrefix,
+                ) ?: return@withContext RomImportSetResult.SourceUnavailable
+                stagedFiles += importedFiles
+                totalBytes += importedFiles.sumOf { it.hashes.sizeBytes }
+                require(totalBytes <= maxBytes) { "Disc set exceeds the configured import limit" }
             }
             val stagedNames = stagedFiles.map { it.relativePath.substringAfterLast('/') }
             val launchName = DiscSetPolicy.selectLaunchFile(staging, stagedNames)
@@ -216,9 +200,11 @@ class AuthorizedRomImporter(
                     )
                 },
             )
-            replaceDirectoryAtomically(targetDirectory, staging, backup)
+            ImportDirectoryPublisher.replaceAtomically(targetDirectory, staging, backup)
             val ordered = listOf(launchFile) + stagedFiles.filterNot { it === launchFile }
             RomImportSetResult.Imported(launchFile, ordered, transactionId)
+        } catch (cancelled: CancellationException) {
+            throw cancelled
         } catch (error: Exception) {
             val rollbackFailure = pendingRegistration?.let { pending ->
                 runCatching { registrationJournal.rollback(pending) }.exceptionOrNull()
@@ -236,21 +222,36 @@ class AuthorizedRomImporter(
         }
     }
 
-    fun confirmRegistration(gameId: GameId, transactionId: String) {
-        val pending = registrationJournal.pendingFor(gameId)
-            .singleOrNull { it.transactionId == transactionId }
-            ?: throw IllegalStateException("Pending import registration was not found")
-        require(registrationJournal.targetMatchesPending(pending)) {
-            "Imported content changed before registration cleanup"
+    private fun sourceSizeBytes(uri: Uri): Long? = runCatching {
+        applicationContext.contentResolver.openAssetFileDescriptor(uri, "r")
+            ?.use { descriptor -> descriptor.length.takeIf { it > 0L } }
+    }.getOrNull()
+
+    /** Completes the Room/filesystem commit without hashing game files on the caller dispatcher. */
+    suspend fun confirmRegistration(gameId: GameId, transactionId: String) {
+        withContext(NonCancellable + Dispatchers.IO) {
+            importTransactionMutex.withLock {
+                val pending = registrationJournal.pendingFor(gameId)
+                    .singleOrNull { it.transactionId == transactionId }
+                    ?: throw IllegalStateException("Pending import registration was not found")
+                require(registrationJournal.targetMatchesPending(pending)) {
+                    "Imported content changed before registration cleanup"
+                }
+                registrationJournal.confirm(pending)
+            }
         }
-        registrationJournal.confirm(pending)
     }
 
-    fun rollbackRegistration(gameId: GameId, transactionId: String) {
-        val pending = registrationJournal.pendingFor(gameId)
-            .singleOrNull { it.transactionId == transactionId }
-            ?: throw IllegalStateException("Pending import registration was not found")
-        registrationJournal.rollback(pending)
+    /** Finishes rollback even when its caller is cancelling, preserving a consistent file set. */
+    suspend fun rollbackRegistration(gameId: GameId, transactionId: String) {
+        withContext(NonCancellable + Dispatchers.IO) {
+            importTransactionMutex.withLock {
+                val pending = registrationJournal.pendingFor(gameId)
+                    .singleOrNull { it.transactionId == transactionId }
+                    ?: throw IllegalStateException("Pending import registration was not found")
+                registrationJournal.rollback(pending)
+            }
+        }
     }
 
     suspend fun reconcilePendingRegistrations(
@@ -258,36 +259,8 @@ class AuthorizedRomImporter(
         gameLookup: suspend (GameId) -> com.gamebox.os.domain.Game?,
     ): ImportRegistrationRecoveryReport =
         importTransactionMutex.withLock {
-            registrationJournal.reconcile(createdBeforeMillis, gameLookup)
+            registrationRecovery.reconcile(createdBeforeMillis, gameLookup)
         }
-
-    private fun replaceDirectoryAtomically(target: File, staging: File, backup: File) {
-        var previousMoved = false
-        try {
-            if (target.exists()) {
-                moveReplacing(target, backup)
-                previousMoved = true
-            }
-            moveReplacing(staging, target)
-        } catch (error: Exception) {
-            if (previousMoved && backup.exists()) {
-                if (target.exists()) target.deleteRecursively()
-                runCatching { moveReplacing(backup, target) }
-            }
-            throw error
-        }
-    }
-
-    private fun moveReplacing(source: File, target: File) {
-        runCatching {
-            Files.move(
-                source.toPath(), target.toPath(),
-                StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING,
-            )
-        }.getOrElse {
-            Files.move(source.toPath(), target.toPath(), StandardCopyOption.REPLACE_EXISTING)
-        }
-    }
 
 }
 

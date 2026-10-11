@@ -186,7 +186,7 @@ internal object CompanionHttpRequestReader {
     private fun ByteArray.toHex(): String = joinToString("") { "%02x".format(it.toInt() and 0xff) }
 }
 
-/** Client errors/timeouts are scoped to this connection, never the listening service. */
+/** Client and route errors are scoped to this connection, never the listening service. */
 internal class CompanionHttpConnection(
     private val requestTimeoutMillis: Int = 5_000,
     private val bodyDirectory: File? = null,
@@ -221,6 +221,8 @@ internal class CompanionHttpConnection(
                 CompanionHttpResponse(400, """{"error":"bad_request"}""")
             } catch (_: IllegalArgumentException) {
                 CompanionHttpResponse(400, """{"error":"bad_request"}""")
+            } catch (_: Exception) {
+                CompanionHttpResponse(500, """{"error":"internal_error"}""")
             }
             val reason = when (response.status) {
                 200 -> "OK"
@@ -229,6 +231,7 @@ internal class CompanionHttpConnection(
                 408 -> "Request Timeout"
                 413 -> "Payload Too Large"
                 507 -> "Insufficient Storage"
+                500 -> "Internal Server Error"
                 else -> "Not Found"
             }
             val body = response.body.toByteArray(Charsets.UTF_8)

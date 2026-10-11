@@ -22,6 +22,7 @@ import java.util.concurrent.Executors
 class CompanionEndpointService : Service() {
     private val executor = Executors.newSingleThreadExecutor()
     private val discoveryExecutor = Executors.newSingleThreadExecutor()
+    private val authorizationReplayGuard = CompanionAuthorizationReplayGuard()
     @Volatile private var server: ServerSocket? = null
     @Volatile private var discoverySocket: DatagramSocket? = null
 
@@ -53,7 +54,7 @@ class CompanionEndpointService : Service() {
         }
         if (!enabled || secret.isNullOrBlank()) { stopSelf(); return }
         runCatching {
-            ServerSocket().use { listener ->
+            CompanionTlsIdentity.createServerSocket().use { listener ->
                 server = listener
                 listener.reuseAddress = true
                 listener.bind(InetSocketAddress(port))
@@ -70,6 +71,13 @@ class CompanionEndpointService : Service() {
                                 authorization = head.authorization,
                                 nowUnixTimeSeconds = System.currentTimeMillis() / 1_000L,
                                 bodySha256 = head.declaredBodySha256,
+                                acceptNonce = { nonce, timestamp ->
+                                    authorizationReplayGuard.accept(
+                                        nonce,
+                                        timestamp,
+                                        System.currentTimeMillis() / 1_000L,
+                                    )
+                                },
                             )
                         },
                     ) { request -> route(request, secret) }

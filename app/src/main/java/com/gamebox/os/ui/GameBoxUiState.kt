@@ -23,8 +23,23 @@ internal class GameBoxUiState private constructor(
 
     fun openDestination(value: String) {
         require(value.isNotBlank()) { "Destination is required" }
+        if (value != Destination.SETTINGS.name) rememberScreenValue(SETTINGS_SECTION_REQUEST, null)
         destination = value
         selectedGameId = null
+    }
+
+    fun openSettings(section: SettingsSection) {
+        rememberScreenValue(SETTINGS_SECTION_REQUEST, section.name)
+        openDestination(Destination.SETTINGS.name)
+    }
+
+    fun requestedSettingsSection(): SettingsSection? =
+        screenValue(SETTINGS_SECTION_REQUEST)?.let { name ->
+            SettingsSection.entries.firstOrNull { it.name == name }
+        }
+
+    fun consumeSettingsSectionRequest(section: SettingsSection) {
+        if (requestedSettingsSection() == section) rememberScreenValue(SETTINGS_SECTION_REQUEST, null)
     }
 
     fun openGame(gameId: String) {
@@ -60,6 +75,13 @@ internal class GameBoxUiState private constructor(
 
     fun screenValue(key: String): String? = screenValues[key]
 
+    fun requestStoreVimmSearch() = rememberScreenValue(STORE_VIMM_SEARCH_REQUEST, "true")
+
+    fun hasStoreVimmSearchRequest(): Boolean =
+        screenValue(STORE_VIMM_SEARCH_REQUEST) == "true"
+
+    fun consumeStoreVimmSearchRequest() = rememberScreenValue(STORE_VIMM_SEARCH_REQUEST, null)
+
     fun rememberScreenValue(key: String, value: String?) {
         require(key.isNotBlank())
         if (value.isNullOrEmpty()) screenValues.remove(key) else screenValues[key] = value
@@ -83,6 +105,8 @@ internal class GameBoxUiState private constructor(
     }
 
     companion object {
+        private const val SETTINGS_SECTION_REQUEST = "navigation.settingsSectionRequest"
+
         fun create(): GameBoxUiState =
             GameBoxUiState("HOME", null, mutableMapOf(), mutableMapOf(), mutableMapOf())
 
@@ -110,6 +134,8 @@ internal class GameBoxUiState private constructor(
         }
     }
 }
+
+private const val STORE_VIMM_SEARCH_REQUEST = "store.vimmSearchRequested"
 
 private val GameBoxUiStateSaver = listSaver<GameBoxUiState, String>(
     save = { state -> state.encode() },

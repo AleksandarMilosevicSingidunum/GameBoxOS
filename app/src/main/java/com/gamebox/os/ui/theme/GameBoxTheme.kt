@@ -15,9 +15,18 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 val GameBoxBlue = Color(0xFF5184FF)
+/** Filled-button blue keeps normal-size white labels above 4.5:1 contrast. */
+val GameBoxActionBlue = Color(0xFF3267F2)
 val GameBoxElectricBlue = Color(0xFF326BFF)
 val GameBoxPurple = Color(0xFF8C38F5)
 val GameBoxCyan = Color(0xFF39BFF7)
+val GameBoxFocusBlue = Color(0xFF459BFF)
+val GameBoxFocusViolet = Color(0xFF7979F6)
+val GameBoxFocusMagenta = Color(0xFFBD71FF)
+val GameBoxCardOutlineStart = Color(0xFF283443)
+val GameBoxCardOutlineEnd = Color(0xFF17212C)
+val GameBoxControllerConfirm = Color(0xFF78D64B)
+val GameBoxControllerBack = Color(0xFFFF4D5E)
 val GameBoxBackground = Color(0xFF03070D)
 val GameBoxSurface = Color(0xFF0B111B)
 val GameBoxSurfaceRaised = Color(0xFF131C2A)

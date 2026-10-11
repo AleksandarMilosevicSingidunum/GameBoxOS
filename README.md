@@ -22,9 +22,16 @@ commercial game binaries and unauthorized provider downloads are excluded.
 
 This repository is an active pre-1.0 implementation of the August 2026 **GameBox Development Blueprint**. The blueprint is a six-month working plan, not a claim that every item is already complete.
 
-Status as of 1 October 2026:
+Status as of 11 October 2026:
 
-Latest verified increments: the primary shell now includes an original scalable GameBox hex/cube mark, distinct PS2/GameCube/Wii/PSP/Dreamcast/3DS/Switch/Homebrew platform glyphs, and full-color code-native Media/PC/quick-launch brand marks; Blueprint primary navigation keeps Downloads as a reachable utility destination; the PC Hub can launch a separate GameBox task on an Android presentation display through the in-product Show on TV action; the production UI state matrix covers catalog offline/provider/error states and queued/downloading/paused/failed/completed Download Manager cards with accessible actions; RetroArch Android handoff supports launcher ROM extras, package aliases, actionable controller guidance, and an ACTION_VIEW compatibility fallback; catalog refresh distinguishes normal success, offline bundled fallback, remote-provider fallback, and terminal error; Store recovery messages are accessible and actionable; optional TheGamesDB transport or per-entry enrichment failures no longer block the authorized catalog; TheGamesDB discovery resolves provider box art, fan art, clear logos, and screenshots from the documented `include=boxart` payload and offers fixed PS2/GameCube/Wii/PSP/Dreamcast/3DS/Switch/Homebrew filters with an up-to-20-title-per-console sync; the complete Android JVM suite and Windows core harness pass on the current main state.
+Recent implementation, verification, and open hardware gates are tracked in the
+[project roadmap](ROADMAP.md). The last recorded full Android JVM run passed 779
+tests; it could not be rerun from the current restricted shell because Gradle
+could not load `native-platform.dll`. The Windows core self-test and an isolated
+WPF build passed on 11 October. The Honor Magic6 Pro is the user's selected
+deployment device, but the latest device check found it asleep with no active TV
+output. Physical-controller acceptance and the live Vimm download-to-import flow
+remain unverified; this status is not a release-completion claim.
 
 | Blueprint area | Status | Current implementation |
 | --- | --- | --- |
@@ -33,18 +40,18 @@ Latest verified increments: the primary shell now includes an original scalable 
 | Controller navigation | Partial | Focusable cards, debounced analog/hat navigation, LB/RB tabs, Back/B handling, nearest-neighbor focus restoration, and contextual X/Y actions across every primary screen, including state-safe play/install/resume, favorite, batch transfer operations, hub visibility/system actions, and cyclic Settings-section traversal; physical-device/reconnect testing remains |
 | Primary UI | Blueprint-matched large-screen implementation | Shared 16:9 living-room shell, original scalable GameBox brand mark, distinct console glyphs, full-color Media/PC launcher marks, centered icon navigation, clock/notification chrome, controller/profile footer, vivid artwork, side information rails, dense content rows, featured heroes, focus/hover/press motion, and blueprint-specific Home, Library, Store, Details, Downloads, Media, PC Hub, Settings, and save-safe uninstall layouts; Settings has functional scroll-linked wide navigation plus phone section chips and live controller/download/network/layout summaries; phone layouts remain responsive rather than forcing the DeX ratio |
 | Catalog and discovery | Implemented foundation | Room-backed catalog, search, platform/genre filters, favorites, cached authorized manifests, pinned MIT-licensed runnable Galaxy Patrol NES fixture, console-first Store filters, configurable HTTPS/JSON discovery, and optional Vimm's Lair title-page discovery that remains separate from verified content import/install |
-| Remote providers | Partial | Runtime TheGamesDB enrichment with Android Keystore-backed key configuration and unique normalized-title confidence gating that refuses ambiguous automatic matches; documented `include=boxart` media parsing for HTTPS cover art, fan art, clear logos, and screenshots; sequential sync of up to 20 titles per requested console; configurable HTTPS catalog with strict validation, offline cache, out-of-band credential abstraction, optional Basic auth, safe WebDAV/S3 URI builders, and bounded transport client; S3 request-signing boundary with AWS Signature V4 and authenticated transport wiring; WebDAV Basic auth hardens incomplete credentials; shared bounded recovery classification is applied by authenticated transports for auth, rate limits, transient network, and permanent failures, with JUnit coverage; the production provider contract exposes refresh, authenticated connection testing, capability reporting, and authorized source resolution; Settings can select HTTPS, WebDAV, or S3-compatible catalogs, configure transport-specific fields, store Basic/SigV4 credentials in Android Keystore, clear them, and run a controller-accessible Save & test action; real endpoint validation remains pending |
+| Remote providers | Partial | Keyless Wikidata exact-title lookup supplies missing year/descriptions/general imagery; Libretro's named-thumbnail archive supplies console box art and screenshots where published, with manual metadata/artwork correction and exact-title confidence gating; configurable HTTPS catalog with strict validation, offline cache, out-of-band credential abstraction, optional Basic auth, safe WebDAV/S3 URI builders, and bounded transport client; S3 request-signing boundary with AWS Signature V4 and authenticated transport wiring; WebDAV Basic auth hardens incomplete credentials; shared bounded recovery classification is applied by authenticated transports for auth, rate limits, transient network, and permanent failures, with JUnit coverage; the production provider contract exposes refresh, authenticated connection testing, capability reporting, and authorized source resolution; Settings can select HTTPS, WebDAV, or S3-compatible catalogs, configure transport-specific fields, store Basic/SigV4 credentials in Android Keystore, clear them, and run a controller-accessible Save & test action; real endpoint validation remains pending |
 | Downloads | Implemented | Durable WorkManager jobs, notifications, measured speed and ETA, preemptive low-storage warnings using the worker reserve, pause/resume, Range validation, retries, cancellation, size limits, SHA-256 verification, and atomic install |
 | Install/uninstall | Partial | Missing imported content has checksum-verified Locate and confirmation-gated Forget actions that retain saves and library metadata; app-private verified install, platform-aware authorized-copy import profiles spanning current Nintendo/Sony/Sega/Microsoft/retro catalog families (including Switch XCI/NSP and 3DS/CIA), unrestricted Android document visibility followed by strict extension validation, one-pass CRC32/MD5/SHA-1/SHA-256 hashing, persistent promotion into Library, atomic multi-file `.cue`/`.gdi`/`.mds`/`.ccd` set import with dependency validation, and general game-ID-based content-only uninstall confirmation with exact freed bytes, verified local/cloud save preflight, retained saves/backups/metadata/history, and partial-removal recovery; additional production content adapters and physical storage validation remain |
 | Saves | Partial | Platform save-adapter registry, real directory discovery, reactive per-game save presence in Details, multi-artifact backup/restore, atomic checksum-protected snapshot manifests, import/export, retention, deterministic sync conflict resolution, explicit game-scoped restore rejection, bounded backup creation/import, and orchestration that executes upload/download/conflict operations with automated JUnit coverage; Settings now exposes WebDAV/S3 endpoint and Android-Keystore credential configuration, while every per-game Details save card performs real bounded Basic/SigV4 upload/download of game-scoped, self-verifying envelopes and preserves a conflicting local copy before restore; real-endpoint integration and physical emulator validation remain |
-| Emulator integration | Partial | Allowlisted emulator handoff with per-game package selection and graphics profile persistence exposed in Details, read-only FileProvider access for verified downloads and user-imported copies, launch-time SHA-256 re-verification of primary and companion disc files, complete companion-URI grants, return tracking, capability registry, documented PPSSPP ACTION_VIEW content handoff, Dolphin AutoStartFiles launch wiring, and approved scoped handoffs for PS1/DuckStation, N64/M64Plus FZ, and Dreamcast/Flycast with RetroArch fallbacks; the bundled Galaxy Patrol RetroArch/FCEUmm launch, input, emulator save-state, return, uninstall/reinstall and restore lifecycle has prior Honor Magic6 Pro evidence, while the latest API-35 TV probe confirmed launch but hit a SystemUI ANR before return could be re-verified; other production adapters remain |
+| Emulator integration | Partial | Allowlisted standalone emulator handoff with per-game package selection and graphics profile persistence exposed in Details, read-only FileProvider access for verified downloads and user-imported copies, launch-time SHA-256 re-verification of primary and companion disc files, complete companion-URI grants, return tracking, documented PPSSPP ACTION_VIEW content handoff, Dolphin AutoStartFiles launch wiring, and scoped standalone adapters for NES.emu, PS1/DuckStation, N64/M64Plus FZ, Dreamcast/Flycast, and other mapped systems; live NES.emu installation/launch and the remaining production adapters still need physical validation |
 | Media and PC | Partial | Installed-app detection, typed availability states, safe launch shortcuts, persistent hide-unavailable policy, responsive empty/setup states, Moonlight connectivity status, bounded host reachability probes, interactive PC host-probe panel with validated persistent host/port configuration and explicit clearing, a deliberate controller-accessible return to the Android/DeX desktop, and recent sessions for media, Moonlight, Winlator, Termux, Files, browser, and Android settings; physical streaming validation remains |
 | Offline operation | Implemented foundation | Cached catalog and persistent local state, explicit network-aware fallback selection, accessible offline banner, resilient bundled fallback after remote-provider failure, actionable retry messaging, and non-fatal optional metadata enrichment; full device airplane-mode acceptance testing remains |
 | Diagnostics | Partial | Sanitized report, bounded redacted event collection, lifecycle wiring, visible download errors, and a 2 MiB ZIP recovery bundle export; physical failure validation remains |
 | CI and releases | Partial | Unit tests, debug APK builds, SHA-256 artifacts, alpha release workflow, deterministic channel-readiness gating, validated APK provenance manifests with size/hash/channel metadata, rollback tag metadata, and tag/channel consistency validation, release/rollback tag existence checks, serialized production publishing, and verified asset upload; protected signed-production workflow is implemented; configuring repository signing secrets and executing the real update channel remain |
 | External storage | Partial | SAF folder selection, persisted permissions, read/write status, real filesDir/installed discovery, exact migration planning, Settings confirmation/execution with result totals, verified document-tree cutover that removes internal sources only after size/SHA-256 confirmation, external-library emulator launch and content-only uninstall integration, explicit confirmation states, disconnect detection, and retryable outage classification; physical unplug testing remains |
-| Target hardware | Partially observed, not validated | Honor Magic5 Pro wired external display has a preliminary low-latency observation using a non-final dock. Controller input, the purchased UGREEN 7-in-1 hub, HDMI reconnect, PD/Ethernet concurrency, thermal behavior, storage, cold-boot/no-touch recovery, and soak testing remain physical gates. |
-| Enclosure/handoff | Handoff prepared | Honor Magic5 Pro + UGREEN-hub entry gates, component criteria, measurement worksheet, external-display/hub/thermal/storage validation matrix, CAD release checklist, prototype acceptance, BOM record, recovery path, and final handoff package are specified in [the hardware handoff](docs/hardware-enclosure-handoff.md); exact hub measurement, final CAD, fabrication, and validation remain |
+| Target hardware | Partially observed, not validated | The selected deployment device is the Honor Magic6 Pro in the user's wired TV/desktop-mode setup. Physical controller input, HDMI reconnect, charging/network concurrency, thermal behavior, storage, cold-boot/no-touch recovery, and soak testing remain physical gates. |
+| Enclosure/handoff | Re-scope required | The existing [hardware handoff](docs/hardware-enclosure-handoff.md) is specific to a Magic5 Pro and a UGREEN hub; it is not acceptance evidence for the selected Magic6 Pro setup. Revisit only after the actual dock and physical measurements are confirmed. |
 
 ## Implemented highlights
 
@@ -54,7 +61,7 @@ Latest verified increments: the primary shell now includes an original scalable 
 - Scroll-linked Settings navigation with selected-state feedback, controller-focusable wide rail, phone section chips, and truthful controller/download/network/layout status cards
 - Persistent catalog, install state, favorites, play history, downloads, and save records
 - Authorized HTTPS catalog configuration with bounded responses and atomic offline caching
-- Offline-installable Galaxy Patrol NES homebrew fixture with pinned source, MIT attribution, iNES/header/size/SHA-256 CI verification, and RetroArch handoff
+- Offline-installable Galaxy Patrol NES homebrew fixture with pinned source, MIT attribution, iNES/header/size/SHA-256 CI verification, and a standalone NES.emu launch route
 - Verified remote download pipeline with true pause/resume and safe job-scoped cleanup
 - App-private staging; content is promoted only after complete SHA-256 verification
 - Platform-aware legal-copy import with friendly format guidance for Switch, 3DS, GameCube, Wii, PS1/PS2/PS3, PSP/Vita, Sega, Xbox, and common cartridge/arcade systems
@@ -73,30 +80,18 @@ Latest verified increments: the primary shell now includes an original scalable 
 
 The active implementation goal covers all remaining software work below. Physical hardware, enclosure, thermal, cabling, and fabrication validation are tracked separately and are excluded from that software goal.
 
-- Extend the verified Galaxy Patrol RetroArch lifecycle to at least one real emulator adapter for every officially supported platform group; complete managed-save and cloud-save acceptance separately
+- Extend the emulator lifecycle to every officially supported platform group; complete managed-save and cloud-save acceptance separately
 - Validate PPSSPP/Dolphin intent behavior and additional production emulator adapters on physical target devices
 - Complete end-to-end authenticated WebDAV/S3 integration testing and physical recovery validation
 - Validate authenticated cloud-save byte transfer against real WebDAV/S3 endpoints and real save adapters against production emulators
 - Complete physical disconnect/unplug safety tests for confirmed SAF migrations
 - Complete physical-device Compose accessibility/lifecycle validation and expand airplane-mode and failure-recovery scenarios (the hosted API-35 emulator instrumentation suite is now a required CI gate)
 - Complete separately connected physical controller testing and long-duration Honor external-display/DeX soak validation (the connected-TV GameBox smoke route is verified)
-- Complete Honor Magic5 Pro HDMI/Honor Desktop Mode/Ethernet/charging/thermal/reconnect soak testing with the purchased UGREEN 7-in-1 hub
+- Complete Honor Magic6 Pro wired-TV/desktop-mode, charging/network, thermal, reconnect, and long-session soak testing with the user's deployment dock
 - Configure signed production builds and execute real update-channel/rollback validation using generated release manifests
-- Execute the prepared physical enclosure handoff: measure the final Honor Magic5 Pro/UGREEN hub/cable layout, select and validate the BOM, release CAD, fabricate, and complete prototype acceptance
+- Re-scope the physical hardware handoff for the selected Honor Magic6 Pro and confirmed dock before measurements, BOM, CAD, or prototype acceptance
 - Extend the authenticated Windows managed-save/content synchronization beyond the completed debug LAN session with maximum-size transfer, disk-full, replacement, routed-network, MSIX signing/install, and physical Windows validation; bounded 6.3 MiB streaming and live cancellation now pass
 - Validate physical LAN/controller streaming and host-probe behavior on target devices
-
-## Blueprint implementation backlog
-
-The remaining work is tracked in these concrete groups:
-
-- Complete end-to-end authenticated WebDAV/S3 provider integration and physical recovery testing.
-- Verify physical disconnect recovery for Settings-driven migrations.
-- Validate adapter-specific save discovery/import/export against production emulators and exercise authenticated cloud byte transport against real WebDAV/S3 endpoints.
-- Run the Compose accessibility/migration/lifecycle suite on physical target devices and add offline/recovery scenarios; the same suite already runs on a clean API-35 emulator in CI.
-- Complete physical controller, Honor Desktop Mode/mirroring, HDMI, Ethernet, charging, thermal, SSD, and unplug/reattach validation.
-- Configure production signing and execute update-channel/rollback validation using generated artifact manifests.
-- Execute the repository hardware handoff specification: target measurements, BOM selection, CAD/fabrication, cooling/cabling validation, and prototype acceptance.
 
 ## Build and test
 
@@ -109,18 +104,16 @@ testDebugUnitTest
 assembleDebug
 ```
 
-For a local instrumentation run, the validated emulator profile is `GameBox_API35`
-using the Google APIs x86_64 API-35 image. Boot it with the Android Emulator, then
-run `connectedDebugAndroidTest` with `ANDROID_SERIAL=emulator-5554`. The current
-68-test suite passes with zero failures and zero errors on the API-35 emulator, with
-two explicit environment-gated skips for clean-emulator content/SAF setup. The suite
-validates Android UI and lifecycle behavior. Honor instrumentation remains a separate
-physical-device gate and must be run after the phone is unlocked. The latest unlocked
-Honor run completed 68 tests with zero failures and one explicit SAF-root skip; no
-active HDMI/DeX display was present during that run. Separate live Honor and API-35 runs verify the bundled Galaxy Patrol
-install → RetroArch/FCEUmm gameplay → controller-key dispatch → emulator save-state
-restore → return → uninstall/reinstall → relaunch path; this does not cover physical
-external-controller hardware or every production adapter.
+For local instrumentation, use the validated `GameBox_API35` Google APIs x86_64
+API-35 image and run `connectedDebugAndroidTest` with
+`ANDROID_SERIAL=emulator-5554`. Test counts and device-specific outcomes change as
+the suite evolves; see the [project roadmap](ROADMAP.md) for dated results. Emulator
+instrumentation does not replace an unlocked Honor test, and Honor phone-screen
+results do not count as TV acceptance. The latest recorded physical-TV legal-homebrew
+smoke flow launched Galaxy Patrol through NES.emu and returned to GameBox; controller
+gameplay in that run used synthetic input, and the HONOR dock/touch controls remained
+visible. Physical-controller, clean-fullscreen, representative save/restore, and
+broader emulator-matrix acceptance remain open.
 
 The optional Windows Companion discovers Windows shortcuts plus Steam, Epic Games, and GOG installations, runs its core test harness, and publishes a self-contained `win-x64` ZIP from `.github/workflows/windows-ci.yml`.
 
@@ -139,11 +132,11 @@ Each CI run produces a temporary debug APK and SHA-256 artifact. Release APKs ar
 
 ### Galaxy Patrol storage and launch
 
-The bundled Galaxy Patrol NES content is installed under the app-private path `filesDir/installed/retro/galaxy-patrol/content/galaxy-patrol.nes`. It is intentionally not exposed as a public filesystem path. GameBox verifies the pinned SHA-256 before launch, publishes the bundled MIT fixture to `Download/GameBox/galaxy-patrol.nes` through Android MediaStore, and starts RetroArch's `RetroActivityFuture` with that conventional filesystem path plus the installed `fceumm_libretro_android.so` core path. The path is passed as `/data/data/<RetroArch package>/cores/fceumm_libretro_android.so`, the stable Android app-private location used by RetroArch's external-launch contract. GameBox also clears a stale RetroArch activity before each handoff. If automatic launch is rejected, force-stop RetroArch once, reopen it to confirm **Nintendo - NES / Famicom (FCEUmm)** is installed, then retry Play from GameBox. The explicit core path is required because current Android RetroArch builds can otherwise open a black surface when an external launcher does not provide a resolvable `LIBRETRO` core.
+The bundled Galaxy Patrol NES content remains under the app-private legacy path `filesDir/installed/retro/galaxy-patrol/content/galaxy-patrol.nes`; it is not exposed as a public filesystem path. GameBox verifies its pinned SHA-256 and hands the scoped content URI to the standalone `com.explusalpha.NesEmu` app with `ACTION_VIEW`; Galaxy Patrol no longer defaults to RetroArch. The roadmap records that NES.emu 1.5.85 launched and rendered the fixture on the Honor's 1920×1080 TV output, with return to GameBox verified. This does not establish clean fullscreen (the HONOR dock and emulator touch controls remained visible), physical-controller gameplay, or save/restore continuity. RetroArch-specific code remains only for compatibility with explicitly constructed legacy capabilities, not as a platform default.
 
 ### Online metadata and box art
 
-GameBox wires the optional TheGamesDB metadata adapter (`TheGamesDbMetadataClient`) into runtime catalog refresh. Configure or clear its API key in Settings; the key is AES-GCM encrypted with an Android Keystore key and never stored in DataStore, URLs, diagnostics, or logs. The Store's console sync requests `include=boxart`, resolves the provider's HTTPS `base_url` entries, and caches cover art, fan art/banner backgrounds, clear logos, and screenshot thumbnails when the title supplies them. Each console sync is capped at 20 games to keep the living-room catalog responsive. The adapter enriches authorized catalog entries with HTTPS artwork and descriptions only. It never downloads game binaries. Discovery details can open storefront/source searches (Steam, GOG, Nintendo, PlayStation Store, itch.io, GitHub where applicable) and an explicitly configured Vimm's Lair discovery source. Vimm integration is limited to title discovery/navigation and a user-initiated browser-download handoff: GameBox watches completed Android DownloadManager entries matching the selected title, verifies the local file through the normal importer, moves it into managed Library storage, and removes the browser source only after successful registration. It never requests Vimm binary URLs itself or treats Vimm as a trusted checksum source; manual local import remains available. Relative TheGamesDB artwork paths are resolved only against credential-free HTTPS provider bases; insecure or malformed artwork preserves the existing fallback. TheGamesDB API requires an API key and is documented at https://api.thegamesdb.net/. Binary installation remains governed by the catalog's authorized HTTPS source and SHA-256 checksum.
+Runtime game enrichment and manual metadata candidates use Wikidata's keyless entity API for exact-title year/description/general imagery and Libretro's keyless named-thumbnail archive for console box art and screenshots where available. The obsolete TheGamesDB metadata scraper, API-key sync, and provider-health path have been removed; legacy cached platform IDs remain in the database schema for upgrade compatibility. Wikidata/Libretro lookups never provide game binaries. Discovery details can open storefront/source searches (Steam, GOG, Nintendo, PlayStation Store, itch.io, GitHub where applicable) and an explicitly configured Vimm's Lair discovery source. Vimm integration is limited to title discovery/navigation and a user-initiated browser-download handoff: GameBox watches completed Android DownloadManager entries matching the selected title, verifies the local file through the normal importer, moves it into managed Library storage, and removes the browser source only after successful registration. It never requests Vimm binary URLs itself or treats Vimm as a trusted checksum source; manual local import remains available. Artwork is accepted only over HTTPS and malformed or insecure results preserve existing/fallback imagery. Binary installation remains governed by the catalog's authorized HTTPS source and SHA-256 checksum.
 
 ### Importing authorized local copies
 
@@ -152,6 +145,36 @@ New legal local or browser-tracked imports use a console-scoped tree such as
 tree; only supported files are registered, and the source archive is removed
 after successful registration. Content-only uninstall removes every
 registered extracted file while retaining saves, metadata, and history.
+
+### On-device file organization
+
+GameBox keeps its working files in Android's app-private storage; these are not
+loose folders in the phone's public Downloads area. The main layout is:
+
+```text
+<GameBox app-private files>/
+  imports/<console>/<game-id>/   Imported game files (archives are not retained)
+  installed/                     Bundled or managed install content
+  saves/                         GameBox-managed saves
+  save-backups/                  Safety copies of managed saves
+  save-backup-manifests/         Integrity/index data for those copies
+  emulator-saves/                Discovered emulator save snapshots
+  emulator-save-backups/         Safety copies of emulator snapshots
+  emulator-save-backup-manifests/
+  save-conflicts/                Preserved files when restore finds a conflict
+  database-backups/              Pre-migration database safety copies
+  catalog/                       Small discovery/catalog cache
+  datastore/                     Android-managed preferences and app state
+```
+
+These directories are created as needed; an absent directory does not indicate
+missing data. The Room library database and Android-managed app state are also
+private to GameBox and are not safe cleanup targets.
+
+Use GameBox's Library import and content-only uninstall actions to manage game
+files. Do not clear app data or delete these folders manually: doing so can
+remove imported games, saves, recovery data, or the library database. Public
+`Download/GameBox/` is only used for the bundled Galaxy Patrol test fixture.
 
 Open a title in Store discovery and select **Import authorized copy**. The Android picker displays every document MIME type because console images such as `.xci`, `.nsp`, `.rvz`, `.wbfs`, `.chd`, and `.cia` are often exposed as generic binary files. GameBox then applies a strict format allowlist for the selected console before it reads, hashes, and copies the file into app-private storage. A successful copy is promoted into the persistent Library with its artwork and metadata, and supported emulator adapters receive a temporary read-only URI only after launch-time SHA-256 verification. Current profiles cover Nintendo handheld and home consoles, PlayStation families, Sega families, Xbox, Atari, Neo Geo, PC Engine, WonderSwan, arcade, retro, and homebrew formats. Unknown catalog platforms use the recognized console-format union while executable and script types remain rejected.
 

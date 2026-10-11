@@ -49,7 +49,7 @@ class GameBoxJsonDiscoverySyncTest {
     }
 
     @Test
-    fun supportedConsoleAliasesUseTheGamesDbCompatiblePlatformIds() {
+    fun supportedConsoleAliasesUseStableCanonicalPlatformIds() {
         assertEquals("playstation2", canonicalDiscoveryPlatformId("PS2"))
         assertEquals("nintendogamecube", canonicalDiscoveryPlatformId("GameCube"))
         assertEquals("nintendowii", canonicalDiscoveryPlatformId("Nintendo Wii"))
@@ -93,7 +93,7 @@ class GameBoxJsonDiscoverySyncTest {
     }
 
     @Test
-    fun syncPreservesFavoritesExistingPlatformAndScopesConfiguredPlatforms() = runBlocking {
+    fun syncPreservesFavoritesExistingPlatformIdentityAndScopesConfiguredPlatforms() = runBlocking {
         val dao = FakeDiscoveryDao(
             existingPlatform = CatalogPlatformEntity(
                 id = "playstation2",

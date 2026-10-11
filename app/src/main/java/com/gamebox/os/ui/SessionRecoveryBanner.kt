@@ -3,7 +3,6 @@ package com.gamebox.os.ui
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -23,7 +22,7 @@ internal fun SessionRecoveryBanner(controller: GameLaunchController) {
             Column(Modifier.padding(12.dp)) {
                 Text(state.message ?: "Session history needs recovery",
                     color = MaterialTheme.colorScheme.onErrorContainer)
-                Button(onClick = controller::onHostResumed) { Text("Retry session recovery") }
+                BlueprintButton(onClick = controller::onHostResumed) { Text("Retry session recovery") }
             }
         }
     }

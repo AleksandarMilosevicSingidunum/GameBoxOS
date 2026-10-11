@@ -9,7 +9,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class EmulatorIntentPolicyTest {
-    private val uri = "content://com.gamebox.os.files/installed/game.iso"
+    private val uri = "content://com.gamebox.os.debug.files/installed/game.iso"
 
     @Test
     fun rejectsMalformedOrCredentialBearingContentUris() {
@@ -17,7 +17,7 @@ class EmulatorIntentPolicyTest {
             EmulatorIntentPolicy.plan(EmulatorIntentPolicy.PPSSPP_PACKAGE, "content://", "Balanced")
         }
         assertThrows(IllegalArgumentException::class.java) {
-            EmulatorIntentPolicy.plan(EmulatorIntentPolicy.PPSSPP_PACKAGE, "content://com.gamebox.os.files", "Balanced")
+            EmulatorIntentPolicy.plan(EmulatorIntentPolicy.PPSSPP_PACKAGE, "content://com.gamebox.os.debug.files", "Balanced")
         }
         assertThrows(IllegalArgumentException::class.java) {
             EmulatorIntentPolicy.plan(EmulatorIntentPolicy.PPSSPP_PACKAGE, "content://user:pass@files/game.iso", "Balanced")
@@ -78,12 +78,28 @@ class EmulatorIntentPolicyTest {
     }
 
     @Test
-    fun dolphinUsesOfficialAutoStartFilesContract() {
+    fun dolphinUsesSingleGameAutoStartContract() {
         val plan = EmulatorIntentPolicy.plan(EmulatorIntentPolicy.DOLPHIN_PACKAGE, uri, "Performance")
 
         assertEquals(EmulatorIntentStyle.LAUNCHER_EXTRAS, plan.style)
-        assertEquals(listOf(uri), plan.stringArrayExtras[EmulatorIntentPolicy.DOLPHIN_AUTO_START_FILES])
+        assertEquals(uri, plan.stringExtras[EmulatorIntentPolicy.DOLPHIN_AUTO_START_FILE])
         assertFalse(plan.graphicsProfileApplied)
+    }
+
+    @Test
+    fun melonDsUsesItsDocumentedExternalFrontendActivity() {
+        val plan = EmulatorIntentPolicy.plan("me.magnum.melonds", uri, "Balanced")
+
+        assertEquals(EmulatorIntentStyle.ACTION_VIEW, plan.style)
+        assertEquals("me.magnum.melonds.ui.emulator.EmulatorActivity", plan.activityClassName)
+    }
+
+    @Test
+    fun nesEmuUsesScopedActionViewContentHandoff() {
+        val plan = EmulatorIntentPolicy.plan("com.explusalpha.NesEmu", uri, "Balanced")
+
+        assertEquals(EmulatorIntentStyle.ACTION_VIEW, plan.style)
+        assertTrue(plan.stringExtras.isEmpty())
     }
 
     @Test

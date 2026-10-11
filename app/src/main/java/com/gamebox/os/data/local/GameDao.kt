@@ -77,6 +77,38 @@ interface GameDao {
 
     @Query("""
         UPDATE games
+        SET year = CASE WHEN year = :expectedYear THEN COALESCE(:year, year) ELSE year END,
+            genre = CASE WHEN genre = :expectedGenre THEN COALESCE(:genre, genre) ELSE genre END,
+            artworkUrl = CASE WHEN artworkUrl IS :expectedArtworkUrl THEN COALESCE(:artworkUrl, artworkUrl) ELSE artworkUrl END,
+            description = CASE WHEN description IS :expectedDescription THEN COALESCE(:description, description) ELSE description END,
+            metadataProvider = CASE WHEN metadataProvider IS :expectedProvider THEN COALESCE(:provider, metadataProvider) ELSE metadataProvider END,
+            metadataExternalId = CASE WHEN metadataExternalId IS :expectedExternalId THEN COALESCE(:externalId, metadataExternalId) ELSE metadataExternalId END,
+            metadataMatchedAtMillis = CASE WHEN metadataMatchedAtMillis IS :expectedMatchedAtMillis THEN COALESCE(:matchedAtMillis, metadataMatchedAtMillis) ELSE metadataMatchedAtMillis END
+        WHERE id = :id
+          AND metadataProvider IS :expectedProvider
+          AND metadataExternalId IS :expectedExternalId
+          AND metadataMatchedAtMillis IS :expectedMatchedAtMillis
+    """)
+    suspend fun applyMetadataEnrichmentIfUnchanged(
+        id: String,
+        expectedYear: Int,
+        expectedGenre: String,
+        expectedArtworkUrl: String?,
+        expectedDescription: String?,
+        expectedProvider: String?,
+        expectedExternalId: String?,
+        expectedMatchedAtMillis: Long?,
+        year: Int?,
+        genre: String?,
+        artworkUrl: String?,
+        description: String?,
+        provider: String?,
+        externalId: String?,
+        matchedAtMillis: Long?,
+    ): Int
+
+    @Query("""
+        UPDATE games
         SET title = :title,
             year = COALESCE(:year, year),
             genre = COALESCE(:genre, genre),

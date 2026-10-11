@@ -1,7 +1,8 @@
 using System.Net;
+using System.Security.Cryptography;
+using System.Security.Cryptography.X509Certificates;
 using System.Text.Json;
 using GameBox.Windows.Core;
-using GameBox.Windows;
 
 if (args.Length > 0 && string.Equals(args[0], "--live-companion", StringComparison.OrdinalIgnoreCase))
 {
@@ -325,10 +326,24 @@ try
     var companionSecret = CompanionProtocol.CreatePairingSecret();
     Require(companionSecret.Length == 64, "Companion pairing secrets must use 256 bits of entropy.");
     var companionAuth = CompanionProtocol.CreateAuthorization(companionSecret, "GET", "/v1/status", 1_700_000_000);
+    var companionRetryAuth = CompanionProtocol.CreateAuthorization(companionSecret, "GET", "/v1/status", 1_700_000_000);
+    Require(companionAuth.StartsWith("v2:", StringComparison.Ordinal) && companionAuth.Split(':').Length == 4,
+        "Companion authorization must include a versioned unique nonce.");
+    Require(companionAuth != companionRetryAuth, "Companion retries must use a fresh request nonce.");
     Require(CompanionProtocol.VerifyAuthorization(companionSecret, "GET", "/v1/status", companionAuth, 1_700_000_030), "Companion authorization must verify a matching request.");
     Require(!CompanionProtocol.VerifyAuthorization(companionSecret, "POST", "/v1/status", companionAuth, 1_700_000_030), "Companion authorization must bind the request method.");
     Require(!CompanionProtocol.VerifyAuthorization(companionSecret, "GET", "/v1/status", companionAuth, 1_700_000_121), "Companion authorization must expire stale requests.");
     RequireThrows<ArgumentException>(() => CompanionProtocol.CreateAuthorization(companionSecret, "GET", "/v1/../status", 1_700_000_000), "Companion authorization must reject path traversal.");
+    using var pinKey = RSA.Create(2048);
+    var pinRequest = new CertificateRequest("CN=GameBox Companion", pinKey, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
+    using var pinCertificate = pinRequest.CreateSelfSigned(DateTimeOffset.UtcNow.AddMinutes(-1), DateTimeOffset.UtcNow.AddDays(1));
+    var certificatePin = pinCertificate.GetCertHashString(HashAlgorithmName.SHA256);
+    Require(CompanionCertificatePin.Matches(certificatePin, pinCertificate), "The exact paired TLS certificate must match its pin.");
+    Require(!CompanionCertificatePin.Matches(new string('A', 64), pinCertificate), "A different TLS certificate must fail pin validation.");
+    Require(CompanionCertificatePin.Normalize(certificatePin.ToLowerInvariant()) == certificatePin,
+        "TLS fingerprints must normalize case without changing the pin.");
+    RequireThrows<ArgumentException>(() => CompanionCertificatePin.Normalize("not-a-fingerprint"),
+        "Malformed TLS pins must be rejected.");
 
     HttpRequestMessage? companionRequest = null;
     using var companionClient = new HttpClient(new StubHttpMessageHandler(request =>
@@ -342,7 +357,7 @@ try
     var companionStatus = await new CompanionStatusClient(companionClient).GetStatusAsync(
         "192.168.1.22", 49_500, companionSecret);
     Require(companionStatus.DeviceName == "Living Room" && companionStatus.Status == "ready", "Companion status response must be parsed.");
-    Require(companionRequest?.RequestUri?.ToString() == "http://192.168.1.22:49500/v1/status", "Companion status must use the configured LAN endpoint.");
+    Require(companionRequest?.RequestUri?.ToString() == "https://192.168.1.22:49500/v1/status", "Companion status must use pinned HTTPS on the configured LAN endpoint.");
     Require(companionRequest?.Headers.Contains(CompanionProtocol.AuthorizationHeader) == true, "Companion status must authenticate its request.");
 
     var truncatedStatusContent = new StringContent(
@@ -787,14 +802,27 @@ try
 
     var pairingPath = Path.Combine(root, "pairing", "paired-device.json");
     var pairingStore = new PairingProfileStore(pairingPath);
-    var pairingProfile = new PairingProfile("192.168.1.22", 49_500, companionSecret);
+    var pairingProfile = new PairingProfile("192.168.1.22", 49_500, companionSecret, certificatePin);
     await pairingStore.SaveAsync(pairingProfile);
     var protectedProfileBytes = await File.ReadAllTextAsync(pairingPath);
     Require(!protectedProfileBytes.Contains(companionSecret, StringComparison.Ordinal),
         "Persisted pairing profile must never contain the plaintext secret.");
     var restoredPairing = await pairingStore.LoadAsync();
     Require(restoredPairing == pairingProfile,
-        "DPAPI pairing profile must round-trip for the current Windows user.");
+        "DPAPI secret and TLS pin must round-trip for the current Windows user.");
+    using (var savedProfile = JsonDocument.Parse(await File.ReadAllTextAsync(pairingPath)))
+    {
+        var protectedSecret = savedProfile.RootElement.GetProperty("ProtectedSecret").GetString();
+        await File.WriteAllTextAsync(pairingPath, JsonSerializer.Serialize(new
+        {
+            Host = "192.168.1.22",
+            Port = 49_500,
+            ProtectedSecret = protectedSecret,
+        }));
+    }
+    var legacyPairing = await pairingStore.LoadAsync();
+    Require(legacyPairing is { CertificateSha256.Length: 0 },
+        "Legacy pairing must load for repair but must not gain a TLS trust pin implicitly.");
     pairingStore.Delete();
     Require(await pairingStore.LoadAsync() is null && !File.Exists(pairingPath),
         "Forgetting a pairing must remove the durable profile.");

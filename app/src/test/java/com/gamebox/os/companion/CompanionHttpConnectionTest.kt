@@ -14,9 +14,30 @@ import org.junit.Test
 class CompanionHttpConnectionTest {
     private val secret = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
     private val now = 1_700_000_000L
-    private fun request(authorization: String? = null): String =
-        "GET /v1/status HTTP/1.1\r\nHost: localhost\r\n" +
+    private fun request(authorization: String? = null, path: String = "/v1/status"): String =
+        "GET $path HTTP/1.1\r\nHost: localhost\r\n" +
             (authorization?.let { "${CompanionProtocol.AUTHORIZATION_HEADER}: $it\r\n" } ?: "") + "\r\n"
+
+    @Test fun authenticatedRequestNonceCanOnlyBeAcceptedOnce() {
+        val guard = CompanionAuthorizationReplayGuard()
+        val nonce = "0123456789abcdef0123456789abcdef"
+        val authorization = CompanionProtocol.createAuthorization(
+            secret, "PUT", "/v1/saves/game-one", now, bodySha256 = "a".repeat(64), nonce = nonce,
+        )
+
+        assertTrue(
+            CompanionProtocol.verifyAuthorization(
+                secret, "PUT", "/v1/saves/game-one", authorization, now,
+                bodySha256 = "a".repeat(64), acceptNonce = { value, timestamp -> guard.accept(value, timestamp, now) },
+            ),
+        )
+        assertFalse(
+            CompanionProtocol.verifyAuthorization(
+                secret, "PUT", "/v1/saves/game-one", authorization, now,
+                bodySha256 = "a".repeat(64), acceptNonce = { value, timestamp -> guard.accept(value, timestamp, now) },
+            ),
+        )
+    }
 
     @Test fun terminatorDoesNotRequireEofOrAnotherRead() {
         val bytes = ByteArrayInputStream(request().toByteArray())
@@ -162,9 +183,21 @@ class CompanionHttpConnectionTest {
             listener.soTimeout = 5000
             val server = executor.submit {
                 val connection = CompanionHttpConnection(200, staging) { 0L }
-                repeat(5) {
+                val replayGuard = CompanionAuthorizationReplayGuard()
+                repeat(6) {
                     listener.accept().use { socket ->
-                        connection.handle(socket) { request ->
+                        connection.handle(socket, authorizeHead = { head ->
+                            val authorization = head.authorization
+                            if (authorization == null) true else CompanionProtocol.verifyAuthorization(
+                                secret,
+                                head.method,
+                                head.path,
+                                authorization,
+                                now,
+                                bodySha256 = head.declaredBodySha256,
+                                acceptNonce = { nonce, timestamp -> replayGuard.accept(nonce, timestamp, now) },
+                            )
+                        }) { request ->
                             CompanionStatusRoute.handle(request.method, request.path, request.authorization,
                                 secret, "Test device", now)
                         }
@@ -186,6 +219,7 @@ class CompanionHttpConnectionTest {
                 val success = exchange(request(authorization))
                 assertTrue(success.startsWith("HTTP/1.1 200"))
                 assertTrue(success.contains("\"status\":\"ready\""))
+                assertTrue(exchange(request(authorization)).startsWith("HTTP/1.1 401"))
                 val content = "CONTENT".toByteArray()
                 val contentRequest = (
                     "PUT /v1/content/game-one HTTP/1.1\r\n" +
@@ -199,5 +233,39 @@ class CompanionHttpConnectionTest {
             } finally { executor.shutdownNow() }
         }
         staging.deleteRecursively()
+    }
+
+    @Test fun routeFailureReturnsServerErrorAndNextRequestStillWorks() {
+        val executor = Executors.newSingleThreadExecutor()
+        ServerSocket(0, 2, InetAddress.getLoopbackAddress()).use { listener ->
+            val connection = CompanionHttpConnection()
+            val server = executor.submit {
+                repeat(2) {
+                    listener.accept().use { socket ->
+                        connection.handle(socket) { request ->
+                            if (request.path == "/explode") error("simulated route failure")
+                            CompanionStatusRoute.handle(
+                                request.method, request.path, request.authorization, secret, "Test device", now,
+                            )
+                        }
+                    }
+                }
+            }
+            try {
+                fun exchange(value: String): String = Socket(listener.inetAddress, listener.localPort).use { client ->
+                    client.getOutputStream().apply { write(value.toByteArray()); flush() }
+                    client.getInputStream().bufferedReader().readText()
+                }
+
+                val authorization = CompanionProtocol.createAuthorization(secret, "GET", "/explode", now)
+                assertTrue(exchange(request(authorization, "/explode")).startsWith("HTTP/1.1 500 Internal Server Error"))
+
+                val statusAuthorization = CompanionProtocol.createAuthorization(secret, "GET", "/v1/status", now)
+                assertTrue(exchange(request(statusAuthorization)).startsWith("HTTP/1.1 200 OK"))
+                server.get(5, TimeUnit.SECONDS)
+            } finally {
+                executor.shutdownNow()
+            }
+        }
     }
 }

@@ -1,36 +1,38 @@
 package com.gamebox.os
 
 import android.content.pm.ActivityInfo
-import android.os.Build
 import android.os.Bundle
-import android.view.Display
-import android.view.WindowManager
-import androidx.core.view.WindowCompat
-import androidx.core.view.WindowInsetsCompat
-import androidx.core.view.WindowInsetsControllerCompat
+import com.gamebox.os.display.hideSystemBars
 import com.gamebox.os.display.isExternalDisplayId
+import com.gamebox.os.display.requestExternalFullscreenAfterFocus
+import com.gamebox.os.display.requestPrimaryFullscreenAfterFocus
+import com.gamebox.os.display.currentDisplayId
 
 /** Android Home/launcher host. Its singleTask contract is intentionally preserved. */
 class MainActivity : GameBoxHostActivity() {
     private val isExternalDisplay: Boolean
-        get() = isExternalDisplayId(display?.displayId ?: Display.DEFAULT_DISPLAY)
+        get() = isExternalDisplayId(currentDisplayId())
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        applyExternalDisplayWindowPolicy()
+        applyLauncherWindowPolicy()
         super.onCreate(savedInstanceState)
-        applyExternalDisplayWindowPolicy()
+        applyLauncherWindowPolicy()
     }
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {
         super.onWindowFocusChanged(hasFocus)
         if (hasFocus) {
-            applyExternalDisplayWindowPolicy()
+            applyLauncherWindowPolicy()
+            requestPrimaryFullscreenAfterFocus()
+            requestExternalFullscreenAfterFocus()
         }
     }
 
     override fun onResume() {
         super.onResume()
-        applyExternalDisplayWindowPolicy()
+        applyLauncherWindowPolicy()
+        requestPrimaryFullscreenAfterFocus()
+        requestExternalFullscreenAfterFocus()
     }
 
     override fun onMultiWindowModeChanged(
@@ -38,36 +40,21 @@ class MainActivity : GameBoxHostActivity() {
         newConfig: android.content.res.Configuration,
     ) {
         super.onMultiWindowModeChanged(isInMultiWindowMode, newConfig)
-        applyExternalDisplayWindowPolicy()
+        applyLauncherWindowPolicy()
+        requestPrimaryFullscreenAfterFocus()
+        requestExternalFullscreenAfterFocus()
     }
 
     override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {
         super.onConfigurationChanged(newConfig)
-        applyExternalDisplayWindowPolicy()
+        applyLauncherWindowPolicy()
     }
 
-    private fun applyExternalDisplayWindowPolicy() {
-        if (!isExternalDisplay) return
-        requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
-        window.addFlags(
-            WindowManager.LayoutParams.FLAG_FULLSCREEN or
-                WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
-        )
-        window.clearFlags(WindowManager.LayoutParams.FLAG_FORCE_NOT_FULLSCREEN)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-            window.attributes = window.attributes.apply {
-                layoutInDisplayCutoutMode =
-                    WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS
-            }
-        }
-        window.setLayout(
-            WindowManager.LayoutParams.MATCH_PARENT,
-            WindowManager.LayoutParams.MATCH_PARENT,
-        )
-        WindowCompat.setDecorFitsSystemWindows(window, false)
-        WindowCompat.getInsetsController(window, window.decorView).apply {
-            systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-            hide(WindowInsetsCompat.Type.systemBars())
-        }
+    private fun applyLauncherWindowPolicy() {
+        if (isExternalDisplay) requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+        // HONOR wired projection can mirror the primary display instead of
+        // registering a secondary Android display. The launcher must remain
+        // immersive in both routing modes so the dock/taskbar cannot frame the UI.
+        hideSystemBars(window)
     }
 }

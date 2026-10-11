@@ -67,8 +67,12 @@ class RomImporterTest {
     fun exposesFriendlyPlatformLabelsAndFormats() {
         assertEquals("Nintendo Switch", RomImportPolicy.profileLabel("nintendoswitch"))
         assertEquals(
-            setOf("xci", "xcz", "nsp", "nsz", "nca", "nro", "nso"),
+            setOf("xci", "xcz", "nsp", "nsz", "nca", "nro", "nso", "zip", "7z"),
             RomImportPolicy.supportedExtensions("Nintendo Switch"),
+        )
+        assertEquals(
+            setOf("xci", "xcz", "nsp", "nsz", "nca", "nro", "nso"),
+            RomImportPolicy.supportedGameExtensions("Nintendo Switch"),
         )
         assertEquals(true, RomImportPolicy.supportsMultiFile("PlayStation"))
         assertEquals(true, "raw" in RomImportPolicy.supportedExtensions("Dreamcast"))
@@ -95,7 +99,7 @@ class RomImporterTest {
         }
 
         assertEquals(
-            ".xci is not supported for PSP. Supported formats: .7Z, .CSO, .ISO, .PBP",
+            ".xci is not supported for PSP. Supported formats: .7Z, .CSO, .ISO, .PBP, .ZIP",
             error.message,
         )
     }

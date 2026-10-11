@@ -5,7 +5,7 @@ class SaveSyncResolver(
 ) {
     fun resolve(local: SaveRevision?, remote: SaveRevision?): SaveSyncResult {
         if (local == null && remote == null) return SaveSyncResult.UpToDate
-        if (local == null) return SaveSyncResult.Downloaded(remote!!)
+        if (local == null) return remote?.let { SaveSyncResult.Downloaded(it) } ?: SaveSyncResult.UpToDate
         if (remote == null) return SaveSyncResult.Uploaded(local)
         require(local.gameId == remote.gameId) { "save revisions must belong to the same game" }
         if (local.checksum == remote.checksum) return SaveSyncResult.UpToDate

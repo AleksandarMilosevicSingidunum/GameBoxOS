@@ -21,4 +21,18 @@ class StarterCatalogIntegrityTest {
         assertFalse(input.contains("/apps/70300/")) // VVVVVV is not Cave Story.
         assertFalse(input.contains("/apps/504230/")) // Celeste is not Celeste Classic.
     }
+
+    @Test fun starterRetroAndHomebrewTitlesHaveTitleCorrectArtwork() {
+        val input = File("src/main/assets/catalog/authorized-fixture.json").readText()
+        val games = CatalogParser().parse(input).games.associateBy { it.id.value }
+
+        assertEquals(
+            "https://upload.wikimedia.org/wikipedia/commons/8/8e/CelesteClassic.png",
+            games.getValue("celeste").artworkUrl,
+        )
+        assertEquals(
+            "https://thumbnails.libretro.com/Nintendo%20-%20Nintendo%203DS/Named_Boxarts/Cave%20Story%20%28USA%29.png",
+            games.getValue("cave-story").artworkUrl,
+        )
+    }
 }

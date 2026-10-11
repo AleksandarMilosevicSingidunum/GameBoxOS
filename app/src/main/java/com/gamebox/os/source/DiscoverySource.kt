@@ -69,6 +69,7 @@ data class DiscoverySourceGame(
     val year: Int? = null,
     val detailsUrl: String? = null,
     val coverUrl: String? = null,
+    val screenshotUrl: String? = null,
 )
 
 data class DiscoverySourcePage(

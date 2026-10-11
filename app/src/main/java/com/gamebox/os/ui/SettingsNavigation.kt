@@ -3,7 +3,8 @@ package com.gamebox.os.ui
 enum class SettingsSection(val label: String) {
     STORAGE("Storage"), CONTROLLERS("Controllers"), DOWNLOADS("Downloads"),
     EMULATORS("Emulators"), DISPLAY("Display"), AUDIO("Audio"), NETWORK("Network"),
-    SAVES_CLOUD("Saves & Cloud Sync"), SYSTEM("System"),
+    SAVES_CLOUD("Saves & Cloud Sync"), SYSTEM("System"), SOURCES("Sources"),
+    DEVELOPER("Developer"),
 }
 
 internal fun adjacentSettingsSection(current: SettingsSection, offset: Int): SettingsSection {

@@ -4,6 +4,8 @@ import android.content.Context
 import androidx.work.WorkInfo
 import androidx.work.WorkManager
 import com.gamebox.os.data.GameRepository
+import com.gamebox.os.data.DownloadRepository
+import com.gamebox.os.domain.DownloadStatus
 import com.gamebox.os.domain.GameId
 import com.gamebox.os.domain.InstallState
 import kotlinx.coroutines.CoroutineScope
@@ -38,6 +40,7 @@ interface AuthorizedDownloadController {
 class WorkManagerAuthorizedDownloadController(
     context: Context,
     private val gameRepository: GameRepository,
+    private val downloadRepository: DownloadRepository,
     scope: CoroutineScope
 ) : AuthorizedDownloadController {
     private val applicationContext = context.applicationContext
@@ -86,6 +89,21 @@ class WorkManagerAuthorizedDownloadController(
                 }
             }
             state.collect { current ->
+                current.status.toDownloadStatus()?.let { status ->
+                    val game = gameRepository.game(HOMEBREW_GAME_ID) ?: return@let
+                    if (downloadRepository.observeJobs().value.none { it.gameId == HOMEBREW_GAME_ID }) {
+                        downloadRepository.enqueue(game, AuthorizedHomebrewDownload.SIZE_BYTES)
+                    }
+                    val transferred = if (status == DownloadStatus.COMPLETED) {
+                        AuthorizedHomebrewDownload.SIZE_BYTES
+                    } else current.bytesTransferred
+                    downloadRepository.updateState(
+                        HOMEBREW_GAME_ID,
+                        status,
+                        transferred,
+                        current.error,
+                    )
+                }
                 current.status.toInstallState()?.let {
                     gameRepository.setInstallState(HOMEBREW_GAME_ID, it)
                 }
@@ -96,6 +114,9 @@ class WorkManagerAuthorizedDownloadController(
     override fun observeState(): StateFlow<AuthorizedDownloadState> = state
 
     override fun install() {
+        gameRepository.game(HOMEBREW_GAME_ID)?.let {
+            downloadRepository.enqueue(it, AuthorizedHomebrewDownload.SIZE_BYTES)
+        }
         gameRepository.setInstallState(HOMEBREW_GAME_ID, InstallState.QUEUED)
         scheduler.enqueueAuthorizedHomebrew()
     }
@@ -156,6 +177,17 @@ class WorkManagerAuthorizedDownloadController(
 
     private companion object {
         val HOMEBREW_GAME_ID = GameId("galaxy-patrol")
+    }
+
+    private fun AuthorizedDownloadState.Status.toDownloadStatus(): DownloadStatus? = when (this) {
+        AuthorizedDownloadState.Status.IDLE -> null
+        AuthorizedDownloadState.Status.QUEUED -> DownloadStatus.QUEUED
+        AuthorizedDownloadState.Status.RUNNING -> DownloadStatus.DOWNLOADING
+        AuthorizedDownloadState.Status.SUCCEEDED -> DownloadStatus.COMPLETED
+        AuthorizedDownloadState.Status.MISSING_CONTENT,
+        AuthorizedDownloadState.Status.ALTERED_CONTENT,
+        AuthorizedDownloadState.Status.FAILED -> DownloadStatus.FAILED
+        AuthorizedDownloadState.Status.CANCELLED -> DownloadStatus.CANCELLED
     }
 }
 

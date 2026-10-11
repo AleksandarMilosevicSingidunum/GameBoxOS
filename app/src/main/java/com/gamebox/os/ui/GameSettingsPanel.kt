@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -19,6 +18,7 @@ import com.gamebox.os.data.GameRepository
 import com.gamebox.os.domain.Game
 import com.gamebox.os.domain.GraphicsProfiles
 import com.gamebox.os.launch.EmulatorCapabilityRegistry
+import com.gamebox.os.launch.emulatorPackageCandidates
 import com.gamebox.os.launch.EmulatorReadinessPolicy
 import com.gamebox.os.launch.EmulatorReadinessState
 import com.gamebox.os.settings.GameBoxSettings
@@ -42,7 +42,9 @@ fun GameSettingsPanel(
     ]?.takeIf { it in options }
     val effectivePackage = game.emulatorPackage ?: platformDefault
     val installedPackages = options
-        .filter { packageManager.getLaunchIntentForPackage(it) != null }
+        .filter { option ->
+            emulatorPackageCandidates(option).any { packageManager.getLaunchIntentForPackage(it) != null }
+        }
         .toSet()
     val readiness = EmulatorReadinessPolicy.evaluate(
         approvedOptions = options,
@@ -59,14 +61,14 @@ fun GameSettingsPanel(
             platformDefault?.let { registry.optionDisplayName(it) } ?: "Automatic recommended option",
         )
         Row(Modifier.horizontalScroll(rememberScrollState())) {
-            FilterChip(
+            BlueprintFilterChip(
                 selected = platformDefault == null,
                 onClick = { scope.launch { settingsRepository.setPlatformEmulatorDefault(game.platform, null) } },
                 label = { Text("Automatic") },
             )
             options.forEach { pkg ->
                 val installed = pkg in installedPackages
-                FilterChip(
+                BlueprintFilterChip(
                     selected = platformDefault == pkg,
                     onClick = { scope.launch { settingsRepository.setPlatformEmulatorDefault(game.platform, pkg) } },
                     enabled = installed,
@@ -79,14 +81,14 @@ fun GameSettingsPanel(
         Text("This game")
         Text(if (game.emulatorPackage == null) "Uses platform default" else "Overrides platform default")
         Row(Modifier.horizontalScroll(rememberScrollState())) {
-            FilterChip(
+            BlueprintFilterChip(
                 selected = game.emulatorPackage == null,
                 onClick = { repository.setEmulatorSettings(game.id, null, game.graphicsProfile) },
                 label = { Text("Automatic") },
             )
             options.forEach { pkg ->
                 val installed = pkg in installedPackages
-                FilterChip(
+                BlueprintFilterChip(
                     selected = game.emulatorPackage == pkg,
                     onClick = { repository.setEmulatorSettings(game.id, pkg, game.graphicsProfile) },
                     enabled = installed,
@@ -107,7 +109,7 @@ fun GameSettingsPanel(
                 GraphicsProfiles.BALANCED,
                 GraphicsProfiles.PERFORMANCE,
             ).forEach { profile ->
-                FilterChip(
+                BlueprintFilterChip(
                     selected = game.graphicsProfile == profile,
                     onClick = {
                         repository.setEmulatorSettings(game.id, game.emulatorPackage, profile)

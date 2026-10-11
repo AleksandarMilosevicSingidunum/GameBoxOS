@@ -27,12 +27,6 @@ data class PendingImportTransaction(
     val files: List<PendingImportFile>,
 )
 
-data class ImportRegistrationRecoveryReport(
-    val confirmed: Int = 0,
-    val rolledBack: Int = 0,
-    val failures: Int = 0,
-)
-
 /**
  * Durable boundary between an atomic import-file commit and Room library registration.
  *
@@ -58,27 +52,6 @@ class ImportRegistrationJournal(
         hadExistingTarget: Boolean,
         files: List<PendingImportFile>,
     ): PendingImportTransaction {
-        requireSafeGameId(gameId.value)
-        requireUuid(transactionId)
-        require(files.isNotEmpty()) { "Pending import must contain at least one file" }
-        require(files.size <= 64) { "Pending import contains too many files" }
-        require(files.map { it.relativePath.lowercase() }.distinct().size == files.size) {
-            "Pending import paths must be unique"
-        }
-        files.forEach { file ->
-            requirePathBelongsToGame(file.relativePath, gameId.value)
-            require(
-                file.relativePath.none { it == '\\' || it == '\u0000' } &&
-                    file.relativePath.split('/').none { it.isBlank() || it == "." || it == ".." }
-            ) { "Pending import path is unsafe" }
-            require(file.sha256.matches(Regex("^[a-f0-9]{64}$"))) {
-                "Pending import SHA-256 is invalid"
-            }
-        }
-
-        check(importsRoot.mkdirs() || importsRoot.isDirectory) {
-            "Import root is unavailable"
-        }
         val pending = PendingImportTransaction(
             gameId = gameId.value,
             transactionId = transactionId,
@@ -86,6 +59,10 @@ class ImportRegistrationJournal(
             hadExistingTarget = hadExistingTarget,
             files = files,
         )
+        validatePending(pending)
+        check(importsRoot.mkdirs() || importsRoot.isDirectory) {
+            "Import root is unavailable"
+        }
         val destination = markerFile(gameId.value, transactionId)
         val temporary = File(importsRoot, destination.name + ".partial")
         temporary.writeText(json.encodeToString(pending), Charsets.UTF_8)
@@ -184,52 +161,6 @@ class ImportRegistrationJournal(
         if (staging.exists()) deleteOwnedDirectory(staging)
         if (backup.exists()) deleteOwnedDirectory(backup)
         Files.deleteIfExists(markerFile(pending.gameId, pending.transactionId).toPath())
-    }
-
-    suspend fun reconcile(
-        createdBeforeMillis: Long = Long.MAX_VALUE,
-        gameLookup: suspend (GameId) -> Game?,
-    ): ImportRegistrationRecoveryReport {
-        require(createdBeforeMillis >= 0L) { "Import recovery cutoff is invalid" }
-        var confirmed = 0
-        var rolledBack = 0
-        var failures = 0
-        val records = try {
-            pending()
-        } catch (_: Exception) {
-            return ImportRegistrationRecoveryReport(failures = 1)
-        }
-
-        records.filter { it.createdAtMillis < createdBeforeMillis }
-            .groupBy { it.gameId }.toSortedMap().forEach { (gameId, transactions) ->
-            if (transactions.size != 1) {
-                failures += transactions.size
-                return@forEach
-            }
-            val pending = transactions.single()
-            runCatching {
-                val game = gameLookup(GameId(gameId))
-                val roomMatches = matchesRegisteredGame(pending, game)
-                when {
-                    roomMatches && targetMatchesPending(pending) -> {
-                        confirm(pending)
-                        confirmed += 1
-                    }
-                    roomMatches -> {
-                        throw IllegalStateException(
-                            "Registered import bytes do not match the durable journal; keep recovery state for repair"
-                        )
-                    }
-                    else -> {
-                        rollback(pending)
-                        rolledBack += 1
-                    }
-                }
-            }.onFailure {
-                failures += 1
-            }
-        }
-        return ImportRegistrationRecoveryReport(confirmed, rolledBack, failures)
     }
 
     private fun validateMarkerIdentity(marker: File, pending: PendingImportTransaction) {

@@ -13,6 +13,8 @@ class SettingsNavigationPolicyTest {
         SettingsSection.DOWNLOADS to 860,
         SettingsSection.SAVES_CLOUD to 1_500,
         SettingsSection.SYSTEM to 2_600,
+        SettingsSection.SOURCES to 3_100,
+        SettingsSection.DEVELOPER to 4_200,
     )
 
     @Test fun `defaults to first available section above first anchor`() {
@@ -22,7 +24,7 @@ class SettingsNavigationPolicyTest {
     @Test fun `selects most recent anchor as content scrolls`() {
         assertEquals(SettingsSection.CONTROLLERS, SettingsNavigationPolicy.selectedSection(610, anchors))
         assertEquals(SettingsSection.SAVES_CLOUD, SettingsNavigationPolicy.selectedSection(1_500, anchors))
-        assertEquals(SettingsSection.SYSTEM, SettingsNavigationPolicy.selectedSection(4_000, anchors))
+        assertEquals(SettingsSection.DEVELOPER, SettingsNavigationPolicy.selectedSection(4_200, anchors))
     }
 
     @Test fun `lead distance activates an approaching heading`() {
@@ -42,11 +44,19 @@ class SettingsNavigationPolicyTest {
 
     @Test fun `settings section navigation wraps in both directions`() {
         assertEquals(
-            SettingsSection.STORAGE,
+            SettingsSection.SOURCES,
             adjacentSettingsSection(SettingsSection.SYSTEM, 1),
         )
         assertEquals(
-            SettingsSection.SYSTEM,
+            SettingsSection.DEVELOPER,
+            adjacentSettingsSection(SettingsSection.SOURCES, 1),
+        )
+        assertEquals(
+            SettingsSection.STORAGE,
+            adjacentSettingsSection(SettingsSection.DEVELOPER, 1),
+        )
+        assertEquals(
+            SettingsSection.DEVELOPER,
             adjacentSettingsSection(SettingsSection.STORAGE, -1),
         )
     }

@@ -22,6 +22,11 @@ internal fun defaultHomeMatchesApp(resolvedPackage: String?, appPackage: String)
 internal fun shouldFocusEmptyHomeSetup(isDefaultHome: Boolean, gameCount: Int): Boolean =
     !isDefaultHome && gameCount == 0
 
+internal fun shouldShowDefaultHomeSetupBanner(
+    isDefaultHome: Boolean,
+    allowPromptOnSurface: Boolean,
+): Boolean = !isDefaultHome && allowPromptOnSurface
+
 internal fun defaultHomeSettingsIntent(): Intent = Intent(Settings.ACTION_HOME_SETTINGS)
 
 /** Prefer the system's direct HOME-role chooser so console mode can own the TV surface. */
