@@ -208,16 +208,12 @@ class TrackedSourceBrowserActivity : ComponentActivity() {
         }
     }
 
-    override fun onKeyUp(keyCode: Int, event: KeyEvent): Boolean {
-        if (keyCode == KeyEvent.KEYCODE_BUTTON_B) {
-            returnToPreviousPage()
-            return true
-        }
-        return super.onKeyUp(keyCode, event)
-    }
-
     @SuppressLint("RestrictedApi") // Match the shared host's controller-confirm translation.
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        if (event.keyCode == KeyEvent.KEYCODE_BUTTON_B) {
+            if (event.action == KeyEvent.ACTION_UP) returnToPreviousPage()
+            return true
+        }
         val activationKeyCode = gamepadBrowserActivationKeyCode(event.keyCode)
         if (activationKeyCode != null) {
             val activeBrowser = popupWebView ?: if (::webView.isInitialized) webView else null

@@ -188,6 +188,20 @@ class TrackedSourceBrowserFocusTest {
             }
             assertTrue(popupRead.await(5, TimeUnit.SECONDS))
             assertEquals("The controller-activated new-tab action must stay inside GameBox", true, popupCreated.get())
+            val popupClosed = CountDownLatch(1)
+            val backTime = android.os.SystemClock.uptimeMillis()
+            activity.runOnUiThread {
+                listOf(KeyEvent.ACTION_DOWN, KeyEvent.ACTION_UP).forEach { action ->
+                    activity.dispatchKeyEvent(
+                        KeyEvent(backTime, backTime, action, KeyEvent.KEYCODE_BUTTON_B, 0, 0, 1, 0, 0,
+                            InputDevice.SOURCE_GAMEPAD),
+                    )
+                }
+                val popup = TrackedSourceBrowserActivity::class.java.getDeclaredField("popupWebView")
+                    .apply { isAccessible = true }
+                if (popup.get(activity) == null) popupClosed.countDown()
+            }
+            assertTrue("Controller B did not close the in-app popup", popupClosed.await(5, TimeUnit.SECONDS))
         } finally {
             activity.runOnUiThread { activity.finish() }
         }
