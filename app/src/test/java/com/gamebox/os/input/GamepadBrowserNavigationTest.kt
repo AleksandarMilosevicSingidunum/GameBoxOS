@@ -14,22 +14,12 @@ class GamepadBrowserNavigationTest {
     }
 
     @Test
-    fun directionsMapToForwardAndReverseWebFocus() {
-        assertEquals(KeyEvent.KEYCODE_TAB, gamepadBrowserNavigationKeyCode(KeyEvent.KEYCODE_DPAD_DOWN))
-        assertEquals(KeyEvent.KEYCODE_TAB, gamepadBrowserNavigationKeyCode(KeyEvent.KEYCODE_DPAD_RIGHT))
-        assertEquals(KeyEvent.KEYCODE_TAB, gamepadBrowserNavigationKeyCode(KeyEvent.KEYCODE_DPAD_UP))
-        assertEquals(KeyEvent.KEYCODE_TAB, gamepadBrowserNavigationKeyCode(KeyEvent.KEYCODE_DPAD_LEFT))
+    fun directionsReachWebViewAsSpatialNavigation() {
+        assertEquals(KeyEvent.KEYCODE_DPAD_DOWN, gamepadBrowserNavigationKeyCode(KeyEvent.KEYCODE_DPAD_DOWN))
+        assertEquals(KeyEvent.KEYCODE_DPAD_RIGHT, gamepadBrowserNavigationKeyCode(KeyEvent.KEYCODE_DPAD_RIGHT))
+        assertEquals(KeyEvent.KEYCODE_DPAD_UP, gamepadBrowserNavigationKeyCode(KeyEvent.KEYCODE_DPAD_UP))
+        assertEquals(KeyEvent.KEYCODE_DPAD_LEFT, gamepadBrowserNavigationKeyCode(KeyEvent.KEYCODE_DPAD_LEFT))
         assertNull(gamepadBrowserNavigationKeyCode(KeyEvent.KEYCODE_BUTTON_A))
 
-        assertEquals(
-            KeyEvent.META_SHIFT_ON,
-            gamepadBrowserNavigationMetaState(KeyEvent.KEYCODE_DPAD_UP, 0),
-        )
-        assertEquals(
-            KeyEvent.META_SHIFT_ON,
-            gamepadBrowserNavigationMetaState(KeyEvent.KEYCODE_DPAD_LEFT, 0),
-        )
-        assertEquals(0, gamepadBrowserNavigationMetaState(KeyEvent.KEYCODE_DPAD_DOWN, 0))
-        assertEquals(0, gamepadBrowserNavigationMetaState(KeyEvent.KEYCODE_DPAD_RIGHT, 0))
     }
 }

@@ -14,16 +14,9 @@ internal fun gamepadBrowserNavigationKeyCode(keyCode: Int): Int? = when (keyCode
     KeyEvent.KEYCODE_DPAD_DOWN,
     KeyEvent.KEYCODE_DPAD_RIGHT,
     KeyEvent.KEYCODE_DPAD_UP,
-    KeyEvent.KEYCODE_DPAD_LEFT -> KeyEvent.KEYCODE_TAB
+    KeyEvent.KEYCODE_DPAD_LEFT -> keyCode
     else -> null
 }
-
-internal fun gamepadBrowserNavigationMetaState(keyCode: Int, metaState: Int): Int =
-    if (keyCode == KeyEvent.KEYCODE_DPAD_UP || keyCode == KeyEvent.KEYCODE_DPAD_LEFT) {
-        metaState or KeyEvent.META_SHIFT_ON
-    } else {
-        metaState
-    }
 
 internal fun gamepadBrowserKeyEvent(event: KeyEvent, keyCode: Int, metaState: Int): KeyEvent =
     KeyEvent(

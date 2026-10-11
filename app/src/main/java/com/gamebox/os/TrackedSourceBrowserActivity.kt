@@ -34,7 +34,6 @@ import com.gamebox.os.display.requestExternalFullscreenAfterFocus
 import com.gamebox.os.importer.RomImportPolicy
 import com.gamebox.os.importer.BrowserDownloadRecord
 import com.gamebox.os.input.gamepadBrowserNavigationKeyCode
-import com.gamebox.os.input.gamepadBrowserNavigationMetaState
 import com.gamebox.os.input.gamepadBrowserActivationKeyCode
 import com.gamebox.os.input.gamepadBrowserKeyEvent
 import com.gamebox.os.ui.TrackedSourceBrowserToolbar
@@ -244,7 +243,7 @@ class TrackedSourceBrowserActivity : ComponentActivity() {
             val translated = gamepadBrowserKeyEvent(
                 event,
                 browserNavigationKeyCode,
-                gamepadBrowserNavigationMetaState(event.keyCode, event.metaState),
+                event.metaState,
             )
             return super.dispatchKeyEvent(translated)
         }
