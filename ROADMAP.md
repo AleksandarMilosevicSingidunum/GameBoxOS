@@ -3999,3 +3999,23 @@ database files are present. Do not treat the failed run as a product-test pass.
   not a verified title detail page; its result notice also said Vimm no longer
   had the listing. Confirm/repair title-specific source URLs with a currently
   available legal homebrew listing. No copyrighted game file was requested.
+
+## 2026-10-11 — Separate stale Honor build behavior from current source
+
+- [x] Read the actual Vimm WebView URL through its existing local debug socket:
+  the installed app ended at `https://vimm.net/vault/GBA/M`. The installed
+  package is version `0.1.0`, last updated 2026-10-10; it predates the current
+  checkout's unavailable-detail handling, so this is not proof of current
+  source URL behavior.
+- [x] Current source builds each result link from its Vimm vault ID and keeps
+  that link when detail hydration returns 404. Focused
+  `VimmLairDiscoverySourceTest`, `ConfiguredSourceResultTest`, and
+  `DiscoveryHttpsCancellationTest` all pass.
+- [x] Added a fullscreen re-request to
+  `TrackedSourceBrowserActivity.onResume()` to match the launcher's resume
+  behavior. The focused unit tests and Android test Kotlin compilation pass.
+- [ ] Could not install/verify this source on Honor: the existing production
+  app is signed with a key unavailable in this environment, so replacing it
+  with the debug/release build is unsafe. Re-test browser fullscreen and the
+  title-specific Vimm page after a signed build is available. No game file was
+  downloaded; the physical controller still reports disconnected.

@@ -483,6 +483,7 @@ class TrackedSourceBrowserActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         hideSystemBars(window)
+        requestExternalFullscreenAfterFocus()
     }
 
     override fun onMultiWindowModeChanged(isInMultiWindowMode: Boolean, newConfig: Configuration) {
