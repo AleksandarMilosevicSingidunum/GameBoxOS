@@ -23,6 +23,19 @@
 - [ ] This did not exercise an actual Vimm transfer, gameplay/save persistence,
   cancellation/error recovery on-device, or production package behavior.
 
+## 11 October 2026 — HONOR TV fullscreen restored after import QA
+
+- [x] Rechecked the actual 1920×1080 projection after the import/uninstall flow.
+  HONOR had left two GameBox activities/windows layered, with a smaller desktop
+  window over the prior screen. Maximizing that window from its own title bar
+  restored a single GameBox Home view.
+- [x] Verified the final TV capture fills the display with no HONOR Dock,
+  Android taskbar, or app window chrome. No app data or game files were changed
+  during this recovery.
+- [ ] HONOR can still reopen the app as a desktop window after system pickers or
+  emulator handoffs; verify the setting persists across a fresh app launch and
+  device reconnect. Controller and Vimm activation remain unverified.
+
 ## 11 October 2026 — HONOR TV Vimm focus and fullscreen follow-up
 
 - [x] Repeated Home → Store → Vimm `GOD OF WAR` search on the physical
