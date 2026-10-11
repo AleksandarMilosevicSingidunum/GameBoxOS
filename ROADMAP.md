@@ -1,5 +1,18 @@
 # GameBox OS Roadmap
 
+## 11 October 2026 — Controller detection and navigation retest
+
+- [x] On the physical HONOR TV session, queried Android's live input inventory:
+  it exposed the touchscreen and device key/DPAD inputs but no GAMEPAD or
+  JOYSTICK source. GameBox's TV Home correctly reported **Not connected**.
+- [x] Focused JVM tests passed on the current checkout:
+  `RuntimeDeviceStatusTest`, `GameBoxRootInputTest`, and
+  `GamepadBrowserNavigationTest` (`:app:testDebugUnitTest`). This verifies the
+  source filter and synthetic key mapping only.
+- [ ] No code-side mismatch was established. Re-test with the Bluetooth
+  controller connected to the HONOR; physical D-pad/A/B and Vimm Download
+  activation are still not accepted until verified on the real device.
+
 ## 11 October 2026 — HONOR TV 7-Zip import, launch, and cleanup
 
 - [x] Used the user-provided PSP `.7z` from `D:\GameBoxOS\games` as the source;
