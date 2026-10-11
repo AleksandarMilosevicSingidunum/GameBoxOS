@@ -3976,3 +3976,26 @@ database files are present. Do not treat the failed run as a product-test pass.
 - [ ] This is software-level configuration evidence only. Live Vimm browsing,
   real controller selection, and Download Manager/import acceptance remain
   pending on the TV.
+
+## 2026-10-11 — Honor TV Vimm search and browser handoff
+
+- [x] On the actual 1920x1080 Honor HDMI display, opened Store's Vimm source;
+  the blank preset search returned 628 results grouped by console, with box
+  art on metadata-backed results. The Store keyboard searched `MARIO` and the
+  Vimm source returned 65 matches, also grouped by console with artwork.
+- [x] Opened a result, navigated with D-pad events to focus `Download`, and
+  activated it with a synthetic A event. GameBox opened its tracked Vimm
+  browser; returning to GameBox showed the expected no-download-started
+  message. Download Manager stayed at 0 queued/active and retained its one
+  existing completed Galaxy Patrol install.
+- [x] The website accepted a synthetic D-pad event, but this only moved focus
+  to a rating cell; game-row selection and the website's own download control
+  were not tested. No ROM was downloaded. Android still reports the physical
+  controller disconnected, so physical-controller acceptance remains open.
+- [x] HONOR's per-app `Open in full screen mode` option was active for GameBox
+  after the browser was opened; the dock/taskbar disappeared and remained
+  hidden after returning to GameBox Home.
+- [ ] The selected Mario & Luigi result opened Vimm's GBA `M` listings page,
+  not a verified title detail page; its result notice also said Vimm no longer
+  had the listing. Confirm/repair title-specific source URLs with a currently
+  available legal homebrew listing. No copyrighted game file was requested.
