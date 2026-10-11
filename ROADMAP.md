@@ -13,6 +13,20 @@
   controller connected to the HONOR; physical D-pad/A/B and Vimm Download
   activation are still not accepted until verified on the real device.
 
+## 11 October 2026 — Galaxy Patrol Start/gameplay visual retest
+
+- [x] On the actual HDMI TV, relaunched the verified Galaxy Patrol fixture in
+  NES.emu 1.5.85 and tapped its visible **Start** touch control. The projected
+  image changed, but captures alternated between a sparse starfield/sprite
+  view and the earlier sparse view; a single D-pad touch did not establish a
+  reliable directional response.
+- [x] Closed content through NES.emu's confirmation and exited through its own
+  menu. GameBox resumed on Galaxy Patrol details with the game still installed;
+  the app was left in its current-session fullscreen mode.
+- [ ] This is inconclusive for actual gameplay/rendering and input acceptance.
+  No physical controller was connected; keep the NES fixture's gameplay quality
+  and NES.emu control mapping as open acceptance gates.
+
 ## 11 October 2026 — HONOR TV 7-Zip import, launch, and cleanup
 
 - [x] Used the user-provided PSP `.7z` from `D:\GameBoxOS\games` as the source;
