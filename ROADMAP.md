@@ -53,6 +53,29 @@
   extraction, registration, source cleanup, or physical-controller operation.
   The debug build is installed alongside production; production remains 0.1.0.
 
+## 11 October 2026 — HONOR TV Vimm search, tracked page, and return
+
+- [x] Reinstalled the current debug APK in place without clearing its data and
+  launched it on the physical HDMI display. Used the SurfaceFlinger physical
+  display ID for TV-only captures; Android's logical display ID is not accepted
+  by `screencap` on this device.
+- [x] Searched Vimm for `Cave Story`: one WiiWare result appeared in its console
+  section. Opened details and activated GameBox's tracked **Download** action.
+  The Vimm vault opened in `TrackedSourceBrowserActivity`; its actual Download
+  control was focused with the visible yellow outline. No site download was
+  activated. Vimm interposed a Cloudflare human-check before showing the vault.
+- [x] Sent controller-B/back to return to GameBox details. It displayed
+  “Returned without starting a download.” No transfer was started.
+- [x] HONOR initially showed its Dock on the tracked browser and after return.
+  Applied the per-app **Open in full screen mode** setting while the tracked
+  activity was active, then maximized its window. Verified the page had no Dock
+  or window chrome, and B returned to GameBox with the Dock still hidden.
+- [ ] The physical Bluetooth controller remains disconnected; TV checks used
+  display-routed touch/key injection. The focused Vimm Download was not
+  activated (copyrighted game), so end-to-end browser download/import remains
+  unverified. Vimm detail metadata enrichment also failed for this result, and
+  its card showed placeholder art; investigate source artwork fallback.
+
 ## 11 October 2026 — HONOR TV Vimm route and browser Back acceptance
 
 - [x] On the physical Honor with the debug app on external display 12
