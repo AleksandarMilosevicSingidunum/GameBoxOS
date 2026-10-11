@@ -28,6 +28,10 @@
 - [x] `:app:testDebugUnitTest` passed on the current checkout: 780 tests,
   0 failures, 0 errors, 1 skipped. This supplements but does not replace the
   physical-Honor flows below.
+- [x] Re-ran the full suite on this checkout: 781 tests, 0 failures, 0 errors,
+  1 skipped. `:app:lintDebug` and `:app:assembleRelease` also completed
+  successfully. Android lint wrote HTML and SARIF reports under
+  `app/build/reports/`.
 
 ## 11 October 2026 — On-device 7-Zip importer lifecycle
 
