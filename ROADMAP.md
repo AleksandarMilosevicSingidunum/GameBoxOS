@@ -1,5 +1,24 @@
 # GameBox OS Roadmap
 
+## 11 October 2026 — Honor TV reconnect and controller gate
+
+- [x] Reopened GameBox on the connected physical `HONOR PGT-N19 API 36.0`
+  from Android Studio and observed its wide 16:9 surface on the wired TV output.
+- [x] The current TV capture has no visible GameBox title bar, but the HONOR
+  Dock/taskbar still overlays the bottom edge. GameBox already requests
+  borderless/immersive fullscreen; the per-app HONOR fullscreen setting was not
+  confirmed applied. A menu-selection attempt did not prove that the Dock was
+  hidden.
+- [x] A misaligned UI click opened Cave Story details; no download or install
+  was started. Android Studio exposes no accessibility tree for the TV content,
+  and a single injected Right key produced no clear focus change.
+- [ ] GameBox reports the controller disconnected. Physical D-pad navigation,
+  Vimm download-to-Download-Manager import, emulator play/return, and TV
+  fullscreen/Dock acceptance remain unverified. ADB server startup failed on
+  both ports 5037 and 5038, so this run did not use ADB.
+- [x] `GameBox.Windows.Core.Tests` passes when its test temp root is redirected
+  from the sandbox temp directory into the writable workspace.
+
 ## 11 October 2026 — Prefer the game-specific Vimm download action
 
 - [x] Updated the tracked browser's initial focus selection to prefer a visible
