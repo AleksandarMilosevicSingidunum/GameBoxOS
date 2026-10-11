@@ -17,6 +17,11 @@
   D-pad focus from Play to Vimm Download and both no-installer regression tests.
   The duplicate `512 MB` test assertion now accounts for its two legitimate UI
   occurrences.
+- [x] Temporarily installed the debug build and opened Celeste Classic on the
+  HDMI TV. Verified the updated hero text, “No installer” state, and matching
+  Library-import instruction visually. Removed the temporary debug package and
+  restored the production app to Home; the settled production capture is again
+  borderless and Dock-free.
 - [x] Ran `AuthorizedInstallLifecycleTest` on the physical Honor: 1/1 passed
   for the authorized Galaxy Patrol install → uninstall → reinstall and save /
   backup retention flow.
