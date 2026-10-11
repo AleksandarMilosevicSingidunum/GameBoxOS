@@ -1,5 +1,28 @@
 # GameBox OS Roadmap
 
+## 11 October 2026 — HONOR TV 7-Zip import, launch, and cleanup
+
+- [x] Used the user-provided PSP `.7z` from `D:\GameBoxOS\games` as the source;
+  preserved the PC original and staged a separate temporary copy on HONOR.
+- [x] Selected it through Android DocumentsUI on the TV. GameBox displayed its
+  import progress and Cancel action, extracted/verified the ISO, registered it
+  in Library with artwork (1,532 MB), and removed the staged archive only after
+  successful import. SHA-256 was surfaced in the completion status.
+- [x] **Play Now** handed the app-private content URI to PPSSPP v1.20.4 and the
+  game title menu rendered on the 1920×1080 TV. Exited through PPSSPP's own menu
+  and returned to GameBox without entering gameplay or changing saves.
+- [x] GameBox's uninstall removed the one imported content file (1,605,664,768
+  bytes). It left the expected stale library reference; the app's explicit
+  **Forget file references** action removed that QA entry. Verified the source
+  folder was empty, the app-private import directory contained no game file,
+  and removed only the empty temporary staging folder. PC source remains intact.
+- [ ] PPSSPP first appeared with HONOR window chrome/Dock and required the
+  device's per-app **Open in full screen mode** plus maximize action. The
+  emulator's touchscreen controls remained visible. Controller is disconnected,
+  so physical input and hiding touch controls safely are still unverified.
+- [ ] This did not exercise an actual Vimm transfer, gameplay/save persistence,
+  cancellation/error recovery on-device, or production package behavior.
+
 ## 11 October 2026 — HONOR TV Vimm focus and fullscreen follow-up
 
 - [x] Repeated Home → Store → Vimm `GOD OF WAR` search on the physical
