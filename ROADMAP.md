@@ -30,15 +30,17 @@
   did not infer why the file had disappeared.
 - [x] Reinstalled the bundled legal fixture via the normal GameBox details
   **Install game** action. The page changed to **installed**, and the expected
-  `files/installed/retro/galaxy-patrol/content/galaxy-patrol.nes` appeared.
+  `files/installed/retro/galaxy-patrol/content/galaxy-patrol.nes` appeared; its
+  on-device SHA-256 matched the pinned fixture hash
+  `97c1757ffd6a5bc1a591809b2b0f8988741f61f6abd82889c148ecae8a2f471f`.
 - [x] **Play Now** launched NES.emu 1.5.85 on the HDMI display. Used the
   emulator's **Close Content** confirmation, then its **Exit** action; GameBox
   resumed and Home showed Galaxy Patrol installed under **Continue Playing**.
 - [ ] The game view was predominantly black with a small moving sprite and
   NES.emu touch controls. This confirms launch/handoff/return, not acceptable
-  gameplay rendering or gameplay/save behavior. No physical controller was
-  connected; HONOR's Dock appeared during gameplay and was absent again after
-  emulator exit.
+  gameplay rendering or gameplay/save behavior. Gameplay controls were not
+  tested. No physical controller was connected; HONOR's Dock appeared during
+  gameplay and was absent again after emulator exit.
 
 ## 11 October 2026 — HONOR TV fullscreen restored after import QA
 
