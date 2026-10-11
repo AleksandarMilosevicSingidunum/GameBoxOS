@@ -1,5 +1,22 @@
 # GameBox OS Roadmap
 
+## 11 October 2026 — Full host verification and HONOR test-runner limitation
+
+- [x] Android JVM suite: 780 tests, 0 failures/errors, 1 skipped; `:app:lintDebug`
+  passes with 24 warnings and no errors; `:app:assembleRelease` succeeds.
+- [x] Windows companion core self-test executable passes.
+- [x] Restored the installed production `com.gamebox.os` app to Home on the
+  1920×1080 HDMI TV. Its bottom Dock and transient window controls are absent
+  after settling; production data was not modified.
+- [ ] HONOR-targeted instrumentation remains unreliable in Desktop mode: the
+  PC activity manager force-stops `com.gamebox.os.debug` as the runner starts
+  its test Activity, killing the instrumentation process before assertions.
+  This is a runner/display interaction, not proof of an app crash. Avoid using
+  that mode's instrumentation results as acceptance until a runner that stays
+  alive on the external display is available.
+- [ ] Physical controller still reports disconnected; live Vimm browser →
+  Download Manager → import and physical controller acceptance remain open.
+
 ## 11 October 2026 — Honor TV details and authorized-install verification
 
 - [x] Captured the actual HDMI panel at 1920×1080: GameBox fills the TV, has no
