@@ -32,9 +32,15 @@
 - [x] Verified the final TV capture fills the display with no HONOR Dock,
   Android taskbar, or app window chrome. No app data or game files were changed
   during this recovery.
-- [ ] HONOR can still reopen the app as a desktop window after system pickers or
-  emulator handoffs; verify the setting persists across a fresh app launch and
-  device reconnect. Controller and Vimm activation remain unverified.
+- [x] Force-stopped and relaunched `com.gamebox.os.debug` on the physical HDMI
+  display. The TV taskbar returned despite GameBox's existing
+  `WindowInsetsControllerCompat` immersive-bars request. Applying HONOR's
+  per-app **Open in full screen mode** and maximizing hid it for that session;
+  a second clean relaunch brought it back. This is now a reproduced OEM policy
+  persistence limitation, not an unimplemented system-bars request.
+- [ ] The app cannot currently keep HONOR's taskbar hidden across process
+  restarts by itself. Controller input and Vimm download activation remain
+  unverified.
 
 ## 11 October 2026 — HONOR TV Vimm focus and fullscreen follow-up
 
