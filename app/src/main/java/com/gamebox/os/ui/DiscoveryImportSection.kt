@@ -24,6 +24,7 @@ internal fun DiscoveryImportSection(
     message: String?,
     supportsDiscSet: Boolean,
     showCopyImport: Boolean = false,
+    actionsEnabled: Boolean = true,
     onCancel: () -> Unit,
     onImportCopy: () -> Unit = {},
     onImportDiscSet: () -> Unit,
@@ -51,14 +52,14 @@ internal fun DiscoveryImportSection(
         Text("Bring your game", fontSize = 14.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold)
         Text("Accepted for $platformLabel: $acceptedFormats", color = MaterialTheme.colorScheme.primary, fontSize = 11.sp)
         Text(
-            "Discovery providers supply metadata or source links, not trusted install content. Import copies and verifies your selected file into Library. You still need a compatible emulator and any required firmware or keys.",
+            "GameBox verifies selected files before adding them to your Library. ZIP and 7z archives are extracted and removed only after successful registration. You still need a compatible emulator and any required firmware or keys.",
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             fontSize = 11.sp,
         )
         if (showCopyImport) {
             BlueprintOutlinedButton(
                 onClick = onImportCopy,
-                enabled = !importing,
+                enabled = actionsEnabled && !importing,
                 modifier = Modifier.padding(top = 4.dp),
             ) {
                 Text("Import your copy", fontSize = 11.sp)
@@ -67,7 +68,7 @@ internal fun DiscoveryImportSection(
         if (supportsDiscSet) {
             BlueprintOutlinedButton(
                 onClick = onImportDiscSet,
-                enabled = !importing,
+                enabled = actionsEnabled && !importing,
                 modifier = Modifier.padding(top = 4.dp),
             ) {
                 Text("Import multi-file disc set", fontSize = 11.sp)

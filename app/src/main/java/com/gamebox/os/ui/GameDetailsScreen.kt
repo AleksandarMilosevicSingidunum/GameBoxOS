@@ -255,6 +255,16 @@ internal fun DetailsScreen(
         )
         Spacer(Modifier.height(8.dp))
         GameDetailsDiscoveryCard(compact, onOpenStore, discoveryActionFocusRequester)
+        GameDetailsManualImportCard(
+            game = game,
+            importer = importer,
+            repository = repository,
+            enabled = !workerActive && launchState.status !in setOf(
+                LaunchUiState.Status.PREPARING,
+                LaunchUiState.Status.LAUNCHED,
+                LaunchUiState.Status.SESSION_ERROR,
+            ),
+        )
         if (detail.hasAboutContent) {
             BlueprintPanel(Modifier.fillMaxWidth().padding(top = 10.dp)) {
                 Text("About this game", Modifier.semantics { heading() }, fontWeight = FontWeight.SemiBold)

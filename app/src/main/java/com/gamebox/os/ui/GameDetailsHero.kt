@@ -218,7 +218,7 @@ internal fun GameDetailsHero(
                                             InstallState.FAILED,
                                             InstallState.MISSING_FILES,
                                         )
-                                    ) "No verified installer is configured. Import your own game copy from Library."
+                                    ) "No verified installer is configured. Use Import your copy below."
                                     else "Install this authorized title below to make it ready to play.",
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     fontSize = 11.sp,

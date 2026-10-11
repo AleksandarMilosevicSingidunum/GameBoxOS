@@ -107,7 +107,7 @@ class GameDetailsHeroTest {
         }
 
         compose.onNodeWithText(
-            "No verified installer is configured. Import your own game copy from Library.",
+            "No verified installer is configured. Use Import your copy below.",
         ).assertIsDisplayed()
     }
 
@@ -136,7 +136,7 @@ class GameDetailsHeroTest {
         }
 
         compose.onNodeWithText(
-            "How to play: this listing has no verified installer. Import your own game copy from Library, then press Play after verification.",
+            "How to play: no verified installer is configured. Use Import your copy below, then press Play after verification.",
         ).assertIsDisplayed()
         compose.onNodeWithText("No installer").assertIsNotEnabled()
         compose.onNodeWithText("Install").assertDoesNotExist()

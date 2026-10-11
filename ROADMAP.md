@@ -1,5 +1,58 @@
 # GameBox OS Roadmap
 
+## 11 October 2026 — Current Android JVM regression suite
+
+- [x] `:app:testDebugUnitTest` passed on the current checkout: 780 tests,
+  0 failures, 0 errors, 1 skipped. This supplements but does not replace the
+  physical-Honor flows below.
+
+## 11 October 2026 — On-device 7-Zip importer lifecycle
+
+- [x] Ran `SevenZipImportLifecycleTest` on the physical HONOR PGT-N19 / API 36
+  (`connectedDebugAndroidTest`, 1 test, 0 failures). It generated a synthetic
+  `.7z` archive in app cache and verified the extracted payload was registered
+  before the source archive was removed; malformed input and missing input
+  were rejected while preserving available source data. The test cleaned its
+  temporary app-cache directory in `finally`.
+- [ ] This exercises the importer on Honor, not the TV-visible DocumentsUI
+  selection/progress/cancel flow. The physical controller is still unavailable;
+  do not count this as end-to-end import acceptance.
+
+## 11 October 2026 — HONOR TV game launch and return verification
+
+- [x] On the physical 1920×1080 HDMI display, opened Galaxy Patrol details in
+  the current `com.gamebox.os.debug` build (0.1.0-debug). Play Now launched
+  `com.explusalpha.NesEmu` with the verified app-private
+  `galaxy-patrol.nes` content URI; the homebrew rendered on the TV. This
+  reproduces the working debug-build flow and distinguishes it from the older
+  production 0.1.0 package, which did not launch in the preceding retest.
+- [x] Exited the emulator through its own Exit action. GameBox resumed on
+  Galaxy Patrol details without a crash or loss of the installed game.
+- [x] Applied HONOR Dock → **Open in full screen mode** to NES.emu. The Dock
+  disappeared for that emulator; GameBox's own per-app fullscreen setting also
+  remains enabled. This is device configuration, not a setting GameBox can
+  apply to third-party emulator packages automatically.
+- [ ] NES.emu still displayed its touch-control overlay during gameplay. The
+  controller was disconnected, so hiding touch controls or validating physical
+  controller mapping/gameplay remains untested. Do not disable fallback touch
+  input until a connected-controller path is verified.
+- [ ] Physical controller acceptance and production-build game launch remain
+  open. The active debug test did not modify production app data or game files.
+
+## 11 October 2026 — HONOR TV manual import entry point
+
+- [x] Fixed game details for listings without a verified installer: guidance
+  now points to the on-page **Import your copy** action instead of suggesting
+  an authorized install or sending users to Library.
+- [x] On the physical 1920×1080 HDMI display, opened Cave Story details in
+  `com.gamebox.os.debug` and verified the import card and guidance. Activated
+  **Import your copy**; Android DocumentsUI opened on the TV in an empty QA
+  folder. Back navigation cancelled cleanly and returned to the game details
+  page with “No files selected.” No file was selected or imported.
+- [ ] This verifies picker launch/cancel only, not actual file selection,
+  extraction, registration, source cleanup, or physical-controller operation.
+  The debug build is installed alongside production; production remains 0.1.0.
+
 ## 11 October 2026 — HONOR TV Vimm route and browser Back acceptance
 
 - [x] On the physical Honor with the debug app on external display 12

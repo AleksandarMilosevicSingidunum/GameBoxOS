@@ -80,7 +80,7 @@ internal fun GameDetailsContentPanel(
     val installerUnavailable = !state.authorizedFixture && missingInstall &&
         (game.sourceUrl == null || game.expectedSha256 == null)
     val howToPlay = if (installerUnavailable) {
-        "How to play: this listing has no verified installer. Import your own game copy from Library, then press Play after verification."
+        "How to play: no verified installer is configured. Use Import your copy below, then press Play after verification."
     } else {
         "How to play: install this authorized game, install the approved emulator shown in Game settings, then press Play after verification."
     }
