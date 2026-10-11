@@ -3,8 +3,9 @@
 ## 11 October 2026 — Honor TV details and authorized-install verification
 
 - [x] Captured the actual HDMI panel at 1920×1080: GameBox fills the TV, has no
-  window border, and the HONOR Dock/taskbar is absent. The UI is still on the
-  TV's Store/details route after hardware tests.
+  window border, and the HONOR Dock/taskbar is absent. Returned the live app to
+  Home after testing; the final TV capture shows the launcher and legal-homebrew
+  carousel.
 - [x] Store exposes three legal/homebrew-style entries (Celeste Classic,
   Freedoom, OpenMW). Celeste Classic has no checksum-backed installer; the old
   detail copy incorrectly promised an authorized install and showed a disabled
@@ -19,6 +20,9 @@
 - [x] Ran `AuthorizedInstallLifecycleTest` on the physical Honor: 1/1 passed
   for the authorized Galaxy Patrol install → uninstall → reinstall and save /
   backup retention flow.
+- [ ] The tests used the debug instrumentation variant. The installed
+  `com.gamebox.os` production app remains version 0.1.0; deploy a correctly
+  signed build before treating the copy fix as live on the launcher.
 - [ ] No external Bluetooth controller is enumerated; GameBox still reports
   `Controller: Not connected`. Automated key-event tests are not physical-input
   acceptance.
