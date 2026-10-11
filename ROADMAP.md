@@ -75,10 +75,13 @@
   activated (copyrighted game), so end-to-end browser download/import remains
   unverified. Vimm detail metadata enrichment also failed for this result.
 - [ ] Artwork diagnosis: visible result cards already run the lazy exact-title
-  Libretro box-art lookup; the WiiWare result still showed initials after the
-  lookup completed. Cached artwork matching requires the same console, so the
-  unrelated 3DS Cave Story cover is correctly not reused. Vimm's listing had no
-  image and its detail lookup failed; a correct WiiWare cover remains missing.
+  Libretro box-art lookup. On TV, a second Vimm search returned nine God of War
+  results grouped by console: both PS2 covers and the PSP *Chains of Olympus*
+  cover loaded, while some PS3/PSP entries still showed initials. Cave Story
+  WiiWare also showed initials after lookup. Cached artwork matching requires
+  the same console, so the unrelated 3DS Cave Story cover is correctly not
+  reused. Vimm's listing had no image and its detail lookup failed; a correct
+  WiiWare cover remains missing.
 - [x] `LibretroThumbnailClientTest` and `ConfiguredSourceResultTest` passed in
   the focused JVM regression run.
 
