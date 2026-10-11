@@ -4163,3 +4163,21 @@ database files are present. Do not treat the failed run as a product-test pass.
   The game was launched but not played through a complete level or save/restore
   cycle. Vimm's website download button was not activated and no ROM was
   downloaded.
+
+## 2026-10-11 — Honor TV fullscreen, return, and test-content cleanup
+
+- [x] Repeated the Galaxy Patrol launch on the actual 1920x1080 Honor TV output.
+  Enabling HONOR's per-app `Open in full screen mode` for NES.emu removed the
+  floating window chrome and bottom Dock; the game occupied the full TV screen.
+- [x] Confirmed NES.emu rendered the running game. Its on-screen touch controls
+  remain visible; Android reported the Bluetooth controller disconnected, so
+  hiding the only available input would make this test unusable.
+- [x] Used NES.emu's own close-content and exit actions to return to GameBox,
+  then used GameBox's uninstall confirmation for this QA-only fixture. The UI
+  reported one content file removed, and the debug app's installed-content tree
+  was empty afterward. No existing games, ROMs, saves, or emulator apps were
+  touched.
+- [ ] Still pending: physical controller acceptance, hiding emulator touch
+  controls only when a gamepad is connected, a full gameplay/save cycle, and a
+  successful generic user-owned import plus live Vimm download tracking. No
+  copyrighted game was downloaded.
