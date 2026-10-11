@@ -16,11 +16,19 @@
   acceptance, but it shows directional WebView traversal is not intuitive on
   this page. No file was downloaded and the website's Download control was
   never activated.
+- [x] In a separate safe check, two injected D-pad Up events moved focus from
+  Download through the format selector to **More…**; injected controller A
+  expanded Vimm's MD5/SHA-1 metadata on the live page. This verifies the
+  browser's mapped activation path for a harmless Vimm control, not the actual
+  DownloadListener or a physical controller.
 - [x] Restored HONOR's per-app **Open in full screen mode** and maximized
   GameBox. Final HDMI capture had no Dock, taskbar, or window chrome.
 - [x] Opened Download Manager on the TV after returning from Vimm: Queue was
   **0** (0 active, 0 queued/paused), and Completed was **1** with only the
   existing 48 KB Galaxy Patrol fixture. No Vimm transfer record was created.
+- [ ] Returning from the tracked browser made the HONOR Dock visible again in
+  GameBox. Reapplying per-app fullscreen and maximizing restored the TV layout;
+  the OEM fullscreen preference is not surviving this activity handoff.
 - [ ] Bluetooth controller is still absent from Android's input inventory.
   Physical A activation and a lawful end-to-end Vimm transfer remain untested;
   do not test by activating a commercial game download.
