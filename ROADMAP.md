@@ -12,6 +12,11 @@
 - [x] On production, three R1 tab changes reached Downloads on the TV. It
   showed 0 active, 0 queued/paused, and one completed Galaxy Patrol marked
   Ready, with 436.3 GB free. No transfer was started or removed.
+- [x] On the production 1920×1080 TV surface, D-pad/A navigation reached
+  Media → PC Hub → Settings. The primary layouts rendered; Settings content
+  followed focus into the Controller/Downloads/Emulators sections, and the
+  installed Library showed Galaxy Patrol as available offline. No setup,
+  launch, storage, or settings action was activated.
 - [ ] This was TV-side Android key injection and touchscreen text/result
   selection, not a physical Bluetooth-controller acceptance; HONOR reports no
   controller connected. The focused instrumentation run crashed before
