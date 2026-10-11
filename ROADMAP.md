@@ -73,8 +73,14 @@
 - [ ] The physical Bluetooth controller remains disconnected; TV checks used
   display-routed touch/key injection. The focused Vimm Download was not
   activated (copyrighted game), so end-to-end browser download/import remains
-  unverified. Vimm detail metadata enrichment also failed for this result, and
-  its card showed placeholder art; investigate source artwork fallback.
+  unverified. Vimm detail metadata enrichment also failed for this result.
+- [ ] Artwork diagnosis: visible result cards already run the lazy exact-title
+  Libretro box-art lookup; the WiiWare result still showed initials after the
+  lookup completed. Cached artwork matching requires the same console, so the
+  unrelated 3DS Cave Story cover is correctly not reused. Vimm's listing had no
+  image and its detail lookup failed; a correct WiiWare cover remains missing.
+- [x] `LibretroThumbnailClientTest` and `ConfiguredSourceResultTest` passed in
+  the focused JVM regression run.
 
 ## 11 October 2026 — HONOR TV Vimm route and browser Back acceptance
 
