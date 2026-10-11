@@ -1,5 +1,25 @@
 # GameBox OS Roadmap
 
+## 11 October 2026 — HONOR TV Vimm focus and fullscreen follow-up
+
+- [x] Repeated Home → Store → Vimm `GOD OF WAR` search on the physical
+  1920×1080 TV, opened God of War: Chains of Olympus details, and used its
+  GameBox **Download** action to reach the exact PSP vault page. The page's
+  Download button received the visible yellow focus cue; a display-routed
+  D-pad Down moved focus to the adjacent Play Online control. B returned to
+  GameBox, which showed “Returned without starting a download.”
+- [x] Download Manager remained at 0 active and 0 queued, with only the
+  existing completed Galaxy Patrol entry. No website download was activated.
+- [x] Found HONOR's **Open in full screen mode** setting had reset for the
+  debug GameBox package. Reapplied it and maximized the temporary window; the
+  Vimm page then filled the TV with no Dock or window chrome, and B returned to
+  fullscreen GameBox.
+- [ ] Android still reports the physical Bluetooth controller disconnected.
+  D-pad behavior was injected through ADB; real controller input and A
+  activation were not tested. We intentionally did not activate the Download
+  control for this copyrighted title. Repeat activation only on a lawful test
+  download whose distribution is authorized.
+
 ## 11 October 2026 — Current Android JVM regression suite
 
 - [x] `:app:testDebugUnitTest` passed on the current checkout: 780 tests,
