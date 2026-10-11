@@ -10,6 +10,9 @@
   GameBox, which showed “Returned without starting a download.”
 - [x] Download Manager remained at 0 active and 0 queued, with only the
   existing completed Galaxy Patrol entry. No website download was activated.
+- [x] `GamepadBrowserNavigationTest` passed using the cached Gradle 9.7.1
+  distribution and Android Studio's bundled JDK; this verifies key mapping,
+  not physical controller input or a live website download.
 - [x] Found HONOR's **Open in full screen mode** setting had reset for the
   debug GameBox package. Reapplied it and maximized the temporary window; the
   Vimm page then filled the TV with no Dock or window chrome, and B returned to
