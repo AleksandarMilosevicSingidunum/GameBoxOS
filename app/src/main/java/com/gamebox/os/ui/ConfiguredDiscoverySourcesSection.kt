@@ -21,7 +21,7 @@ import com.gamebox.os.source.GameSourceProviderType
 internal fun ConfiguredDiscoverySourcesSection(
     configuredSources: List<GameSourceConfig>,
     query: String,
-    onUpdateQuery: (String) -> Unit = {},
+    onUseSearchSuggestion: (String) -> Unit = {},
     consoleLabel: String?,
     syncing: Boolean,
     sourceMessage: String? = null,
@@ -80,7 +80,7 @@ internal fun ConfiguredDiscoverySourcesSection(
         cardWidth = 180.dp,
         cardHeight = 130.dp,
         query = query,
-        onUseSearchSuggestion = onUpdateQuery,
+        onUseSearchSuggestion = onUseSearchSuggestion,
         modifier = Modifier.padding(top = if (results.isEmpty()) 0.dp else 10.dp),
         firstResultFocusRequester = firstResultFocusRequester.takeIf { results.isNotEmpty() },
         returnFocusRequester = returnFocusRequester,

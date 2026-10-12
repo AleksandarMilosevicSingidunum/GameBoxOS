@@ -1,5 +1,22 @@
 # GameBox OS Roadmap
 
+## 11 October 2026 — HONOR TV corrected Vimm search
+
+- [x] On the 1920×1080 HDMI display, searched Vimm for `Freedoom`. GameBox
+  returned four results grouped under GameCube, PS2, Xbox, and DS, with box art,
+  and showed the spelling suggestion **Did you mean “Freedom”?**
+- [x] Selecting the suggestion changed the query and automatically reran the
+  Vimm search; the corrected results repopulated without another search-button
+  action. The first implementation raced the Store query-change cleanup, which
+  canceled its own search; the rerun is now scheduled after that cleanup and has
+  a unit test for stale versus committed correction queries.
+- [x] `:app:testDebugUnitTest` passed (782 tests, 0 failures, 0 errors, 1
+  skipped), and `:app:assembleDebug` succeeded. Result exploration only; no
+  game listing was opened and no Vimm download was activated.
+- [ ] The HONOR taskbar returned after the debug APK update and needs its
+  per-app fullscreen setting reapplied. Android still reports no connected
+  physical gamepad; no controller acceptance was claimed.
+
 ## 11 October 2026 — HONOR TV Vimm search and focus retest
 
 - [x] On the physical 1920×1080 HDMI output, used GameBox's on-screen search

@@ -28,7 +28,7 @@ internal fun CompactCatalogDiscoverySection(
     sourceMessage: String?,
     configuredSources: List<GameSourceConfig>,
     query: String,
-    onUpdateQuery: (String) -> Unit = {},
+    onUseSearchSuggestion: (String) -> Unit = {},
     configuredResults: List<DiscoverySourceGame>,
     allDiscoveryGames: List<DiscoveryGame>,
     onOpenConfiguredSource: (GameSourceConfig) -> Unit,
@@ -66,7 +66,7 @@ internal fun CompactCatalogDiscoverySection(
     ConfiguredDiscoverySourcesSection(
         configuredSources = configuredSources,
         query = query,
-        onUpdateQuery = onUpdateQuery,
+        onUseSearchSuggestion = onUseSearchSuggestion,
         consoleLabel = selectedConsole?.label,
         syncing = syncing,
         sourceMessage = sourceMessage,

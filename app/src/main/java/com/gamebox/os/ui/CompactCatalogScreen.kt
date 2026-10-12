@@ -42,6 +42,7 @@ internal data class CompactCatalogActions(
     val openAuthorized: (Game) -> Unit,
     val selectConsole: (String?) -> Unit,
     val openConfiguredSource: (GameSourceConfig) -> Unit,
+    val useSearchSuggestion: (String) -> Unit,
     val openConfiguredResult: (DiscoverySourceGame) -> Unit,
     val openDiscoveryGame: (DiscoveryGame) -> Unit,
 )
@@ -133,7 +134,7 @@ internal fun CompactCatalogScreen(
             sourceMessage = state.sourceMessage,
             configuredSources = state.configuredSources,
             query = filters.query,
-            onUpdateQuery = { filters.query = it },
+            onUseSearchSuggestion = actions.useSearchSuggestion,
             configuredResults = state.configuredResults,
             allDiscoveryGames = state.allDiscoveryGames,
             onOpenConfiguredSource = actions.openConfiguredSource,

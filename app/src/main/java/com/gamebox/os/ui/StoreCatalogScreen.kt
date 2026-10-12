@@ -26,6 +26,9 @@ import com.gamebox.os.source.GameSourceConfig
 import com.gamebox.os.source.GameSourceProviderType
 import kotlinx.coroutines.launch
 
+internal fun pendingVimmSearchForQuery(currentQuery: String, pendingQuery: String?): String? =
+    pendingQuery?.takeIf { it == currentQuery }
+
 @Composable
 internal fun CatalogScreen(
     repository: GameRepository,
@@ -68,6 +71,7 @@ internal fun CatalogScreen(
     var searchFocusRequestedForStore by remember(uiState) { mutableStateOf(false) }
     var showControllerSearchKeyboard by remember(uiState) { mutableStateOf(false) }
     var searchVimmAfterKeyboard by remember(uiState) { mutableStateOf(false) }
+    var pendingVimmCorrection by remember(uiState) { mutableStateOf<String?>(null) }
     val firstWideCatalogRailItem = remember { FocusRequester() }
     val firstWideCatalogContent = remember { FocusRequester() }
     val emptyCatalogActionFocusRequester = remember { FocusRequester() }
@@ -179,6 +183,11 @@ internal fun CatalogScreen(
 
     LaunchedEffect(filters.query, selectedConsoleKey) {
         discoveryActions.clearSearchResults()
+        val correctedQuery = pendingVimmCorrection.also { pendingVimmCorrection = null }
+        pendingVimmSearchForQuery(filters.query, correctedQuery)?.let { query ->
+            configuredSources.firstOrNull { it.type == GameSourceProviderType.VIMM_LAIR }
+                ?.let { discoveryActions.openSource(it, query, selectedConsole) }
+        }
     }
     DisposableEffect(controllerActions, selectedDiscovery, selectedConfiguredResult) {
         val lease = if (selectedDiscovery == null && selectedConfiguredResult == null) {
@@ -267,6 +276,11 @@ internal fun CatalogScreen(
         discoveryActions.openSource(source, filters.query, selectedConsole)
     }
 
+    fun useSearchSuggestion(query: String) {
+        pendingVimmCorrection = query
+        filters.query = query
+    }
+
     fun openConfiguredResult(result: DiscoverySourceGame) {
         configuredResultFocusKey = result.sourceId + ":" + result.externalId
         restoreConfiguredResultFocus = false
@@ -296,6 +310,7 @@ internal fun CatalogScreen(
                 onClearPlatform = { filters.platform = null },
                 onSelectConsole = { selection.selectConsole(it?.key) },
                 onOpenConfiguredSource = ::openConfiguredSource,
+                onUseSearchSuggestion = ::useSearchSuggestion,
                 onOpenConfiguredResult = ::openConfiguredResult,
                 onRefresh = repository::refreshCatalog,
                 openAuthorized = open,
@@ -340,6 +355,7 @@ internal fun CatalogScreen(
             openAuthorized = open,
             selectConsole = { selection.selectConsole(it) },
             openConfiguredSource = ::openConfiguredSource,
+            useSearchSuggestion = ::useSearchSuggestion,
             openConfiguredResult = ::openConfiguredResult,
             openDiscoveryGame = { selection.selectDiscovery(it.id) },
         ),

@@ -49,6 +49,7 @@ internal data class BlueprintCatalogScreenActions(
     val onClearPlatform: () -> Unit,
     val onSelectConsole: (StoreConsole?) -> Unit,
     val onOpenConfiguredSource: (GameSourceConfig) -> Unit,
+    val onUseSearchSuggestion: (String) -> Unit,
     val onOpenConfiguredResult: (DiscoverySourceGame) -> Unit,
     val onRefresh: () -> Unit,
     val openAuthorized: (Game) -> Unit,
@@ -284,7 +285,7 @@ internal fun BlueprintCatalogScreen(
                         cardWidth = 156.dp,
                         cardHeight = 132.dp,
                         query = query,
-                        onUseSearchSuggestion = onQuery,
+                        onUseSearchSuggestion = actions.onUseSearchSuggestion,
                         headingFontSize = 13,
                         firstResultFocusRequester = firstConfiguredResultFocusRequester
                             .takeIf { configuredSourceResults.isNotEmpty() },

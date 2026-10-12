@@ -175,7 +175,7 @@ class ConfiguredDiscoverySourcesSectionTest {
                     allDiscoveryGames = emptyList(),
                     onOpenSource = {},
                     onOpenResult = {},
-                    onUpdateQuery = { updatedQuery = it },
+                    onUseSearchSuggestion = { updatedQuery = it },
                 )
             }
         }
