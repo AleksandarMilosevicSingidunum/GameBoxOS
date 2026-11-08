@@ -71,6 +71,18 @@ internal fun ConfiguredDiscoverySourcesSection(
                 )
             }
         }
+        if (hasVimmSource && !consoleLabel.isNullOrBlank() &&
+            configuredSources.any {
+                it.type == GameSourceProviderType.VIMM_LAIR &&
+                    vimmLairSearchPlatforms(it, consoleLabel).isEmpty()
+            }
+        ) {
+            Text(
+                "Vimm's Lair has no searchable vault for $consoleLabel.",
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                fontSize = 11.sp,
+            )
+        }
     }
 
     ConfiguredSourceStatus(sourceMessage, syncing, Modifier.padding(top = 8.dp))

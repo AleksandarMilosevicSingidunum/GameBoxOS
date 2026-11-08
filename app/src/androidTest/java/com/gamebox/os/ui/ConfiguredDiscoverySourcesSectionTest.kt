@@ -231,6 +231,7 @@ class ConfiguredDiscoverySourcesSectionTest {
 
         compose.onNodeWithContentDescription("Search Vimm's Lair configured discovery source")
             .assertIsNotEnabled()
+        compose.onNodeWithText("Vimm's Lair has no searchable vault for 3DS.").assertIsDisplayed()
     }
 
     private fun source(id: String, name: String, type: GameSourceProviderType) =

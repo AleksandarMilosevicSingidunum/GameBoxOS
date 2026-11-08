@@ -66,7 +66,8 @@ internal class DiscoveryImportWorkflow(
                 val cleanupDeferred = runCatching {
                     importer.confirmRegistration(game.id, result.transactionId)
                 }.isFailure
-                val sourceRemoved = removeSourceAfterSuccess && deleteImportedSource(context, uri)
+                val sourceRemoved = removeSourceAfterSuccess && shouldDeleteImportedSource(cleanupDeferred) &&
+                    deleteImportedSource(context, uri)
                 singleImportSuccessMessage(
                     platform = resolvedPlatform,
                     hash = result.hashes.sha256,
@@ -125,17 +126,21 @@ internal class DiscoveryImportWorkflow(
                         importer.confirmRegistration(game.id, result.transactionId)
                     }.isFailure
                     val archiveSources = sources.filter { shouldRemoveImportedArchive(it.displayName) }
-                    val archivesRemoved = archiveSources.count { deleteImportedSource(context, it.uri) }
+                    val archivesRemoved = if (shouldDeleteImportedSource(cleanupDeferred)) {
+                        archiveSources.count { deleteImportedSource(context, it.uri) }
+                    } else 0
                     buildString {
                         append("${result.files.size}-file disc set verified and added to Library; ")
-                        if (archiveSources.isEmpty()) {
+                        if (cleanupDeferred && archiveSources.isNotEmpty()) {
+                            append("${archiveSources.size} original archive(s) retained because GameBox could not finish import cleanup")
+                        } else if (archiveSources.isEmpty()) {
                             append("original disc files retained")
                         } else {
                             append("$archivesRemoved of ${archiveSources.size} selected archive(s) removed")
                             if (archivesRemoved < archiveSources.size) append("; some archives could not be deleted")
                             if (sources.size > archiveSources.size) append("; original disc files retained")
                         }
-                        if (cleanupDeferred) append(". Transaction cleanup will finish after restart.")
+                        if (cleanupDeferred) append(". Delete retained archives only after verifying the Library copy.")
                     }
                 }
                 RomImportSetResult.SourceUnavailable -> DiscoveryImportOutcome(
@@ -181,10 +186,8 @@ internal class DiscoveryImportWorkflow(
         sourceRemoved: Boolean,
         sourceRemovalRequested: Boolean,
     ): String = when {
-        cleanupDeferred && sourceRemoved ->
-            "$platform download verified, moved to Library, and source removed. Transaction cleanup will finish after restart."
         cleanupDeferred ->
-            "$platform copy verified and added to Library. The browser source was retained because Android denied deletion."
+            "$platform copy verified and added to Library. The original was retained because GameBox could not finish import cleanup; delete it only after verifying the Library copy."
         sourceRemoved ->
             "$platform download verified, moved to Library, and source removed. SHA-256 ${hash.take(12)}…"
         sourceRemovalRequested ->

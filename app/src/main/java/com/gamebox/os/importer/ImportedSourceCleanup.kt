@@ -5,6 +5,8 @@ import android.content.Intent
 import android.net.Uri
 import android.provider.DocumentsContract
 
+internal fun shouldDeleteImportedSource(cleanupDeferred: Boolean): Boolean = !cleanupDeferred
+
 /** Deletes only the selected original after its imported copy is verified and registered. */
 internal fun deleteImportedSource(context: Context, uri: Uri): Boolean = runCatching {
     when {

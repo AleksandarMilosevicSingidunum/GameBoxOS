@@ -48,7 +48,8 @@ internal fun displayTvChannelName(name: String): String {
 }
 
 internal fun tvChannelKey(channel: TvChannel): String = channel.guideId?.substringBefore('@')?.lowercase()
-    ?.takeIf(String::isNotBlank) ?: channel.name.lowercase().replace(Regex("[^\\p{L}\\p{N}]"), "")
+    ?.takeIf(String::isNotBlank)
+    ?: displayTvChannelName(channel.name).lowercase().replace(Regex("[^\\p{L}\\p{N}]"), "")
 
 internal fun nextTvStreamIndex(current: Int, streamCount: Int): Int? =
     (current + 1).takeIf { it in 0 until streamCount }

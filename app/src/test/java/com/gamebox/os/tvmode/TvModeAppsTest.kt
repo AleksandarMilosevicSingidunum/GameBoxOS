@@ -95,7 +95,9 @@ https://media.example/unsafe.m3u8
     @Test
     fun channelIdentityDoesNotPersistStreamCredentialsOrUrl() {
         assertEquals("rts1.rs", tvChannelKey(TvChannel("RTS 1 HD", "https://secret.example/live?token=private", guideId = "RTS1.rs@HD")))
-        assertEquals("pink720p", tvChannelKey(TvChannel("Pink 720p", "https://example.invalid/live")))
+        assertEquals("pink", tvChannelKey(TvChannel("Pink 720p", "https://example.invalid/live")))
+        assertEquals(tvChannelKey(TvChannel("Pink", "https://one.example/live")), tvChannelKey(TvChannel("Pink (1080p)", "https://two.example/live")))
+        assertEquals(tvChannelKey(TvChannel("РТС 1", "https://one.example/live")), tvChannelKey(TvChannel("РТС 1 HD", "https://two.example/live")))
     }
 
     @Test
