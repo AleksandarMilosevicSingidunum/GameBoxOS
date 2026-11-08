@@ -12,6 +12,8 @@ The existing UAT checklist currently has **122 cases: 5 Pass, 22 Partial, 2 Fail
 
 The five reviews covered: (1) games, console/emulator coverage; (2) discovery, downloads, import, library, metadata; (3) TV Mode and Live TV; (4) controller, Remote, Windows companion; (5) release, installation, migration, security, and cross-cutting QA. Conflicts were resolved in favor of dated target-device evidence and explicit limitations in the repository's acceptance documents.
 
+**Live TV evidence update (8 November):** Ten distinct public international broadcaster feeds were subsequently played in GameBox on the HONOR HDMI output; all ten showed moving video and the in-app player reported decoded sizes of at least 1920×1080. This proves the current player path for those feeds, not Serbian channel continuity. F-01 remains open specifically for Serbian broadcasts because RTS 1 and Prva still failed to decode during the earlier device run. Detailed channel-by-channel observations and local captures are in the 8 November section of `docs/UAT.md`.
+
 ## Confirmed failures / highest priority
 
 | ID | Severity | Feature | Evidence and impact |

@@ -511,3 +511,24 @@ These are context, not a substitute for running the cases above:
 - [x] Focused JVM suites passed 45/45 (`BrowserDownloadRecoveryTest` 10, `TvModeAppsTest` 32, `CompanionRemoteCommandBusTest` 3); `:app:assembleDebugAndroidTest` and `:app:assembleDebug` succeeded. The installed build matches SHA-256 `3201E82BB7884393894BF7337438CDE27D3BE70ED1B856672B643196C21DF8D8`.
 - [x] Reopened GameBox TV Mode on HONOR HDMI display 62 at 1920×1080/60 Hz after the install; `iptv-org · RS`, favorites, and Prva World last-watched state remained visible (`tmp/goal-current-hdmi-2026-11-08.png`).
 - [ ] Remote commands were not driven through a separate phone against the Vimm browser on hardware. Physical-controller input remains unavailable. At capture the guide was unavailable and the HONOR Dock was visible.
+
+## 2026-11-08 — Ten public 1080p Live TV streams on HONOR HDMI
+
+On the real HONOR Magic 6 Pro HDMI output (logical display 62, 1920×1080/60 Hz), selected ten distinct channels from a disposable custom M3U in GameBox. Each ran in the in-app player for at least 18 seconds; the player overlay showed decoded dimensions of 1920×1080 or 2560×1440, and moving video was visible in the HDMI captures.
+
+| Channel | Observed decoded size | Result | Local TV capture |
+| --- | --- | --- | --- |
+| France 24 English | 1920×1080 | Pass | `tmp/tv-france24-en-player.png` |
+| France 24 Arabic | 1920×1080 | Pass | `tmp/tv-f24-ar.png` |
+| France 24 French | 1920×1080 | Pass | `tmp/tv-f24-fr.png` |
+| France 24 Spanish | 1920×1080 | Pass | `tmp/tv-f24-es.png` |
+| TRT World | 2560×1440 | Pass | `tmp/tv-trt-world.png` |
+| TRT Arabi | 2560×1440 | Pass | `tmp/tv-trt-arabi.png` |
+| NHK World Japan | 1920×1080 | Pass | `tmp/tv-nhk.png` |
+| DW Español | 1920×1080 | Pass | `tmp/tv-dw-es.png` |
+| DW Russian | 1920×1080 | Pass | `tmp/tv-dw-ru.png` |
+| CGTN English | 1920×1080 | Pass | `tmp/tv-cgtn.png` |
+
+The initial fixture reused language-suffixed guide IDs, which GameBox correctly groups as alternate streams; the final fixture used ten unique guide IDs and the channel picker displayed “All channels · 10”. No subscription, DRM, or regional restriction was bypassed. This proves current in-app playback for these public international feeds only; it does not establish Serbian channel availability or the right to redistribute any stream. Each capture is local test evidence and is intentionally not committed.
+
+After testing, loaded `iptv-org · RS` with country code `RS` and verified the TV Home again showed RTS 1 as the featured channel and Serbian channel cards. The disposable `/sdcard/Download/GameBoxQA_20261108` directory and the local playlist fixtures were removed; only the local screenshots listed above remain. The HONOR Dock is still visible on the display.

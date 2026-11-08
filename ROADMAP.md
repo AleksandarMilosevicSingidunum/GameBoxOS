@@ -5184,3 +5184,9 @@ Reopened the installed MIT @rkanoid from GameBox on HDMI display 48. GBA.emu own
 - [x] Added command-bus priority coverage and extended the browser instrumentation case for Remote Select/Back. Instrumentation compiled but was not executed on HONOR.
 - [x] Focused JVM suites passed 45/45; debug and Android-test APKs assembled. The debug APK was installed in place and its hash matched `3201E82BB7884393894BF7337438CDE27D3BE70ED1B856672B643196C21DF8D8`. TV Mode reopened with saved RS source/favorites/last-watched state on physical HDMI.
 - [ ] Separate-phone Remote acceptance on the live Vimm page, a physical gamepad, live channel video/EPG recovery, and persistent Dock-free TV output remain open.
+
+## 8 November 2026 — Ten public 1080p Live TV streams on HONOR HDMI
+
+- [x] Tested ten distinct public broadcaster feeds in GameBox’s in-app player on HONOR HDMI display 62 (1920×1080/60 Hz); all ten showed moving video after at least 18 seconds and the player reported decoded 1920×1080 or 2560×1440. Per-channel captures and results are in the dated section of `docs/UAT.md`.
+- [x] Restored the default `iptv-org · RS` playlist with code `RS`; TV Home showed RTS 1 featured and Serbian channel cards. Removed the disposable test playlist and screenshot folder from HONOR.
+- [ ] These international stream results do not resolve the Serbian RTS/Prva playback issue. Physical-controller acceptance, reliable Serbian direct broadcasts, and the HONOR Dock remain open.
