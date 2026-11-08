@@ -1,5 +1,19 @@
 # GameBox OS Roadmap
 
+## 8 November 2026 — HONOR HDMI Dock/fullscreen investigation
+
+- [x] Reinstalled the current debug APK in place and inspected GameBox on HONOR HDMI display 62 (1920×1080/60 Hz). GameBox is borderless and fills the app bounds, but a 43 px `Dock` window from `com.hihonor.desktop.systemui` remains at y=1037–1080.
+- [x] `dumpsys window` shows GameBox already requests hidden status/navigation/caption/system-overlay types; the HONOR Dock is a separate persistent system window. Android documents persistent system overlays as not hideable by client `WindowInsetsController` requests. HONOR Settings search for “taskbar” returned no matching control on this device. No app-side flag can truthfully claim to hide it.
+- [ ] TV-06 remains **Fail** pending an HONOR-supported system setting/device configuration that removes the Dock, or a product decision to accept the OEM overlay. Latest HDMI capture: `tmp/gamebox-tv-after-settings.png`. Settings were closed afterward; GameBox TV Home was restored. No system setting was changed.
+
+## 8 November 2026 — importer recovery and Live TV lifecycle fixes
+
+- [x] Browser-download import now persists `IMPORTED` before deleting the staged source. If durable status persistence fails, cleanup is skipped; retry-cookie and queue-row cleanup are best-effort. Regression tests cover ordering and persistence failure. The focused importer recovery tests passed 12/12.
+- [x] Live TV’s player now pauses when its host leaves `RESUMED`, resumes only while playback remains requested, and stops on Back/Close. Focused lifecycle tests passed; Android instrumentation sources and debug APK compiled.
+- [x] Full Android JVM suite: 902 tests, 0 failures/errors, 1 skipped. `:app:lintDebug` and unsigned `:app:assembleRelease` succeeded. Debug APK SHA-256: `FF33AF05116415D169311F9A2B0F5A5A7270BCAE5BC7D795263BCA0B45A80CDF`.
+- [ ] On the installed HONOR build, opened RTS 1 on HDMI and waited 18 seconds. No frame decoded; ExoPlayer logged `UnknownHostException (no network)` and GameBox displayed `ERROR_CODE_IO_NETWORK_CONNECTION_FAILED`. Retry and official RTS Planeta actions were visible. Capture: `tmp/gamebox-live-tv-check-2026-11-08.png`. No resolution or successful stream playback was verified.
+- [ ] Lifecycle was not tested with a healthy stream or an actual process/background transition; keep that hardware acceptance open.
+
 ## 8 November 2026 — ten-agent implementation and HDMI acceptance
 
 - [x] Ten agents completed scoped reviews/fixes across Vimm, download scheduling, archive import cancellation, Live TV parsing, TV guide/filter UX, controller repeats, emulator selection, artwork lookup, Remote reconnection, and Windows Steam discovery.

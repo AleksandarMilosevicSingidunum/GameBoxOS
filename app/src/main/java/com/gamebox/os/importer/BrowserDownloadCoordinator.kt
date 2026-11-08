@@ -338,7 +338,7 @@ class BrowserDownloadCoordinator(
         ).importSingle(
             candidate.uri,
             candidate.displayName,
-            removeSourceAfterSuccess = true,
+            removeSourceAfterSuccess = false,
             onProgress = { progress ->
                 store.update(downloadId) {
                     it.copy(
@@ -354,12 +354,22 @@ class BrowserDownloadCoordinator(
         if (!result.succeeded) {
             store.update(downloadId) { it.copy(status = BrowserDownloadStatus.FAILED, error = result.message) }
         } else {
-            store.update(downloadId) { it.copy(status = BrowserDownloadStatus.IMPORTED, error = null) }
-            store.setRetryCookie(downloadId, null)
-            if (current.transferJobId == null) manager.remove(downloadId)
+            markBrowserDownloadImportedBeforeCleanup(
+                markImported = {
+                    store.update(downloadId) { it.copy(status = BrowserDownloadStatus.IMPORTED, error = null) }
+                },
+                cleanupSource = { deleteImportedSource(appContext, candidate.uri) },
+            )
+            runCatching { store.setRetryCookie(downloadId, null) }
+            if (current.transferJobId == null) runCatching { manager.remove(downloadId) }
         }
     }
 
+}
+
+internal fun markBrowserDownloadImportedBeforeCleanup(markImported: () -> Unit, cleanupSource: () -> Unit) {
+    markImported()
+    cleanupSource()
 }
 
 internal fun activeBrowserDownloadIds(records: List<BrowserDownloadRecord>): List<Long> =

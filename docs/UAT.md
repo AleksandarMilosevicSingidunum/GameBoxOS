@@ -18,6 +18,17 @@
 - [x] Live TV parsing now merges same-guide-ID quality variants while preserving distinct request headers; TV Mode presents guide failure/retry status and category filtering. Metadata artwork fallback uses the canonical provider title after a display rename. Remote remembered pairing no longer runs discovery when the host explicitly rejects a revoked token. Windows Steam discovery now checks the registered custom Steam path before the default path. Controller shell buttons ignore held-key repeats while D-pad repeats remain available for focus movement.
 - [ ] The HONOR Dock remains visible over the lower edge; physical controller is not active. Category/filter and guide display were checked, but no stream was played in this recheck. Serbian 1080p channels still have 0/10 decoded-frame passes; game launch/save lifecycle, full import/download failure injection, second-phone Remote, and Windows UI acceptance remain incomplete.
 
+### 8 November 2026 — HONOR Dock/fullscreen investigation
+
+- [x] Reinstalled the current debug APK in place and inspected the actual HDMI output (logical display 62, physical display `4639578574838715141`, 1920×1080/60 Hz). GameBox fills its borderless 1920×1080 activity bounds, while a separate 43 px HONOR `Dock` window (`com.hihonor.desktop.systemui`, frame y=1037–1080) remains visible. Capture: `tmp/gamebox-tv-after-settings.png`.
+- [x] `dumpsys window` reports GameBox has requested hidden system-bar/overlay visibility, while the Dock is a separate persistent system window. HONOR Settings search for `taskbar` showed no matching setting on this device. The temporary Settings window was closed and GameBox TV Home restored; no system preference or user data was changed.
+- [ ] TV-06 remains **Fail**. Android classifies persistent system overlays as not hideable by app `WindowInsetsController` requests ([Android WindowInsets.Type](https://developer.android.com/reference/android/view/WindowInsets.Type#systemOverlays())). Do not treat another app-side fullscreen flag as a fix; resolution requires a supported HONOR setting/device policy or an explicit product decision to accept the OEM Dock.
+
+### 8 November 2026 — importer recovery and Live TV lifecycle fixes
+
+- [x] Full Android JVM suite passed **902 tests (0 failures/errors, 1 skipped)**. `:app:lintDebug`, unsigned `:app:assembleRelease`, `:app:compileDebugAndroidTestKotlin`, and `:app:assembleDebug` succeeded. Debug APK SHA-256: `FF33AF05116415D169311F9A2B0F5A5A7270BCAE5BC7D795263BCA0B45A80CDF`. This does not simulate a process crash or prove healthy-stream background/resume behavior.
+- [x] Installed the debug build in place on HONOR with app data preserved and opened the default RS playlist’s RTS 1 channel on HDMI display 62. After an 18-second wait, ExoPlayer logged `UnknownHostException (no network)` and the player showed `ERROR_CODE_IO_NETWORK_CONNECTION_FAILED`, Retry, and Open RTS Planeta. No frame decoded; resolution remains unverified. Capture: `tmp/gamebox-live-tv-check-2026-11-08.png`.
+
 **Document status:** Comprehensive UAT checklist; release-candidate execution and sign-off are pending.
 **Target:** Android GameBox OS on the HONOR Magic6 Pro (PGT-N19), docked to the deployment TV; companion Android Remote and Windows Companion are included where shipped.
 **Scope basis:** Current README, roadmap, hardware checklist, legal-homebrew matrix, and TV/emulator test matrix.

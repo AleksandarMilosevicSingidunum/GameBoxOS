@@ -49,6 +49,9 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.LifecycleOwner
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -573,7 +576,6 @@ internal fun TvModeScreen(
             }
         }
         activeChannel?.let { channel ->
-            BackHandler { activeChannel = null }
             TvChannelPlayer(
                 channel = channel,
                 modifier = Modifier.fillMaxSize().externalDisplaySystemOverlayInsets(externalDisplay, tvBottomInset),
@@ -1180,6 +1182,11 @@ internal fun TvPlaybackRetryAction(
 @UnstableApi
 @Composable
 private fun TvChannelPlayer(channel: TvChannel, modifier: Modifier = Modifier, onClose: () -> Unit) {
+    var explicitlyClosed by remember(channel) { mutableStateOf(false) }
+    val closePlayer = {
+        explicitlyClosed = true
+        onClose()
+    }
     val officialRtsUrl = remember(channel) { officialRtsPlanetaLiveUrl(channel) }
     var useOfficialRts by remember(channel) { mutableStateOf(false) }
     if (useOfficialRts && officialRtsUrl != null) {
@@ -1187,20 +1194,22 @@ private fun TvChannelPlayer(channel: TvChannel, modifier: Modifier = Modifier, o
             title = displayTvChannelName(channel.name) + " · RTS Planeta",
             url = officialRtsUrl,
             modifier = modifier,
-            onClose = onClose,
+            onClose = closePlayer,
             autoplayMedia = true,
             subtitle = "Direct stream unavailable · official RTS Planeta page",
         )
         return
     }
     val context = LocalContext.current
+    val lifecycle = (LocalActivity.current as? LifecycleOwner)?.lifecycle
     var playing by remember(channel.streams) { mutableStateOf(false) }
+    var playbackRequested by remember(channel.streams) { mutableStateOf(true) }
     var loading by remember(channel.streams) { mutableStateOf(true) }
     var error by remember(channel.streams) { mutableStateOf<String?>(null) }
     var videoResolution by remember(channel.streams) { mutableStateOf<String?>(null) }
     var streamIndex by remember(channel.streams) { mutableIntStateOf(0) }
     val exoPlayer = remember(channel.streams) { ExoPlayer.Builder(context).build() }
-    DisposableEffect(exoPlayer, channel.streams) {
+    DisposableEffect(exoPlayer, channel.streams, lifecycle) {
         val listener = object : Player.Listener {
             override fun onPlaybackStateChanged(playbackState: Int) {
                 loading = error == null &&
@@ -1237,12 +1246,33 @@ private fun TvChannelPlayer(channel: TvChannel, modifier: Modifier = Modifier, o
         }
         exoPlayer.addListener(listener)
         exoPlayer.setTvStream(context, channel.streams.first())
-        exoPlayer.playWhenReady = true
         exoPlayer.prepare()
+        val lifecycleObserver = lifecycle?.let { hostLifecycle ->
+            LifecycleEventObserver { _, event ->
+                when (event) {
+                    Lifecycle.Event.ON_PAUSE, Lifecycle.Event.ON_STOP -> exoPlayer.pause()
+                    Lifecycle.Event.ON_RESUME -> {
+                        if (shouldResumeTvPlayback(playbackRequested, explicitlyClosed)) {
+                            exoPlayer.playWhenReady = true
+                        }
+                    }
+                    else -> Unit
+                }
+            }
+        }
+        lifecycleObserver?.let(lifecycle::addObserver)
+        exoPlayer.playWhenReady = lifecycle?.currentState?.isAtLeast(Lifecycle.State.RESUMED) == true &&
+            shouldResumeTvPlayback(playbackRequested, explicitlyClosed)
         onDispose {
+            lifecycleObserver?.let(lifecycle::removeObserver)
             exoPlayer.removeListener(listener)
             exoPlayer.release()
         }
+    }
+    BackHandler {
+        playbackRequested = false
+        exoPlayer.pause()
+        closePlayer()
     }
     Box(modifier.background(Color.Black)) {
         AndroidView(
@@ -1268,7 +1298,11 @@ private fun TvChannelPlayer(channel: TvChannel, modifier: Modifier = Modifier, o
                     Text(if (loading) "Connecting to stream…" else error ?: videoResolution?.let { "Live TV · $it" } ?: "Live TV",
                         color = if (error != null) Color(0xFFFFC2C2) else Color(0xFFC2D4E5), fontSize = 12.sp)
                 }
-                IconButton(onClick = onClose, modifier = Modifier.semantics { contentDescription = "Back to Live TV" }) {
+                IconButton(onClick = {
+                    playbackRequested = false
+                    exoPlayer.pause()
+                    closePlayer()
+                }, modifier = Modifier.semantics { contentDescription = "Back to Live TV" }) {
                     Icon(Icons.Rounded.Close, contentDescription = null, tint = Color.White)
                 }
             }
@@ -1294,14 +1328,18 @@ private fun TvChannelPlayer(channel: TvChannel, modifier: Modifier = Modifier, o
                     error = null
                     loading = true
                     playing = false
+                    playbackRequested = true
                     exoPlayer.setTvStream(context, channel.streams[retryIndex])
-                    exoPlayer.playWhenReady = true
                     exoPlayer.prepare()
+                    exoPlayer.playWhenReady = lifecycle?.currentState?.isAtLeast(Lifecycle.State.RESUMED) == true &&
+                        shouldResumeTvPlayback(playbackRequested, explicitlyClosed)
                 }
                 IconButton(
                     enabled = !loading && error == null,
                     onClick = {
-                        if (exoPlayer.isPlaying) exoPlayer.pause() else exoPlayer.play()
+                        playbackRequested = !playbackRequested
+                        exoPlayer.playWhenReady = lifecycle?.currentState?.isAtLeast(Lifecycle.State.RESUMED) == true &&
+                            shouldResumeTvPlayback(playbackRequested, explicitlyClosed)
                     },
                     modifier = Modifier.semantics { contentDescription = if (playing) "Pause stream" else "Play stream" },
                 ) {
@@ -1312,6 +1350,9 @@ private fun TvChannelPlayer(channel: TvChannel, modifier: Modifier = Modifier, o
         }
     }
 }
+
+internal fun shouldResumeTvPlayback(playbackRequested: Boolean, explicitlyClosed: Boolean): Boolean =
+    playbackRequested && !explicitlyClosed
 
 @UnstableApi
 private fun ExoPlayer.setTvStream(context: android.content.Context, stream: TvStream) {

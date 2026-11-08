@@ -5,8 +5,33 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
+import java.io.IOException
 
 class BrowserDownloadRecoveryTest {
+    @Test
+    fun browserSourceIsNotDeletedUnlessImportedStatusWasPersistedFirst() {
+        val events = mutableListOf<String>()
+
+        markBrowserDownloadImportedBeforeCleanup(
+            markImported = { events += "imported" },
+            cleanupSource = { events += "deleted" },
+        )
+
+        assertEquals(listOf("imported", "deleted"), events)
+
+        events.clear()
+        try {
+            markBrowserDownloadImportedBeforeCleanup(
+                markImported = { throw IOException("status persistence failed") },
+                cleanupSource = { events += "deleted" },
+            )
+        } catch (_: IOException) {
+            // A failed durable status update must leave the original download intact.
+        }
+
+        assertTrue(events.isEmpty())
+    }
+
     @Test
     fun durableMonitorKeepsInterruptedImportsActiveUntilTheirOwnRecordCompletes() {
         val queued = record(21L, BrowserDownloadStatus.QUEUED)
