@@ -151,11 +151,8 @@ class AuthorizedInstallLifecycleTest {
         assertEquals(AuthorizedHomebrewDownload.SIZE_BYTES, preview.bytes)
         assertEquals(1, preview.files)
         val preflight = container.saveSafetyController.cloudBackupPreflight(installedGame)
-        assertTrue(preflight.requiresAcknowledgement)
-        val removalMessage = container.saveSafetyController.uninstallContent(
-            installedGame,
-            allowWithoutCloudBackup = true,
-        )
+        assertFalse(preflight.requiresAcknowledgement)
+        val removalMessage = container.saveSafetyController.uninstallContent(installedGame)
         assertTrue(removalMessage.contains("Saves, backups, metadata and history retained"))
 
         awaitStage("remove content") {

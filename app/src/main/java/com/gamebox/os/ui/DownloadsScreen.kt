@@ -1,5 +1,6 @@
 package com.gamebox.os.ui
 
+import android.os.Build
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.BorderStroke
@@ -178,7 +179,7 @@ internal fun DownloadsScreen(
         Spacer(Modifier.height(14.dp))
         if (!compact) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                DownloadMetricCard(Icons.Rounded.Downloading, (jobs.count { it.status == DownloadStatus.DOWNLOADING } + browserDownloadsInManager.count { it.status == BrowserDownloadStatus.DOWNLOADING }).toString(), "Active downloads", Modifier.weight(1f))
+                DownloadMetricCard(Icons.Rounded.Downloading, (jobs.count { it.status == DownloadStatus.DOWNLOADING } + browserDownloadsInManager.count { it.status in setOf(BrowserDownloadStatus.DOWNLOADING, BrowserDownloadStatus.IMPORTING) }).toString(), "Active transfers / imports", Modifier.weight(1f))
                 DownloadMetricCard(Icons.Rounded.Schedule, (jobs.count { it.status == DownloadStatus.QUEUED || it.status == DownloadStatus.PAUSED } + browserDownloadsInManager.count { it.status in setOf(BrowserDownloadStatus.QUEUED, BrowserDownloadStatus.PAUSED) }).toString(), "Queued or paused", Modifier.weight(1f))
                 DownloadMetricCard(Icons.Rounded.Verified, (jobs.count { it.status == DownloadStatus.COMPLETED } + browserDownloads.count { it.status == BrowserDownloadStatus.IMPORTED }).toString(), "Completed", Modifier.weight(1f))
                 DownloadMetricCard(
@@ -217,7 +218,7 @@ internal fun DownloadsScreen(
                         Text(if (showingCompleted) "Nothing completed yet" else "No active downloads", fontWeight = FontWeight.Bold)
                         Text(
                             if (showingCompleted) "Finished and imported games will appear here."
-                            else "Games you queue from authorized sources will appear here.",
+                            else "Downloads and local imports continue here while you browse GameBox.",
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             fontSize = 11.sp,
                         )
@@ -297,7 +298,7 @@ internal fun DownloadsScreen(
             }
 
             if (visibleBrowserDownloads.isNotEmpty()) {
-                Text(if (showingCompleted) "Completed browser downloads" else "Browser downloads", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                Text(if (showingCompleted) "Completed imports and downloads" else "Imports and downloads", fontWeight = FontWeight.Bold, fontSize = 13.sp)
                 visibleBrowserDownloads.forEach { browserDownload ->
                     BrowserDownloadQueueItem(
                         record = browserDownload,
@@ -305,11 +306,35 @@ internal fun DownloadsScreen(
                             browserDownload.status in setOf(
                                 BrowserDownloadStatus.FAILED,
                                 BrowserDownloadStatus.PAUSED,
-                            )
+                            ) || (
+                                Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE &&
+                                    browserDownload.status == BrowserDownloadStatus.QUEUED &&
+                                    browserDownload.transferJobId == null
+                                )
                         }?.let {
                             {
                                 (context.applicationContext as GameBoxApplication)
                                     .browserDownloadCoordinator.retry(browserDownload.downloadId)
+                            }
+                        },
+                        onCancel = browserDownload.takeIf { it.manualImport &&
+                            it.status in setOf(BrowserDownloadStatus.QUEUED, BrowserDownloadStatus.IMPORTING)
+                        }?.let { record ->
+                            {
+                                val app = context.applicationContext as GameBoxApplication
+                                com.gamebox.os.importer.cancelManualRomImport(context, app.browserDownloadStore, record)
+                            }
+                        },
+                        onDismiss = browserDownload.takeIf {
+                            it.status in setOf(BrowserDownloadStatus.FAILED, BrowserDownloadStatus.CANCELLED)
+                        }?.let { record ->
+                            {
+                                val app = context.applicationContext as GameBoxApplication
+                                app.browserDownloadStore.dismiss(record.downloadId)?.let { removed ->
+                                    if (removed.manualImport) {
+                                        com.gamebox.os.importer.releaseManualImportAccess(context, removed)
+                                    }
+                                }
                             }
                         },
                     )
@@ -449,7 +474,12 @@ internal fun DownloadManagerSectionTabs(
 }
 
 @Composable
-internal fun BrowserDownloadQueueItem(record: BrowserDownloadRecord, onRetry: (() -> Unit)? = null) {
+internal fun BrowserDownloadQueueItem(
+    record: BrowserDownloadRecord,
+    onRetry: (() -> Unit)? = null,
+    onCancel: (() -> Unit)? = null,
+    onDismiss: (() -> Unit)? = null,
+) {
     BlueprintPanel(Modifier.fillMaxWidth()) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             Column(Modifier.weight(1f)) {
@@ -469,6 +499,7 @@ internal fun BrowserDownloadQueueItem(record: BrowserDownloadRecord, onRetry: ((
                     BrowserDownloadStatus.IMPORTING -> "Verifying & importing"
                     BrowserDownloadStatus.IMPORTED -> "Added to Library"
                     BrowserDownloadStatus.FAILED -> "Needs attention"
+                    BrowserDownloadStatus.CANCELLED -> "Cancelled"
                 },
                 color = if (record.status == BrowserDownloadStatus.FAILED) {
                     MaterialTheme.colorScheme.error
@@ -482,16 +513,24 @@ internal fun BrowserDownloadQueueItem(record: BrowserDownloadRecord, onRetry: ((
                 TrackedBrowserDownloadProgress(record)
             record.status == BrowserDownloadStatus.IMPORTING ->
                 TrackedBrowserImportProgress(record)
-            record.status in setOf(BrowserDownloadStatus.QUEUED, BrowserDownloadStatus.DOWNLOADING, BrowserDownloadStatus.PAUSED) ->
+            record.status == BrowserDownloadStatus.QUEUED ->
+                Text("Waiting for Android to start the transfer", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
+            record.status in setOf(BrowserDownloadStatus.DOWNLOADING, BrowserDownloadStatus.PAUSED) ->
                 LinearProgressIndicator(Modifier.fillMaxWidth())
         }
         record.error?.let { error ->
             Text(error, color = MaterialTheme.colorScheme.error, fontSize = 12.sp)
         }
-        if (record.status in setOf(BrowserDownloadStatus.FAILED, BrowserDownloadStatus.PAUSED) && onRetry != null) {
+        if (record.status in setOf(BrowserDownloadStatus.FAILED, BrowserDownloadStatus.PAUSED, BrowserDownloadStatus.QUEUED) && onRetry != null) {
             BlueprintButton(onClick = onRetry) {
-                Text(if (record.status == BrowserDownloadStatus.PAUSED) "Restart download" else "Retry download or import")
+                Text(if (record.status in setOf(BrowserDownloadStatus.PAUSED, BrowserDownloadStatus.QUEUED)) "Restart download" else "Retry download or import")
             }
+        }
+        if (record.status in setOf(BrowserDownloadStatus.FAILED, BrowserDownloadStatus.CANCELLED) && onDismiss != null) {
+            BlueprintOutlinedButton(onClick = onDismiss) { Text("Dismiss") }
+        }
+        if (record.manualImport && record.status in setOf(BrowserDownloadStatus.QUEUED, BrowserDownloadStatus.IMPORTING) && onCancel != null) {
+            BlueprintOutlinedButton(onClick = onCancel) { Text("Cancel import") }
         }
     }
 }
@@ -500,9 +539,9 @@ internal fun BrowserDownloadQueueItem(record: BrowserDownloadRecord, onRetry: ((
 private fun DownloadMetricCard(icon: androidx.compose.ui.graphics.vector.ImageVector, value: String, label: String, modifier: Modifier) {
     Surface(
         modifier = modifier,
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.80f),
-        shape = RoundedCornerShape(8.dp),
-        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.70f)),
+        color = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.94f),
+        shape = RoundedCornerShape(12.dp),
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.8f)),
     ) {
         Row(Modifier.padding(14.dp), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
             Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(24.dp))

@@ -59,8 +59,8 @@ internal fun downloadActivityCount(
     remoteStatuses: Iterable<DownloadStatus>,
     browserStatuses: Iterable<BrowserDownloadStatus>,
 ): Int = remoteStatuses.count {
-    it in setOf(DownloadStatus.QUEUED, DownloadStatus.DOWNLOADING, DownloadStatus.PAUSED, DownloadStatus.FAILED, DownloadStatus.CANCELLED)
-} + browserStatuses.count { it != BrowserDownloadStatus.IMPORTED }
+    it != DownloadStatus.COMPLETED
+} + browserStatuses.count { it !in setOf(BrowserDownloadStatus.IMPORTED, BrowserDownloadStatus.CANCELLED) }
 
 internal fun destinationAfterPrimaryTabMove(current: Destination, offset: Int): Destination {
     val currentIndex = primaryDestinations.indexOf(current).coerceAtLeast(0)
@@ -76,6 +76,7 @@ internal fun TopNav(
     selectedFocusRequester: FocusRequester? = null,
     onSelect: (Destination) -> Unit,
     onSearch: () -> Unit = { onSelect(Destination.STORE) },
+    onTvMode: () -> Unit = {},
 ) {
     var now by remember { mutableStateOf(LocalDateTime.now()) }
     LaunchedEffect(Unit) {
@@ -94,6 +95,10 @@ internal fun TopNav(
             ) {
                 GameBoxLogo(selected)
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    val openTvMode = rememberUiClickAction(onTvMode)
+                    IconButton(onClick = openTvMode, modifier = Modifier.size(36.dp).blueprintButtonFocusRing(CircleShape).onBlueprintActivation(openTvMode).semantics { contentDescription = "Open TV Mode" }) {
+                        Icon(Icons.Rounded.Tv, contentDescription = null, modifier = Modifier.size(18.dp))
+                    }
                     IconButton(
                         onClick = openDownloads,
                         modifier = Modifier.size(36.dp).blueprintButtonFocusRing(CircleShape)
@@ -135,6 +140,14 @@ internal fun TopNav(
                 }
             }
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                val openTvMode = rememberUiClickAction(onTvMode)
+                IconButton(
+                    onClick = openTvMode,
+                    modifier = Modifier.size(36.dp).blueprintButtonFocusRing(CircleShape)
+                        .onBlueprintActivation(openTvMode).semantics { contentDescription = "Open TV Mode" },
+                ) {
+                    Icon(Icons.Rounded.Tv, contentDescription = null, modifier = Modifier.size(18.dp))
+                }
                 val openSearch = rememberUiClickAction(onSearch)
                 IconButton(
                     onClick = openSearch,

@@ -95,6 +95,54 @@ class EmulatorIntentPolicyTest {
     }
 
     @Test
+    fun watermelonDsUsesItsFrontendLaunchActionAndActivity() {
+        val plan = EmulatorIntentPolicy.plan("me.magnum.melondualds", uri, "Balanced")
+
+        assertEquals(EmulatorIntentStyle.ACTION_VIEW, plan.style)
+        assertEquals("me.magnum.melondualds.LAUNCH_ROM", plan.action)
+        assertEquals("me.magnum.melonds.ui.emulator.EmulatorActivity", plan.activityClassName)
+    }
+
+    @Test
+    fun flycastUsesItsExplicitViewActivityForScopedContentUris() {
+        val plan = EmulatorIntentPolicy.plan("com.flycast.emulator", uri, "Balanced")
+
+        assertEquals(EmulatorIntentStyle.ACTION_VIEW, plan.style)
+        assertEquals("com.flycast.emulator.MainActivity", plan.activityClassName)
+    }
+
+    @Test
+    fun armsx2UsesItsActionViewGameUriContract() {
+        val plan = EmulatorIntentPolicy.plan("com.armsx2", uri, "Balanced")
+
+        assertEquals(EmulatorIntentStyle.ACTION_VIEW, plan.style)
+        assertEquals("com.armsx2.MainActivity", plan.activityClassName)
+        assertTrue(plan.stringExtras.isEmpty())
+    }
+
+    @Test
+    fun redreamUsesItsDocumentedContentViewActivity() {
+        val plan = EmulatorIntentPolicy.plan("io.recompiled.redream", uri, "Balanced")
+
+        assertEquals(EmulatorIntentStyle.ACTION_VIEW, plan.style)
+        assertEquals("io.recompiled.redream.MainActivity", plan.activityClassName)
+    }
+
+    @Test
+    fun redreamUsesItsAndroidWildcardContentMime() {
+        assertEquals("application/octet-stream", EmulatorIntentPolicy.contentMimeType("io.recompiled.redream", "application/x-cdi"))
+        assertEquals("application/x-cdi", EmulatorIntentPolicy.contentMimeType("com.flycast.emulator", "application/x-cdi"))
+    }
+
+    @Test
+    fun gopher64ReceivesTheScopedRomUriThroughActionView() {
+        val plan = EmulatorIntentPolicy.plan("io.github.gopher64.gopher64", uri, "Balanced")
+
+        assertEquals(EmulatorIntentStyle.ACTION_VIEW, plan.style)
+        assertTrue(plan.stringExtras.isEmpty())
+    }
+
+    @Test
     fun nesEmuUsesScopedActionViewContentHandoff() {
         val plan = EmulatorIntentPolicy.plan("com.explusalpha.NesEmu", uri, "Balanced")
 

@@ -8,7 +8,7 @@ class ExternalDisplayTaskbarGuidanceTest {
     @Test
     fun honorGuidanceAppearsOnlyForPhysicalExternalDisplays() {
         assertEquals(
-            "For GameBox and each emulator on HONOR Desktop Mode, open the app's Dock menu and choose Open in full screen mode to hide the Dock. This is an HONOR per-app setting; GameBox cannot change it or force third-party emulators into fullscreen. To hide the Dock globally, use Settings > Large screen features > Global Taskbar when available.",
+            "GameBox requests fullscreen, but HONOR Desktop Mode may keep its Dock over the app. Open the app's Dock menu and choose Open in full screen mode; repeat for emulators as needed. On the tested MagicOS 10 build, Settings search found no Global Taskbar or Dock-hide switch, and the fullscreen choice did not persist after relaunch. GameBox cannot hide this separate HONOR overlay.",
             externalDisplayTaskbarGuidance("HONOR", listOf("Living room TV · 1920×1080")),
         )
         assertNull(externalDisplayTaskbarGuidance("HONOR", listOf("studio.screen.sharing:0")))

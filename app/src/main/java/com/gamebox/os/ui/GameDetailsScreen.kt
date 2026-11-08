@@ -47,6 +47,14 @@ internal enum class DetailControllerPrimaryAction {
     PRIMARY, OPEN_DOWNLOADS, OPEN_GAME_SETTINGS
 }
 
+internal enum class FixtureAction { INSTALL, PLAY, DOWNLOADS }
+
+internal fun fixtureAction(state: InstallState): FixtureAction = when (state) {
+    InstallState.INSTALLED, InstallState.UPDATE_AVAILABLE -> FixtureAction.PLAY
+    InstallState.NOT_INSTALLED, InstallState.FAILED, InstallState.MISSING_FILES -> FixtureAction.INSTALL
+    else -> FixtureAction.DOWNLOADS
+}
+
 internal data class DetailControllerActionPlan(
     val xLabel: String,
     val xAction: DetailControllerPrimaryAction,
@@ -61,14 +69,14 @@ internal fun detailControllerActionPlan(
     hasRemoteSource: Boolean,
 ): DetailControllerActionPlan {
     val action = when {
-        workerActive -> DetailControllerPrimaryAction.OPEN_DOWNLOADS
+        authorizedFixture && workerActive -> DetailControllerPrimaryAction.OPEN_DOWNLOADS
         state in setOf(
             InstallState.QUEUED,
             InstallState.DOWNLOADING,
             InstallState.VERIFYING,
             InstallState.INSTALLING,
         ) -> DetailControllerPrimaryAction.OPEN_DOWNLOADS
-        state == InstallState.PAUSED && !hasRemoteSource ->
+        state == InstallState.PAUSED && (authorizedFixture || !hasRemoteSource) ->
             DetailControllerPrimaryAction.OPEN_DOWNLOADS
         state in setOf(InstallState.NOT_INSTALLED, InstallState.FAILED, InstallState.MISSING_FILES) &&
             !authorizedFixture && !hasRemoteSource ->
@@ -80,6 +88,7 @@ internal fun detailControllerActionPlan(
         DetailControllerPrimaryAction.OPEN_GAME_SETTINGS -> "Game settings"
         DetailControllerPrimaryAction.PRIMARY -> when {
             state == InstallState.INSTALLED -> "Play"
+            state == InstallState.UPDATE_AVAILABLE && authorizedFixture -> "Play"
             state == InstallState.UPDATE_AVAILABLE -> "Update"
             state == InstallState.PAUSED -> "Resume"
             state == InstallState.FAILED -> "Retry"
@@ -181,8 +190,16 @@ internal fun DetailsScreen(
     }
     fun performPrimaryAction() {
         if (isAuthorizedFixture) {
-            authorizedDownloadController.install()
-        } else {
+            when (fixtureAction(game.state)) {
+                FixtureAction.INSTALL -> authorizedDownloadController.install()
+                FixtureAction.DOWNLOADS -> onDownloads()
+                FixtureAction.PLAY -> {
+                    if (launchActivity != null) gameLaunchController.launchOnDisplay(game, hostDisplayId, launchActivity)
+                    else gameLaunchController.launchOnDisplay(game, hostDisplayId)
+                }
+            }
+            return
+        }
             when (game.state) {
                 InstallState.NOT_INSTALLED, InstallState.FAILED, InstallState.MISSING_FILES ->
                     if (hasRemoteSource) remoteDownloadController.install(game)
@@ -201,7 +218,6 @@ internal fun DetailsScreen(
                 InstallState.UPDATE_AVAILABLE ->
                     if (hasRemoteSource) remoteDownloadController.install(game) else onDownloads()
             }
-        }
     }
     val controllerActions = LocalControllerActions.current
     val actionPlan = detailControllerActionPlan(
@@ -253,6 +269,7 @@ internal fun DetailsScreen(
             onInstallAuthorized = authorizedDownloadController::install,
             onInstallRemote = { remoteDownloadController.install(game) },
         )
+        LaunchFeedbackBanner(game.id, launchState)
         Spacer(Modifier.height(8.dp))
         GameDetailsDiscoveryCard(compact, onOpenStore, discoveryActionFocusRequester)
         GameDetailsManualImportCard(

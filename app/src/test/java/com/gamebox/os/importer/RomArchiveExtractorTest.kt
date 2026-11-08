@@ -3,6 +3,7 @@ package com.gamebox.os.importer
 import java.nio.file.Files
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
+import kotlinx.coroutines.CancellationException
 import org.apache.commons.compress.archivers.sevenz.SevenZOutputFile
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -213,6 +214,41 @@ class RomArchiveExtractorTest {
             }
 
             assertFalse("corrupt later entry must remove earlier extracted files", staging.resolve("archive-content").exists())
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun cancellationDuringExtractionCleansPartialOutputAndPreservesArchive() {
+        val root = Files.createTempDirectory("gamebox-archive-cancel-").toFile()
+        try {
+            val archive = root.resolve("cancel.zip")
+            val payload = ByteArray(2 * 1024 * 1024) { (it % 251).toByte() }
+            ZipOutputStream(archive.outputStream()).use { zip ->
+                zip.putNextEntry(ZipEntry("game.nes"))
+                zip.write(payload)
+                zip.closeEntry()
+            }
+            val originalArchive = archive.readBytes()
+            val staging = root.resolve("staging")
+            val partial = staging.resolve("archive-content/game.nes")
+
+            assertThrows(CancellationException::class.java) {
+                RomArchiveExtractor.extractIfArchive(
+                    source = archive,
+                    staging = staging,
+                    platform = "NES",
+                    maxFiles = 64,
+                    maxBytes = payload.size.toLong(),
+                    ensureActive = {
+                        if (partial.length() > 0L) throw CancellationException("import cancelled")
+                    },
+                )
+            }
+
+            assertFalse("cancelled extraction must remove partial output", staging.resolve("archive-content").exists())
+            assertTrue("the user source archive must remain unchanged", archive.readBytes().contentEquals(originalArchive))
         } finally {
             root.deleteRecursively()
         }

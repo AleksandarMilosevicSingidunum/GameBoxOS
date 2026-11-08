@@ -11,6 +11,21 @@ public sealed record SteamDiscoveryResult(
 
 public static partial class SteamDiscovery
 {
+    public static string ResolveInstallRoot(IEnumerable<string?> candidates)
+    {
+        ArgumentNullException.ThrowIfNull(candidates);
+        foreach (var candidate in candidates.Where(path => !string.IsNullOrWhiteSpace(path)))
+        {
+            try
+            {
+                var path = Path.GetFullPath(candidate!.Trim());
+                if (Directory.Exists(Path.Combine(path, "steamapps"))) return path;
+            }
+            catch (Exception error) when (error is ArgumentException or NotSupportedException or PathTooLongException) { }
+        }
+        return "";
+    }
+
     public static SteamDiscoveryResult Discover(
         string steamRoot,
         string shortcutRoot,

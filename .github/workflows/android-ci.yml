@@ -36,10 +36,10 @@ jobs:
         with:
           packages: "platform-tools platforms;android-36 build-tools;36.0.0"
 
-      - name: Set up Gradle 9.5
+      - name: Set up Gradle Wrapper
         uses: gradle/actions/setup-gradle@v6
         with:
-          gradle-version: "9.5.0"
+          gradle-version: "wrapper"
           cache-provider: basic
 
       - name: Test Android release version ordering
@@ -58,7 +58,10 @@ jobs:
           PY
 
       - name: Compile and run unit tests
-        run: timeout 15m gradle --no-daemon testDebugUnitTest
+        run: timeout 15m bash ./gradlew --no-daemon testDebugUnitTest
+
+      - name: Run Android lint
+        run: timeout 15m bash ./gradlew --no-daemon lintDebug
 
       - name: Preserve unit test reports
         if: always()
@@ -72,7 +75,7 @@ jobs:
           retention-days: 14
 
       - name: Build debug APK and instrumentation test APK
-        run: timeout 15m gradle --no-daemon assembleDebug assembleDebugAndroidTest
+        run: timeout 15m bash ./gradlew --no-daemon assembleDebug assembleDebugAndroidTest
 
       - name: Record APK checksum
         run: |
@@ -188,10 +191,10 @@ jobs:
         with:
           packages: "platform-tools platforms;android-36 build-tools;36.0.0"
 
-      - name: Set up Gradle 9.5
+      - name: Set up Gradle Wrapper
         uses: gradle/actions/setup-gradle@v6
         with:
-          gradle-version: "9.5.0"
+          gradle-version: "wrapper"
           cache-provider: basic
 
       - name: Enable KVM for instrumentation
@@ -211,7 +214,7 @@ jobs:
           arch: x86_64
           emulator-options: -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect
           disable-animations: true
-          script: gradle --no-daemon connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.notClass=com.gamebox.os.ui.BlueprintScreenshotsTest
+          script: bash ./gradlew --no-daemon connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.notClass=com.gamebox.os.ui.BlueprintScreenshotsTest
 
       - name: Preserve instrumentation test reports
         if: always()

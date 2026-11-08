@@ -8,7 +8,7 @@ import java.io.File
 
 class BrowserDownloadRecoveryTest {
     @Test
-    fun durableMonitorOnlySchedulesActiveAndroidTransfers() {
+    fun durableMonitorKeepsInterruptedImportsActiveUntilTheirOwnRecordCompletes() {
         val queued = record(21L, BrowserDownloadStatus.QUEUED)
         val importing = record(22L, BrowserDownloadStatus.IMPORTING)
         val failed = record(23L, BrowserDownloadStatus.FAILED)
@@ -29,6 +29,24 @@ class BrowserDownloadRecoveryTest {
     }
 
     @Test
+    fun manualImportsUseTheirOwnDurableWorkChainAndNeverStartBrowserMonitoring() {
+        val manual = record(-41L, BrowserDownloadStatus.QUEUED).copy(manualImport = true)
+
+        assertEquals("gamebox-manual-import:-41", ManualRomImportWorker.workName(manual.downloadId))
+        assertEquals(emptyList<Long>(), activeBrowserDownloadIds(listOf(manual)))
+    }
+
+    @Test
+    fun startupReconciliationRecoversQueuedAndInterruptedManualImports() {
+        val queued = record(-41L, BrowserDownloadStatus.QUEUED).copy(manualImport = true)
+        val importing = record(-42L, BrowserDownloadStatus.IMPORTING).copy(manualImport = true)
+        val completed = record(-43L, BrowserDownloadStatus.IMPORTED).copy(manualImport = true)
+        val browser = record(44L, BrowserDownloadStatus.QUEUED)
+
+        assertEquals(listOf(-41L, -42L), recoverableManualImportIds(listOf(queued, importing, completed, browser)))
+    }
+
+    @Test
     fun systemCompletionResumesOnlyQueuedOrTransferringDownloads() {
         assertTrue(shouldResumeBrowserDownloadAfterCompletion(BrowserDownloadStatus.QUEUED))
         assertTrue(shouldResumeBrowserDownloadAfterCompletion(BrowserDownloadStatus.DOWNLOADING))
@@ -36,6 +54,25 @@ class BrowserDownloadRecoveryTest {
         assertFalse(shouldResumeBrowserDownloadAfterCompletion(BrowserDownloadStatus.IMPORTING))
         assertFalse(shouldResumeBrowserDownloadAfterCompletion(BrowserDownloadStatus.IMPORTED))
         assertFalse(shouldResumeBrowserDownloadAfterCompletion(BrowserDownloadStatus.FAILED))
+    }
+
+    @Test
+    fun failedUserInitiatedSchedulingIsVisibleAndRetryable() {
+        val queued = record(31L, BrowserDownloadStatus.QUEUED).copy(downloadUrl = "https://example.test/game.zip")
+
+        val failed = browserDownloadStartFailure(queued, "scheduler unavailable")
+
+        assertEquals(BrowserDownloadStatus.FAILED, failed.status)
+        assertEquals("scheduler unavailable", failed.error)
+        assertEquals(queued.downloadUrl, failed.downloadUrl)
+        assertEquals(queued.downloadId, failed.downloadId)
+    }
+
+    @Test
+    fun persistedSchedulingErrorIsBoundedForTheDownloadQueue() {
+        val failed = browserDownloadStartFailure(record(32L, BrowserDownloadStatus.QUEUED), "x".repeat(200))
+
+        assertEquals(180, failed.error?.length)
     }
 
     @Test
@@ -56,6 +93,21 @@ class BrowserDownloadRecoveryTest {
         val active = (1L..105L).map { record(it, BrowserDownloadStatus.QUEUED) }
 
         assertEquals(active.size, retainRecentBrowserDownloads(active).size)
+    }
+
+    @Test
+    fun newestManualImportIsRetainedDespiteItsNegativeWorkId() {
+        val recentManual = record(-900L, BrowserDownloadStatus.IMPORTED).copy(
+            manualImport = true,
+            createdAtMillis = 10_000L,
+        )
+        val olderTransfers = (1L..101L).map { record(it, BrowserDownloadStatus.IMPORTED) }
+
+        val retained = retainRecentBrowserDownloads(olderTransfers + recentManual)
+
+        assertEquals(100, retained.size)
+        assertTrue(retained.first() == recentManual)
+        assertFalse(retained.any { it.downloadId == 1L })
     }
 
     @Test

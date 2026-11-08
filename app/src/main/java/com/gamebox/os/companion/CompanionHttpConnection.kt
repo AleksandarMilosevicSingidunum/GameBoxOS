@@ -47,6 +47,7 @@ internal object CompanionHttpRequestReader {
     private const val MAX_HEADERS = 32
     private const val MAX_SAVE_BYTES = 16 * 1024 * 1024L
     private const val MAX_CONTENT_BYTES = 64L * 1024 * 1024 * 1024
+    private const val MAX_CONTROL_BYTES = 512L
     private const val CONTENT_PREFIX = "/v1/content/"
     private val headerName = Regex("[!#$%&'*+.^_`|~0-9A-Za-z-]+")
     private val sha256Pattern = Regex("^[a-fA-F0-9]{64}$")
@@ -102,7 +103,11 @@ internal object CompanionHttpRequestReader {
             }
         }
         val isContentUpload = parts[1].startsWith(CONTENT_PREFIX)
-        val maximum = if (isContentUpload) MAX_CONTENT_BYTES else MAX_SAVE_BYTES
+        val maximum = when {
+            parts[1] == CompanionRemoteRoute.PATH || parts[1] == CompanionRemotePairRoute.PATH -> MAX_CONTROL_BYTES
+            isContentUpload -> MAX_CONTENT_BYTES
+            else -> MAX_SAVE_BYTES
+        }
         if (contentLength > maximum) throw CompanionPayloadTooLarge()
         val declaredHash = headers[BODY_SHA256_HEADER.lowercase(Locale.ROOT)]
         if (contentLength > 0L) require(declaredHash != null && sha256Pattern.matches(declaredHash)) {
@@ -230,6 +235,7 @@ internal class CompanionHttpConnection(
                 401 -> "Unauthorized"
                 408 -> "Request Timeout"
                 413 -> "Payload Too Large"
+                503 -> "Service Unavailable"
                 507 -> "Insufficient Storage"
                 500 -> "Internal Server Error"
                 else -> "Not Found"

@@ -86,6 +86,66 @@
       "genre": "Arcade",
       "sizeMb": 1,
       "contentPolicy": "MIT-licensed-homebrew"
+    },
+    {
+      "id": "rkanoid-gba",
+      "title": "@rkanoid (GBA homebrew)",
+      "platform": "GBA",
+      "year": 2022,
+      "genre": "Arcade",
+      "sizeMb": 1,
+      "contentPolicy": "MIT-licensed-homebrew",
+      "description": "Bring your own copy of the MIT-licensed modern GBA recompile from the GBADev project. GameBox does not bundle or download the ROM."
+    },
+    {
+      "id": "gbc-raytracer-homebrew",
+      "title": "GBC RayTracer (Game Boy Color homebrew)",
+      "platform": "Game Boy Color",
+      "year": 0,
+      "genre": "Demo",
+      "sizeMb": 1,
+      "contentPolicy": "MIT-licensed-homebrew",
+      "description": "Bring your own copy of the MIT-licensed GBC RayTracer homebrew by Jay Huggins. GameBox does not bundle or download the ROM."
+    },
+    {
+      "id": "chroma-circuit-dreamcast",
+      "title": "Chroma Circuit (Dreamcast homebrew)",
+      "platform": "Dreamcast",
+      "year": 0,
+      "genre": "Racing",
+      "sizeMb": 2,
+      "contentPolicy": "MIT-licensed-homebrew",
+      "description": "Bring your own copy of the MIT-licensed Chroma Circuit Dreamcast homebrew. GameBox does not bundle or download the game image."
+    },
+    {
+      "id": "pong-nds-homebrew",
+      "title": "Pong-NDS (Nintendo DS homebrew)",
+      "platform": "DS",
+      "year": 2026,
+      "genre": "Arcade",
+      "sizeMb": 3,
+      "contentPolicy": "MIT-licensed-homebrew",
+      "description": "Bring your own copy of the MIT-licensed Pong-NDS homebrew from Chi-Iroh. GameBox does not bundle or download the game binary."
+    },
+    {
+      "id": "gothicvania-snes-homebrew",
+      "title": "Gothicvania (SNES homebrew)",
+      "platform": "SNES",
+      "year": 2024,
+      "genre": "Platformer",
+      "sizeMb": 1,
+      "contentPolicy": "MIT-licensed-homebrew",
+      "description": "Bring your own copy of the MIT-licensed Gothicvania SNES homebrew. GameBox does not bundle or download the game ROM."
+    },
+    {
+      "id": "fission-failure-64-n64",
+      "title": "Fission Failure 64 (N64 homebrew)",
+      "platform": "N64",
+      "year": 2021,
+      "genre": "Action puzzle",
+      "sizeMb": 15,
+      "contentPolicy": "MIT-licensed-homebrew",
+      "description": "Bring your own copy of the MIT-licensed Fission Failure 64 homebrew from vrgl117.games. GameBox does not bundle or download the game ROM."
     }
   ]
 }

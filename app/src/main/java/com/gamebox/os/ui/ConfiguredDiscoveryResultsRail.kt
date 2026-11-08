@@ -37,7 +37,7 @@ internal fun ConfiguredDiscoveryResultsRail(
     returnFocusRequester: FocusRequester? = null,
     returnFocusKey: String? = null,
     query: String? = null,
-    onUseSearchSuggestion: (String) -> Unit = {},
+    onUseSearchSuggestion: (String, String) -> Unit = { _, _ -> },
     headingFontSize: Int = 15,
 ) {
     if (results.isEmpty()) return
@@ -61,7 +61,7 @@ internal fun ConfiguredDiscoveryResultsRail(
             }
             suggestion?.let { correctedQuery ->
                 BlueprintTextButton(
-                    onClick = { onUseSearchSuggestion(correctedQuery) },
+                    onClick = { onUseSearchSuggestion(correctedQuery, results.first().sourceId) },
                 ) {
                     Text("Did you mean “$correctedQuery”?", fontSize = 11.sp)
                 }
@@ -100,7 +100,7 @@ internal fun ConfiguredDiscoveryResultsRail(
                                     returnFocusRequester?.let(Modifier::focusRequester) ?: Modifier
                                 } else Modifier
                             ),
-                        onClick = { onOpenResult(result) },
+                        onClick = onOpenResult,
                     )
                 }
             }

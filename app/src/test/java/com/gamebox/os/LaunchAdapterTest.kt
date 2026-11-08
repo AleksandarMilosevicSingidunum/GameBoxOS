@@ -9,6 +9,7 @@ import com.gamebox.os.launch.EmulatorCapabilityRegistry
 import com.gamebox.os.launch.EmulatorContentRoot
 import com.gamebox.os.launch.ReturnTracker
 import com.gamebox.os.launch.retroArchCorePath
+import com.gamebox.os.launch.requiresFilesystemRomExport
 import com.gamebox.os.launch.externalDisplayLaunchId
 import com.gamebox.os.launch.hasRetroArchCoreContract
 import org.junit.Assert.assertEquals
@@ -21,6 +22,12 @@ import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.flow.first
 
 class LaunchAdapterTest {
+    @Test fun onlyRetroArchUsesFilesystemRomExports() {
+        assertTrue(requiresFilesystemRomExport("com.retroarch.aarch64"))
+        assertFalse(requiresFilesystemRomExport("com.flycast.emulator"))
+        assertFalse(requiresFilesystemRomExport("org.ppsspp.ppsspp"))
+    }
+
     @Test fun retroArchLaunchRequiresARecognizedCoreContractBeforeStartingNativeActivity() {
         val base = EmulatorCapability(
             id = "imported-test",
@@ -75,6 +82,155 @@ class LaunchAdapterTest {
             assertEquals(original.minutesPlayed, after.minutesPlayed)
             assertEquals(original.favorite, after.favorite)
         }
+    }
+
+    @Test fun automaticLaunchRetriesNextApprovedEmulatorWhenDefaultIsMissing(): Unit = runBlocking {
+        val repository = com.gamebox.os.data.FakeGameRepository()
+        val game = Game(
+            GameId("n64-auto-fallback"), "N64 homebrew", "N64", 2021, "Action", 15,
+            InstallState.INSTALLED,
+            localContentRelativePath = "imports/n64/homebrew.z64",
+            localContentSha256 = "f".repeat(64),
+            localContentMimeType = "application/x-n64-rom",
+        )
+        val attempts = mutableListOf<String>()
+        val gateway = object : com.gamebox.os.launch.PackageGateway {
+            override fun launch(
+                capability: EmulatorCapability,
+                preparation: com.gamebox.os.launch.LaunchPreparation,
+            ): com.gamebox.os.launch.GatewayResult {
+                attempts += capability.packageName
+                return if (capability.packageName in setOf(
+                        "io.github.gopher64.gopher64", "org.mupen64plusae.v3.fzurita",
+                    )
+                ) {
+                    com.gamebox.os.launch.GatewayResult.EMULATOR_UNAVAILABLE
+                } else {
+                    com.gamebox.os.launch.GatewayResult.LAUNCHED
+                }
+            }
+        }
+        val controller = com.gamebox.os.launch.DefaultGameLaunchController(
+            EmulatorCapabilityRegistry(), gateway, repository, scope = this,
+        )
+
+        controller.launch(game)
+        withTimeout(5_000) {
+            controller.observeState().first { it.status == com.gamebox.os.launch.LaunchUiState.Status.LAUNCHED }
+        }
+
+        assertEquals(
+            listOf(
+                "io.github.gopher64.gopher64", "org.mupen64plusae.v3.fzurita",
+                "org.mupen64plusae.v3.alpha",
+            ),
+            attempts,
+        )
+    }
+
+    @Test fun explicitlySelectedMissingEmulatorDoesNotSwitchSilently(): Unit = runBlocking {
+        val repository = com.gamebox.os.data.FakeGameRepository()
+        val game = Game(
+            GameId("n64-explicit-emulator"), "N64 homebrew", "N64", 2021, "Action", 15,
+            InstallState.INSTALLED,
+            emulatorPackage = "org.mupen64plusae.v3.fzurita",
+            localContentRelativePath = "imports/n64/homebrew.z64",
+            localContentSha256 = "a".repeat(64),
+            localContentMimeType = "application/x-n64-rom",
+        )
+        val attempts = mutableListOf<String>()
+        val gateway = object : com.gamebox.os.launch.PackageGateway {
+            override fun launch(
+                capability: EmulatorCapability,
+                preparation: com.gamebox.os.launch.LaunchPreparation,
+            ): com.gamebox.os.launch.GatewayResult {
+                attempts += capability.packageName
+                return com.gamebox.os.launch.GatewayResult.EMULATOR_UNAVAILABLE
+            }
+        }
+        val controller = com.gamebox.os.launch.DefaultGameLaunchController(
+            EmulatorCapabilityRegistry(), gateway, repository, scope = this,
+        )
+
+        controller.launch(game)
+        withTimeout(5_000) {
+            controller.observeState().first { it.status == com.gamebox.os.launch.LaunchUiState.Status.EMULATOR_UNAVAILABLE }
+        }
+
+        assertEquals(listOf("org.mupen64plusae.v3.fzurita"), attempts)
+    }
+
+    @Test fun automaticUnavailableStateNamesLastAttemptedEmulatorAndNextStep(): Unit = runBlocking {
+        val repository = com.gamebox.os.data.FakeGameRepository()
+        val game = Game(
+            GameId("n64-unavailable-emulators"), "N64 homebrew", "N64", 2021, "Action", 15,
+            InstallState.INSTALLED,
+            localContentRelativePath = "imports/n64/homebrew.z64",
+            localContentSha256 = "b".repeat(64),
+            localContentMimeType = "application/x-n64-rom",
+        )
+        val attempts = mutableListOf<String>()
+        val gateway = object : com.gamebox.os.launch.PackageGateway {
+            override fun launch(
+                capability: EmulatorCapability,
+                preparation: com.gamebox.os.launch.LaunchPreparation,
+            ): com.gamebox.os.launch.GatewayResult {
+                attempts += capability.packageName
+                return com.gamebox.os.launch.GatewayResult.EMULATOR_UNAVAILABLE
+            }
+        }
+        val controller = com.gamebox.os.launch.DefaultGameLaunchController(
+            EmulatorCapabilityRegistry(), gateway, repository, scope = this,
+        )
+
+        controller.launch(game)
+        val state = withTimeout(5_000) {
+            controller.observeState().first { it.status == com.gamebox.os.launch.LaunchUiState.Status.EMULATOR_UNAVAILABLE }
+        }
+
+        assertEquals(
+            listOf(
+                "io.github.gopher64.gopher64", "org.mupen64plusae.v3.fzurita",
+                "org.mupen64plusae.v3.alpha",
+            ),
+            attempts,
+        )
+        val message = requireNotNull(state.message)
+        assertTrue(message.contains("Mupen64Plus AE"))
+        assertTrue(message.contains("Game Settings"))
+    }
+
+    @Test fun automaticHandoffRejectionNamesTheEmulatorThatRejectedIt(): Unit = runBlocking {
+        val repository = com.gamebox.os.data.FakeGameRepository()
+        val game = Game(
+            GameId("n64-rejected-emulator"), "N64 homebrew", "N64", 2021, "Action", 15,
+            InstallState.INSTALLED,
+            localContentRelativePath = "imports/n64/homebrew.z64",
+            localContentSha256 = "c".repeat(64),
+            localContentMimeType = "application/x-n64-rom",
+        )
+        val attempts = mutableListOf<String>()
+        val gateway = object : com.gamebox.os.launch.PackageGateway {
+            override fun launch(
+                capability: EmulatorCapability,
+                preparation: com.gamebox.os.launch.LaunchPreparation,
+            ): com.gamebox.os.launch.GatewayResult {
+                attempts += capability.packageName
+                return if (attempts.size == 1) com.gamebox.os.launch.GatewayResult.EMULATOR_UNAVAILABLE
+                else com.gamebox.os.launch.GatewayResult.HANDOFF_REJECTED
+            }
+        }
+        val controller = com.gamebox.os.launch.DefaultGameLaunchController(
+            EmulatorCapabilityRegistry(), gateway, repository, scope = this,
+        )
+
+        controller.launch(game)
+        val state = withTimeout(5_000) {
+            controller.observeState().first { it.status == com.gamebox.os.launch.LaunchUiState.Status.HANDOFF_REJECTED }
+        }
+
+        assertEquals(listOf("io.github.gopher64.gopher64", "org.mupen64plusae.v3.fzurita"), attempts)
+        assertTrue(requireNotNull(state.message).contains("M64Plus FZ"))
     }
 
     @Test fun preparationDoesNotBlockCallerAndDuplicatePlayDoesNotDispatchTwice(): Unit = runBlocking {
@@ -179,13 +335,38 @@ class LaunchAdapterTest {
         val dreamcast = Game(GameId("dc-test"), "DC Test", "Dreamcast", 1999, "Racing", 1, installed)
 
         assertEquals(listOf("com.github.stenzek.duckstation"), registry.optionsFor(ps1))
-        assertEquals(listOf("org.mupen64plusae.v3.fzurita"), registry.optionsFor(n64))
-        assertEquals(listOf("com.flycast.emulator"), registry.optionsFor(dreamcast))
+        assertEquals(
+            listOf(
+                "io.github.gopher64.gopher64", "org.mupen64plusae.v3.fzurita",
+                "org.mupen64plusae.v3.alpha",
+            ),
+            registry.optionsFor(n64),
+        )
+        assertEquals(listOf("io.recompiled.redream"), registry.optionsFor(dreamcast))
         assertEquals("DuckStation", registry.displayName("com.github.stenzek.duckstation"))
         assertEquals("M64Plus FZ", registry.displayName("org.mupen64plusae.v3.fzurita"))
+        assertEquals("Mupen64Plus AE", registry.displayName("org.mupen64plusae.v3.alpha"))
+        assertEquals("Gopher64", registry.displayName("io.github.gopher64.gopher64"))
         assertEquals("Flycast", registry.displayName("com.flycast.emulator"))
+        assertEquals("Redream", registry.displayName("io.recompiled.redream"))
         val nes = Game(GameId("nes-test"), "NES Test", "Nintendo Entertainment System", 1986, "Action", 1, installed)
         assertEquals("com.explusalpha.NesEmu", registry.optionsFor(nes).first())
+    }
+
+    @Test fun gopher64CanBeSelectedForImportedN64Games() {
+        val game = Game(
+            GameId("n64-ae-test"), "N64 homebrew", "N64", 2020, "Action", 1,
+            InstallState.INSTALLED,
+            emulatorPackage = "io.github.gopher64.gopher64",
+            localContentRelativePath = "imports/n64/homebrew.z64",
+            localContentSha256 = "e".repeat(64),
+            localContentMimeType = "application/x-n64-rom",
+        )
+
+        val capability = requireNotNull(EmulatorCapabilityRegistry().forGame(game))
+        assertEquals("io.github.gopher64.gopher64", capability.packageName)
+        assertEquals("imports/n64/homebrew.z64", capability.contentRelativePath)
+        assertNull(capability.requiredCore)
     }
 
     @Test fun supportedStandalonePlatformDefaultsNeverSelectRetroArch() {
@@ -201,6 +382,18 @@ class LaunchAdapterTest {
             assertTrue("$platform must expose a standalone default", options.isNotEmpty())
             assertTrue("$platform must not default to RetroArch", options.none { it.startsWith("com.retroarch") })
         }
+    }
+
+    @Test fun gbaEmuIsTheOnlyApprovedGbaAdapterAfterFallbackCrash() {
+        val game = Game(GameId("gba-test"), "GBA test", "Game Boy Advance", 2000,
+            "Test", 1, InstallState.INSTALLED)
+        val registry = EmulatorCapabilityRegistry()
+
+        assertEquals(
+            listOf("com.explusalpha.GbaEmu"),
+            registry.optionsFor(game),
+        )
+        assertEquals("GBA.emu", registry.displayName("com.explusalpha.GbaEmu"))
     }
 
     @Test fun unsupportedPlatformsDoNotAdvertiseAnApprovedEmulator() {

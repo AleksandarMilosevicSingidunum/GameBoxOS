@@ -24,6 +24,15 @@ internal class RememberedGameFilters internal constructor(
     var region by mutableStateOf(region)
     var language by mutableStateOf(language)
     var favoritesOnly by mutableStateOf(favoritesOnly)
+
+    fun clear() {
+        query = ""
+        platform = null
+        genre = null
+        region = null
+        language = null
+        favoritesOnly = false
+    }
 }
 
 @Composable

@@ -24,6 +24,7 @@ fun interface SaveAdapter {
 interface BidirectionalSaveAdapter : SaveAdapter {
     fun openArtifact(artifact: SaveArtifact): InputStream
     fun restoreArtifact(artifact: SaveArtifact, source: InputStream)
+    fun deleteArtifact(artifact: SaveArtifact)
 }
 
 class DirectorySaveAdapter(
@@ -94,6 +95,13 @@ class DirectorySaveAdapter(
             )
         } finally {
             staged.delete()
+        }
+    }
+
+    override fun deleteArtifact(artifact: SaveArtifact) {
+        val destination = resolveArtifact(artifact)
+        check(!destination.exists() || destination.isFile && destination.delete()) {
+            "Save artifact could not be removed during rollback"
         }
     }
 

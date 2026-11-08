@@ -4,6 +4,7 @@ import android.app.ActivityOptions
 import android.content.pm.ActivityInfo
 import android.content.ComponentName
 import android.content.res.Configuration
+import android.graphics.Rect
 import android.view.KeyEvent
 import android.view.WindowManager
 import androidx.compose.ui.test.*
@@ -560,12 +561,14 @@ class ExternalDisplayActivityTest {
     }
 
     @Test
-    fun externalDisplayActivityKeepsNonExportedHostBoundary() {
+    fun externalDisplayActivityIsAnExportedReusableSecondaryHome() {
         val info = rule.activity.packageManager.getActivityInfo(
             ComponentName(rule.activity, ExternalDisplayActivity::class.java),
             0,
         )
-        assertFalse(info.exported)
+        assertTrue(info.exported)
+        assertEquals(ActivityInfo.LAUNCH_SINGLE_TASK, info.launchMode)
+        assertEquals("com.gamebox.os.external", info.taskAffinity)
     }
 
     @Test
@@ -605,9 +608,7 @@ class ExternalDisplayActivityTest {
     fun externalDisplayLaunchBundleRequestsFullscreenWindowingMode() {
         val launchBundle = ActivityOptions.makeBasic().toGameBoxFullscreenLaunchBundle()
         assertEquals(1, launchBundle.getInt("android.activity.windowingMode", -1))
-        // A display-sized launchBounds rectangle can make desktop shells create
-        // a captioned/freeform task instead of a borderless TV surface.
-        assertFalse(launchBundle.containsKey("android:activity.launchBounds"))
+        assertEquals(null, launchBundle.getParcelable<Rect>("android:activity.launchBounds"))
     }
 
     private fun sendButton(keyCode: Int) {

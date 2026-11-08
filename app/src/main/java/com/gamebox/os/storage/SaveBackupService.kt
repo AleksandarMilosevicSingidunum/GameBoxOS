@@ -104,6 +104,17 @@ class SaveBackupService(
         return BackupResult.SUCCESS
     }
 
+    /** Fully verifies a backup so a multi-file restore can fail before changing any live save. */
+    internal fun validateBackup(relativePath: String): BackupResult {
+        val backup = resolveContained(backupsRoot, relativePath)
+        if (!AtomicSaveSnapshot.hasHeader(backup) && backup.isFile && backup.length() > maxBackupBytes) {
+            return BackupResult.SIZE_LIMIT_EXCEEDED
+        }
+        return if (readBackup(backup) != null) BackupResult.SUCCESS else if (backup.exists()) {
+            BackupResult.CHECKSUM_MISMATCH
+        } else BackupResult.BACKUP_MISSING
+    }
+
     /** Removes a newly-created snapshot generation after an incomplete publication. */
     internal fun discardGeneration(generation: String) {
         require(generation.matches(Regex("[A-Za-z0-9._-]+"))) { "Snapshot generation is invalid" }
@@ -144,6 +155,88 @@ class SaveBackupService(
         } finally {
             staged.delete()
         }
+    }
+
+    /** Stores current bytes for a restore transaction; unlike user backups, empty saves are valid here. */
+    internal fun stageRestoreSource(relativePath: String, source: InputStream): BackupResult {
+        val staged = resolveContained(backupsRoot, relativePath)
+        check(staged.parentFile?.mkdirs() != false || staged.parentFile?.isDirectory == true)
+        var size = 0L
+        return try {
+            staged.outputStream().use { output ->
+                source.use { input ->
+                    val buffer = ByteArray(64 * 1024)
+                    while (true) {
+                        val count = input.read(buffer)
+                        if (count < 0) break
+                        if (count == 0) continue
+                        size += count
+                        if (size > maxBackupBytes) return BackupResult.SIZE_LIMIT_EXCEEDED
+                        output.write(buffer, 0, count)
+                    }
+                }
+            }
+            BackupResult.SUCCESS
+        } catch (_: Exception) {
+            staged.delete()
+            BackupResult.SNAPSHOT_ABORTED
+        } finally {
+            if (size > maxBackupBytes) staged.delete()
+        }
+    }
+
+    internal fun openRestoreSource(relativePath: String): InputStream =
+        resolveContained(backupsRoot, relativePath).inputStream()
+
+    internal fun stageCurrentSave(sourceRelativePath: String, transactionRelativePath: String): BackupResult {
+        val source = resolveContained(savesRoot, sourceRelativePath)
+        if (!source.exists()) return BackupResult.SOURCE_MISSING
+        if (!source.isFile) return BackupResult.SNAPSHOT_ABORTED
+        if (source.length() > maxBackupBytes) return BackupResult.SIZE_LIMIT_EXCEEDED
+        return stageRestoreSource(transactionRelativePath, source.inputStream())
+    }
+
+    /** Reinstates bytes captured by stageRestoreSource. */
+    internal fun restoreStagedSave(transactionRelativePath: String, destinationRelativePath: String): BackupResult {
+        val source = resolveContained(backupsRoot, transactionRelativePath)
+        if (!source.isFile) return BackupResult.BACKUP_MISSING
+        val destination = resolveContained(savesRoot, destinationRelativePath)
+        val staged = resolveContained(savesRoot, destinationRelativePath + ".restore.part")
+        check(destination.parentFile?.mkdirs() != false || destination.parentFile?.isDirectory == true)
+        return try {
+            source.inputStream().use { input ->
+                staged.outputStream().use { output ->
+                    val buffer = ByteArray(64 * 1024)
+                    var size = 0L
+                    while (true) {
+                        val count = input.read(buffer)
+                        if (count < 0) break
+                        if (count == 0) continue
+                        size += count
+                        if (size > maxBackupBytes) return BackupResult.SIZE_LIMIT_EXCEEDED
+                        output.write(buffer, 0, count)
+                    }
+                }
+            }
+            promote(staged, destination)
+            BackupResult.SUCCESS
+        } catch (_: Exception) {
+            BackupResult.SNAPSHOT_ABORTED
+        } finally {
+            staged.delete()
+        }
+    }
+
+    internal fun removeSave(relativePath: String) {
+        val file = resolveContained(savesRoot, relativePath)
+        check(!file.exists() || file.isFile && file.delete()) { "Live save could not be removed during rollback" }
+    }
+
+    internal fun discardRestoreTransaction(id: String) {
+        require(id.matches(Regex("[A-Za-z0-9._-]+"))) { "Restore transaction id is invalid" }
+        val directory = resolveContained(backupsRoot, ".restore-transactions/$id")
+        if (directory.exists()) check(directory.deleteRecursively()) { "Restore staging could not be cleaned up" }
+        directory.parentFile?.takeIf { it.isDirectory && it.list()?.isEmpty() == true }?.delete()
     }
 
     fun exportBackup(relativePath: String, output: OutputStream): BackupResult {

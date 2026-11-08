@@ -142,7 +142,8 @@ class DefaultGameLaunchController(
             update(game.id, LaunchUiState.Status.NOT_INSTALLED, "Install and verify before launching")
             return
         }
-        val capability = registry.forGame(game, platformEmulatorDefault(game.platform))
+        val platformDefault = platformEmulatorDefault(game.platform)
+        val capability = registry.forGame(game, platformDefault)
         if (capability == null) {
             update(game.id, LaunchUiState.Status.UNSUPPORTED, "No approved adapter for this title")
             return
@@ -161,9 +162,25 @@ class DefaultGameLaunchController(
             ticket = runBlocking { sessionJournal?.begin(game.id.value) }
             deferredHostReturn.arm()
         }
+        val automaticSelection = game.emulatorPackage == null && platformDefault == null
+        var selectedCapability: EmulatorCapability = capability
         val result = withContext(Dispatchers.IO) {
-            if (sourceActivity == null) gateway.launchOnDisplay(capability, preparation, displayId)
-            else gateway.launchOnDisplayFromActivity(capability, preparation, displayId, sourceActivity)
+            fun launch(selected: EmulatorCapability) = if (sourceActivity == null) {
+                gateway.launchOnDisplay(selected, preparation, displayId)
+            } else {
+                gateway.launchOnDisplayFromActivity(selected, preparation, displayId, sourceActivity)
+            }
+
+            var attempt = launch(selectedCapability)
+            if (attempt == GatewayResult.EMULATOR_UNAVAILABLE && automaticSelection) {
+                for (packageName in registry.optionsFor(game).filterNot { it == capability.packageName }) {
+                    val alternative = registry.forGame(game, packageName) ?: continue
+                    selectedCapability = alternative
+                    attempt = launch(alternative)
+                    if (attempt != GatewayResult.EMULATOR_UNAVAILABLE) break
+                }
+            }
+            attempt
         }
         if (result == GatewayResult.LAUNCHED) {
             ticket?.let { sessionJournal?.confirm(it) }
@@ -180,7 +197,7 @@ class DefaultGameLaunchController(
             GatewayResult.EMULATOR_UNAVAILABLE -> update(
                 game.id,
                 LaunchUiState.Status.EMULATOR_UNAVAILABLE,
-                "Install the approved emulator package: ${capability.packageName}",
+                "${registry.displayName(selectedCapability.packageName)} is unavailable. Install it or choose another emulator in Game Settings.",
             )
             GatewayResult.CONTENT_MISSING -> {
                 repository.setInstallState(game.id, InstallState.MISSING_FILES)
@@ -193,7 +210,7 @@ class DefaultGameLaunchController(
             GatewayResult.HANDOFF_REJECTED -> update(
                 game.id,
                 LaunchUiState.Status.HANDOFF_REJECTED,
-                buildHandoffRejectedMessage(capability),
+                buildHandoffRejectedMessage(selectedCapability),
             )
         }
     }
@@ -240,7 +257,7 @@ class DefaultGameLaunchController(
                         } else {
                             Result.success(null)
                         }
-                        val message = launchReturnMessage(it.launchConfirmed, backupAttempt)
+                        val message = launchReturnMessage(it.launchConfirmed, it.minutesAway, backupAttempt)
                         update(returnedGameId, LaunchUiState.Status.RETURNED, message)
                     }
                 } catch (cancelled: CancellationException) {

@@ -66,6 +66,41 @@ internal data class GameDetailsContentActions(
 )
 
 @Composable
+internal fun LaunchFeedbackBanner(gameId: com.gamebox.os.domain.GameId, state: LaunchUiState) {
+    if (state.gameId != gameId || state.status == LaunchUiState.Status.IDLE) return
+    val failed = state.status in setOf(
+        LaunchUiState.Status.EMULATOR_UNAVAILABLE,
+        LaunchUiState.Status.UNSUPPORTED,
+        LaunchUiState.Status.NOT_INSTALLED,
+        LaunchUiState.Status.CONTENT_MISSING,
+        LaunchUiState.Status.VERIFICATION_FAILED,
+        LaunchUiState.Status.HANDOFF_REJECTED,
+        LaunchUiState.Status.SESSION_ERROR,
+    )
+    Surface(
+        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+        color = if (failed) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.surfaceVariant,
+        shape = RoundedCornerShape(10.dp),
+        border = androidx.compose.foundation.BorderStroke(
+            1.dp,
+            if (failed) MaterialTheme.colorScheme.error.copy(alpha = 0.45f)
+            else MaterialTheme.colorScheme.outline.copy(alpha = 0.6f),
+        ),
+    ) {
+        Column(Modifier.padding(horizontal = 14.dp, vertical = 10.dp)) {
+            Text(
+                state.message ?: state.status.name.lowercase().replace('_', ' '),
+                color = if (failed) MaterialTheme.colorScheme.onErrorContainer
+                else MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            if (state.status == LaunchUiState.Status.PREPARING) {
+                LinearProgressIndicator(Modifier.fillMaxWidth().padding(top = 8.dp))
+            }
+        }
+    }
+}
+
+@Composable
 internal fun GameDetailsContentPanel(
     state: GameDetailsContentState,
     actions: GameDetailsContentActions,
@@ -90,7 +125,11 @@ internal fun GameDetailsContentPanel(
         LaunchUiState.Status.SESSION_ERROR,
     )
 
-    Surface(color = MaterialTheme.colorScheme.surface, shape = RoundedCornerShape(9.dp)) {
+    Surface(
+        color = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.96f),
+        shape = RoundedCornerShape(12.dp),
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.76f)),
+    ) {
         Column(Modifier.fillMaxWidth().padding(16.dp)) {
             Text("Game content · ${game.state.displayName()}", fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
             state.requiredEmulatorCore?.let { requiredCore ->
@@ -166,9 +205,9 @@ internal fun GameDetailsContentPanel(
                     modifier = (if (state.compact) Modifier.fillMaxWidth() else Modifier)
                         .bringFocusedControlIntoView(),
                     enabled = when {
-                        state.authorizedFixture -> !state.workerActive
                         game.state in setOf(InstallState.INSTALLED, InstallState.UPDATE_AVAILABLE) &&
                             !state.hasApprovedEmulator -> false
+                        state.authorizedFixture -> !state.workerActive
                         game.state in setOf(
                             InstallState.NOT_INSTALLED,
                             InstallState.FAILED,
@@ -178,11 +217,11 @@ internal fun GameDetailsContentPanel(
                     },
                 ) {
                     Text(
-                        if (!state.authorizedFixture &&
-                            game.state in setOf(InstallState.INSTALLED, InstallState.UPDATE_AVAILABLE) &&
+                        if (game.state in setOf(InstallState.INSTALLED, InstallState.UPDATE_AVAILABLE) &&
                             !state.hasApprovedEmulator
                         ) "Unsupported system"
                         else if (installerUnavailable) "No installer"
+                        else if (state.authorizedFixture && game.state in setOf(InstallState.INSTALLED, InstallState.UPDATE_AVAILABLE)) "Play"
                         else if (!state.authorizedFixture) game.state.primaryAction()
                         else if (state.authorizedState.status == AuthorizedDownloadState.Status.SUCCEEDED)
                             "Reinstall game" else "Install game",
@@ -199,10 +238,6 @@ internal fun GameDetailsContentPanel(
                         InstallState.UPDATE_AVAILABLE,
                     )
                 ) {
-                    BlueprintButton(
-                        onClick = actions.onPlay,
-                        modifier = Modifier.bringFocusedControlIntoView(),
-                    ) { Text("Play") }
                     TvDetailsSecondaryAction(
                         label = "Uninstall content",
                         compact = state.compact,
@@ -274,22 +309,6 @@ internal fun GameDetailsContentPanel(
                         modifier = Modifier.bringFocusedControlIntoView(),
                     ) { Text("Cancel preparation") }
                 }
-                Spacer(Modifier.height(12.dp))
-                Text(
-                    launchState.message ?: when (launchState.status) {
-                        LaunchUiState.Status.LAUNCHED -> "Emulator launched"
-                        LaunchUiState.Status.RETURNED -> "Returned safely; play session recorded"
-                        else -> launchState.status.name.lowercase().replace('_', ' ')
-                    },
-                    color = if (launchState.status in setOf(
-                        LaunchUiState.Status.EMULATOR_UNAVAILABLE,
-                        LaunchUiState.Status.UNSUPPORTED,
-                        LaunchUiState.Status.NOT_INSTALLED,
-                        LaunchUiState.Status.CONTENT_MISSING,
-                        LaunchUiState.Status.VERIFICATION_FAILED,
-                        LaunchUiState.Status.HANDOFF_REJECTED,
-                    )) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
-                )
             }
         }
     }

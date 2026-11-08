@@ -1,6 +1,8 @@
 package com.gamebox.os.ui
 
 import android.content.ActivityNotFoundException
+import android.content.Context
+import android.content.ContextWrapper
 import android.content.Intent
 import android.net.Uri
 import android.provider.Settings
@@ -16,6 +18,8 @@ import androidx.compose.ui.semantics.*
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.*
 import com.gamebox.os.display.launchGameBoxOnExternalDisplay
+import com.gamebox.os.display.currentDisplayId
+import com.gamebox.os.display.isExternalDisplayId
 import com.gamebox.os.settings.SettingsRepository
 import kotlinx.coroutines.launch
 
@@ -30,6 +34,7 @@ internal fun AppHubScreen(
 ) {
     val context = LocalContext.current
     val activity = context as? android.app.Activity
+    val externalDisplay = isExternalDisplayContext(context)
     val currentSettings by settingsRepository.settings.collectAsState(
         initial = com.gamebox.os.settings.GameBoxSettings()
     )
@@ -48,7 +53,7 @@ internal fun AppHubScreen(
             },
             yLabel = controllerLabels.yLabel,
             onY = {
-                val intent = if (hubKind == AppHubKind.PC) desktopHomeIntent()
+                val intent = if (hubKind == AppHubKind.PC) desktopHomeIntent(externalDisplay)
                     else Intent(Settings.ACTION_SOUND_SETTINGS)
                 runCatching { context.startActivity(intent) }
             },
@@ -58,12 +63,10 @@ internal fun AppHubScreen(
             if (owner != null && lease != null) owner.clear(lease)
         }
     }
-    val launchIntents = remember(shortcuts) {
+    val launchIntents = remember(shortcuts, externalDisplay) {
         shortcuts.associate { shortcut ->
             shortcut.packageName to if (shortcut.packageName == "__android_home__") {
-                Intent(Intent.ACTION_MAIN)
-                    .addCategory(Intent.CATEGORY_HOME)
-                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                desktopHomeIntent(externalDisplay)
             } else {
                 context.packageManager.getLaunchIntentForPackage(shortcut.packageName)
             }
@@ -152,7 +155,7 @@ internal fun AppHubScreen(
             Spacer(Modifier.height(12.dp))
             MoonlightHostProbePanel(settingsRepository, Modifier.fillMaxWidth())
             BlueprintOutlinedButton(
-                onClick = { runCatching { context.startActivity(desktopHomeIntent()) } },
+                onClick = { runCatching { context.startActivity(desktopHomeIntent(externalDisplay)) } },
                 modifier = Modifier.semantics { contentDescription = "Return to Android or DeX desktop" },
             ) {
                 Icon(Icons.Rounded.DesktopWindows, null, Modifier.size(16.dp))
@@ -209,7 +212,18 @@ internal fun AppHubScreen(
     }
 }
 
-internal fun desktopHomeIntent(): Intent =
-    Intent(Intent.ACTION_MAIN)
-        .addCategory(Intent.CATEGORY_HOME)
+internal fun desktopHomeIntent(externalDisplay: Boolean = false): Intent {
+    val home = Intent(Intent.ACTION_MAIN)
+        .addCategory(if (externalDisplay) Intent.CATEGORY_SECONDARY_HOME else Intent.CATEGORY_HOME)
         .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    return if (externalDisplay) Intent.createChooser(home, "Choose TV desktop") else home
+}
+
+internal fun isExternalDisplayContext(context: Context): Boolean =
+    generateSequence(context as Context?) { current ->
+        (current as? ContextWrapper)?.baseContext
+    }.filterIsInstance<android.app.Activity>()
+        .firstOrNull()
+        ?.currentDisplayId()
+        ?.let(::isExternalDisplayId)
+        ?: false

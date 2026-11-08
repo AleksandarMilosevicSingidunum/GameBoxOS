@@ -10,6 +10,7 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.gamebox.os.data.CatalogDiscoveryRepository
+import com.gamebox.os.catalog.LibretroThumbnails
 import com.gamebox.os.source.ConfiguredDiscoverySyncResult
 import com.gamebox.os.source.DiscoverySourceGame
 import com.gamebox.os.source.GameSourceConfig
@@ -24,6 +25,16 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+
+internal suspend fun lookupVimmThumbnailsOrNull(
+    lookup: suspend () -> LibretroThumbnails,
+): LibretroThumbnails? = try {
+    lookup()
+} catch (cancelled: CancellationException) {
+    throw cancelled
+} catch (_: Exception) {
+    null
+}
 
 /** Owns asynchronous Store discovery/source actions and their observable UI state. */
 internal class CatalogDiscoveryActions(
@@ -85,14 +96,14 @@ internal class CatalogDiscoveryActions(
         }
         isSyncing = true
         progress = 0f
+        message = if (platforms.size == 1) {
+            "Searching " + source.name + "…"
+        } else {
+            "Searching " + source.name + " across " + platforms.size + " consoles…"
+        }
         vimmSearchActive = true
         val requestGeneration = ++vimmSearchGeneration
         val job = scope.launch(start = CoroutineStart.LAZY) {
-            message = if (platforms.size == 1) {
-                "Searching " + source.name + "…"
-            } else {
-                "Searching " + source.name + " across " + platforms.size + " consoles…"
-            }
             try {
                 val summary = searchVimmLairAcrossPlatforms(
                     config = source,
@@ -199,11 +210,13 @@ internal class CatalogDiscoveryActions(
         scope.launch {
             try {
                 val hydrated = VimmLairDiscoverySource(source).hydrate(result)
-                val thumbnails = com.gamebox.os.catalog.LibretroThumbnailClient()
-                    .lookup(hydrated.platform, hydrated.title, hydrated.region)
+                val thumbnails = lookupVimmThumbnailsOrNull {
+                    com.gamebox.os.catalog.LibretroThumbnailClient()
+                        .lookup(hydrated.platform, hydrated.title, hydrated.region)
+                }
                 selectedConfiguredResult = hydrated.copy(
-                    coverUrl = hydrated.coverUrl ?: thumbnails.boxartUrl,
-                    screenshotUrl = thumbnails.screenshotUrl,
+                    coverUrl = hydrated.coverUrl ?: thumbnails?.boxartUrl,
+                    screenshotUrl = thumbnails?.screenshotUrl,
                 )
                 configuredResultNotice = null
                 message = "Loaded details from " + source.name
@@ -217,10 +230,10 @@ internal class CatalogDiscoveryActions(
             } catch (_: Exception) {
                 configuredResultNotice = configuredSourceDetailFailureMessage(source.name)
                 message = configuredResultNotice.orEmpty()
-                val thumbnails = runCatching {
+                val thumbnails = lookupVimmThumbnailsOrNull {
                     com.gamebox.os.catalog.LibretroThumbnailClient()
                         .lookup(result.platform, result.title, result.region)
-                }.getOrNull()
+                }
                 selectedConfiguredResult = result.copy(
                     coverUrl = result.coverUrl ?: thumbnails?.boxartUrl,
                     screenshotUrl = result.screenshotUrl ?: thumbnails?.screenshotUrl,

@@ -57,6 +57,7 @@ internal fun ControllerSearchField(
     onOpenKeyboard: () -> Unit,
     modifier: Modifier = Modifier,
     focusRequester: FocusRequester? = null,
+    label: String = "Search games",
 ) {
     val activate = rememberUiClickAction(onOpenKeyboard)
     OutlinedButton(
@@ -67,9 +68,9 @@ internal fun ControllerSearchField(
             .then(focusRequester?.let(Modifier::focusRequester) ?: Modifier)
             .semantics {
                 contentDescription = if (query.isBlank()) {
-                    "Search games. Press A to type with the controller."
+                    "$label. Press A to type with the controller."
                 } else {
-                    "Search games: $query. Press A to edit."
+                    "$label: $query. Press A to edit."
                 }
             },
         shape = RoundedCornerShape(8.dp),
@@ -77,7 +78,7 @@ internal fun ControllerSearchField(
     ) {
         androidx.compose.material3.Icon(Icons.Rounded.Search, contentDescription = null)
         Text(
-            query.ifBlank { "Search games" },
+            query.ifBlank { label },
             Modifier.padding(start = 8.dp),
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
@@ -92,6 +93,7 @@ internal fun ControllerSearchKeyboardDialog(
     query: String,
     onQueryChange: (String) -> Unit,
     onDismiss: () -> Unit,
+    title: String = "Search games",
 ) {
     val firstKeyFocus = remember { FocusRequester() }
 
@@ -141,7 +143,7 @@ internal fun ControllerSearchKeyboardDialog(
                     verticalArrangement = Arrangement.spacedBy(rowSpacing),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
-                    Text("Search games", style = MaterialTheme.typography.titleLarge)
+                    Text(title, style = MaterialTheme.typography.titleLarge)
                     Surface(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(9.dp),

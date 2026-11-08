@@ -75,6 +75,8 @@ internal fun HomeScreen(
     open: (Game) -> Unit,
     openStorageSettings: () -> Unit = {},
     openControllerSettings: () -> Unit = {},
+    downloadActivity: HomeDownloadActivity? = null,
+    openDownloads: () -> Unit = {},
 ) {
     val context = LocalContext.current
     val storageCapacity = rememberStorageCapacitySnapshot(context)
@@ -120,6 +122,8 @@ internal fun HomeScreen(
         openStore = openStore,
         openStorageSettings = openStorageSettings,
         openControllerSettings = openControllerSettings,
+        downloadActivity = downloadActivity,
+        openDownloads = openDownloads,
         onFocused = onFocused,
         open = open,
     )

@@ -49,6 +49,11 @@ data class GameBoxSettings(
     val platformEmulatorDefaults: Map<String, String> = emptyMap(),
     val recentShortcutLaunches: List<ShortcutLaunchRecord> = emptyList(),
     val hiddenShortcutPackages: Set<String> = emptySet(),
+    val tvFavoritePackages: List<String> = DEFAULT_TV_FAVORITE_PACKAGES,
+    val tvPlaylistUri: String? = null,
+    val tvFavoriteChannels: List<String> = emptyList(),
+    val tvLastChannel: String? = null,
+    val tvHomeSections: List<String> = DEFAULT_TV_HOME_SECTIONS,
 )
 
 class SettingsRepository(private val context: Context) {
@@ -80,6 +85,12 @@ class SettingsRepository(private val context: Context) {
     suspend fun rotateCompanionPairingSecret(): String = credentialStore.rotateCompanionPairingSecret()
 
     suspend fun clearCompanionPairingSecret() = credentialStore.clearCompanionPairingSecret()
+
+    suspend fun remoteControlToken(): String? = credentialStore.remoteControlToken()
+
+    suspend fun createRemoteControlToken(): String = credentialStore.createRemoteControlToken()
+
+    suspend fun revokeRemoteControlToken() = credentialStore.revokeRemoteControlToken()
 
     suspend fun setCompanionConfiguration(enabled: Boolean, port: Int = 49_500) {
         require(port in 10_240..65_535) { "Companion port must be between 10240 and 65535" }
@@ -134,6 +145,38 @@ class SettingsRepository(private val context: Context) {
 
     suspend fun showAllShortcuts() {
         context.gameBoxDataStore.edit { it.remove(HIDDEN_SHORTCUT_PACKAGES) }
+    }
+
+    suspend fun setTvFavoritePackages(packages: List<String>) {
+        val cleaned = packages.map(String::trim).filter { it.matches(Regex("[A-Za-z0-9_]+(\\.[A-Za-z0-9_]+)+")) }.distinct().take(100)
+        context.gameBoxDataStore.edit { preferences ->
+            preferences[TV_FAVORITE_PACKAGES] = cleaned.joinToString("\n")
+        }
+    }
+
+    suspend fun setTvPlaylistUri(uri: String?) {
+        context.gameBoxDataStore.edit { preferences ->
+            if (uri.isNullOrBlank()) preferences.remove(TV_PLAYLIST_URI)
+            else preferences[TV_PLAYLIST_URI] = uri
+        }
+    }
+
+    suspend fun setTvFavoriteChannels(keys: List<String>) {
+        val cleaned = keys.map(String::trim).filter { it.length in 1..160 && it.none(Char::isISOControl) }.distinct().take(500)
+        context.gameBoxDataStore.edit { it[TV_FAVORITE_CHANNELS] = cleaned.joinToString("\n") }
+    }
+
+    suspend fun setTvLastChannel(key: String?) {
+        context.gameBoxDataStore.edit { preferences ->
+            if (key.isNullOrBlank() || key.length > 160 || key.any(Char::isISOControl)) preferences.remove(TV_LAST_CHANNEL)
+            else preferences[TV_LAST_CHANNEL] = key
+        }
+    }
+
+    suspend fun setTvHomeSections(sections: List<String>) {
+        val allowed = DEFAULT_TV_HOME_SECTIONS.toSet()
+        val cleaned = sections.filter { it in allowed }.distinct()
+        context.gameBoxDataStore.edit { it[TV_HOME_SECTIONS] = cleaned.joinToString("\n") }
     }
 
     suspend fun recordShortcutLaunch(packageName: String, launchedAtEpochMs: Long = System.currentTimeMillis()) {

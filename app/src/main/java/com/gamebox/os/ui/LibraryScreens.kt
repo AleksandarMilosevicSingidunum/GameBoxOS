@@ -104,7 +104,8 @@ internal fun CollectionScreen(
         )
         Spacer(Modifier.height(14.dp))
         if (filtered.isEmpty()) {
-            Text("No games match these filters")
+            Text(if (games.isEmpty()) "Your library is empty" else "No games match these filters")
+            if (games.isNotEmpty()) BlueprintButton(onClick = filters::clear) { Text("Clear filters") }
         } else if (compact) {
             HomeGameSection("All games", filtered, focusTarget, onFocused, compact, open)
         } else {
@@ -205,14 +206,7 @@ internal fun BlueprintLibraryScreen(
                 language = filters.language,
                 onLanguage = { filters.language = it },
             )
-            BlueprintTextButton(onClick = {
-                filters.query = ""
-                filters.platform = null
-                filters.favoritesOnly = false
-                filters.genre = null
-                filters.region = null
-                filters.language = null
-            }) { Text("Clear filters", fontSize = 12.sp) }
+            BlueprintTextButton(onClick = filters::clear) { Text("Clear filters", fontSize = 12.sp) }
             Spacer(Modifier.weight(1f))
             Text("Sort by", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
             BlueprintTextButton(onClick = { alphabetical = !alphabetical }, modifier = Modifier.fillMaxWidth()) {
@@ -274,6 +268,8 @@ internal fun BlueprintLibraryScreen(
                                     }
                                 },
                         ) { Text("Browse Store") }
+                    } else {
+                        BlueprintButton(onClick = filters::clear) { Text("Clear filters") }
                     }
                 }
             } else {

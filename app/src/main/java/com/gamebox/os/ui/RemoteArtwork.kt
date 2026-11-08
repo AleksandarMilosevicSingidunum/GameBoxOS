@@ -17,6 +17,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
@@ -27,6 +28,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.unit.dp
 import com.gamebox.os.R
 import com.gamebox.os.domain.Game
 import kotlinx.coroutines.CancellationException
@@ -70,6 +72,7 @@ internal fun RemoteArtwork(
     fallbackKey: String? = null,
     contentScale: ContentScale = ContentScale.Crop,
     showFallbackMonogram: Boolean = true,
+    artworkBackdrop: Boolean = false,
 ) {
     val cacheDir = LocalContext.current.cacheDir
     val safeUrl = normalizeArtworkUrl(url)
@@ -98,6 +101,17 @@ internal fun RemoteArtwork(
         }
     }
     Box(modifier) {
+        if (artworkBackdrop && (bitmap != null || bundledArtwork != null)) {
+            val backdrop = Modifier.fillMaxSize().blur(18.dp)
+            if (bitmap != null) {
+                Image(requireNotNull(bitmap).asImageBitmap(), contentDescription = null,
+                    contentScale = ContentScale.Crop, modifier = backdrop)
+            } else if (bundledArtwork != null) {
+                Image(painterResource(bundledArtwork), contentDescription = null,
+                    contentScale = ContentScale.Crop, modifier = backdrop)
+            }
+            Box(Modifier.fillMaxSize().background(Color(0xB509101C)))
+        }
         if (bundledArtwork != null) {
             Image(
                 painterResource(bundledArtwork),
@@ -105,7 +119,7 @@ internal fun RemoteArtwork(
                 contentScale = contentScale,
                 modifier = Modifier.fillMaxSize(),
             )
-        } else {
+        } else if (!artworkBackdrop || bitmap == null) {
             ArtworkPlaceholder(
                 fallbackKey ?: url.orEmpty(),
                 Modifier.fillMaxSize(),

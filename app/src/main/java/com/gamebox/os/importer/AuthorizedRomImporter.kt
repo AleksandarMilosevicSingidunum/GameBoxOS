@@ -156,6 +156,7 @@ class AuthorizedRomImporter(
             val sourceStager = RomImportSourceStager(
                 maxBytes = maxBytes,
                 progress = progressReporter,
+                ensureActive = { importCoroutineContext.ensureActive() },
             )
             var totalBytes = 0L
             val stagedFiles = mutableListOf<ImportedRomFile>()

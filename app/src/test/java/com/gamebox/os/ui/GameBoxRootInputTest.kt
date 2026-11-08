@@ -4,9 +4,24 @@ import android.view.KeyEvent
 import android.view.SoundEffectConstants
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class GameBoxRootInputTest {
+    @Test
+    fun tvModeBackDismissesActiveTextEntryBeforeExitingMode() {
+        var textEntryActive = true
+        var exits = 0
+
+        assertTrue(dispatchTvModeBack(true, { textEntryActive = false }, { exits++ }))
+        assertFalse(textEntryActive)
+        assertEquals(0, exits)
+
+        assertTrue(dispatchTvModeBack(textEntryActive, { textEntryActive = false }, { exits++ }))
+        assertEquals(1, exits)
+    }
+
     @Test
     fun backDismissalUsesOneStablePriorityAcrossOverlaysAndDetails() {
         assertEquals(
@@ -43,6 +58,14 @@ class GameBoxRootInputTest {
         assertEquals(GameBoxRootInput.Back, gameBoxRootInputForKey(KeyEvent.KEYCODE_BACK))
         assertEquals(GameBoxRootInput.Back, gameBoxRootInputForKey(KeyEvent.KEYCODE_BUTTON_B))
         assertNull(gameBoxRootInputForKey(KeyEvent.KEYCODE_DPAD_CENTER))
+    }
+
+    @Test
+    fun shellCommandsIgnoreHeldKeyRepeatsButLeaveDpadRepeatsToFocusedControls() {
+        assertTrue(shouldHandleGameBoxRootKey(KeyEvent.KEYCODE_BUTTON_L1, 0))
+        assertFalse(shouldHandleGameBoxRootKey(KeyEvent.KEYCODE_BUTTON_L1, 1))
+        assertFalse(shouldHandleGameBoxRootKey(KeyEvent.KEYCODE_MENU, 2))
+        assertTrue(shouldHandleGameBoxRootKey(KeyEvent.KEYCODE_DPAD_RIGHT, 1))
     }
 
     @Test

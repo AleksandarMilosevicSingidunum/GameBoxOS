@@ -16,12 +16,13 @@ import com.gamebox.os.data.DiscoveryGame
 import com.gamebox.os.source.DiscoverySourceGame
 import com.gamebox.os.source.GameSourceConfig
 import com.gamebox.os.source.GameSourceProviderType
+import com.gamebox.os.source.vimmLairSearchPlatforms
 
 @Composable
 internal fun ConfiguredDiscoverySourcesSection(
     configuredSources: List<GameSourceConfig>,
     query: String,
-    onUseSearchSuggestion: (String) -> Unit = {},
+    onUseSearchSuggestion: (String, String) -> Unit = { _, _ -> },
     consoleLabel: String?,
     syncing: Boolean,
     sourceMessage: String? = null,
@@ -63,7 +64,8 @@ internal fun ConfiguredDiscoverySourcesSection(
             configuredSources.forEach { source ->
                 ConfiguredDiscoverySourceButton(
                     source = source,
-                    enabled = !syncing,
+                    enabled = !syncing && (source.type != GameSourceProviderType.VIMM_LAIR ||
+                        vimmLairSearchPlatforms(source, consoleLabel).isNotEmpty()),
                     onClick = { onOpenSource(source) },
                     downFocusRequester = firstResultFocusRequester.takeIf { results.isNotEmpty() },
                 )

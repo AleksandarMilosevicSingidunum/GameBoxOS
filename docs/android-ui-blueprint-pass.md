@@ -35,6 +35,26 @@ aspect ratios necessarily change the rendered result.
 
 ## Verification
 
+### HONOR wired projection
+
+Use `scripts/install-honor-projection.ps1 -Serial <adb-serial> -DisplayId <HDMI-id>`
+with the current physical external display ID from `adb shell dumpsys display`.
+The script reads the application ID and launcher Activity from the APK, installs
+that artifact, and verifies that its package is resumed on the specified TV
+display. It rejects the phone's display 0 and disconnected/virtual displays.
+Use `-ApkPath` to select a different built APK.
+
+Debug builds install as `com.gamebox.os.debug`; production uses `com.gamebox.os`.
+Installing `app-debug.apk` and then starting `com.gamebox.os/.MainActivity` tests
+the older production app, not the new debug build. Their application data is
+separate. Record the script's package, display ID, and APK SHA-256 with hardware
+acceptance evidence.
+
+On the tested HONOR Desktop Mode firmware, choose **Open in full screen mode**
+from GameBox's Dock menu to hide the Dock. This worked for the current TV
+session, but a cold ADB relaunch restored the Dock; the install script's
+fullscreen window request does not prove persistent Dock suppression.
+
 The Android workflow builds the APK and runs unit/instrumentation tests.
 Its separate phone, DeX and enlarged-text visual jobs install the production APK
 on API 35 emulators and capture the real MainActivity, game details and all seven

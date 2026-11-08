@@ -172,9 +172,9 @@ internal fun SettingsScreen(
         )
         Spacer(Modifier.height(12.dp))
         Surface(
-            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.82f),
-            shape = RoundedCornerShape(8.dp),
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.72f)),
+            color = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.94f),
+            shape = RoundedCornerShape(12.dp),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.8f)),
             modifier = Modifier.fillMaxWidth(),
         ) {
             Row(

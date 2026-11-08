@@ -46,10 +46,11 @@ internal data class BlueprintCatalogScreenState(
 )
 
 internal data class BlueprintCatalogScreenActions(
+    val onQuery: (String) -> Unit,
     val onClearPlatform: () -> Unit,
     val onSelectConsole: (StoreConsole?) -> Unit,
     val onOpenConfiguredSource: (GameSourceConfig) -> Unit,
-    val onUseSearchSuggestion: (String) -> Unit,
+    val onUseSearchSuggestion: (String, String) -> Unit,
     val onOpenConfiguredResult: (DiscoverySourceGame) -> Unit,
     val onRefresh: () -> Unit,
     val openAuthorized: (Game) -> Unit,
@@ -90,7 +91,7 @@ internal fun BlueprintCatalogScreen(
     val favoritesOnly = filters.favoritesOnly
     val onFavoritesOnly: (Boolean) -> Unit = { filters.favoritesOnly = it }
     val query = filters.query
-    val onQuery: (String) -> Unit = { filters.query = it }
+    val onQuery = actions.onQuery
     val uiState = state.uiState
     val selectedConsole = state.selectedConsole
     val refreshState = state.refreshState
@@ -323,13 +324,13 @@ internal fun BlueprintCatalogScreen(
                     }
                 }
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text(if (installedOnly) "Installed Games" else "Your Game Sources", Modifier.semantics { heading() }, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                    Text(if (installedOnly) "Installed Games" else "Available Games", Modifier.semantics { heading() }, fontSize = 13.sp, fontWeight = FontWeight.Bold)
                     Text("${visibleAuthorized.size} titles", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 10.sp)
                 }
                 if (visibleAuthorized.isEmpty()) {
                     Text(
                         if (installedOnly) "No installed games match this console. Open a discovered title to import your game."
-                        else "No connected game sources match these filters.",
+                        else "No available games match these filters.",
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontSize = 11.sp,
                     )

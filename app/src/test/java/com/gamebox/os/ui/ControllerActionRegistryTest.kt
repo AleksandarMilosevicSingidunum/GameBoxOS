@@ -78,4 +78,5 @@ class ControllerActionRegistryTest {
         assertTrue(registry.dispatchBack { globalBackCalls++; true })
         assertEquals(1, globalBackCalls)
     }
+
 }

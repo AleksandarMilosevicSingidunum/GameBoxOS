@@ -22,6 +22,7 @@ internal data class GameBoxRouteState(
     val hostDisplayId: Int?,
     val externalDisplay: Boolean,
     val hostWindowHasFocus: Boolean,
+    val homeDownloadActivity: HomeDownloadActivity? = null,
 )
 
 internal data class GameBoxRouteActions(
@@ -96,6 +97,8 @@ internal fun GameBoxDestinationContent(
                     open = actions.openGame,
                     openStorageSettings = { animatedState.uiState.openSettings(SettingsSection.STORAGE) },
                     openControllerSettings = { animatedState.uiState.openSettings(SettingsSection.CONTROLLERS) },
+                    downloadActivity = animatedState.homeDownloadActivity,
+                    openDownloads = actions.openDownloads,
                 )
 
                 Destination.LIBRARY -> CollectionScreen(

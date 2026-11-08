@@ -38,9 +38,20 @@ class CompanionEndpointServiceLifecycleTest {
         try {
             CompanionEndpointService.start(context)
             assertPlainHttpRejected(port)
-            val response = awaitStatus(port, secret, fingerprint)
-            assertTrue(response.startsWith("HTTP/1.1 200"))
-            assertTrue(response.contains("\"status\":\"ready\""))
+            openStalledConnection(port, fingerprint).use { stalled ->
+                val startedAt = System.currentTimeMillis()
+                val response = awaitStatus(port, secret, fingerprint)
+                assertTrue("Status waited behind the stalled connection", System.currentTimeMillis() - startedAt < 1_500L)
+                assertTrue(response.startsWith("HTTP/1.1 200"))
+                assertTrue(response.contains("\"status\":\"ready\""))
+            }
+            val pendingPairingCode = ActiveCompanionRemotePairing.open()
+            CompanionEndpointService.stop(context)
+            awaitUnavailable(port)
+            assertFalse(
+                "Stopping the companion must invalidate an open remote pairing code",
+                ActiveCompanionRemotePairing.consume(pendingPairingCode),
+            )
         } finally {
             CompanionEndpointService.stop(context)
             awaitUnavailable(port)
@@ -80,6 +91,23 @@ class CompanionEndpointServiceLifecycleTest {
             Thread.sleep(100)
         }
         throw AssertionError("Companion service did not answer on port $port")
+    }
+
+    private fun openStalledConnection(port: Int, fingerprint: String): SSLSocket {
+        val deadline = System.currentTimeMillis() + 5_000L
+        while (System.currentTimeMillis() < deadline) {
+            val socket = pinnedSocketFactory(fingerprint).createSocket() as SSLSocket
+            runCatching {
+                socket.connect(InetSocketAddress("127.0.0.1", port), 250)
+                socket.soTimeout = 2_000
+                socket.startHandshake()
+                socket.getOutputStream().write("GET /v1/status HTTP/1.1\r\nHost:".toByteArray())
+                socket.getOutputStream().flush()
+            }.onSuccess { return socket }
+            runCatching { socket.close() }
+            Thread.sleep(100)
+        }
+        throw AssertionError("Companion service did not accept the stalled request on port $port")
     }
 
     private fun pinnedSocketFactory(fingerprint: String) =

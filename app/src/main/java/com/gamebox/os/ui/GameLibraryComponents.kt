@@ -2,6 +2,12 @@ package com.gamebox.os.ui
 
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.StartOffset
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
@@ -68,6 +74,7 @@ internal fun GameRow(
     onFocused: (GameId) -> Unit,
     compact: Boolean,
     open: (Game) -> Unit,
+    firstFocusRequester: FocusRequester? = null,
 ) {
     val listState = rememberLazyListState()
     val restoreIndex = games.indexOfFirst { it.id == restoreGameId }
@@ -84,6 +91,7 @@ internal fun GameRow(
                 modifier = Modifier.width(if (compact) 184.dp else 198.dp)
                     .height(if (compact) 126.dp else 105.dp),
                 restoreFocus = restoreGameId == game.id,
+                focusRequesterOverride = firstFocusRequester.takeIf { game.id == games.firstOrNull()?.id },
                 onFocused = onFocused,
                 onClick = { open(game) },
             )
@@ -113,6 +121,28 @@ internal fun GameCard(
     val pressed by source.collectIsPressedAsState()
     val emphasized = focused || hovered
     val reducedMotion = LocalReducedMotion.current
+    val idleTransition = if (reducedMotion) null else rememberInfiniteTransition(label = "game-card-idle")
+    val idleDelay = (game.id.value.hashCode().ushr(1) % 1_800)
+    val idleOffset = idleTransition?.animateFloat(
+        initialValue = 0f,
+        targetValue = -1.5f,
+        animationSpec = infiniteRepeatable(
+            tween(4_800, easing = FastOutSlowInEasing),
+            RepeatMode.Reverse,
+            initialStartOffset = StartOffset(idleDelay),
+        ),
+        label = "game-card-float",
+    )?.value ?: 0f
+    val artworkDrift = idleTransition?.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            tween(22_000, easing = FastOutSlowInEasing),
+            RepeatMode.Reverse,
+            initialStartOffset = StartOffset(idleDelay),
+        ),
+        label = "game-artwork-drift",
+    )?.value ?: 0.5f
     val focusBloom by animateFloatAsState(
         targetValue = if (hero && emphasized && !reducedMotion) 1f else 0f,
         animationSpec = if (reducedMotion) snap() else tween(420),
@@ -150,11 +180,15 @@ internal fun GameCard(
                 focused = it.isFocused
                 if (it.isFocused) onFocused(game.id)
             }
-            .graphicsLayer { scaleX = scale; scaleY = scale }
+            .graphicsLayer {
+                scaleX = scale
+                scaleY = scale
+                translationY = if (emphasized || pressed) 0f else idleOffset.dp.toPx()
+            }
             .hoverable(source)
             .focusable()
             .blueprintActivation(source, performClick, showIndication = false),
-        shape = RoundedCornerShape(8.dp),
+        shape = RoundedCornerShape(if (hero) 14.dp else 10.dp),
         color = MaterialTheme.colorScheme.surface,
         border = BorderStroke(
             borderWidth,
@@ -165,12 +199,13 @@ internal fun GameCard(
     ) {
         BoxWithConstraints(Modifier.fillMaxSize()) {
             if (poster && !hero) {
-                PosterGameCardContent(game, maxWidth)
+                PosterGameCardContent(game, maxWidth, artworkDrift)
             } else {
                 StandardGameCardContent(
                     game = game,
                     hero = hero,
                     focusBloom = focusBloom,
+                    artworkDrift = artworkDrift,
                     cardWidth = maxWidth,
                     cardHeight = maxHeight,
                 )
@@ -180,14 +215,22 @@ internal fun GameCard(
 }
 
 @Composable
-private fun PosterGameCardContent(game: Game, cardWidth: Dp) {
+private fun PosterGameCardContent(game: Game, cardWidth: Dp, artworkDrift: Float) {
     Column(Modifier.fillMaxSize()) {
         Box(Modifier.weight(1f).fillMaxWidth().testTag("game-card-poster-artwork")) {
             RemoteArtwork(
                 game.artworkUrl,
-                Modifier.fillMaxSize(),
+                Modifier.fillMaxSize().then(
+                    if (LocalReducedMotion.current) Modifier else Modifier.graphicsLayer {
+                        scaleX = 1.035f
+                        scaleY = 1.035f
+                        translationX = (artworkDrift - .5f) * size.width * .018f
+                        translationY = (.5f - artworkDrift) * size.height * .012f
+                    },
+                ),
                 fallbackKey = gameArtworkFallbackTitle(game),
                 contentScale = gameCardArtworkScale(hero = false, poster = true),
+                artworkBackdrop = true,
             )
             if (game.favorite) {
                 Icon(
@@ -228,13 +271,22 @@ private fun StandardGameCardContent(
     game: Game,
     hero: Boolean,
     focusBloom: Float,
+    artworkDrift: Float,
     cardWidth: Dp,
     cardHeight: Dp,
 ) {
     Box(Modifier.fillMaxSize()) {
         RemoteArtwork(
             game.artworkUrl,
-            Modifier.fillMaxSize(),
+            Modifier.fillMaxSize().then(
+                if (LocalReducedMotion.current) Modifier else Modifier.graphicsLayer {
+                    val zoom = if (hero) 1.045f else 1.03f
+                    scaleX = zoom
+                    scaleY = zoom
+                    translationX = (artworkDrift - .5f) * size.width * (if (hero) .024f else .016f)
+                    translationY = (.5f - artworkDrift) * size.height * .012f
+                },
+            ),
             fallbackKey = gameArtworkFallbackTitle(game),
             contentScale = gameCardArtworkScale(hero, poster = false),
             showFallbackMonogram = false,
@@ -243,7 +295,10 @@ private fun StandardGameCardContent(
             Modifier.fillMaxSize().background(
                 if (hero) {
                     Brush.horizontalGradient(
-                        listOf(Color(0xF0060B12), Color(0xB0060B12), Color.Transparent),
+                        0f to Color(0xFA07101F),
+                        .40f to Color(0xD907101F),
+                        .72f to Color(0x6507101F),
+                        1f to Color(0x2207101F),
                     )
                 } else {
                     Brush.verticalGradient(
@@ -303,18 +358,26 @@ private fun HeroGameCardContent(game: Game, cardWidth: Dp) {
         Modifier.fillMaxSize().padding(horizontal = 22.dp, vertical = 18.dp),
         verticalArrangement = Arrangement.Bottom,
     ) {
-        Text(
-            game.platform.uppercase(),
-            color = MaterialTheme.colorScheme.primary,
-            fontSize = 10.sp,
-            fontWeight = FontWeight.Bold,
-        )
-        Spacer(Modifier.height(8.dp))
+        Surface(
+            color = Color(0xCC19376D),
+            shape = RoundedCornerShape(6.dp),
+            border = BorderStroke(1.dp, Color(0x665B9BFF)),
+        ) {
+            Text(
+                game.platform.uppercase(),
+                Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                color = Color(0xFFD8E7FF),
+                fontSize = 9.sp,
+                fontWeight = FontWeight.Bold,
+                letterSpacing = 1.sp,
+            )
+        }
+        Spacer(Modifier.height(6.dp))
         Text(
             game.title,
             fontSize = if (cardWidth < 450.dp) 28.sp else 38.sp,
             lineHeight = if (cardWidth < 450.dp) 32.sp else 44.sp,
-            fontWeight = FontWeight.Bold,
+            fontWeight = FontWeight.Black,
             maxLines = if (cardWidth < 450.dp) 2 else 1,
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.fillMaxWidth(.84f),

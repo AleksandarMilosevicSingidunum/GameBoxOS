@@ -385,6 +385,32 @@ class VimmLairDiscoverySourceTest {
     }
 
     @Test
+    fun typoSuggestionPrefersTheMostCommonResultWordAndSkipsTies() {
+        fun result(id: String, title: String) = DiscoverySourceGame(
+            sourceId = "vimm",
+            externalId = id,
+            title = title,
+            platform = "GBA",
+        )
+        val results = listOf(
+            result("1", "Mario & Luigi: Superstar Saga"),
+            result("2", "Mario Golf"),
+            result("3", "Mario Kart"),
+            result("4", "Mais"),
+        )
+
+        assertEquals("Mario", vimmLairCorrectedQuery("MAIO", results))
+        assertEquals(
+            null,
+            vimmLairCorrectedQuery("MAIO", listOf(result("1", "Mario"), result("2", "Mais"))),
+        )
+        assertEquals(
+            null,
+            vimmLairCorrectedQuery("MAIO", listOf(result("1", "Mario"), result("2", "Mais Mais"))),
+        )
+    }
+
+    @Test
     fun exactGodOfWarChainsVaultLinkHydratesMetadataWithoutCreatingMediaFields() = runBlocking {
         var requested: URI? = null
         val source = VimmLairDiscoverySource(

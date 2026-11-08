@@ -65,6 +65,21 @@ internal class SettingsCredentialStore(context: Context) {
         secrets.put(COMPANION_PAIRING_SECRET, null)
     }
 
+    suspend fun remoteControlToken(): String? = withContext(Dispatchers.IO) {
+        secrets.get(REMOTE_CONTROL_TOKEN)
+    }
+
+    suspend fun createRemoteControlToken(): String = withContext(Dispatchers.IO) {
+        val token = ByteArray(32).also { SecureRandom().nextBytes(it) }
+            .joinToString("") { "%02x".format(it.toInt() and 0xff) }
+        secrets.put(REMOTE_CONTROL_TOKEN, token)
+        token
+    }
+
+    suspend fun revokeRemoteControlToken() = withContext(Dispatchers.IO) {
+        secrets.put(REMOTE_CONTROL_TOKEN, null)
+    }
+
     fun catalogCredentials(key: String): CatalogCredentials? = when (key) {
         CATALOG_WEBDAV_CREDENTIALS, CATALOG_HTTPS_CREDENTIALS -> CatalogCredentials(
             username = secrets.get(CATALOG_USERNAME),
@@ -126,5 +141,6 @@ internal class SettingsCredentialStore(context: Context) {
         const val CLOUD_SAVE_ACCESS_KEY = "cloud_save_access_key"
         const val CLOUD_SAVE_SECRET_KEY = "cloud_save_secret_key"
         const val COMPANION_PAIRING_SECRET = "companion_pairing_secret"
+        const val REMOTE_CONTROL_TOKEN = "gamebox_remote_control_token"
     }
 }

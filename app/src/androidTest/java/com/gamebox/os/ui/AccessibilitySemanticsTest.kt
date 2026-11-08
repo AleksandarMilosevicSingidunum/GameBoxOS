@@ -34,7 +34,7 @@ class AccessibilitySemanticsTest {
     @Test
     fun gameCardExposesUsefulSpokenDescriptionAndClickAction() {
         val game = Game(GameId("galaxy-patrol"), "Galaxy Patrol", "Retro", 2018, "Arcade", 1,
-            InstallState.INSTALLED, favorite = true)
+            InstallState.INSTALLED, favorite = true, lastPlayed = "2026-10-01T10:00:00Z")
         composeRule.setContent {
             GameCard(game, Modifier.size(320.dp, 180.dp), hero = true, onClick = {})
         }

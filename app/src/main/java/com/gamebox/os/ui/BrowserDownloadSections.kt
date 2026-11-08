@@ -8,11 +8,11 @@ internal data class BrowserDownloadSections(
     val completed: List<BrowserDownloadRecord>,
 )
 
-/** Keeps fast background imports visible in Download Manager's completed list. */
+/** Keeps fast imports and cancelled jobs visible in Download Manager history. */
 internal fun browserDownloadSections(records: List<BrowserDownloadRecord>) =
     BrowserDownloadSections(
-        active = records.filter { it.status != BrowserDownloadStatus.IMPORTED },
-        completed = records.filter { it.status == BrowserDownloadStatus.IMPORTED },
+        active = records.filter { it.status !in setOf(BrowserDownloadStatus.IMPORTED, BrowserDownloadStatus.CANCELLED) },
+        completed = records.filter { it.status in setOf(BrowserDownloadStatus.IMPORTED, BrowserDownloadStatus.CANCELLED) },
     )
 
 internal fun shouldShowCompletedDownloadsByDefault(sections: BrowserDownloadSections): Boolean =

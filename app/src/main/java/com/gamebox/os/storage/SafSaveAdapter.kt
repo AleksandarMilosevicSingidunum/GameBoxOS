@@ -61,6 +61,17 @@ class SafSaveAdapter(
         }
     }
 
+    override fun deleteArtifact(artifact: SaveArtifact) {
+        val segments = safSaveSegments(artifact.gameId, artifact.relativePath)
+        require(segments.size > 1) { "SAF save artifact must name a file" }
+        val parent = resolveDirectory(segments.dropLast(1))
+            ?: throw IllegalStateException("SAF save destination is unavailable")
+        val destination = parent.findFile(segments.last())
+        check(destination == null || destination.delete()) {
+            "SAF save artifact could not be removed during rollback"
+        }
+    }
+
     override fun restoreArtifact(artifact: SaveArtifact, source: InputStream) {
         val segments = safSaveSegments(artifact.gameId, artifact.relativePath)
         require(segments.size > 1) { "SAF save artifact must name a file" }

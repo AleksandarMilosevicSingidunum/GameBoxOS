@@ -119,9 +119,18 @@ public partial class MainWindow : Window
             var existing = _allGames.ToList();
             var shortcutResult = await Task.Run(() => ShortcutDiscovery.Discover(roots, existing));
             var withShortcuts = existing.Concat(shortcutResult.Entries).ToList();
-            var steamRoot = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86),
-                "Steam");
+            string? registeredSteamRoot = null;
+            try
+            {
+                registeredSteamRoot = Registry.CurrentUser
+                    .OpenSubKey(@"Software\Valve\Steam")?
+                    .GetValue("SteamPath") as string;
+            }
+            catch (System.Security.SecurityException) { }
+            var steamRoot = SteamDiscovery.ResolveInstallRoot(new[] {
+                registeredSteamRoot,
+                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86), "Steam")
+            });
             var generatedRoot = Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
                 "GameBoxOS",
@@ -639,9 +648,16 @@ public partial class MainWindow : Window
         if (plan.RemovedCount == 0) return;
         var message = "Remove " + plan.RemovedCount + " missing entr" + (plan.RemovedCount == 1 ? "y" : "ies") + " from the companion library? This removes their metadata, favorites, and play history, but never deletes game or save files.";
         if (MessageBox.Show(message, "Remove missing entries", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes) return;
+        var previous = _allGames.ToList();
         _allGames.Clear();
         foreach (var game in plan.RetainedEntries) _allGames.Add(game);
-        await SaveLibraryAsync();
+        try { await SaveLibraryAsync(); }
+        catch (Exception ex)
+        {
+            RestoreLibrary(previous);
+            MessageBox.Show(ex.Message, "Unable to save library", MessageBoxButton.OK, MessageBoxImage.Error);
+            return;
+        }
         RefreshPlatformOptions();
         RefreshVisibleGames();
         StatusText.Text = plan.RemovedCount + " missing entr" + (plan.RemovedCount == 1 ? "y" : "ies") + " removed";
@@ -800,8 +816,14 @@ public partial class MainWindow : Window
     {
         var game = Selected;
         if (game is null) return;
+        var previous = _allGames.ToList();
         Replace(game, game with { Favorite = !game.Favorite });
-        await SaveLibraryAsync();
+        try { await SaveLibraryAsync(); }
+        catch (Exception ex)
+        {
+            RestoreLibrary(previous);
+            MessageBox.Show(ex.Message, "Unable to save favorite", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
     }
 
     private async void ClearHistory_Click(object sender, RoutedEventArgs e)
@@ -809,8 +831,15 @@ public partial class MainWindow : Window
         var game = Selected;
         if (game?.LastPlayedUtc is null) return;
         if (MessageBox.Show("Clear the last-played history for " + game.Title + "? Favorites, launch settings, and game files will remain unchanged.", "Clear play history", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
+        var previous = _allGames.ToList();
         Replace(game, GameLibrary.ClearPlayHistory(game));
-        await SaveLibraryAsync();
+        try { await SaveLibraryAsync(); }
+        catch (Exception ex)
+        {
+            RestoreLibrary(previous);
+            MessageBox.Show(ex.Message, "Unable to save play history", MessageBoxButton.OK, MessageBoxImage.Error);
+            return;
+        }
         StatusText.Text = "Play history cleared for " + game.Title;
     }
 
@@ -819,8 +848,23 @@ public partial class MainWindow : Window
         var game = Selected;
         if (game is null) return;
         if (MessageBox.Show("Remove " + game.Title + " from the companion library? No game files will be deleted.", "Remove library entry", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
+        var previous = _allGames.ToList();
         _allGames.Remove(game);
-        await SaveLibraryAsync();
+        try { await SaveLibraryAsync(); }
+        catch (Exception ex)
+        {
+            RestoreLibrary(previous);
+            MessageBox.Show(ex.Message, "Unable to remove game", MessageBoxButton.OK, MessageBoxImage.Error);
+            return;
+        }
+        RefreshVisibleGames();
+    }
+
+    private void RestoreLibrary(IEnumerable<GameEntry> entries)
+    {
+        _allGames.Clear();
+        foreach (var game in entries) _allGames.Add(game);
+        RefreshPlatformOptions();
         RefreshVisibleGames();
     }
 

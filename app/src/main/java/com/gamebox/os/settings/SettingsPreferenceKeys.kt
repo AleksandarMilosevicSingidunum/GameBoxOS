@@ -36,3 +36,17 @@ internal val MOONLIGHT_PORT = intPreferencesKey("moonlight_port")
 internal val PLATFORM_EMULATOR_DEFAULTS = stringPreferencesKey("platform_emulator_defaults")
 internal val RECENT_SHORTCUT_LAUNCHES = stringPreferencesKey("recent_shortcut_launches")
 internal val HIDDEN_SHORTCUT_PACKAGES = stringPreferencesKey("hidden_shortcut_packages")
+internal val TV_FAVORITE_PACKAGES = stringPreferencesKey("tv_favorite_packages")
+internal val DEFAULT_TV_FAVORITE_PACKAGES = listOf(
+    "org.videolan.vlc",
+    "com.amazon.avod.thirdpartyclient",
+    "com.netflix.mediaclient",
+    "com.morescreens.rts",
+    "com.google.android.youtube",
+    "com.ug.eon.android",
+)
+internal val TV_PLAYLIST_URI = stringPreferencesKey("tv_playlist_uri")
+internal val TV_FAVORITE_CHANNELS = stringPreferencesKey("tv_favorite_channels")
+internal val TV_LAST_CHANNEL = stringPreferencesKey("tv_last_channel")
+internal val TV_HOME_SECTIONS = stringPreferencesKey("tv_home_sections")
+internal val DEFAULT_TV_HOME_SECTIONS = listOf("LIVE_TV", "QUICK_LAUNCH", "GUIDE")

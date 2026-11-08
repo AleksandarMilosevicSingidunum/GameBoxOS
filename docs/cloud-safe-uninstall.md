@@ -1,6 +1,6 @@
 # Cloud-safe uninstall
 
-When a game has a managed save copy, the uninstall dialog now preflights cloud-save readiness before enabling content removal. A configured path is not treated as proof: the controller creates a fresh verified local backup and performs the real encrypted cloud upload during uninstall.
+When a game has a managed save copy, the uninstall dialog preflights cloud-save readiness before enabling content removal. The controller creates a fresh verified local backup. If cloud storage is configured, it also uploads and verifies a cloud copy; the save payload is not encrypted at rest by GameBox.
 
 If cloud configuration, connectivity, credentials, or upload verification fails, removal stops before any content file is deleted. The dialog then presents the sanitized failure and requires the user to explicitly acknowledge continuing with only the verified local backup. This acknowledgement is scoped to the open confirmation and is not persisted.
 

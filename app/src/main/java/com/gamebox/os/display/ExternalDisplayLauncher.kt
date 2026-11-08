@@ -28,7 +28,8 @@ private const val fullscreenWindowingMode = 1
 private const val launchWindowingModeKey = "android.activity.windowingMode"
 
 internal fun ActivityOptions.toGameBoxFullscreenLaunchBundle(): Bundle =
-    toBundle().apply {
+    // Android documents null launch bounds as an explicit fullscreen request.
+    setLaunchBounds(null).toBundle().apply {
         // This is a best-effort hint for OEM desktop shells. Android's public
         // fullscreen request is also made by the destination Activity where supported.
         putInt(launchWindowingModeKey, fullscreenWindowingMode)
@@ -108,23 +109,13 @@ internal fun launchGameBoxOnExternalDisplay(activity: Activity): String {
     return runCatching {
         val options = ActivityOptions.makeBasic().apply {
             launchDisplayId = target.displayId
-            // Do not provide launchBounds here. On Android desktop shells,
-            // even bounds equal to the physical display can force a freeform
-            // task with a caption. The host activities request MATCH_PARENT;
-            // the display-targeted fullscreen windowing hint should decide
-            // the final surface size.
+            // Keep launch bounds null: a display-sized rectangle can make
+            // desktop shells create a captioned freeform task.
         }
         val launchOptions = options.toGameBoxFullscreenLaunchBundle()
-        // Always target the dedicated external-display host. OEM desktop shells can resolve
-        // an ACTION_MAIN/CATEGORY_HOME launch back to MainActivity even when
-        // the user explicitly requested an external display, which creates a
-        // phone/freeform surface instead of the borderless external-display host.
+        // Reuse the dedicated external-display task without touching the phone's Home task.
         val launchIntent = Intent(activity, externalDisplayActivityClass)
-            .addFlags(
-                Intent.FLAG_ACTIVITY_NEW_TASK or
-                    Intent.FLAG_ACTIVITY_MULTIPLE_TASK or
-                    Intent.FLAG_ACTIVITY_NEW_DOCUMENT,
-            )
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         activity.startActivity(launchIntent, launchOptions)
         externalDisplayLaunchRequestedMessage(target)
     }.getOrElse { error ->

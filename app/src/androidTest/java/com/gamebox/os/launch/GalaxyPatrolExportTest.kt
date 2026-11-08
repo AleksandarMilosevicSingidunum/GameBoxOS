@@ -14,6 +14,21 @@ import org.junit.runner.RunWith
 /** Tests real MediaStore duplicate-name handling, not RetroArch execution. */
 @RunWith(AndroidJUnit4::class)
 class GalaxyPatrolExportTest {
+    @Test fun cleanupRetainsFailedDeletionForRetry() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val preferencesName = "retroarch-cleanup-retry-test-" + UUID.randomUUID()
+        val uri = android.net.Uri.parse("content://media/external/downloads/42424242")
+        val preferences = context.getSharedPreferences(preferencesName, Context.MODE_PRIVATE)
+        preferences.edit().putStringSet("uris", setOf(uri.toString())).commit()
+        val publisher = RetroArchContentPublisher(context, preferencesName)
+
+        publisher.cleanup { throw java.io.IOException("temporary MediaStore failure") }
+        assertEquals(setOf(uri.toString()), preferences.getStringSet("uris", emptySet()))
+
+        publisher.cleanup { 1 }
+        assertTrue(preferences.getStringSet("uris", emptySet()).isNullOrEmpty())
+    }
+
     @Test fun descriptorExportPublishesEveryVerifiedDiscTrackBesideTheCue() {
         val context = ApplicationProvider.getApplicationContext<Context>()
         val directory = "Download/GameBox/retroarch-disc-test-" + UUID.randomUUID()

@@ -177,4 +177,30 @@ class BrowserDownloadRetryTest {
         compose.onNodeWithText(".bin is not supported for Nintendo Entertainment System").assertIsDisplayed()
         assertTrue(compose.onAllNodesWithText("Retry download or import").fetchSemanticsNodes().isEmpty())
     }
+
+    @Test
+    fun failedTrackedTransferCanBeDismissed() {
+        var dismissed = false
+        compose.setContent {
+            MaterialTheme {
+                BrowserDownloadQueueItem(
+                    record = BrowserDownloadRecord(
+                        downloadId = 47L,
+                        stagedName = "rejected.png",
+                        displayName = "rejected.png",
+                        gameId = "rejected-game",
+                        title = "Rejected Game",
+                        platformName = "Nintendo DS",
+                        platformId = "nds",
+                        status = BrowserDownloadStatus.FAILED,
+                        error = ".png is not supported",
+                    ),
+                    onDismiss = { dismissed = true },
+                )
+            }
+        }
+
+        compose.onNodeWithText("Dismiss").performClick()
+        compose.runOnIdle { assertTrue(dismissed) }
+    }
 }

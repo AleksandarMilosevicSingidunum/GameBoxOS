@@ -79,7 +79,7 @@ internal fun PerGameSaveCard(game: Game, controller: SaveSafetyController, compa
                 Text("Manage a single-file copy in GameBox. These actions do not change your emulator's live saves. Export the copy and use the emulator's import process when supported.")
                 localSaveContent()
                 HorizontalDivider(Modifier.padding(vertical = 4.dp))
-                Text("Encrypted cloud copy", style = MaterialTheme.typography.titleSmall)
+                Text("Cloud copy", style = MaterialTheme.typography.titleSmall)
                 Text("Uses the WebDAV or S3-compatible provider configured in Settings. A different local copy is preserved before cloud restore.")
                 cloudSaveContent()
                 state.operationMessage?.let { Text(it,
@@ -104,7 +104,7 @@ internal fun PerGameSaveCard(game: Game, controller: SaveSafetyController, compa
                     localSaveContent()
                 }
                 BlueprintPanel(Modifier.weight(1f)) {
-                    Text("Encrypted cloud copy", style = MaterialTheme.typography.titleMedium)
+                    Text("Cloud copy", style = MaterialTheme.typography.titleMedium)
                     Text(
                         "Uses the WebDAV or S3-compatible provider configured in Settings. A different local copy is preserved before cloud restore.",
                         style = MaterialTheme.typography.bodySmall,

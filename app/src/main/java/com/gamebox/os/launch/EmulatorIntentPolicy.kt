@@ -10,6 +10,7 @@ data class EmulatorIntentPlan(
     val stringArrayExtras: Map<String, List<String>> = emptyMap(),
     val graphicsProfileApplied: Boolean = false,
     val activityClassName: String? = null,
+    val action: String? = null,
 )
 
 object EmulatorIntentPolicy {
@@ -27,6 +28,11 @@ object EmulatorIntentPolicy {
     const val RETROARCH_EXTERNAL = "EXTERNAL"
     const val RETROARCH_ACTIVITY = "com.retroarch.browser.retroactivity.RetroActivityFuture"
     private const val RETROARCH_PACKAGE = "com.retroarch"
+
+    fun contentMimeType(packageName: String, requestedMimeType: String): String =
+        if (packageName == "org.azahar_emu.azahar" || packageName == "io.recompiled.redream") {
+            "application/octet-stream"
+        } else requestedMimeType
 
     fun plan(
         packageName: String,
@@ -68,6 +74,23 @@ object EmulatorIntentPolicy {
             packageName == "me.magnum.melonds" -> EmulatorIntentPlan(
                 style = EmulatorIntentStyle.ACTION_VIEW,
                 activityClassName = "me.magnum.melonds.ui.emulator.EmulatorActivity",
+            )
+            packageName == "me.magnum.melondualds" -> EmulatorIntentPlan(
+                style = EmulatorIntentStyle.ACTION_VIEW,
+                activityClassName = "me.magnum.melonds.ui.emulator.EmulatorActivity",
+                action = "me.magnum.melondualds.LAUNCH_ROM",
+            )
+            packageName == "com.flycast.emulator" -> EmulatorIntentPlan(
+                style = EmulatorIntentStyle.ACTION_VIEW,
+                activityClassName = "com.flycast.emulator.MainActivity",
+            )
+            packageName == "com.armsx2" -> EmulatorIntentPlan(
+                style = EmulatorIntentStyle.ACTION_VIEW,
+                activityClassName = "com.armsx2.MainActivity",
+            )
+            packageName == "io.recompiled.redream" -> EmulatorIntentPlan(
+                style = EmulatorIntentStyle.ACTION_VIEW,
+                activityClassName = "io.recompiled.redream.MainActivity",
             )
             else -> EmulatorIntentPlan(EmulatorIntentStyle.ACTION_VIEW)
         }

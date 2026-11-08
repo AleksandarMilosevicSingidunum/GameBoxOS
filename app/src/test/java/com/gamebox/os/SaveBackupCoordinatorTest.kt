@@ -49,7 +49,7 @@ class SaveBackupCoordinatorTest {
         val manifests = File(root, "manifests")
         try {
             val source = File(saves, "game-a/slot1.sav").apply {
-                parentFile.mkdirs()
+                requireNotNull(parentFile).mkdirs()
                 writeText("before")
             }
             val coordinator = SaveBackupCoordinator(
@@ -59,7 +59,7 @@ class SaveBackupCoordinatorTest {
             )
 
             assertEquals(1, coordinator.backup("ppsspp", "game-a").successfulCount)
-            source.writeText("changed")
+            source.delete()
 
             val restored = SaveRestoreCoordinator(
                 SaveBackupService(saves, backups),

@@ -119,6 +119,7 @@ class DefaultSaveSafetyController(
         savesRoot = savesRoot,
         backupService = backupService,
         externalContent = externalContent,
+        cloudConfigured = cloudSaveOperations::isConfigured,
         uploadCloudSave = cloudSaveOperations::upload,
         safeCloudError = cloudSaveOperations::safeError,
     )

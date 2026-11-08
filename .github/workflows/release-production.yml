@@ -79,7 +79,7 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v6
         with:
-          gradle-version: "9.5.0"
+          gradle-version: "wrapper"
           cache-provider: basic
 
       - name: Decode protected keystore
@@ -92,7 +92,7 @@ jobs:
           echo "GAMEBOX_KEYSTORE_PATH=$RUNNER_TEMP/gamebox-release.keystore" >> "$GITHUB_ENV"
 
       - name: Test and build signed release
-        run: gradle --no-daemon testDebugUnitTest assembleRelease
+        run: bash ./gradlew --no-daemon testDebugUnitTest assembleRelease
 
       - name: Verify signed APK and checksum
         shell: bash

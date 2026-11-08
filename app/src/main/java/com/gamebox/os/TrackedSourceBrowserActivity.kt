@@ -3,6 +3,7 @@ package com.gamebox.os
 import android.app.DownloadManager
 import android.annotation.SuppressLint
 import android.content.Intent
+import android.os.Build
 import android.content.pm.ActivityInfo
 import android.content.res.Configuration
 import android.net.Uri
@@ -12,6 +13,7 @@ import android.view.KeyEvent
 import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
+import android.os.SystemClock
 import android.webkit.CookieManager
 import android.webkit.WebChromeClient
 import android.webkit.URLUtil
@@ -21,6 +23,7 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.compose.setContent
+import androidx.lifecycle.lifecycleScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -30,9 +33,14 @@ import androidx.compose.ui.viewinterop.AndroidView
 import android.widget.FrameLayout
 import com.gamebox.os.display.applyBorderlessFullscreenWindow
 import com.gamebox.os.display.hideSystemBars
+import com.gamebox.os.display.currentDisplayId
+import com.gamebox.os.display.isExternalDisplayId
+import com.gamebox.os.companion.CompanionRemoteCommand
+import com.gamebox.os.companion.CompanionRemoteCommandBus
 import com.gamebox.os.display.requestExternalFullscreenAfterFocus
 import com.gamebox.os.importer.RomImportPolicy
 import com.gamebox.os.importer.BrowserDownloadRecord
+import com.gamebox.os.importer.newBrowserTransferJobId
 import com.gamebox.os.input.gamepadBrowserNavigationKeyCode
 import com.gamebox.os.input.gamepadBrowserActivationKeyCode
 import com.gamebox.os.input.gamepadBrowserKeyEvent
@@ -40,6 +48,8 @@ import com.gamebox.os.ui.TrackedSourceBrowserToolbar
 import com.gamebox.os.ui.TrackedSourcePageProgress
 import com.gamebox.os.ui.theme.GameBoxTheme
 import java.util.UUID
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.launch
 
 internal const val VIMM_DOWNLOAD_FOCUS_SCRIPT = """
     (() => {
@@ -112,6 +122,7 @@ internal fun focusBrowserView(view: View) {
 
 /** Keeps the source page and its user-initiated download on GameBox's TV display. */
 class TrackedSourceBrowserActivity : ComponentActivity() {
+    private val remoteCommands = MutableSharedFlow<CompanionRemoteCommand>(extraBufferCapacity = 32)
     private lateinit var webView: WebView
     private lateinit var browserContainer: FrameLayout
     private var popupWebView: WebView? = null
@@ -132,6 +143,13 @@ class TrackedSourceBrowserActivity : ComponentActivity() {
             finish()
             return
         }
+        CompanionRemoteCommandBus.register(
+            this,
+            externalDisplay = isExternalDisplayId(currentDisplayId()),
+            commands = remoteCommands,
+            priority = 1,
+        )
+        lifecycleScope.launch { remoteCommands.collect(::dispatchRemoteCommand) }
         val platform = intent.getStringExtra(EXTRA_PLATFORM)
         val label = intent.getStringExtra(EXTRA_SOURCE_LABEL).orEmpty()
         browserContainer = FrameLayout(this).apply {
@@ -204,6 +222,31 @@ class TrackedSourceBrowserActivity : ComponentActivity() {
                     )
                 }
             }
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        CompanionRemoteCommandBus.setHostState(this, resumed = true, textEntryAvailable = false)
+        hideSystemBars(window)
+        requestExternalFullscreenAfterFocus()
+    }
+
+    override fun onPause() {
+        CompanionRemoteCommandBus.setHostState(this, resumed = false, textEntryAvailable = false)
+        super.onPause()
+    }
+
+    private fun dispatchRemoteCommand(command: CompanionRemoteCommand) {
+        when (command) {
+            is CompanionRemoteCommand.Key -> {
+                val now = SystemClock.uptimeMillis()
+                dispatchKeyEvent(KeyEvent(now, now, KeyEvent.ACTION_DOWN, command.keyCode, 0))
+                dispatchKeyEvent(KeyEvent(now, SystemClock.uptimeMillis(), KeyEvent.ACTION_UP, command.keyCode, 0))
+            }
+            CompanionRemoteCommand.Back -> onBackPressedDispatcher.onBackPressed()
+            CompanionRemoteCommand.Home, CompanionRemoteCommand.GameBox -> finish()
+            is CompanionRemoteCommand.Text, CompanionRemoteCommand.Backspace -> Unit
         }
     }
 
@@ -327,61 +370,62 @@ class TrackedSourceBrowserActivity : ComponentActivity() {
         }
         runCatching {
             val stagedName = "${UUID.randomUUID()}.${displayName.substringAfterLast('.').lowercase()}"
-            val request = DownloadManager.Request(downloadUrl)
-                .setTitle(displayName)
-                .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE)
-                .setAllowedOverMetered(true)
-                .setAllowedOverRoaming(true)
-                .setDestinationInExternalFilesDir(this, Environment.DIRECTORY_DOWNLOADS, stagedName)
-            if (!mimeType.isNullOrBlank()) request.setMimeType(mimeType)
-            if (!userAgent.isNullOrBlank()) request.addRequestHeader("User-Agent", userAgent)
-            (popupWebView?.url ?: webView.url)?.takeIf { it.startsWith("https://") }?.let {
-                request.addRequestHeader("Referer", it)
-            }
-            CookieManager.getInstance().getCookie(url)?.takeIf(String::isNotBlank)?.let {
-                request.addRequestHeader("Cookie", it)
-            }
-            val downloadManager = getSystemService(DownloadManager::class.java)
-            val id = downloadManager.enqueue(request)
+            val referer = (popupWebView?.url ?: webView.url)?.takeIf { it.startsWith("https://") }
+            val cookie = CookieManager.getInstance().getCookie(url)
             val app = application as GameBoxApplication
-            try {
-                app.browserDownloadStore.add(
-                    BrowserDownloadRecord(
-                        downloadId = id,
-                        stagedName = stagedName,
-                        displayName = displayName,
-                        gameId = gameId,
-                        title = gameTitle,
-                        platformName = platform,
-                        platformId = platformId,
-                        region = intent.getStringExtra(EXTRA_GAME_REGION),
-                        releaseDate = intent.getStringExtra(EXTRA_GAME_RELEASE_DATE),
-                        description = intent.getStringExtra(EXTRA_GAME_DESCRIPTION),
-                        players = intent.getStringExtra(EXTRA_GAME_PLAYERS),
-                        rating = intent.getDoubleExtra(EXTRA_GAME_RATING, Double.NaN)
-                            .takeUnless(Double::isNaN),
-                        coverUrl = intent.getStringExtra(EXTRA_GAME_COVER),
-                        backgroundUrl = intent.getStringExtra(EXTRA_GAME_BACKGROUND),
-                        logoUrl = intent.getStringExtra(EXTRA_GAME_LOGO),
-                        downloadUrl = url,
-                        userAgent = userAgent,
-                        mimeType = mimeType,
-                        referer = (popupWebView?.url ?: webView.url)?.takeIf { it.startsWith("https://") },
-                    ),
-                )
-            } catch (error: Exception) {
-                // The accepted request cannot be safely tracked without its durable
-                // game metadata, so remove it only when that metadata could not be saved.
-                downloadManager.remove(id)
-                throw error
+            val transferJobId = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                newBrowserTransferJobId()
+            } else null
+            val id = if (transferJobId != null) System.currentTimeMillis() else {
+                val request = DownloadManager.Request(downloadUrl)
+                    .setTitle(displayName)
+                    .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE)
+                    .setAllowedOverMetered(true)
+                    .setAllowedOverRoaming(true)
+                    .setDestinationInExternalFilesDir(this, Environment.DIRECTORY_DOWNLOADS, stagedName)
+                if (!mimeType.isNullOrBlank()) request.setMimeType(mimeType)
+                if (!userAgent.isNullOrBlank()) request.addRequestHeader("User-Agent", userAgent)
+                referer?.let { request.addRequestHeader("Referer", it) }
+                cookie?.takeIf(String::isNotBlank)?.let { request.addRequestHeader("Cookie", it) }
+                getSystemService(DownloadManager::class.java).enqueue(request)
             }
-            // Android owns the transfer now. Retry credentials and GameBox's
-            // background monitor are optional follow-up work; failures here must
-            // never cancel a download that the user explicitly started.
-            runCatching {
-                app.browserDownloadStore.setRetryCookie(id, CookieManager.getInstance().getCookie(url))
+            val record = BrowserDownloadRecord(
+                downloadId = id,
+                stagedName = stagedName,
+                displayName = displayName,
+                gameId = gameId,
+                title = gameTitle,
+                platformName = platform,
+                platformId = platformId,
+                region = intent.getStringExtra(EXTRA_GAME_REGION),
+                releaseDate = intent.getStringExtra(EXTRA_GAME_RELEASE_DATE),
+                description = intent.getStringExtra(EXTRA_GAME_DESCRIPTION),
+                players = intent.getStringExtra(EXTRA_GAME_PLAYERS),
+                rating = intent.getDoubleExtra(EXTRA_GAME_RATING, Double.NaN).takeUnless(Double::isNaN),
+                coverUrl = intent.getStringExtra(EXTRA_GAME_COVER),
+                backgroundUrl = intent.getStringExtra(EXTRA_GAME_BACKGROUND),
+                logoUrl = intent.getStringExtra(EXTRA_GAME_LOGO),
+                downloadUrl = url,
+                transferJobId = transferJobId,
+                userAgent = userAgent,
+                mimeType = mimeType,
+                referer = referer,
+            )
+            if (transferJobId != null) {
+                if (!app.browserDownloadCoordinator.startUserInitiatedTransfer(record, cookie)) {
+                    Toast.makeText(this, R.string.tracked_source_transfer_schedule_failed, Toast.LENGTH_LONG).show()
+                }
+            } else {
+                val downloadManager = getSystemService(DownloadManager::class.java)
+                try {
+                    app.browserDownloadStore.add(record)
+                } catch (error: Exception) {
+                    downloadManager.remove(id)
+                    throw error
+                }
+                runCatching { app.browserDownloadStore.setRetryCookie(id, cookie) }
+                runCatching { app.browserDownloadCoordinator.trackImmediately(id) }
             }
-            runCatching { app.browserDownloadCoordinator.trackImmediately(id) }
             setResult(RESULT_OK, Intent().apply {
                 putExtra(EXTRA_DOWNLOAD_ID, id)
                 putExtra(EXTRA_STAGED_NAME, stagedName)
@@ -475,12 +519,6 @@ class TrackedSourceBrowserActivity : ComponentActivity() {
         }
     }
 
-    override fun onResume() {
-        super.onResume()
-        hideSystemBars(window)
-        requestExternalFullscreenAfterFocus()
-    }
-
     override fun onMultiWindowModeChanged(isInMultiWindowMode: Boolean, newConfig: Configuration) {
         super.onMultiWindowModeChanged(isInMultiWindowMode, newConfig)
         hideSystemBars(window)
@@ -493,6 +531,7 @@ class TrackedSourceBrowserActivity : ComponentActivity() {
     }
 
     override fun onDestroy() {
+        CompanionRemoteCommandBus.unregister(this)
         popupWebView?.let(::closePopup)
         if (::webView.isInitialized) webView.destroy()
         super.onDestroy()

@@ -59,6 +59,35 @@ class DetailControllerActionPlanTest {
     }
 
     @Test
+    fun installedFixtureOffersPlay() {
+        val result = detailControllerActionPlan(
+            state = InstallState.INSTALLED,
+            favorite = false,
+            authorizedFixture = true,
+            workerActive = false,
+            hasRemoteSource = false,
+        )
+        assertEquals("Play", result.xLabel)
+        assertEquals(DetailControllerPrimaryAction.PRIMARY, result.xAction)
+        assertEquals(FixtureAction.PLAY, fixtureAction(InstallState.INSTALLED))
+        assertEquals(FixtureAction.INSTALL, fixtureAction(InstallState.NOT_INSTALLED))
+        assertEquals(FixtureAction.INSTALL, fixtureAction(InstallState.FAILED))
+        assertEquals(FixtureAction.DOWNLOADS, fixtureAction(InstallState.DOWNLOADING))
+    }
+
+    @Test
+    fun fixtureWorkerDoesNotOverrideAnotherGamesAction() {
+        val result = detailControllerActionPlan(
+            state = InstallState.INSTALLED,
+            favorite = false,
+            authorizedFixture = false,
+            workerActive = true,
+            hasRemoteSource = false,
+        )
+        assertEquals("Play", result.xLabel)
+    }
+
+    @Test
     fun missingSourceOpensGameSettingsInsteadOfPretendingToInstall() {
         val result = plan(
             state = InstallState.MISSING_FILES,

@@ -31,43 +31,51 @@ class WikidataMetadataClient(
         it.openConnection() as HttpsURLConnection
     },
 ) : GameMetadataCandidateProvider {
-    private val cache = LinkedHashMap<String, WikidataMetadata?>(128, 0.75f, true)
+    private val cache = LinkedHashMap<String, List<WikidataMetadata>>(CACHE_CAPACITY, 0.75f, true)
 
     suspend fun enrich(game: Game): Game = withContext(Dispatchers.IO) {
         if (game.title.isBlank()) return@withContext game
         val key = normalizeCatalogTitle(game.title)
-        val metadata = cachedLookup(key) { lookup(game.title) }
-        metadata?.mergeInto(game) ?: game
+        val matches = cachedLookup(key) { lookup(game.title) }.orEmpty()
+        val hasPlatformEvidence = matches.any { it.hasPlatformClaims }
+        val platformMatches = if (hasPlatformEvidence) {
+            matches.filter { metadata -> metadata.platforms.any { sameGamePlatform(game.platform, it) } }
+        } else matches
+        val selected = platformMatches.singleOrNull() ?: platformMatches
+            .filter { it.year == game.year && game.year != 0 }
+            .singleOrNull()
+        selected?.mergeInto(game) ?: game
     }
 
     override suspend fun findCandidates(game: Game): List<MetadataMatchCandidate> = withContext(Dispatchers.IO) {
         if (game.title.isBlank()) return@withContext emptyList()
         val key = normalizeCatalogTitle(game.title)
-        val metadata = cachedLookup(key) { lookup(game.title) } ?: return@withContext emptyList()
-        listOf(
+        cachedLookup(key) { lookup(game.title) }.orEmpty().map { metadata ->
             MetadataMatchCandidate(
                 externalId = metadata.externalId,
                 title = metadata.title,
+                platform = metadata.platforms.takeIf { it.isNotEmpty() }?.joinToString(", "),
                 year = metadata.year,
                 description = metadata.description,
                 artworkUrl = metadata.artworkUrl,
                 provider = "WIKIDATA",
-            ),
-        )
+            )
+        }
     }
 
-    private suspend fun cachedLookup(key: String, load: suspend () -> WikidataMetadata?): WikidataMetadata? {
-        synchronized(cache) {
-            if (cache.containsKey(key)) return cache[key]
-        }
+    private suspend fun cachedLookup(key: String, load: suspend () -> List<WikidataMetadata>): List<WikidataMetadata>? {
+        synchronized(cache) { cache[key] }?.let { return it }
         val metadata = runCatching { load() }
             .onFailure { if (it is CancellationException) throw it }
             .getOrNull()
-        synchronized(cache) { if (!cache.containsKey(key)) cache[key] = metadata }
+        if (!metadata.isNullOrEmpty()) synchronized(cache) {
+            cache[key] = metadata
+            while (cache.size > CACHE_CAPACITY) cache.remove(cache.keys.first())
+        }
         return metadata
     }
 
-    private suspend fun lookup(title: String): WikidataMetadata? {
+    private suspend fun lookup(title: String): List<WikidataMetadata> {
         val search = request(
             "https://www.wikidata.org/w/api.php?action=wbsearchentities" +
                 "&search=" + encode(title) +
@@ -78,7 +86,7 @@ class WikidataMetadataClient(
             .filter { normalizeCatalogTitle(it["label"]?.jsonPrimitive?.contentOrNull.orEmpty()) ==
                 normalizeCatalogTitle(title) }
             .take(4)
-        if (candidates.isEmpty()) return null
+        if (candidates.isEmpty()) return emptyList()
 
         val ids = candidates.mapNotNull { it["id"]?.jsonPrimitive?.contentOrNull }
         val entities = request(
@@ -86,11 +94,26 @@ class WikidataMetadataClient(
                 "&ids=" + encode(ids.joinToString("|")) +
                 "&props=" + encode("claims|descriptions") + "&languages=en&format=json",
         ).jsonObject["entities"]?.jsonObject.orEmpty()
-        val selected = candidates.firstNotNullOfOrNull { candidate ->
-            val id = candidate["id"]?.jsonPrimitive?.contentOrNull ?: return@firstNotNullOfOrNull null
+        val metadata = candidates.mapNotNull { candidate ->
+            val id = candidate["id"]?.jsonPrimitive?.contentOrNull ?: return@mapNotNull null
             parseEntity(id, entities[id]?.jsonObject, title)
-        } ?: return null
-        return selected
+        }.distinctBy { it.externalId }
+        val platformIds = metadata.flatMap { it.platformIds }.distinct().take(MAX_PLATFORM_IDS)
+        val platformLabels = if (platformIds.isEmpty()) emptyMap() else runCatching {
+            val platformEntities = request(
+                "https://www.wikidata.org/w/api.php?action=wbgetentities" +
+                    "&ids=" + encode(platformIds.joinToString("|")) +
+                    "&props=labels&languages=en&format=json",
+            ).jsonObject["entities"]?.jsonObject.orEmpty()
+            platformEntities.mapNotNull { (id, value) ->
+                value.jsonObject["labels"]?.jsonObject?.get("en")?.jsonObject
+                    ?.get("value")?.jsonPrimitive?.contentOrNull?.trim()
+                    ?.takeIf { it.isNotEmpty() && it.length <= 120 }?.let { id to it }
+            }.toMap()
+        }.onFailure { if (it is CancellationException) throw it }.getOrDefault(emptyMap())
+        return metadata.map { item ->
+            item.copy(platforms = item.platformIds.mapNotNull(platformLabels::get))
+        }
     }
 
     private fun parseEntity(id: String, entity: JsonObject?, requestedTitle: String): WikidataMetadata? {
@@ -99,6 +122,11 @@ class WikidataMetadataClient(
             ?.get("en")?.jsonObject?.get("value")?.jsonPrimitive?.contentOrNull
             ?.trim()?.takeIf { it.isNotEmpty() }?.take(4_000)
         val claims = entity["claims"]?.jsonObject ?: return null
+        val isVideoGame = claims["P31"]?.jsonArray.orEmpty().any { claim ->
+            claim.jsonObject["mainsnak"]?.jsonObject?.get("datavalue")?.jsonObject
+                ?.get("value")?.jsonObject?.get("id")?.jsonPrimitive?.contentOrNull == VIDEO_GAME_QID
+        }
+        if (!isVideoGame) return null
         val year = claims["P577"]?.jsonArray.orEmpty()
             .firstNotNullOfOrNull { claim ->
                 val value = claim.jsonObject["mainsnak"]?.jsonObject
@@ -121,6 +149,10 @@ class WikidataMetadataClient(
             year = year,
             description = description,
             artworkUrl = image,
+            platformIds = claims[PLATFORM_PROPERTY]?.jsonArray.orEmpty().mapNotNull { claim ->
+                claim.jsonObject["mainsnak"]?.jsonObject?.get("datavalue")?.jsonObject
+                    ?.get("value")?.jsonObject?.get("id")?.jsonPrimitive?.contentOrNull
+            }.distinct().take(MAX_PLATFORM_IDS),
         )
     }
 
@@ -148,7 +180,42 @@ class WikidataMetadataClient(
         require(file.isNotEmpty() && file.length <= 240)
         "https://commons.wikimedia.org/wiki/Special:FilePath/" + encode(file)
     }.getOrNull()
+
+    private companion object {
+        const val CACHE_CAPACITY = 128
+        const val VIDEO_GAME_QID = "Q7889"
+        const val PLATFORM_PROPERTY = "P400"
+        const val MAX_PLATFORM_IDS = 32
+    }
 }
+
+private fun sameGamePlatform(gamePlatform: String, metadataPlatform: String): Boolean {
+    fun identity(value: String): String {
+        val normalized = normalizeCatalogTitle(value)
+        return PLATFORM_ALIASES.firstOrNull { normalized in it }?.first() ?: normalized
+    }
+    return identity(gamePlatform) == identity(metadataPlatform)
+}
+
+private val PLATFORM_ALIASES = listOf(
+    setOf("nes", "nintendoentertainmentsystem"),
+    setOf("snes", "supernintendo", "supernintendoentertainmentsystem"),
+    setOf("gb", "gameboy"),
+    setOf("gbc", "gameboycolor"),
+    setOf("gba", "gameboyadvance"),
+    setOf("n64", "nintendo64"),
+    setOf("ds", "nds", "nintendods"),
+    setOf("3ds", "nintendo3ds"),
+    setOf("gamecube", "nintendogamecube"),
+    setOf("wii", "wiiware", "nintendowii"),
+    setOf("ps1", "psx", "playstation", "sonyplaystation"),
+    setOf("ps2", "playstation2", "sonyplaystation2"),
+    setOf("ps3", "playstation3", "sonyplaystation3"),
+    setOf("psp", "playstationportable", "sonyplaystationportable"),
+    setOf("dreamcast", "segadreamcast"),
+    setOf("xbox", "microsoftxbox"),
+    setOf("xbox360", "microsoftxbox360"),
+)
 
 private data class WikidataMetadata(
     val externalId: String,
@@ -156,7 +223,11 @@ private data class WikidataMetadata(
     val year: Int?,
     val description: String?,
     val artworkUrl: String?,
+    val platformIds: List<String> = emptyList(),
+    val platforms: List<String> = emptyList(),
 ) {
+    val hasPlatformClaims: Boolean get() = platformIds.isNotEmpty()
+
     fun mergeInto(game: Game): Game = game.copy(
         year = if (game.year == 0) year ?: game.year else game.year,
         artworkUrl = game.artworkUrl ?: artworkUrl,

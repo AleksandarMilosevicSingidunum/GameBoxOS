@@ -1,9 +1,16 @@
 package com.gamebox.os.ui
 
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.StartOffset
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.*
 import androidx.compose.foundation.interaction.*
 import androidx.compose.foundation.layout.*
@@ -34,14 +41,24 @@ internal fun ConfiguredSourceResultCard(
     modifier: Modifier = Modifier,
     presentation: DiscoveryGame = configuredSourceResultToDiscoveryGame(game),
     thumbnailClient: LibretroThumbnailClient? = null,
-    onClick: () -> Unit,
+    onClick: (DiscoverySourceGame) -> Unit,
 ) {
     var focused by remember { mutableStateOf(false) }
     val source = remember { MutableInteractionSource() }
-    val performClick = rememberUiClickAction(onClick)
     val hovered by source.collectIsHoveredAsState()
     val reducedMotion = LocalReducedMotion.current
     val emphasized = focused || hovered
+    val idleTranslation = if (reducedMotion) 0f else rememberInfiniteTransition(label = "source-card-idle")
+        .animateFloat(
+            initialValue = 0f,
+            targetValue = -1.5f,
+            animationSpec = infiniteRepeatable(
+                tween(4_800, easing = FastOutSlowInEasing),
+                RepeatMode.Reverse,
+                initialStartOffset = StartOffset((game.externalId.hashCode().ushr(1) % 1_800)),
+            ),
+            label = "source-card-float",
+        ).value
     val scale by animateFloatAsState(
         targetValue = when {
             reducedMotion -> 1f
@@ -63,6 +80,9 @@ internal fun ConfiguredSourceResultCard(
     var artworkLookupFinished by remember(game.sourceId, game.externalId) {
         mutableStateOf(discoveredCover != null || thumbnailClient == null)
     }
+    val performClick = rememberUiClickAction {
+        onClick(game.copy(coverUrl = discoveredCover ?: game.coverUrl))
+    }
     LaunchedEffect(game.sourceId, game.externalId, discoveredCover, thumbnailClient) {
         if (discoveredCover == null && thumbnailClient != null) {
             discoveredCover = runCatching {
@@ -75,7 +95,11 @@ internal fun ConfiguredSourceResultCard(
     val editionLabel = configuredSourceResultEditionLabel(game)
     val platformLabel = configuredSourceResultPlatformLabel(game.platform)
     Surface(
-        modifier = modifier.graphicsLayer { scaleX = scale; scaleY = scale }
+        modifier = modifier.graphicsLayer {
+            scaleX = scale
+            scaleY = scale
+            translationY = if (emphasized) 0f else idleTranslation.dp.toPx()
+        }
             .hoverable(source)
             .focusDebugTarget()
             .onFocusChanged { focused = it.isFocused }
@@ -185,6 +209,17 @@ internal fun DiscoveryGameCard(game: DiscoveryGame, modifier: Modifier, onClick:
     val pressed by source.collectIsPressedAsState()
     val reducedMotion = LocalReducedMotion.current
     val emphasized = focused || hovered
+    val idleTranslation = if (reducedMotion) 0f else rememberInfiniteTransition(label = "discovery-card-idle")
+        .animateFloat(
+            initialValue = 0f,
+            targetValue = -1.5f,
+            animationSpec = infiniteRepeatable(
+                tween(4_800, easing = FastOutSlowInEasing),
+                RepeatMode.Reverse,
+                initialStartOffset = StartOffset(game.id.value.hashCode().ushr(1) % 1_800),
+            ),
+            label = "discovery-card-float",
+        ).value
     val scale by animateFloatAsState(
         targetValue = if (reducedMotion) 1f else if (pressed) .97f else if (emphasized) 1.018f else 1f,
         animationSpec = if (reducedMotion) snap() else spring(),
@@ -196,7 +231,11 @@ internal fun DiscoveryGameCard(game: DiscoveryGame, modifier: Modifier, onClick:
         label = "discovery-focus-border",
     )
     Surface(
-        modifier.graphicsLayer { scaleX = scale; scaleY = scale }
+        modifier.graphicsLayer {
+            scaleX = scale
+            scaleY = scale
+            translationY = if (emphasized || pressed) 0f else idleTranslation.dp.toPx()
+        }
             .focusDebugTarget()
             .onFocusChanged { focused = it.isFocused }
             .hoverable(source)

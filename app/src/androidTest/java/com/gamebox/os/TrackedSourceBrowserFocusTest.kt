@@ -7,6 +7,8 @@ import android.view.KeyEvent
 import android.view.View
 import android.view.ViewGroup
 import android.webkit.WebView
+import com.gamebox.os.companion.CompanionRemoteCommand
+import com.gamebox.os.companion.CompanionRemoteCommandBus
 import androidx.test.platform.app.InstrumentationRegistry
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
@@ -156,15 +158,15 @@ class TrackedSourceBrowserFocusTest {
                 .removeSuffix("px").toFloat() >= 2f)
             assertEquals("solid", outline[1])
             assertEquals("rgb(255, 212, 0)", outline[2])
-            val confirmTime = android.os.SystemClock.uptimeMillis()
+            val remoteSelectAccepted = AtomicReference<Boolean>()
             activity.runOnUiThread {
-                listOf(KeyEvent.ACTION_DOWN, KeyEvent.ACTION_UP).forEach { action ->
-                    activity.dispatchKeyEvent(
-                        KeyEvent(confirmTime, confirmTime, action, KeyEvent.KEYCODE_BUTTON_A, 0, 0, 1, 0, 0,
-                            InputDevice.SOURCE_GAMEPAD),
-                    )
-                }
+                remoteSelectAccepted.set(
+                    CompanionRemoteCommandBus.publish(
+                        CompanionRemoteCommand.Key(KeyEvent.KEYCODE_DPAD_CENTER),
+                    ),
+                )
             }
+            assertEquals("The active tracked browser must accept Remote Select", true, remoteSelectAccepted.get())
             activity.runOnUiThread {
                 webView.evaluateJavascript(
                     "(window.clicked || 0)+':'+window.trusted+':'+window.popup",
@@ -189,18 +191,18 @@ class TrackedSourceBrowserFocusTest {
             assertTrue(popupRead.await(5, TimeUnit.SECONDS))
             assertEquals("The controller-activated new-tab action must stay inside GameBox", true, popupCreated.get())
             val popupClosed = CountDownLatch(1)
-            val backTime = android.os.SystemClock.uptimeMillis()
+            val remoteBackAccepted = AtomicReference<Boolean>()
             activity.runOnUiThread {
-                listOf(KeyEvent.ACTION_DOWN, KeyEvent.ACTION_UP).forEach { action ->
-                    activity.dispatchKeyEvent(
-                        KeyEvent(backTime, backTime, action, KeyEvent.KEYCODE_BUTTON_B, 0, 0, 1, 0, 0,
-                            InputDevice.SOURCE_GAMEPAD),
-                    )
-                }
+                remoteBackAccepted.set(
+                    CompanionRemoteCommandBus.publish(
+                        CompanionRemoteCommand.Back,
+                    ),
+                )
                 val popup = TrackedSourceBrowserActivity::class.java.getDeclaredField("popupWebView")
                     .apply { isAccessible = true }
                 if (popup.get(activity) == null) popupClosed.countDown()
             }
+            assertEquals("The active tracked browser must accept Remote Back", true, remoteBackAccepted.get())
             assertTrue("Controller B did not close the in-app popup", popupClosed.await(5, TimeUnit.SECONDS))
         } finally {
             activity.runOnUiThread { activity.finish() }

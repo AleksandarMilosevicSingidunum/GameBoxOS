@@ -62,6 +62,8 @@ internal fun HomeDashboardContent(
     open: (Game) -> Unit,
     openStorageSettings: () -> Unit = {},
     openControllerSettings: () -> Unit = {},
+    downloadActivity: HomeDownloadActivity? = null,
+    openDownloads: () -> Unit = {},
 ) {
     if (presentation == null) {
         Column(
@@ -71,6 +73,7 @@ internal fun HomeDashboardContent(
             if (showDefaultHomeSetupBanner) {
                 DefaultHomeSetupBanner(onChooseHome, emptyHomeSetupFocusRequester)
             }
+            downloadActivity?.let { HomeDownloadActivityCard(it, openDownloads) }
             BlueprintPanel(Modifier.fillMaxWidth()) {
                 Row(
                     Modifier.fillMaxWidth(),
@@ -190,6 +193,8 @@ internal fun HomeDashboardContent(
     val secondarySection = homeSecondarySection(games, history, hero)
     val collectionFocusRequester = remember { FocusRequester() }
     val desktopFocusRequester = remember { FocusRequester() }
+    val activityFocusRequester = remember { FocusRequester() }
+    val secondaryFocusRequester = remember { FocusRequester() }
 
     Column(
         Modifier.fillMaxWidth().verticalScroll(restoredScrollState("home")),
@@ -198,7 +203,7 @@ internal fun HomeDashboardContent(
     ) {
         if (showDefaultHomeSetupBanner) DefaultHomeSetupBanner(onChooseHome)
         Text(
-            if (history.isEmpty()) "Ready to play" else "Continue Playing",
+            presentation.heroHeading,
             modifier = Modifier.semantics { heading() },
             fontSize = if (compact) 22.sp else 16.sp,
             fontWeight = FontWeight.SemiBold,
@@ -206,11 +211,15 @@ internal fun HomeDashboardContent(
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
             GameCard(
                 hero,
-                Modifier.weight(1f).height(if (compact) 224.dp else 184.dp),
+                Modifier.weight(1f).height(if (compact) 224.dp else 212.dp),
                 hero = true,
                 restoreFocus = focusTarget == hero.id,
                 hostWindowHasFocus = hostWindowHasFocus,
-                focusDownRequester = if (compact) null else if (installed.isEmpty()) {
+                focusDownRequester = if (compact) null else if (downloadActivity != null) {
+                    activityFocusRequester
+                } else if (installed.isEmpty() && secondarySection != null) {
+                    secondaryFocusRequester
+                } else if (installed.isEmpty()) {
                     desktopFocusRequester
                 } else collectionFocusRequester,
                 onFocused = onFocused,
@@ -225,19 +234,18 @@ internal fun HomeDashboardContent(
                             )
             }
         }
+        downloadActivity?.let { HomeDownloadActivityCard(it, openDownloads, activityFocusRequester) }
         if (compact) {
             HomeGameSection(
                 "In your library", installed, focusTarget.takeIf { it != hero.id }, onFocused, true, open,
             )
-            HomeQuickLaunchRow(openPc)
         } else {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(18.dp)) {
-                Column(Modifier.weight(1.65f)) {
+            Column(Modifier.fillMaxWidth()) {
                     Text("Your collection", Modifier.semantics { heading() }, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
                     Spacer(Modifier.height(8.dp))
                     if (installed.isEmpty()) {
                         Text(
-                            "Install a title from Store to start your collection.",
+                            "Find a game or import your copy to start your collection.",
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             fontSize = 12.sp,
                         )
@@ -261,26 +269,42 @@ internal fun HomeDashboardContent(
                             }
                         }
                     }
-                }
-                Column(Modifier.weight(1f)) {
-                    HomeQuickLaunchRow(
-                        openPc,
-                        compact = false,
-                        desktopFocusRequester = desktopFocusRequester,
-                    )
-                }
             }
         }
         secondarySection?.let { section ->
             HomeGameSection(
                 section.title,
                 section.games,
-                focusTarget.takeIf { id -> id != hero.id && section.games.none { it.id == id } },
+                focusTarget.takeIf { id ->
+                    id != hero.id && section.games.any { it.id == id } &&
+                        (if (compact) installed else installed.take(8)).none { it.id == id }
+                },
                 onFocused,
                 compact,
                 open,
                 openStore = if (compact) null else openStore,
+                firstFocusRequester = secondaryFocusRequester.takeIf { !compact && installed.isEmpty() },
             )
+        }
+        HomeQuickLaunchRow(openPc, compact = compact, desktopFocusRequester = desktopFocusRequester.takeIf { !compact })
+    }
+}
+
+@Composable
+private fun HomeDownloadActivityCard(activity: HomeDownloadActivity, openDownloads: () -> Unit, focusRequester: FocusRequester? = null) {
+    BlueprintPanel(Modifier.fillMaxWidth()) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Icon(Icons.Rounded.Downloading, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text("Downloads and imports", fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
+                val status = activity.progress?.let { "${activity.status} · ${(it * 100).toInt()}%" } ?: activity.status
+                Text("${activity.title} · $status", maxLines = 1, overflow = TextOverflow.Ellipsis, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp)
+                activity.progress?.let { progress ->
+                    LinearProgressIndicator(progress = { progress }, modifier = Modifier.fillMaxWidth())
+                }
+                if (activity.count > 1) Text("${activity.count} items in progress or needing attention", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            BlueprintOutlinedButton(onClick = openDownloads, modifier = focusRequester?.let { Modifier.focusRequester(it) } ?: Modifier) { Text("View downloads") }
         }
     }
 }
@@ -358,6 +382,7 @@ internal fun HomeGameSection(
     compact: Boolean,
     open: (Game) -> Unit,
     openStore: (() -> Unit)? = null,
+    firstFocusRequester: FocusRequester? = null,
 ) {
     Column {
         Row(
@@ -384,7 +409,7 @@ internal fun HomeGameSection(
         if (games.isEmpty()) {
             Text("Your games will appear here.", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
         } else {
-            GameRow(games, focusTarget, onFocused, compact, open)
+            GameRow(games, focusTarget, onFocused, compact, open, firstFocusRequester)
         }
     }
 }
@@ -406,7 +431,7 @@ internal fun HomeQuickLaunchRow(
         ).forEachIndexed { index, (label, accent) ->
             Surface(
                 color = accent,
-                shape = RoundedCornerShape(7.dp),
+                shape = RoundedCornerShape(10.dp),
                 border = BorderStroke(1.dp, Color.White.copy(alpha = .12f)),
                 modifier = Modifier.weight(1f).heightIn(min = if (compact) 140.dp else 100.dp)
                     .then(
@@ -419,7 +444,7 @@ internal fun HomeQuickLaunchRow(
             ) {
                 Column(
                     Modifier.fillMaxWidth()
-                        .background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = .40f))))
+                        .background(Brush.verticalGradient(listOf(Color.White.copy(alpha = .06f), Color.Black.copy(alpha = .48f))))
                         .padding(8.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center,
@@ -505,9 +530,9 @@ internal fun HomeStatusItem(
         }
     } ?: Modifier
     Surface(
-        color = MaterialTheme.colorScheme.surface.copy(alpha = .80f),
-        shape = RoundedCornerShape(7.dp),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        color = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = .92f),
+        shape = RoundedCornerShape(10.dp),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = .7f)),
         modifier = Modifier.fillMaxWidth().then(interactionModifier).testTag("home-status-item-$label"),
     ) {
         Column(Modifier.padding(horizontal = 12.dp, vertical = 10.dp)) {

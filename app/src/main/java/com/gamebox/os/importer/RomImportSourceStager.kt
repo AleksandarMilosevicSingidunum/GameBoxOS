@@ -10,6 +10,7 @@ internal const val MAX_DISC_SET_FILES = 64
 internal class RomImportSourceStager(
     private val maxBytes: Long,
     private val progress: RomImportProgressReporter,
+    private val ensureActive: () -> Unit = {},
 ) {
     /** Returns null only when Android can no longer open the selected document. */
     fun stage(
@@ -115,6 +116,7 @@ internal class RomImportSourceStager(
                         sourceCount,
                     )
                 },
+                ensureActive = ensureActive,
             ),
         )
         var verifiedSourceBytes = 0L

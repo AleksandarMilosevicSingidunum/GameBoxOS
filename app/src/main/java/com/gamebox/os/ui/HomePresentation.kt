@@ -10,7 +10,13 @@ internal data class HomePresentationState(
     val recentlyPlayed: List<Game>,
     val hero: Game,
     val focusTarget: GameId,
-)
+) {
+    val heroHeading: String get() = when {
+        recentlyPlayed.isNotEmpty() -> "Continue playing"
+        installedGames.isNotEmpty() -> "Your games"
+        else -> "Discover games"
+    }
+}
 
 internal data class HomeSecondarySection(
     val title: String,

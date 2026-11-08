@@ -38,7 +38,7 @@ internal fun GameArtworkHeroFrame(
 ) {
     Surface(
         modifier = modifier,
-        shape = RoundedCornerShape(9.dp),
+        shape = RoundedCornerShape(14.dp),
         color = MaterialTheme.colorScheme.surface,
         border = BorderStroke(1.dp, borderColor),
         tonalElevation = tonalElevation,
@@ -53,7 +53,7 @@ internal fun GameArtworkHeroFrame(
             Box(
                 Modifier.fillMaxSize().background(
                     Brush.horizontalGradient(
-                        listOf(Color(0xF4050812), Color(0xA1050812), Color(0x22050812)),
+                        listOf(Color(0xF807101E), Color(0xC807101E), Color(0x5507101E), Color(0x1807101E)),
                     ),
                 ),
             )

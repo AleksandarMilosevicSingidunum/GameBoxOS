@@ -21,4 +21,18 @@ class DesktopHomeIntentTest {
         assertEquals(null, intent.component)
         assertEquals(null, intent.getPackage())
     }
+
+    @Test
+    fun tvDesktopEscapeTargetsTheSecondaryDisplayHome() {
+        val chooser = desktopHomeIntent(externalDisplay = true)
+        val intent = requireNotNull(chooser.getParcelableExtra(Intent.EXTRA_INTENT, Intent::class.java))
+
+        assertEquals(Intent.ACTION_CHOOSER, chooser.action)
+        assertEquals(Intent.ACTION_MAIN, intent.action)
+        assertNotNull(intent.categories)
+        assertTrue(Intent.CATEGORY_SECONDARY_HOME in intent.categories.orEmpty())
+        assertTrue(intent.flags and Intent.FLAG_ACTIVITY_NEW_TASK != 0)
+        assertEquals(null, intent.component)
+        assertEquals(null, intent.getPackage())
+    }
 }

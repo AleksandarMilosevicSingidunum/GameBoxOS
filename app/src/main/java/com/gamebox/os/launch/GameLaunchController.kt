@@ -9,6 +9,7 @@ import android.net.Uri
 import android.os.Environment
 import android.os.Handler
 import android.os.Looper
+import android.os.StrictMode
 import android.view.Display
 import com.gamebox.os.display.toGameBoxFullscreenLaunchBundle
 import androidx.core.content.FileProvider
@@ -32,6 +33,9 @@ internal fun hasRetroArchCoreContract(capability: EmulatorCapability): Boolean =
 
 internal fun externalDisplayLaunchId(displayId: Int?): Int? =
     displayId?.takeIf { it > Display.DEFAULT_DISPLAY }
+
+internal fun requiresFilesystemRomExport(packageName: String): Boolean =
+    packageName.startsWith("com.retroarch")
 
 internal fun startIntentOnDisplay(
     context: Context,
@@ -111,8 +115,22 @@ class AndroidPackageGateway(
     private val externalContent: ExternalLibraryContentStore? = null,
 ) : PackageGateway {
     private val retroArchContentPublisher = RetroArchContentPublisher(context)
+    private val contentUriGrants = context.getSharedPreferences(CONTENT_URI_GRANTS, Context.MODE_PRIVATE)
 
-    override fun cleanupLaunchedContent() = retroArchContentPublisher.cleanup()
+    override fun cleanupLaunchedContent() {
+        contentUriGrants.getStringSet(CONTENT_URI_GRANTS_KEY, emptySet()).orEmpty().forEach { grant ->
+            val separator = grant.indexOf('|')
+            if (separator > 0) {
+                val packageName = grant.substring(0, separator)
+                val uri = runCatching { Uri.parse(grant.substring(separator + 1)) }.getOrNull()
+                if (uri != null) runCatching {
+                    context.revokeUriPermission(packageName, uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                }
+            }
+        }
+        contentUriGrants.edit().remove(CONTENT_URI_GRANTS_KEY).commit()
+        retroArchContentPublisher.cleanup()
+    }
 
     override fun launch(capability: EmulatorCapability, preparation: LaunchPreparation): GatewayResult =
         launchInternal(capability, preparation, displayId = null)
@@ -215,25 +233,24 @@ class AndroidPackageGateway(
         // verified file in a descriptor-backed disc set together: CUE/GDI files
         // refer to their tracks by sibling filename, so exporting only the
         // descriptor can make RetroArch hang while resolving absent tracks.
-        val retroArchRom = if (resolvedPackage.startsWith("com.retroarch")) {
+        val exportedRomPath = if (resolvedPackage.startsWith("com.retroarch")) {
             retroArchContentPublisher.publishSet(retroArchSources, capability.contentRelativePath)
                 ?: return GatewayResult.HANDOFF_REJECTED
         } else {
-            uri.toString()
+            null
         }
+        val launchUri = exportedRomPath?.let { Uri.fromFile(File(it)) } ?: uri
         val intent = (when (plan.style) {
-            EmulatorIntentStyle.ACTION_VIEW -> Intent(Intent.ACTION_VIEW)
+            EmulatorIntentStyle.ACTION_VIEW -> Intent(plan.action ?: Intent.ACTION_VIEW)
                 // PPSSPP accepts scoped ACTION_VIEW URIs, but its Android
                 // resolver rejects a wildcard MIME for a content URI even
                 // though its manifest advertises */*. Preserve the verified
                 // game MIME so ISO/CSO/PBP paths resolve on real builds.
-                // Azahar's official vanilla APK advertises only
+                // Azahar and Redream's official Android APKs advertise only
                 // application/octet-stream for content:// ACTION_VIEW.
                 .setDataAndType(
-                    uri,
-                    if (resolvedPackage == "org.azahar_emu.azahar") {
-                        "application/octet-stream"
-                    } else capability.mimeType,
+                    launchUri,
+                    EmulatorIntentPolicy.contentMimeType(resolvedPackage, capability.mimeType),
                 )
                 .setPackage(resolvedPackage)
                 .apply {
@@ -246,7 +263,7 @@ class AndroidPackageGateway(
                 Intent(baseIntent).apply {
                     plan.stringExtras.forEach { (key, value) -> putExtra(key, value) }
                     if (resolvedPackage.startsWith("com.retroarch")) {
-                        putExtra(EmulatorIntentPolicy.RETROARCH_ROM, retroArchRom)
+                        putExtra(EmulatorIntentPolicy.RETROARCH_ROM, exportedRomPath)
                     }
                     plan.stringArrayExtras.forEach { (key, values) -> putExtra(key, values.toTypedArray()) }
                 }
@@ -271,12 +288,33 @@ class AndroidPackageGateway(
                     Intent.FLAG_ACTIVITY_CLEAR_TOP or
                     Intent.FLAG_GRANT_READ_URI_PERMISSION
             )
-        intent.clipData = contentClipData(uri, contentUris.drop(1))
+        if (launchUri.scheme == "content") {
+            intent.clipData = contentClipData(uri, contentUris.drop(1))
+        }
         if (intent.resolveActivity(context.packageManager) == null) {
             return GatewayResult.HANDOFF_REJECTED
         }
+        val gameBoxUris = contentUris.filter { it.authority == context.packageName + ".files" }
+        if (gameBoxUris.isNotEmpty()) {
+            val grants = gameBoxUris.map { "$resolvedPackage|$it" }.toSet()
+            val persisted = contentUriGrants.getStringSet(CONTENT_URI_GRANTS_KEY, emptySet())
+                .orEmpty().toMutableSet().apply { addAll(grants) }
+            if (!contentUriGrants.edit().putStringSet(CONTENT_URI_GRANTS_KEY, persisted).commit()) {
+                return GatewayResult.HANDOFF_REJECTED
+            }
+            try {
+                // Some emulators reopen ACTION_VIEW content in a service process after launch;
+                // explicitly grant this package the verified GameBox file for that handoff.
+                gameBoxUris.forEach { uri ->
+                    context.grantUriPermission(resolvedPackage, uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                }
+            } catch (_: SecurityException) {
+                cleanupLaunchedContent()
+                return GatewayResult.HANDOFF_REJECTED
+            }
+        }
         return preparation.dispatch { runCatching {
-            startIntentOnDisplay(context, intent, displayId, sourceActivity)
+            startGameIntentOnDisplay(context, intent, displayId, sourceActivity)
             GatewayResult.LAUNCHED
         }.getOrElse {
             // Some RetroArch Android builds expose a launcher activity but reject
@@ -297,13 +335,36 @@ class AndroidPackageGateway(
             }
         }
     }
+    }
 
+    private fun startGameIntentOnDisplay(
+        context: Context,
+        intent: Intent,
+        displayId: Int?,
+        sourceActivity: Activity?,
+    ) {
+        if (intent.data?.scheme != "file") {
+            startIntentOnDisplay(context, intent, displayId, sourceActivity)
+            return
+        }
+        val previousPolicy = StrictMode.getVmPolicy()
+        try {
+            StrictMode.setVmPolicy(StrictMode.VmPolicy.Builder().build())
+            startIntentOnDisplay(context, intent, displayId, sourceActivity)
+        } finally {
+            StrictMode.setVmPolicy(previousPolicy)
+        }
     }
 
     private fun contentClipData(primary: android.net.Uri, companions: List<android.net.Uri>): ClipData =
         ClipData.newRawUri("GameBox content", primary).apply {
             companions.forEach { companionUri -> addItem(ClipData.Item(companionUri)) }
         }
+
+    private companion object {
+        const val CONTENT_URI_GRANTS = "gamebox_emulator_content_uri_grants"
+        const val CONTENT_URI_GRANTS_KEY = "grants"
+    }
 
     /**
      * Publishes only the built-in MIT fixture. MediaStore needs no broad storage

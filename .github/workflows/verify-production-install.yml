@@ -1,0 +1,168 @@
+name: Verify signed production APK install and upgrade
+
+on:
+  workflow_dispatch:
+    inputs:
+      candidate_tag:
+        description: Candidate production tag to build and verify
+        required: true
+        type: string
+      previous_tag:
+        description: Existing signed release to upgrade from
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: gamebox-production-install-verification
+  cancel-in-progress: false
+
+jobs:
+  verify-install-upgrade:
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    env:
+      CANDIDATE_TAG: ${{ inputs.candidate_tag }}
+      PREVIOUS_TAG: ${{ inputs.previous_tag }}
+      GAMEBOX_KEYSTORE_PASSWORD: ${{ secrets.GAMEBOX_KEYSTORE_PASSWORD }}
+      GAMEBOX_KEY_ALIAS: ${{ secrets.GAMEBOX_KEY_ALIAS }}
+      GAMEBOX_KEY_PASSWORD: ${{ secrets.GAMEBOX_KEY_PASSWORD }}
+      GAMEBOX_VERSION_NAME: ${{ inputs.candidate_tag }}
+    steps:
+      - name: Checkout candidate sources
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.candidate_tag }}
+
+      - name: Validate tags and signing inputs
+        shell: bash
+        run: |
+          [[ "$CANDIDATE_TAG" != "$PREVIOUS_TAG" ]] || { echo "Candidate and previous release must differ." >&2; exit 1; }
+          for name in GAMEBOX_KEYSTORE_PASSWORD GAMEBOX_KEY_ALIAS GAMEBOX_KEY_PASSWORD; do
+            [[ -n "${!name}" ]] || { echo "Missing protected secret: $name" >&2; exit 1; }
+          done
+          candidate_code="$(python scripts/android-version-code.py "$CANDIDATE_TAG")"
+          previous_code="$(python scripts/android-version-code.py "$PREVIOUS_TAG")"
+          (( candidate_code > previous_code )) || { echo "Candidate versionCode must be higher than previous release." >&2; exit 1; }
+          echo "GAMEBOX_VERSION_CODE=$candidate_code" >> "$GITHUB_ENV"
+          echo "PREVIOUS_VERSION_CODE=$previous_code" >> "$GITHUB_ENV"
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v4
+        with:
+          packages: "platform-tools platforms;android-36 build-tools;36.0.0"
+
+      - uses: gradle/actions/setup-gradle@v6
+        with:
+          gradle-version: "wrapper"
+          cache-provider: basic
+
+      - name: Decode production keystore
+        shell: bash
+        env:
+          KEYSTORE_BASE64: ${{ secrets.GAMEBOX_KEYSTORE_BASE64 }}
+        run: |
+          [[ -n "$KEYSTORE_BASE64" ]] || { echo "Missing GAMEBOX_KEYSTORE_BASE64" >&2; exit 1; }
+          echo "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/gamebox-release.keystore"
+          echo "GAMEBOX_KEYSTORE_PATH=$RUNNER_TEMP/gamebox-release.keystore" >> "$GITHUB_ENV"
+
+      - name: Build and verify candidate APK
+        shell: bash
+        run: |
+          bash ./gradlew --no-daemon testDebugUnitTest assembleRelease
+          candidate="$RUNNER_TEMP/GameBoxOS-$CANDIDATE_TAG.apk"
+          cp app/build/outputs/apk/release/app-release.apk "$candidate"
+          echo "CANDIDATE_APK=$candidate" >> "$GITHUB_ENV"
+          sha256sum "$candidate"
+
+      - name: Download and verify previous signed release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          previous_dir="$RUNNER_TEMP/previous"
+          mkdir -p "$previous_dir"
+          gh release download "$PREVIOUS_TAG" \
+            --repo "$GITHUB_REPOSITORY" \
+            --pattern "GameBoxOS-$PREVIOUS_TAG.apk" \
+            --pattern "GameBoxOS-$PREVIOUS_TAG.apk.sha256" \
+            --dir "$previous_dir"
+          (
+            cd "$previous_dir"
+            sha256sum --check "GameBoxOS-$PREVIOUS_TAG.apk.sha256"
+          )
+          echo "PREVIOUS_APK=$previous_dir/GameBoxOS-$PREVIOUS_TAG.apk" >> "$GITHUB_ENV"
+
+      - name: Compare package, version, and signer
+        shell: bash
+        run: |
+          build_tools="$ANDROID_HOME/build-tools/36.0.0"
+          package_info() { "$build_tools/aapt" dump badging "$1" | sed -n "s/^package: name='\([^']*\)' versionCode='\([^']*\)'.*/\1 \2/p"; }
+          signer() { "$build_tools/apksigner" verify --print-certs "$1" | sed -n 's/.*certificate SHA-256 digest: //p' | head -n 1; }
+          read -r previous_package previous_code <<< "$(package_info "$PREVIOUS_APK")"
+          read -r candidate_package candidate_code <<< "$(package_info "$CANDIDATE_APK")"
+          previous_signer="$(signer "$PREVIOUS_APK")"
+          candidate_signer="$(signer "$CANDIDATE_APK")"
+          [[ "$previous_package" == com.gamebox.os && "$candidate_package" == com.gamebox.os ]]
+          [[ "$previous_code" == "$PREVIOUS_VERSION_CODE" ]]
+          [[ "$candidate_code" == "$GAMEBOX_VERSION_CODE" ]]
+          [[ -n "$previous_signer" && "$previous_signer" == "$candidate_signer" ]]
+          echo "Package: $candidate_package"
+          echo "Previous versionCode: $previous_code"
+          echo "Candidate versionCode: $candidate_code"
+          echo "Signing certificate SHA-256: $candidate_signer"
+
+      - name: Enable KVM for the Android emulator
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Install previous release, upgrade, and launch on emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          profile: pixel_7_pro
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
+          script: |
+            set -euo pipefail
+            package=com.gamebox.os
+            assert_launches() {
+              adb shell am force-stop "$package"
+              adb logcat -c
+              adb shell monkey -p "$package" -c android.intent.category.LAUNCHER 1
+              for attempt in $(seq 1 20); do
+                pid="$(adb shell pidof "$package" | tr -d '\r')"
+                [[ -n "$pid" ]] && break
+                sleep 1
+              done
+              [[ -n "$pid" ]] || { adb logcat -d -t 3000; exit 1; }
+              sleep 3
+              runtime_log="$(adb logcat -d -s AndroidRuntime:E)"
+              if grep -q 'FATAL EXCEPTION' <<< "$runtime_log"; then
+                printf '%s\n' "$runtime_log"
+                exit 1
+              fi
+            }
+
+            adb wait-for-device
+            adb install "$PREVIOUS_APK"
+            installed_info="$(adb shell dumpsys package "$package")"
+            grep -q "versionCode=$PREVIOUS_VERSION_CODE" <<< "$installed_info"
+            assert_launches
+
+            adb install -r "$CANDIDATE_APK"
+            installed_info="$(adb shell dumpsys package "$package")"
+            grep -q "versionCode=$GAMEBOX_VERSION_CODE" <<< "$installed_info"
+            assert_launches
+
+            echo "Signed release install and in-place upgrade passed on the CI emulator."

@@ -86,7 +86,7 @@ class LibretroThumbnailClient(
     }
 
     override suspend fun findCandidates(game: Game): List<MetadataMatchCandidate> {
-        val art = lookup(game.platform, game.title, game.region).boxartUrl ?: return emptyList()
+        val art = lookup(game.platform, game.providerTitle, game.region).boxartUrl ?: return emptyList()
         return listOf(MetadataMatchCandidate(
             externalId = "${game.platform}:${game.title}".take(80),
             title = game.title,

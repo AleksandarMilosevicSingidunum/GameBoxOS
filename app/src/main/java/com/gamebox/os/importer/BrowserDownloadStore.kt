@@ -1,6 +1,7 @@
 package com.gamebox.os.importer
 
 import android.content.Context
+import com.gamebox.os.data.DiscoveryGame
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -28,6 +29,7 @@ data class BrowserDownloadRecord(
     val backgroundUrl: String? = null,
     val logoUrl: String? = null,
     val downloadUrl: String? = null,
+    val transferJobId: Int? = null,
     val userAgent: String? = null,
     val mimeType: String? = null,
     val referer: String? = null,
@@ -41,6 +43,12 @@ data class BrowserDownloadRecord(
     val importFileIndex: Int = 0,
     val importFileCount: Int = 0,
     val error: String? = null,
+    val manualImport: Boolean = false,
+    val sourceUris: List<String> = emptyList(),
+    val sourceNames: List<String> = emptyList(),
+    val sourceGrantFlags: Int = 0,
+    val createdAtMillis: Long = 0L,
+    val favorite: Boolean = false,
 )
 
 @Serializable
@@ -51,6 +59,7 @@ enum class BrowserDownloadStatus {
     IMPORTING,
     IMPORTED,
     FAILED,
+    CANCELLED,
 }
 
 internal val ACTIVE_BROWSER_DOWNLOAD_STATUSES = setOf(
@@ -61,17 +70,19 @@ internal val ACTIVE_BROWSER_DOWNLOAD_STATUSES = setOf(
 )
 private const val MAX_BROWSER_DOWNLOAD_RECORDS = 100
 
+private fun BrowserDownloadRecord.sortTimestamp() = createdAtMillis.takeIf { it > 0L } ?: downloadId
+
 internal fun retainRecentBrowserDownloads(records: List<BrowserDownloadRecord>): List<BrowserDownloadRecord> {
     val active = records.filter { it.status in ACTIVE_BROWSER_DOWNLOAD_STATUSES }
     val terminal = records.asSequence()
         .filterNot { it.status in ACTIVE_BROWSER_DOWNLOAD_STATUSES }
-        .sortedByDescending(BrowserDownloadRecord::downloadId)
+        .sortedByDescending(BrowserDownloadRecord::sortTimestamp)
         .take((MAX_BROWSER_DOWNLOAD_RECORDS - active.size).coerceAtLeast(0))
         .toList()
-    return (active + terminal).sortedByDescending(BrowserDownloadRecord::downloadId)
+    return (active + terminal).sortedByDescending(BrowserDownloadRecord::sortTimestamp)
 }
 
-/** Durable, app-owned metadata for DownloadManager transfers initiated from a source browser. */
+/** Durable transfer and import state shared by Download Manager and background workers. */
 class BrowserDownloadStore(context: Context) {
     private val appContext = context.applicationContext
     private val preferences = appContext
@@ -84,12 +95,12 @@ class BrowserDownloadStore(context: Context) {
 
     fun add(record: BrowserDownloadRecord) = mutate { current ->
         (current.filterNot { it.downloadId == record.downloadId } + record)
-            .sortedByDescending { it.downloadId }
+            .sortedByDescending(BrowserDownloadRecord::sortTimestamp)
     }
 
     fun replace(oldDownloadId: Long, replacement: BrowserDownloadRecord) = mutate { current ->
         (current.filterNot { it.downloadId == oldDownloadId || it.downloadId == replacement.downloadId } + replacement)
-            .sortedByDescending { it.downloadId }
+            .sortedByDescending(BrowserDownloadRecord::sortTimestamp)
     }
 
     fun setRetryCookie(downloadId: Long, cookie: String?) =
@@ -104,6 +115,24 @@ class BrowserDownloadStore(context: Context) {
 
     fun get(downloadId: Long): BrowserDownloadRecord? =
         records.value.firstOrNull { it.downloadId == downloadId }
+
+    fun dismiss(downloadId: Long): BrowserDownloadRecord? {
+        val removed = synchronized(lock) {
+            val record = mutableRecords.value.firstOrNull { it.downloadId == downloadId }
+                ?: return null
+            if (record.status != BrowserDownloadStatus.FAILED &&
+                record.status != BrowserDownloadStatus.CANCELLED
+            ) return null
+            val updated = mutableRecords.value.filterNot { it.downloadId == downloadId }
+            check(preferences.edit().putString(KEY_RECORDS, json.encodeToString(updated)).commit()) {
+                "Could not persist browser download state"
+            }
+            mutableRecords.value = updated
+            record
+        }
+        secrets.put(retryCookieKey(downloadId), null)
+        return removed
+    }
 
     private fun mutate(transform: (List<BrowserDownloadRecord>) -> List<BrowserDownloadRecord>) {
         synchronized(lock) {

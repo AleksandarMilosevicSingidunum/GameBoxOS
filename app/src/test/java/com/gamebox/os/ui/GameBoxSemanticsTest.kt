@@ -12,12 +12,18 @@ class GameBoxSemanticsTest {
     @Test
     fun gameCardAnnouncesIdentityStateAndFavoriteStatus() {
         val game = Game(GameId("galaxy-patrol"), "Galaxy Patrol", "Retro", 2018, "Arcade", 1,
-            InstallState.INSTALLED, favorite = true)
+            InstallState.INSTALLED, favorite = true, lastPlayed = "2026-10-01T10:00:00Z")
 
         assertEquals(
             "Galaxy Patrol, Retro, installed, favorite, continue playing",
             GameBoxSemantics.gameCardDescription(game, hero = true),
         )
+    }
+
+    @Test
+    fun discoveryHeroDoesNotAnnounceContinuePlaying() {
+        val game = Game(GameId("sample"), "Sample", "PSP", 2026, "Action", 1, InstallState.NOT_INSTALLED)
+        assertEquals("Sample, PSP, not installed", GameBoxSemantics.gameCardDescription(game, hero = true))
     }
 
     @Test

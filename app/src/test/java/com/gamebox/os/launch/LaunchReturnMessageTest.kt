@@ -12,7 +12,20 @@ class LaunchReturnMessageTest {
     fun interruptedHandoffDoesNotClaimPlayOrBackup() {
         assertEquals(
             "Recovered an interrupted handoff; no playtime was added",
-            launchReturnMessage(false, Result.failure(IllegalStateException("unused"))),
+            launchReturnMessage(false, 0, Result.failure(IllegalStateException("unused"))),
+        )
+    }
+
+    @Test
+    fun quickConfirmedReturnDoesNotClaimSuccessfulPlay() {
+        assertEquals(
+            "Emulator returned in under a minute; the game may not have finished starting",
+            launchReturnMessage(true, 0, Result.success(null)),
+        )
+        assertEquals(
+            "Emulator returned in under a minute; the game may not have finished starting. " +
+                "Automatic save backup failed safely; use Save controls to retry.",
+            launchReturnMessage(true, 0, Result.failure(IllegalStateException("backup failed"))),
         )
     }
 
@@ -20,11 +33,11 @@ class LaunchReturnMessageTest {
     fun backupFailureAndMissingBackupHaveDistinctFeedback() {
         assertEquals(
             "Returned to GameBox; time away recorded. Automatic save backup failed safely; use Save controls to retry.",
-            launchReturnMessage(true, Result.failure(IllegalStateException("backup failed"))),
+            launchReturnMessage(true, 1, Result.failure(IllegalStateException("backup failed"))),
         )
         assertEquals(
             "Returned to GameBox; time away recorded",
-            launchReturnMessage(true, Result.success(null)),
+            launchReturnMessage(true, 1, Result.success(null)),
         )
     }
 
@@ -34,7 +47,7 @@ class LaunchReturnMessageTest {
 
         assertEquals(
             "Returned to GameBox; time away recorded. One save needs attention",
-            launchReturnMessage(true, Result.success(backup)),
+            launchReturnMessage(true, 1, Result.success(backup)),
         )
     }
 
@@ -57,11 +70,11 @@ class LaunchReturnMessageTest {
 
         assertEquals(
             "Returned to GameBox; time away recorded. No managed save was found to back up.",
-            launchReturnMessage(true, Result.success(empty)),
+            launchReturnMessage(true, 1, Result.success(empty)),
         )
         assertEquals(
             "Returned to GameBox; time away recorded. Backed up 2 save artifact(s).",
-            launchReturnMessage(true, Result.success(complete)),
+            launchReturnMessage(true, 1, Result.success(complete)),
         )
     }
 }

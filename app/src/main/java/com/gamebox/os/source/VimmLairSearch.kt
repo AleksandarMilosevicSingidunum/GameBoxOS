@@ -91,7 +91,7 @@ internal val vimmLairSupportedPlatforms = listOf(
     "Xbox", "Xbox 360", "DS",
 )
 
-/** Requested discovery preset. 3DS and Switch remain visible but have no verified Vimm vault mapping. */
+/** Keep the requested preset visible; the search action is disabled where no vault mapping exists. */
 internal val vimmLairDefaultPresetPlatforms = listOf(
     "Dreamcast", "Game Boy Advance", "Game Boy Color", "GameCube", "N64", "NES",
     "PS1", "PS2", "PS3", "PSP", "SNES", "Wii", "WiiWare", "Xbox",
@@ -201,15 +201,21 @@ internal fun vimmLairApproximateTitleMatch(title: String, query: String): Boolea
 internal fun vimmLairCorrectedQuery(query: String, games: List<DiscoverySourceGame>): String? {
     val words = Regex("[\\p{L}\\p{N}]+").findAll(query).toList()
     val titleWords = games.flatMap { game ->
-        Regex("[\\p{L}\\p{N}]+").findAll(game.title).map { it.value }.toList()
-    }.distinctBy { it.lowercase() }
+        Regex("[\\p{L}\\p{N}]+").findAll(game.title).map { it.value }
+            .toList().distinctBy { it.lowercase() }
+    }.groupBy { it.lowercase() }
     val replacements = words.mapNotNull { match ->
         val typed = match.value
-        if (typed.length < 3 || titleWords.any { it.equals(typed, ignoreCase = true) }) return@mapNotNull null
-        val correction = titleWords.firstOrNull { candidate ->
-            !candidate.startsWith(typed, ignoreCase = true) &&
-                vimmEditDistanceAtMost(typed.lowercase(), candidate.lowercase(), 1)
-        } ?: return@mapNotNull null
+        if (typed.length < 3 || typed.lowercase() in titleWords) return@mapNotNull null
+        val candidates = titleWords.entries.mapNotNull { (normalized, matches) ->
+            val candidate = matches.first()
+            if (candidate.startsWith(typed, ignoreCase = true) ||
+                !vimmEditDistanceAtMost(typed.lowercase(), normalized, 1)
+            ) null else candidate to matches.size
+        }.sortedByDescending { it.second }
+        val best = candidates.firstOrNull() ?: return@mapNotNull null
+        if (candidates.getOrNull(1)?.second == best.second) return@mapNotNull null
+        val correction = best.first
         match.range to correction
     }
     if (replacements.isEmpty()) return null

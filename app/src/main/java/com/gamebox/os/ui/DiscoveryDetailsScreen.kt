@@ -31,15 +31,14 @@ import com.gamebox.os.data.GameRepository
 import com.gamebox.os.data.DiscoveryGame
 import com.gamebox.os.importer.AuthorizedRomImporter
 import com.gamebox.os.importer.RomImportPolicy
-import com.gamebox.os.importer.RomImportSource
-import com.gamebox.os.importer.RomImportProgress
+import com.gamebox.os.importer.BrowserDownloadStatus
+import com.gamebox.os.importer.cancelManualRomImport
+import com.gamebox.os.importer.enqueueManualRomImport
+import com.gamebox.os.importer.DiscoveryImportWorkflow
 import com.gamebox.os.TrackedSourceBrowserActivity
 import com.gamebox.os.catalog.legalSourceLinks
 import com.gamebox.os.display.externalDisplayActivityResultOptions
 import com.gamebox.os.source.GameSourceConfig
-import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.launch
 
 @Composable
 internal fun DiscoveryDetailsScreen(
@@ -64,9 +63,19 @@ internal fun DiscoveryDetailsScreen(
     val context = LocalContext.current
     val primaryActionFocusRequester = remember(game.id) { FocusRequester() }
     val documentPickerOptions = remember(context) { externalDisplayActivityResultOptions(context) }
-    val scope = rememberCoroutineScope()
     val importWorkflow = remember(context, importer, repository, game, platformName) {
         DiscoveryImportWorkflow(context, importer, repository, game, platformName)
+    }
+    val browserDownloadStore = remember(context) {
+        (context.applicationContext as com.gamebox.os.GameBoxApplication).browserDownloadStore
+    }
+    val browserDownloadRecords by browserDownloadStore.records.collectAsState()
+    val latestManualImport = remember(browserDownloadRecords, game.id) {
+        browserDownloadRecords.filter { it.manualImport && it.gameId == game.id.value }
+            .maxByOrNull(com.gamebox.os.importer.BrowserDownloadRecord::createdAtMillis)
+    }
+    val activeManualImport = latestManualImport?.takeIf {
+        it.status in setOf(BrowserDownloadStatus.QUEUED, BrowserDownloadStatus.IMPORTING)
     }
     val legalSources = remember(game.title, game.platformId) {
         legalSourceLinks(game.title, game.platformId)
@@ -80,78 +89,47 @@ internal fun DiscoveryDetailsScreen(
     val importFormats = remember(platformName) {
         RomImportPolicy.supportedExtensionsLabel(platformName)
     }
-    var importing by remember(game.id) { mutableStateOf(false) }
-    var importJob by remember(game.id) { mutableStateOf<Job?>(null) }
     var importMessage by remember(game.id) { mutableStateOf<String?>(null) }
-    var importProgress by remember(game.id) { mutableStateOf<RomImportProgress?>(null) }
-    fun launchImport(
-        startMessage: String,
-        action: suspend (onProgress: (RomImportProgress) -> Unit) -> String,
-    ) {
-        importing = true
-        importProgress = null
-        importMessage = startMessage
-        importJob = scope.launch {
-            try {
-                importMessage = try {
-                    action { progress -> importProgress = progress }
-                } catch (cancelled: CancellationException) {
-                    importMessage = "Import cancelled. Partial files were removed."
-                    throw cancelled
-                } catch (error: Exception) {
-                    "Import failed: ${error.message?.take(140) ?: "unknown error"}"
-                }
-            } finally {
-                importing = false
-                importProgress = null
-                importJob = null
-            }
+    fun enqueueManualImport(uris: List<Uri>, grantFlags: Int) {
+        try {
+            enqueueManualRomImport(
+                context,
+                browserDownloadStore,
+                game,
+                platformName,
+                uris,
+                uris.map(importWorkflow::displayName),
+                grantFlags,
+            )
+            importMessage = "Import queued. Progress is available in Download Manager."
+        } catch (error: Exception) {
+            importMessage = "Could not queue import: ${error.message?.take(140) ?: "choose the files again"}"
         }
     }
-    fun importAuthorizedUri(
-        uri: Uri,
-        displayName: String,
-        removeSourceAfterSuccess: Boolean = false,
-    ) {
-        launchImport("Importing and verifying $displayName…") { onProgress ->
-            importWorkflow.importSingle(
-                uri,
-                displayName,
-                removeSourceAfterSuccess,
-                onProgress = onProgress,
-            ).message
-        }
-    }
-
     val importLauncher = rememberLauncherForActivityResult(
         OpenGameFilesContract(allowMultiple = false)
-    ) { uris ->
-        val uri = uris.singleOrNull()
+    ) { selection ->
+        val uris = selection.uris
+        val uri = selection.uris.singleOrNull()
         if (uri == null) {
             importMessage = "No file selected"
         } else {
-            importAuthorizedUri(uri, importWorkflow.displayName(uri), removeSourceAfterSuccess = true)
+            enqueueManualImport(selection.uris, selection.grantFlags)
         }
     }
     val importSetLauncher = rememberLauncherForActivityResult(
         OpenGameFilesContract(allowMultiple = true)
-    ) { uris ->
+    ) { selection ->
+        val uris = selection.uris
         if (uris.isEmpty()) {
             importMessage = "No files selected"
         } else {
-            val sources = uris.map { uri -> RomImportSource(uri, importWorkflow.displayName(uri)) }
-            launchImport("Importing and verifying ${sources.size} disc-set files…") { onProgress ->
-                importWorkflow.importDiscSet(sources, onProgress)
-            }
+            enqueueManualImport(uris, selection.grantFlags)
         }
     }
 
-    val browserDownloadStore = remember(context) {
-        (context.applicationContext as com.gamebox.os.GameBoxApplication).browserDownloadStore
-    }
-    val browserDownloadRecords by browserDownloadStore.records.collectAsState()
     val browserDownloadRecord = remember(browserDownloadRecords, game.id) {
-        browserDownloadRecords.firstOrNull { it.gameId == game.id.value }
+        browserDownloadRecords.firstOrNull { !it.manualImport && it.gameId == game.id.value }
     }
     val trackingBrowserDownload = browserDownloadRecord?.status in setOf(
         com.gamebox.os.importer.BrowserDownloadStatus.QUEUED,
@@ -167,17 +145,19 @@ internal fun DiscoveryDetailsScreen(
         browserDownloadRecord?.let { record ->
             importMessage = when (record.status) {
                 com.gamebox.os.importer.BrowserDownloadStatus.QUEUED ->
-                    "Download queued in GameBox Download Manager. It continues if you leave this page."
+                    "Download queued in GameBox. It continues if you leave this page."
                 com.gamebox.os.importer.BrowserDownloadStatus.DOWNLOADING ->
                     "Downloading ${record.displayName} in the background."
                 com.gamebox.os.importer.BrowserDownloadStatus.PAUSED ->
-                    "${record.displayName} is paused by Android. Open Download Manager to restart it."
+                    "${record.displayName} is paused. Open Downloads to restart it."
                 com.gamebox.os.importer.BrowserDownloadStatus.IMPORTING ->
                     "Download complete; verifying and importing ${record.title}…"
                 com.gamebox.os.importer.BrowserDownloadStatus.IMPORTED ->
                     "${record.title} was verified and added to your Library. The temporary download was moved."
                 com.gamebox.os.importer.BrowserDownloadStatus.FAILED ->
                     "Download needs attention: ${record.error ?: "try importing your copy manually"}"
+                com.gamebox.os.importer.BrowserDownloadStatus.CANCELLED ->
+                    "The tracked download was cancelled."
             }
         }
     }
@@ -190,16 +170,13 @@ internal fun DiscoveryDetailsScreen(
         val stagedName = data?.getStringExtra(TrackedSourceBrowserActivity.EXTRA_STAGED_NAME)
         val displayName = data?.getStringExtra(TrackedSourceBrowserActivity.EXTRA_DISPLAY_NAME)
         if (startError != null) {
-            importMessage = "Download was not queued: $startError. Open Download Manager for details, or import your own copy."
+            importMessage = "Download was not queued: $startError. Open Downloads for details, or import your own copy."
         } else if (result.resultCode != Activity.RESULT_OK || id < 0 || stagedName == null || displayName == null ||
             browserDownloadStore.get(id) == null
         ) {
             importMessage = "Returned without starting a download. You can still import your copy manually."
         } else {
-            importMessage = "Download added to GameBox Download Manager. It will continue if you leave this page and import when complete."
-            // Make the newly queued transfer immediately visible when the source
-            // browser returns. The transfer itself is owned by Android's
-            // DownloadManager and continues independently of this screen.
+            importMessage = "Download added to GameBox. It will continue if you leave this page and import when complete."
             onOpenDownloads()
         }
     }
@@ -234,7 +211,7 @@ internal fun DiscoveryDetailsScreen(
                 artworkUrl = detail.heroUrl,
                 fallbackKey = detail.title,
                 modifier = Modifier.fillMaxWidth().height(if (narrow) 320.dp else 300.dp),
-                borderColor = MaterialTheme.colorScheme.outlineVariant,
+                borderColor = MaterialTheme.colorScheme.outline,
             ) {
                 Column(
                     Modifier.fillMaxSize().padding(if (narrow) 18.dp else 24.dp)
@@ -260,7 +237,7 @@ internal fun DiscoveryDetailsScreen(
                     DiscoveryDetailsHeroActions(
                         compact = narrow,
                         primaryActionFocusRequester = primaryActionFocusRequester,
-                        importing = importing,
+                        importing = activeManualImport != null,
                         downloadAvailable = directSource?.tracksBrowserDownload == true,
                         downloadWaiting = trackingBrowserDownload,
                         downloadFailed = browserDownloadFailed,
@@ -286,14 +263,20 @@ internal fun DiscoveryDetailsScreen(
             DiscoveryImportSection(
                 platformLabel = importPlatformLabel,
                 acceptedFormats = importFormats,
-                importing = importing,
-                progress = importProgress,
-                message = importMessage,
+                importing = activeManualImport != null,
+                progress = activeManualImport?.let(::manualImportProgress),
+                message = importMessage ?: latestManualImport?.let { record ->
+                    when (record.status) {
+                        BrowserDownloadStatus.IMPORTED -> "Your copy was verified and added to your Library."
+                        BrowserDownloadStatus.FAILED, BrowserDownloadStatus.CANCELLED -> record.error
+                        else -> null
+                    }
+                },
                 supportsDiscSet = RomImportPolicy.supportsMultiFile(platformName),
                 showCopyImport = directSource?.tracksBrowserDownload == true,
                 onCancel = {
+                    activeManualImport?.let { cancelManualRomImport(context, browserDownloadStore, it) }
                     importMessage = "Cancelling import…"
-                    importJob?.cancel()
                 },
                 onImportCopy = { importLauncher.launch(arrayOf("*/*"), documentPickerOptions) },
                 onImportDiscSet = { importSetLauncher.launch(arrayOf("*/*"), documentPickerOptions) },

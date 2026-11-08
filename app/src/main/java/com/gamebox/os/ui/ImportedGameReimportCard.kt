@@ -39,7 +39,8 @@ internal fun ImportedGameReimportCard(game: Game, importer: AuthorizedRomImporte
     var message by remember(game.id) { mutableStateOf<String?>(null) }
     var importProgress by remember(game.id) { mutableStateOf<RomImportProgress?>(null) }
     var confirmForget by remember(game.id) { mutableStateOf(false) }
-    val picker = rememberLauncherForActivityResult(OpenGameFilesContract(allowMultiple = true)) { uris ->
+    val picker = rememberLauncherForActivityResult(OpenGameFilesContract(allowMultiple = true)) { selection ->
+        val uris = selection.uris
         if (uris.isEmpty()) message = "No files selected" else {
             busy = true
             importProgress = null
@@ -92,22 +93,21 @@ internal fun ImportedGameReimportCard(game: Game, importer: AuthorizedRomImporte
                                 val cleanupDeferred = runCatching {
                                     importer.confirmRegistration(current.id, result.transactionId)
                                 }.isFailure
-                                val sourcesRemoved = if (cleanupDeferred) 0 else
-                                    sources.count { deleteImportedSource(context, it.uri) }
-                                val removedCountMessage = if (sourcesRemoved == 1) {
-                                    "1 selected source file removed."
-                                } else {
-                                    "$sourcesRemoved selected source files removed."
-                                }
+                                val archives = sources.filter { shouldRemoveImportedArchive(it.displayName) }
+                                val archivesRemoved = if (cleanupDeferred) 0 else
+                                    archives.count { deleteImportedSource(context, it.uri) }
+                                val rawSourceCount = sources.size - archives.size
                                 val sourceStatus = when {
                                     cleanupDeferred ->
-                                        "Source files were retained until transaction recovery completes."
-                                    sourcesRemoved == sources.size ->
-                                        removedCountMessage
-                                    sourcesRemoved > 0 ->
-                                        "$sourcesRemoved of ${sources.size} selected source file(s) removed; Android retained the rest."
+                                        "Transaction recovery is pending; source files were retained."
+                                    archives.isEmpty() ->
+                                        "Selected game files were retained."
+                                    archivesRemoved == archives.size ->
+                                        "$archivesRemoved selected archive(s) removed; $rawSourceCount game file(s) retained."
+                                    archivesRemoved > 0 ->
+                                        "$archivesRemoved of ${archives.size} selected archive(s) removed; remaining files were retained."
                                     else ->
-                                        "Source files were retained because Android denied deletion."
+                                        "Selected archives could not be deleted; all source files were retained."
                                 }
                                 if (cleanupDeferred) {
                                     "Content verified and restored. Saves and history retained; transaction cleanup will finish after restart. $sourceStatus"
@@ -171,7 +171,7 @@ internal fun ImportedGameReimportCard(game: Game, importer: AuthorizedRomImporte
                     if (game.canReimportContent()) "Repair missing game files" else "Game file repair",
                     style = MaterialTheme.typography.titleMedium,
                 )
-                Text("Select the original game file, or the descriptor and all tracks with their original filenames. Checksums must match. You can instead forget stale file references. Saves and history are always kept.")
+                Text("Select the original game file, or the descriptor and all tracks with their original filenames. Checksums must match. Raw game files are kept; selected ZIP/7z archives are removed after successful repair. You can instead forget stale file references. Saves and history are always kept.")
                 if (busy) {
                     GameImportProgressIndicator(
                         modifier = Modifier.fillMaxWidth(),

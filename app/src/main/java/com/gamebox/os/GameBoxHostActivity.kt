@@ -13,6 +13,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import androidx.lifecycle.lifecycleScope
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -22,12 +23,16 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.ui.Modifier
 import com.gamebox.os.input.AnalogNavigationDebouncer
 import com.gamebox.os.input.gamepadConfirmKeyCode
+import com.gamebox.os.companion.CompanionEndpointService
 import com.gamebox.os.display.currentDisplayId
 import com.gamebox.os.navigation.GameBoxDeepLink
 import com.gamebox.os.navigation.GameBoxNavigationRequest
+import com.gamebox.os.settings.SettingsRepository
 import com.gamebox.os.ui.GameBoxApp
 import com.gamebox.os.ui.OfflineStatusBanner
 import com.gamebox.os.ui.theme.GameBoxTheme
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 
 /** Shared host for the normal Home task and the separate external-display task. */
 abstract class GameBoxHostActivity : ComponentActivity() {
@@ -38,6 +43,7 @@ abstract class GameBoxHostActivity : ComponentActivity() {
     private val textInputExitSequence = mutableIntStateOf(0)
     private val externalDisplayBottomInsetPx = mutableIntStateOf(0)
     private var navigationSequence = 0L
+    private var companionStartCheckPending = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -173,5 +179,17 @@ abstract class GameBoxHostActivity : ComponentActivity() {
         super.onResume()
         container.gameLaunchController.onHostResumed()
         container.managedSaveDiscovery.refresh()
+        if (!companionStartCheckPending) {
+            companionStartCheckPending = true
+            lifecycleScope.launch {
+                try {
+                    if (SettingsRepository(applicationContext).settings.first().companionEnabled) {
+                        CompanionEndpointService.start(applicationContext)
+                    }
+                } finally {
+                    companionStartCheckPending = false
+                }
+            }
+        }
     }
 }

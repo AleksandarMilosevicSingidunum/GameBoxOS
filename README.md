@@ -16,22 +16,25 @@ See the [production critical path](docs/production-critical-path.md) for current
 release blockers. Starter catalog entries are discovery metadata, not preinstalled
 games; installation state must come from local operations.
 
+Use the [GameBox OS UAT plan](docs/UAT.md) to execute and record end-to-end
+acceptance across Android, TV Mode, emulators, Remote, and the Windows Companion.
+
 Legal emulator fixtures are tracked in the [legal homebrew test matrix](docs/legal-homebrew-test-matrix.md).
 Only license-cleared or locally reproducible homebrew is eligible for acceptance runs;
 commercial game binaries and unauthorized provider downloads are excluded.
 
 This repository is an active pre-1.0 implementation of the August 2026 **GameBox Development Blueprint**. The blueprint is a six-month working plan, not a claim that every item is already complete.
 
-Status as of 11 October 2026:
+Status as of 29 October 2026:
 
 Recent implementation, verification, and open hardware gates are tracked in the
-[project roadmap](ROADMAP.md). The last recorded full Android JVM run passed 779
-tests; it could not be rerun from the current restricted shell because Gradle
-could not load `native-platform.dll`. The Windows core self-test and an isolated
-WPF build passed on 11 October. The Honor Magic6 Pro is the user's selected
-deployment device, but the latest device check found it asleep with no active TV
-output. Physical-controller acceptance and the live Vimm download-to-import flow
-remain unverified; this status is not a release-completion claim.
+[project roadmap](ROADMAP.md). The Android Gradle Wrapper is pinned to 9.7.1;
+the current JVM run passed 816 tests (0 failures, 0 errors, 1 skipped), and the
+instrumentation APK compiled. The Windows core self-check and WPF build also
+passed. At the latest device check, the Honor Magic6 Pro remained ADB-connected
+but its HDMI projection had disconnected. Physical-controller acceptance and
+the live Vimm download-to-import flow remain unverified; this is not a
+release-completion claim.
 
 | Blueprint area | Status | Current implementation |
 | --- | --- | --- |
@@ -46,6 +49,7 @@ remain unverified; this status is not a release-completion claim.
 | Saves | Partial | Platform save-adapter registry, real directory discovery, reactive per-game save presence in Details, multi-artifact backup/restore, atomic checksum-protected snapshot manifests, import/export, retention, deterministic sync conflict resolution, explicit game-scoped restore rejection, bounded backup creation/import, and orchestration that executes upload/download/conflict operations with automated JUnit coverage; Settings now exposes WebDAV/S3 endpoint and Android-Keystore credential configuration, while every per-game Details save card performs real bounded Basic/SigV4 upload/download of game-scoped, self-verifying envelopes and preserves a conflicting local copy before restore; real-endpoint integration and physical emulator validation remain |
 | Emulator integration | Partial | Allowlisted standalone emulator handoff with per-game package selection and graphics profile persistence exposed in Details, read-only FileProvider access for verified downloads and user-imported copies, launch-time SHA-256 re-verification of primary and companion disc files, complete companion-URI grants, return tracking, documented PPSSPP ACTION_VIEW content handoff, Dolphin AutoStartFiles launch wiring, and scoped standalone adapters for NES.emu, PS1/DuckStation, N64/M64Plus FZ, Dreamcast/Flycast, and other mapped systems; live NES.emu installation/launch and the remaining production adapters still need physical validation |
 | Media and PC | Partial | Installed-app detection, typed availability states, safe launch shortcuts, persistent hide-unavailable policy, responsive empty/setup states, Moonlight connectivity status, bounded host reachability probes, interactive PC host-probe panel with validated persistent host/port configuration and explicit clearing, a deliberate controller-accessible return to the Android/DeX desktop, and recent sessions for media, Moonlight, Winlator, Termux, Files, browser, and Android settings; physical streaming validation remains |
+| TV Mode and phone remote | Implemented foundation | Optional full-screen HDMI dashboard with installed-app discovery/pinning, controller focus, Live TV M3U playlists (iptv-org country lists or user-selected playlists), and a separate Android remote app using same-network discovery, one-time pairing, persistent encrypted HMAC credentials, and a local-only HTTP control port; second-phone acceptance remains |
 | Offline operation | Implemented foundation | Cached catalog and persistent local state, explicit network-aware fallback selection, accessible offline banner, resilient bundled fallback after remote-provider failure, actionable retry messaging, and non-fatal optional metadata enrichment; full device airplane-mode acceptance testing remains |
 | Diagnostics | Partial | Sanitized report, bounded redacted event collection, lifecycle wiring, visible download errors, and a 2 MiB ZIP recovery bundle export; physical failure validation remains |
 | CI and releases | Partial | Unit tests, debug APK builds, SHA-256 artifacts, alpha release workflow, deterministic channel-readiness gating, validated APK provenance manifests with size/hash/channel metadata, rollback tag metadata, and tag/channel consistency validation, release/rollback tag existence checks, serialized production publishing, and verified asset upload; protected signed-production workflow is implemented; configuring repository signing secrets and executing the real update channel remain |
@@ -100,12 +104,14 @@ Open the repository root in the current stable Android Studio, install Android S
 CI runs:
 
 ```text
-testDebugUnitTest
-assembleDebug
+bash ./gradlew testDebugUnitTest assembleDebug
 ```
 
+On Windows, use `gradlew.bat` instead of `bash ./gradlew`. Android builds
+require Android SDK 36 and JDK 17 or newer.
+
 For local instrumentation, use the validated `GameBox_API35` Google APIs x86_64
-API-35 image and run `connectedDebugAndroidTest` with
+API-35 image and run `bash ./gradlew connectedDebugAndroidTest` with
 `ANDROID_SERIAL=emulator-5554`. Test counts and device-specific outcomes change as
 the suite evolves; see the [project roadmap](ROADMAP.md) for dated results. Emulator
 instrumentation does not replace an unlocked Honor test, and Honor phone-screen

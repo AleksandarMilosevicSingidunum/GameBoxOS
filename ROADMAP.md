@@ -1,21 +1,463 @@
 # GameBox OS Roadmap
 
-## 11 October 2026 — HONOR TV corrected Vimm search
+## 8 November 2026 — ten-agent implementation and HDMI acceptance
 
-- [x] On the 1920×1080 HDMI display, searched Vimm for `Freedoom`. GameBox
-  returned four results grouped under GameCube, PS2, Xbox, and DS, with box art,
-  and showed the spelling suggestion **Did you mean “Freedom”?**
-- [x] Selecting the suggestion changed the query and automatically reran the
-  Vimm search; the corrected results repopulated without another search-button
-  action. The first implementation raced the Store query-change cleanup, which
-  canceled its own search; the rerun is now scheduled after that cleanup and has
-  a unit test for stale versus committed correction queries.
-- [x] `:app:testDebugUnitTest` passed (782 tests, 0 failures, 0 errors, 1
-  skipped), and `:app:assembleDebug` succeeded. Result exploration only; no
-  game listing was opened and no Vimm download was activated.
-- [ ] The HONOR taskbar returned after the debug APK update and needs its
-  per-app fullscreen setting reapplied. Android still reports no connected
-  physical gamepad; no controller acceptance was claimed.
+- [x] Ten agents completed scoped reviews/fixes across Vimm, download scheduling, archive import cancellation, Live TV parsing, TV guide/filter UX, controller repeats, emulator selection, artwork lookup, Remote reconnection, and Windows Steam discovery.
+- [x] Android JVM suite: 899 passed, 0 failures/errors, 1 skipped. Companion Remote: 13 passed. App lint passed; debug, Android-test, and unsigned release APKs assembled. Windows core tests passed and WPF build completed with 0 warnings/errors.
+- [x] Installed the debug build in place on HONOR without clearing app data. On physical HDMI (1920×1080/60 Hz), GameBox TV Home retained favorites, Prva World, and now/next guide. All channels showed 50 entries; Travel filtered to RTG int.; All categories restored results. Display-targeted ADB taps were used, not a physical controller. Evidence: `tmp/gamebox-agent-integrated-tv-2026-11-08.png`, `tmp/gamebox-agent-channels-2026-11-08.png`, `tmp/gamebox-agent-sports-2026-11-08.png`, `tmp/gamebox-agent-finaltv-2026-11-08.png`.
+- [ ] Remaining production blockers: HONOR Dock/fullscreen persistence, 0/10 tested Serbian 1080p channels decoded, physical controller acceptance, unsupported emulator/console coverage, complete game download/import/save/uninstall lifecycle, second-phone Remote, Windows UI/live library acceptance, and signed update/rollback. Detailed all-function status: `docs/UAT_GAP_AUDIT_2026-11-08.md` and `docs/UAT.md`.
+
+## 8 November 2026 — Free-TV Serbia source comparison
+
+- [x] Compared the proposed Free-TV/IPTV Serbia playlist on the connected HONOR (HDMI display 59, 1920×1080/60 Hz) without changing GameBox’s saved playlist. The playlist metadata was fetched from GitHub and its HTTPS HLS manifests were probed from Android; no video segments were downloaded or decoded.
+- [ ] This source is not a better default: RTS 1/2/3 and RTS Svet master manifests expose 1280×720 and 480×270 variants; Kurir is explicitly a 720p playlist; Red TV DNS lookup failed; Informer TV returned HTTP 403. The RTV 1/2 entries use RTMP, which GameBox’s Media3 player does not support. No candidate demonstrates 1080p playback or stronger availability than the existing source.
+- [x] Decision: retain iptv-org RS as the app’s primary playlist under the active objective’s source rule; do not import the Free-TV playlist as a default. Continue to prefer official broadcaster destinations such as RTS Planeta where available, and only promote community-list channels after per-channel rights, decoded-resolution, and HONOR playback checks.
+
+## 8 November 2026 — HONOR HDMI task reuse
+
+- [x] On the active HONOR HDMI display 59 (1920×1080/60 Hz), launched the dedicated external-display activity twice. Android delivered the second request to the current top instance; `dumpsys activity` showed one GameBox external-display task (#106), and TV Home stayed visible. Capture: `tmp/gamebox-tv-task-reuse-2026-11-08.png`.
+- [ ] This verifies repeated launch/task reuse with HDMI connected, not physical HDMI disconnect/reconnect or handset recovery. TV-05 remains Partial until that hardware cycle is observed.
+
+## 8 November 2026 — Ten-channel HD Live TV acceptance
+
+- [ ] Tested ten entries labelled 1080p in the current iptv-org RS playlist on the HONOR HDMI TV (1920×1080, 60 Hz; logical display 38), using display-targeted touch and waiting 15 seconds per channel. **Zero decoded a video frame**, so none passes HD playback acceptance: Nova returned an HTTP bad-status error; RTS 2 and RTS Svet returned `ERROR_CODE_IO_NETWORK_CONNECTION_FAILED`; Prva, Prva Kick, Prva Life, Prva Max, Prva Plus, and Prva World reported the stream server could not be found; Top TV failed with `ERROR_CODE_IO_CLEARTEXT_NOT_PERMITTED`. Playlist quality labels are not proof of delivered resolution. Evidence: `tmp/gamebox-tv-nova-check-2026-11-07.png`, `tmp/gamebox-tv-rts2-check-2026-11-07.png`, `tmp/gamebox-tv-rtssvet-playback-2026-11-08.png`, `tmp/gamebox-tv-prva-check-2026-11-07.png`, `tmp/gamebox-tv-prvakick-check-2026-11-07.png`, `tmp/gamebox-tv-prvalife-playback-2026-11-08.png`, `tmp/gamebox-tv-prvamax-playback2-2026-11-08.png`, `tmp/gamebox-tv-prvaplus-playback-2026-11-08.png`, `tmp/gamebox-tv-prvaworld-playback-2026-11-08.png`, `tmp/gamebox-tv-toptv-playback-2026-11-08.png`.
+- [ ] HONOR Wi-Fi itself is validated and can reach the internet (`1.1.1.1` ping succeeded); `de1.dstv.cx` fails DNS lookup on-device and Google DNS-over-HTTPS returns NXDOMAIN (DNS response 3). Nova’s host resolves, but its endpoint returns HTTP 403. This confirms the main Prva/RTS and Nova failures occur at source/host reachability, before video decode. Top TV remains blocked by its HTTP-only URL and the app’s HTTPS-only policy. Do not relax that policy; keep the channel unavailable unless an authorized HTTPS source is found. No channel has a confirmed 1080p decoded frame.
+
+## 8 November 2026 — Remote target isolation
+
+- [x] Replaced the broadcast remote-command SharedFlow with per-screen channels. Only a resumed GameBox screen receives commands; an active external-display screen takes priority over the phone screen. Text/backspace are accepted only when the selected screen has an active search, and the server still rejects commands when no collector is listening.
+- [x] Added regression coverage for phone/TV isolation, fallback when the external screen is paused, and selected-screen text-field validation. `CompanionRemoteCommandBusTest` passed 2/2 and `CompanionRemoteRouteTest` passed 7/7. `:app:assembleDebug` succeeded; installed APK SHA-256: `7770758F687FE06830CBABB294576D4D9FD1D704624F214BEBCD863B23A4E873`.
+- [ ] Installed the debug update in place on the HONOR, preserving data, and verified TV Home on HDMI display 59 at 1920×1080 (`tmp/gamebox-tv-remote-route-build-tv-2026-11-08.png`). This did not exercise a companion command against both simultaneously active phone/TV screens. Separate-phone Remote and physical-controller acceptance remain unverified; the HONOR Dock is still visible.
+
+## 7 November 2026 — Current verification and remaining high-priority gaps
+
+- [ ] Added `.github/workflows/verify-production-install.yml` to build a signed candidate, verify package/version/signer against a previous signed release, then install, cold-launch, upgrade, and relaunch on a CI emulator. It has not been dispatched; signed release tags and protected signing secrets are required. This does not replace HONOR-to-TV acceptance.
+- [ ] Rebuilt and installed the current debug package on the HONOR and launched GameBox on the actual HDMI output (1920×1080, 60 Hz; Android logical display 38). Home rendered on HDMI, but the HONOR Dock remained visible. Display-targeted taps produced live-player failures for RTS 1 and RTS 2 (`ERROR_CODE_IO_NETWORK_CONNECTION_FAILED`), Prva and Prva Kick (server could not be found), Nova (bad HTTP status), and Arena Sport 1 (Android blocked cleartext HTTP). No 1080p channel has decoded and rendered successfully in this run, and no physical controller input was observed. Captures: `tmp/gamebox-tv-active-goal-2026-11-07.png`, `tmp/gamebox-tv-rts1-check-2026-11-07.png`, `tmp/gamebox-tv-prva-check-2026-11-07.png`, `tmp/gamebox-tv-rts2-check-2026-11-07.png`, `tmp/gamebox-tv-arena1-check-2026-11-07.png`, `tmp/gamebox-tv-nova-check-2026-11-07.png`, `tmp/gamebox-tv-prvakick-check-2026-11-07.png`. The radio/HLS tests elsewhere do not pass these live-broadcast checks.
+- [x] TV Back now dismisses an active app/channel/country search first, then exits TV Mode on the next press. The shared text-entry target is cleared and TV Mode closes its keyboard state; a focused priority test covers the dismissal-before-exit order. Android 14 scheduling failure also has an explicit message while its failed record remains retryable in Downloads.
+- [x] Full JVM suites passed before the latest targeted fixes: GameBox 881/881 and Remote 12/12. After the latest edits, focused GameBox root-input/controller and transfer-scheduler tests passed (17/17); instrumentation sources compiled and `:app:assembleDebug` succeeded (45s, 10 tasks executed; existing icon deprecation warnings only).
+- [x] Resumed HTTP 206 downloads now require `Content-Range` to begin at the requested offset and require the received body length to match the declared range; a mismatched body discards the partial file before retry. Regression tests cover a wrong start offset and partial cleanup.
+- [ ] The TV keyboard Back fix and scheduling-failure message have not been observed on the external display yet. The HONOR TV currently has an Android file picker launched from GameBox in the foreground; it was left untouched to avoid interrupting a pending selection.
+- [x] RetroArch temporary export cleanup now retains URIs when MediaStore deletion throws, allowing later cleanup to retry instead of orphaning an exported copy. Added a failure-then-retry regression case; all 4 `GalaxyPatrolExportTest` instrumentation tests passed on the connected HONOR (PGT-N19; external HDMI display 38 remained active at 1920×1080). Test results: `app/build/outputs/androidTest-results/connected/debug/TEST-PGT-N19 - 16-_app-.xml`.
+- [x] Removed the recovery shortcuts that marked a tracked browser transfer `IMPORTED` merely because any local content already existed for the same game ID. Interrupted `IMPORTING` records now remain active and their own transfer/import path is retried. Focused `BrowserDownloadRecoveryTest`, `BrowserDownloadTransferSchedulerTest`, `BrowserDownloadTrackerTest`, and `:app:assembleDebug` all passed (43s; 9 tasks executed).
+- [x] Rechecked on HONOR HDMI display 38 at 1920×1080: Download Manager still showed Queue 0 / Completed 1 and the existing Galaxy Patrol entry as Ready. Opened Galaxy Patrol in NES.emu and used its normal Close Content/Exit path; GameBox returned to the same Details screen without losing the installed entry. This validates launch/return, not gameplay or save persistence. Captures: `tmp/codex-download-manager-current.png`, `tmp/codex-galaxy-launch-tv.png`, `tmp/codex-gamebox-emulator-exit.png`.
+- [ ] The TV test used display-targeted synthetic input. Galaxy Patrol’s title/game image rendered, but gameplay response to injected D-pad input was not established; Android reports no active physical gamepad. Emulator fullscreen/taskbar and managed-save checks also remain open.
+- [ ] Browser website → tracked transfer → Download Manager → automatic import and process-death recovery were not exercised end-to-end on hardware. The legal Galaxy Patrol item was already installed, so it was left untouched; no Vimm/commercial download was started.
+- [x] Fixed M3U variant deduplication: streams with the same URL but different safe request headers now remain separate fallback candidates. `TvModeAppsTest` covers the case.
+- [x] Focused test/build passed after the fix: `TvModeAppsTest` 29/29 and `:app:assembleDebug` successful. Installed debug APK SHA-256 `921A98CE1624B6C36305432CD409233A600A79CF13B42D47D134157266EE1422`; installed `base.apk` hash matched.
+- [x] On HONOR HDMI physical display 38 (1920×1080), the authorized Mux Big Buck Bunny HLS fixture played inside GameBox and the player reported decoded 1920×1080 (`tmp/codex-mux-playback-2026-11-07.png`). Serbia (RS) playlist was restored; Arena Sport 1 was restored as last watched. Only the exact temporary fixture and a leftover test capture were removed; `blockblast.3dsx` remains untouched.
+- [ ] This VOD fixture proves in-app HLS playback, not live broadcast or header propagation. Header-required playback remains unverified. Serbian RTS/Prva stream failures remain.
+- [ ] Next P0 evidence: complete authorized download → Download Manager → exactly-once import and force-stop/recovery on HONOR. Archive/job unit coverage does not prove scheduled process-death behavior.
+- [ ] Other release gaps: complete device import → emulator → return/save/uninstall; physical controller; Remote from a separate handset; all search fields/accessibility; cleartext/DNS/timeout runtime diagnostics; HONOR Dock/fullscreen and upgrade/recovery acceptance.
+
+## 7 November 2026 — Per-stream Live TV headers
+
+- [x] M3U parsing now retains safe per-stream `User-Agent`, `Referer`, and `Origin` options from `#EXTVLCOPT` and the common `URL|Header=value` suffix. Media3 applies those headers to the selected stream and its HTTP media requests. Cookie/Authorization and unknown headers are ignored; Kodi code and dynamic resolver entries are not executed.
+- [x] Added regression coverage for header decoding, duplicate-channel alternate streams, same-URL header variants, and rejection of Cookie/Authorization. `TvModeAppsTest` passed 29/29 and `:app:assembleDebug` succeeded.
+- [x] Installed the build on HONOR in place with app data preserved and confirmed TV Home on the 1920×1080 HDMI output (`tmp/gamebox-tv-m3u-headers-2026-11-07.png`). The saved `iptv-org · RS` playlist and TDI Radio TV Home card remained present.
+- [ ] No header-dependent stream was played in this pass. Sanitized cleartext/DNS/timeout guidance is now implemented and unit-tested, but no such error was deliberately induced on-device. Serbian RTS/Prva playback remains failed.
+
+## 7 November 2026 — Remote text feedback and release gaps
+
+- [x] Remote text and backspace now receive HTTP 409 with an actionable message when no GameBox TV search field is open. The companion displays the guidance and keeps its paired/connected state. Search-field availability is tracked per active GameBox UI instance. Route/client regressions pass.
+- [x] Updated host and Remote debug APKs installed in place on HONOR without clearing data. External display 38 is 1920×1080 and GameBox Home is visible after the screen settles; current TV capture: `tmp/gamebox-tv-production-check-settled-2026-11-07.png`. The RS playlist and TDI Radio TV card are intact.
+- [x] Focused verification: `TvModeAppsTest` 29/29, `CompanionRemoteRouteTest` 7/7, `RemoteClientProtocolTest` 6/6; both `:app:assembleDebug` and `:companion-remote:assembleDebug` succeeded.
+- [x] On HONOR, the remembered Remote app returned an actionable message and stayed connected when sending text on Home with no search field open. With the TV channel-search keyboard open, the same text was accepted and appeared in the TV query; the query was cleared and GameBox Home/last-watched TDI state restored. Positive TV capture: `tmp/gamebox-tv-remote-positive2-2026-11-07.png`; restored Home: `tmp/gamebox-tv-remote-restored-2026-11-07.png`.
+- [x] Playback failures now distinguish Android-blocked cleartext HTTP, DNS resolution, and connection/timeout cases without exposing stream URLs or exception details. Regression coverage is added; no live HTTP failure was induced in this pass.
+- [ ] Audit backlog, in priority order: verify an authorized tracked-browser download through Download Manager and exactly-once import; force JobScheduler interruption/recovery; complete one device import → emulator → return → save/uninstall journey; exercise sanitized playback diagnostics against real failure types; test companion typing from a separate handset and physical controller; expand accessibility/focus acceptance. Serbian RTS/Prva video remains failed and the HONOR Dock remains visible.
+
+## 7 November 2026 — Save restore preflight safety
+
+- [x] Multi-file restore verifies all backup payloads before publication and stages existing live bytes in a bounded private transaction area. If an adapter write fails after publication, GameBox rolls prior artifacts back and removes newly-created artifacts; rollback failure retains recovery bytes. The failure-injection test verifies rollback after the third artifact was already published.
+- [x] Full Android JVM suite passed: 873 tests, 0 failures/errors, 1 skipped. Debug, instrumentation-test, and release APK assembly passed.
+- [ ] HONOR/SAF-provider acceptance and wrong-game restore UI remain unverified. A provider that refuses rollback can still leave partially restored saves; GameBox reports this and retains recovery bytes.
+- [x] Installed the updated debug APK in place on HONOR (`0.1.0-debug`, SHA-256 `6CB4E4296D24DDAB035CABDD4032BB6F9A0569F45938B25AB05D788A057EBE64`) without clearing data and verified the installed base APK hash matches. Confirmed `ExternalDisplayActivity` on physical HDMI display 38 at 1920×1080 and captured `tmp/honor-tv-restore-build-2026-11-07.png`; the RS playlist and TDI last-watched Home state were preserved. The HONOR Dock still overlays the bottom edge (TV-06 remains failed). Unsigned release APK SHA-256: `0B53CB2B1BD53595D55FAC6FA671A41E8EAD4653BCE1D7933CF483B7BB19C1CA`.
+
+## 7 November 2026 — RTSP player capability
+
+- [x] Added Media3’s RTSP module at the same version as the existing ExoPlayer/HLS dependencies. This closes the mismatch where M3U parsing surfaced RTSP streams but the packaged player did not include the RTSP protocol module.
+- [ ] A reachable, authorized RTSP test stream and playback/error-recovery check on HONOR HDMI remain unavailable; this dependency change is not evidence of a successful live stream.
+
+## 7 November 2026 — TV Remote search routing and emulator guidance
+
+- [x] Remote text now uses a bounded FIFO channel tagged with the active TV app/channel/country search target, so bursts are not collapsed into the app search and stale text cannot enter a different field. Country input keeps the existing two-letter uppercase rule. JVM tests cover ordered input, backspace, field isolation, and country filtering.
+- [x] Automatic emulator fallback errors now identify the last attempted emulator by display name and direct users to Game Settings. Rejected handoffs identify the emulator that actually rejected the content. Regression tests cover all candidates unavailable and a fallback handoff rejection.
+- [x] Focused launch/Remote input tests passed and the updated debug APK was installed in place on HONOR without clearing app data. `ExternalDisplayActivity` resumed on HDMI display 38 at 1920×1080; screenshot: `tmp/honor-tv-remote-input-2026-11-07.png`.
+- [x] Full `:app:testDebugUnitTest :app:assembleDebug :app:assembleDebugAndroidTest :app:assembleRelease` verification passed: 877 tests, 0 failures, 0 errors, 1 skipped. Release APK is unsigned; SHA-256: `5BB79C07D27A1954EFFB33BE687CCBCEE9DA9AE9EF1270C73757A6DAD94751C1`.
+- [x] Rechecked the live HONOR HDMI output at 1920×1080 and confirmed GameBox TV Home is visible. The installed `com.gamebox.os.debug` APK hash matches the local debug build. Latest capture: `tmp/gamebox-tv-remote-routing-final-2026-11-07.png`.
+- [ ] Separate-phone Remote entry into each TV search, physical-controller navigation, and all-console gameplay remain unverified. The HONOR Dock still overlays the bottom edge.
+
+## 7 November 2026 — Remote authorization replay fix
+
+- [x] Host remote GET/PUT authorization now requires the per-service bounded nonce replay guard. A deterministic regression proves a signed command nonce is accepted once and rejected on replay; full host tests pass 870 (0 failures/errors, 1 skipped), Remote tests 11/11.
+- [x] Debug/instrumentation and host/Remote release APKs assemble. Host debug installed in place on HONOR and shown top-resumed on HDMI display 38; live unauthenticated LAN GET returned 401. Unsigned release hashes: host `F15A4B1E32EABC7A586C70A8D8642D3C8DEA891560E973776E33CE376A2E33D0`, Remote `8B65EE2DE4E887EA639AA765054275AB0A1763CAA93A84F4164435E90CC67A6B`.
+- [ ] Signed second-phone replay/interleaving, physical gamepad, and Serbian Live TV playback remain acceptance gaps.
+
+## 7 November 2026 — Stream fallback and import recovery
+
+- [x] RTS failure no longer automatically replaces the in-app player with the guide page. HONOR HDMI showed `ERROR_CODE_IO_NETWORK_CONNECTION_FAILED` for RTS 1 plus both **Retry stream** and explicit **Open RTS Planeta** actions. TDI Radio TV was restored as last watched after the test.
+- [x] A 20-second Prva playback attempt on the final installed build also failed with `ERROR_CODE_IO_NETWORK_CONNECTION_FAILED`; the failure view retained **Retry stream**. This confirms the source/network issue remains; it is not a passing Serbian broadcast test.
+- [x] A stopped transfer job requeues only transfer states. A rescheduled job reuses a non-empty finalized staged download and detects already-imported game content, preventing redundant network transfer/import after a stop race.
+- [x] Full GameBox JVM tests: 871 passed (0 failures/errors, 1 skipped); Remote tests: 11/11. Debug, instrumentation, host release, and Remote release APK builds succeeded. Installed host debug SHA matches local (`9098D78D1BD332EC93018FB2EAFBC6980A9DA7A1A9C24FF688AB98D3750590EA`); unsigned release SHA-256: host `0EE5BB9A8A3C466F4680C5739B4CC8C6718829920617A9553A4510BC26CBCA03`, Remote `8B65EE2DE4E887EA639AA765054275AB0A1763CAA93A84F4164435E90CC67A6B`. TV Home is resumed on HONOR HDMI with TDI Radio TV restored as last watched.
+- [ ] Forced JobScheduler interruption during import, physical gamepad, reliable RTS/Prva playback, and HONOR Dock behavior remain unverified.
+
+Gaming UX implementation priorities, current evidence, and remaining acceptance gates are tracked in [Gaming UX implementation goal](docs/GAMING_UX_GOAL.md).
+
+## 7 November 2026 — Remote request-ordering follow-up
+
+- [x] Remote UI requests are serialized in submission order; host commands and pair/revoke routes share a serialization lock, with revoke HMAC checked against the current token inside that route.
+- [x] Remote JVM tests passed (11, 0 failures); GameBox JVM suite passed (869, 0 failures/errors, 1 skipped). Host and Remote APKs assembled; the host update was installed without clearing data, matched the local SHA, remained on the 1920×1080 TV dashboard, and still rejected unauthenticated remote requests with HTTP 401.
+- [ ] Second-phone concurrent command delivery and a physical pair/revoke race remain untested. The UI still reports no active gamepad; Serbian live broadcast playback remains unresolved.
+
+## 7 November 2026 — Live TV recovery follow-up
+
+- [x] Added a TV-accessible retry action for failed channel streams. Fresh JVM suite passed (868 tests, 0 failures/errors, 1 skipped); debug and instrumentation APK assembly succeeded.
+- [x] Installed build hash matched the local APK. Prva’s failure and retry/loading state were observed on HONOR HDMI at 1920×1080. TDI Radio TV was restored as last watched afterward.
+- [ ] Serbian live broadcast playback, physical gamepad navigation, and instrumentation execution remain open. The retry restarts the stream request but cannot repair unavailable/blocked upstream URLs.
+
+## 29 October 2026 — acceptance test continuation
+
+- [x] Updated the existing HONOR debug package with `adb install -r`, preserving app data. Installed build is `0.1.0-debug`, updated at 22:13; APK SHA-256 `D0922F6AC162C536DEDBECF350A88413DBBF76421ED101692052987B5E8D58A3`. The app was not launched.
+- [ ] TV runtime acceptance remains pending: the post-install display inventory still contains only the built-in screen and Android Studio virtual display, with no HDMI output.
+- [x] Ran the complete Android JVM unit suite: 817 tests, 0 failures, 0 errors, 1 skipped.
+- [x] Compiled the Android instrumentation test APK successfully.
+- [x] Unsigned Android release APK assembled successfully, including `lintVitalRelease`.
+- [x] Android `lintDebug` completed successfully. It reports SDK/dependency freshness and code-style warnings; no lint errors.
+- [x] Windows core self-check passed, and the WPF companion built with 0 warnings and 0 errors. The first sandboxed self-check could not replace its temporary test file; rerunning with authorized temporary-file access passed.
+- [x] Rechecked the HONOR over ADB. Only its 1312×2848 built-in panel and the 544×1182 `studio.screen.sharing` virtual display are present; no HDMI display is connected. The virtual display is not accepted as TV validation.
+- [ ] Resume physical-TV navigation, downloads, emulator launch/gameplay, and controller acceptance when HDMI returns. No phone-screen or virtual-display substitution was used.
+- [ ] The active project audit still has unresolved blueprint and console-coverage work; this verification pass does not complete the goal.
+
+## 29 October 2026 — Vimm browser return and details acceptance
+
+- [x] On the physical HDMI display, opened a Vimm search result, inspected its
+  GameBox details, and opened **Download** to enter the tracked Vimm browser.
+  **Back to GameBox** restored the same game details and showed **Returned
+  without starting a download**. No site download was activated.
+- [x] Download Manager remained at **Queue · 0 / Completed · 1** after this
+  browser-only return; no transfer was created.
+- [ ] Vimm’s extra details failed to load in GameBox for this result even
+  though the vault page rendered. Search art/results and browser routing work;
+  metadata hydration still needs repair or a dependable fallback.
+- [ ] The HONOR Dock remained over the TV. Display Settings search did not
+  reveal a taskbar option; the undocumented secure setting was only read
+  (`game_dockbar_disable_mode = 2`) and was not modified.
+
+## 29 October 2026 — Vimm typo correction and TV search acceptance
+
+- [x] Fixed Vimm typo suggestions to choose the uniquely most frequent close
+  title word in the returned results and hide suggestions when the best
+  candidates tie. Regression coverage reproduces `MAIO` with frequent `Mario`
+  results and an ambiguous `Mario`/`Mais` tie.
+- [x] On the physical HDMI TV, the old build searched `MAIO`, returned 63
+  results with box art, and incorrectly suggested **Mais** despite Mario
+  results. Installed the updated debug build; the same query now suggests
+  **Mario**. Activating that suggestion reran the search as `Mario`, returning
+  65 results with console-grouped artwork. Captures are in `tmp/`.
+- [x] `:app:testDebugUnitTest` passed: 810 tests, 0 failures, 1 skipped.
+  `:app:assembleDebug`, `:app:assembleDebugAndroidTest`, Windows core checks,
+  and the WPF build passed.
+- [x] The physical TV Download Manager showed **Queue · 0**, **Completed · 1**,
+  and Galaxy Patrol Ready. Navigation and search entry in this pass used
+  synthetic HDMI input; no physical controller press was counted.
+- [ ] The HONOR Dock remains visible. Physical A/X acceptance and starting a
+  download of a legally authorized homebrew test through Vimm remain open.
+- [x] Inspected the HONOR TV app drawer’s GameBox icon menu: it offers **Add to
+  Desktop**, **Pin to Taskbar**, and **Uninstall**, but no per-app fullscreen
+  control. The taskbar icon menu offers **Start in Windowed Mode** only. No
+  global Dock preference was changed.
+
+## 29 October 2026 — PS2 install and HONOR fullscreen status
+
+- [x] Checked the official Play! listing on the actual HONOR TV output. Google
+  Play refused availability, reporting that the app was made for an older
+  Android version; Play! was not installed and no sideload bypass was tried.
+- [x] Replaced the stale AetherSX2 PS2 entry with ARMSX2 and an explicit `ACTION_VIEW` URI handoff; focused unit tests and debug build passed. Installed official ARMSX2 2.9.1 on the HONOR (arm64-v8a) after verifying the upstream release SHA-256.
+- [ ] PS2 launch/gameplay on TV remains unverified: HDMI was absent during install validation. ARMSX2 requires a BIOS dump from a PS2 the user owns.
+- [ ] The HONOR Dock is visible in the current GameBox TV capture. The
+  taskbar long-press menu exposes only **Start in Windowed Mode**; ADB could
+  not start, so the per-app fullscreen setting could not be reapplied.
+- [ ] Physical controller A/X acceptance is still pending because the user
+  could not press the controller during this pass.
+
+## 29 October 2026 — P0 uninstall and details audit verification
+
+- [x] Corrected stale audit status for the three P0 findings. Installed Galaxy
+  Patrol resolves to **Play**; `AuthorizedInstallFeedbackTest` and
+  `DetailControllerActionPlanTest` cover its primary and controller actions.
+  The details UI describes cloud copies truthfully and does not claim payload
+  encryption.
+- [x] Ran `GeneralContentRemovalTest.importedDiscSetUninstallAndReimportRetainProgressMetadata`
+  on the connected HONOR (`OK (1 test)`). With cloud storage unconfigured, the
+  test got `NOT_REQUIRED`, created a verified local save backup, removed only
+  its temporary game's content, and retained the save and metadata.
+- [x] Also reconciled DS emulator visibility and graphics-profile audit items:
+  both approved DS packages are in manifest queries; the settings UI directs
+  users to emulator-owned graphics options and **Open emulator**. Focused JVM
+  action, cloud gate, and emulator-intent tests passed.
+- [ ] Physical controller action and successful DS emulator launch remain
+  unverified. The temporary Android test APK was removed and GameBox returned
+  to HDMI display 48.
+
+## 29 October 2026 — Metadata platform disambiguation
+
+- [x] Wikidata enrichment now filters exact-title results to video-game
+  entities, then uses a unique matching year or known console platform to
+  disambiguate. Platform claims use `P400`; supported console aliases handle
+  labels such as NES / Nintendo Entertainment System and PSP / PlayStation
+  Portable. If platform claims exist but none match, automatic enrichment
+  leaves the current game metadata untouched.
+- [x] Manual metadata candidates include their platform labels. Focused tests
+  cover same-title NES/PSP matches, unmatched platforms, and visible manual
+  candidate labels. The full `:app:testDebugUnitTest` suite and
+  `:app:assembleDebug` passed.
+- [ ] TV metadata refresh and physical-controller operation were not exercised
+  in this pass; manual candidate presentation is covered by JVM tests.
+
+## 29 October 2026 — Download Manager and companion service acceptance
+
+- [x] On the physical 1920×1080 HDMI display, inspected Download Manager and
+  opened **Download Queue** using display-targeted synthetic touch. It showed
+  **Queue · 0**, **Completed · 5**, then the empty state **Your queue is clear**.
+  This verifies the screen and its empty-state content; it is not a physical
+  controller-input check.
+- [x] Android enumerated **Wireless Controller** as an external
+  `KEYBOARD | GAMEPAD | JOYSTICK` input device. No physical button event was
+  verified during this pass because the controller could not be pressed.
+- [x] Bounded companion TLS handling to four active connections and eight
+  queued connections; overload receives HTTP 503. A slow, incomplete request
+  no longer prevents a separate authenticated status request from succeeding;
+  the HONOR regression test requires the status response in under 1.5 seconds.
+  The companion service now shuts down its listener and executors gracefully.
+- [x] `:app:testDebugUnitTest`, `:app:assembleDebug`,
+  `:app:assembleDebugAndroidTest`, and the focused
+  `CompanionEndpointServiceLifecycleTest` passed on the HONOR. The first
+  device run exposed an interrupted-shutdown fatal trace; graceful shutdown
+  removed it, and the corrected rerun passed without a fatal trace.
+- [x] Installed the current debug APK alongside production without replacing
+  production data. On the debug TV UI, installed the bundled legal Galaxy
+  Patrol fixture; Details changed to **installed**, Download Manager showed
+  **Completed · 1 / Galaxy Patrol Ready**, and Library showed one game.
+  **Play Now** launched NES.emu 1.5.85 and rendered gameplay on HDMI. After
+  enabling HONOR **Open in full screen mode** for NES.emu, the Dock was hidden.
+  NES.emu **Close Content → Exit** returned to Galaxy Patrol details and showed
+  **Returned to GameBox; time away recorded**.
+- [x] Force-stopping and relaunching GameBox restored the HONOR Dock. Reapplying
+  **Open in full screen mode** removed it again; the settled 1920×1080 Home
+  capture fills the display without Dock or window chrome.
+- [ ] Actual long-upload plus concurrent status, simultaneous conflicting
+  writes, physical-controller input, and emulator control response remain
+  unverified. After instrumentation Android returned to the production app;
+  the visible production Download Manager showed **Queue · 0 / Completed · 1**
+  (Galaxy Patrol). The debug variant was then installed alongside production
+  and its own fresh one-item test flow passed. The controller was detected but
+  no physical button was pressed.
+
+## 29 October 2026 — Physical TV 7z import and GBA launch
+
+- [x] Reconnected to the HONOR's physical HDMI display 47 at 1920×1080. From
+  the `@rkanoid` GBA details screen, opened **Import your copy**, selected the
+  generated MIT homebrew archive `rkanoid-mit.7z` in the TV file picker, and
+  returned to the same GameBox details with the game installed.
+- [x] Download Manager showed **Completed · 1** and **Added to Library**. The
+  source archive was removed from the temporary Downloads folder; the imported
+  `rkanoid-mit.gba` SHA-256
+  (`99AE825FFB1B7E8B48B33CD2715CEB8CA524858F99FEE4B22938489460083D94`)
+  matched the local fixture. Library showed the game under GBA.
+- [x] **Play Now** launched GBA.emu 1.5.85 on HDMI and rendered the home's
+  menu. GBA.emu's Close Content and Exit actions returned to GameBox.
+- [x] The focused `RomArchiveExtractorTest` suite passed locally, covering 7z
+  extraction and archive-failure cleanup.
+- [ ] Gameplay selection, physical-controller input, and emulator fullscreen
+  remain incomplete: the test stayed at the 1 Player menu, the controller was
+  disconnected, and the HONOR Dock and touch-control overlay remained visible.
+
+## 29 October 2026 — HONOR TV fullscreen and Dock recheck
+
+- [x] Reconnected to the actual HONOR HDMI display 47 at 1920×1080 and
+  confirmed `com.gamebox.os.debug/.MainActivity` is foreground on that display.
+  Its window is match-parent with `LAYOUT_NO_LIMITS`; HONOR's taskbar menu says
+  **Start in Windowed Mode**, confirming GameBox's per-app fullscreen mode is
+  active. After dismissing transient controls and waiting six seconds, the
+  separate HONOR desktop Dock was still visible. No undocumented global Dock
+  setting was changed. This points to the OEM desktop Dock policy, not an
+  app window-size or title-bar regression.
+- [ ] Recheck after HONOR Dock policy is changed through its supported UI, or
+  after the desktop shell's transient/overlay state changes; keep TV captures
+  as the visual acceptance target.
+
+## 29 October 2026 — Durable manual import queue
+
+- [x] Moved manual imports from both Library game details and Store discovery
+  details into unique WorkManager jobs. Picker URI read/write grants are
+  persisted before scheduling; job metadata and staged progress are stored in
+  the existing Download Manager record store. Workers survive screen exit and
+  process recreation, register only verified imports, and release URI grants at
+  terminal completion. Users can cancel active manual imports from either
+  details progress or Download Manager.
+- [x] Download Manager now lists local imports alongside browser transfers and
+  shows their extraction/verification progress, result, and cancellation.
+  Negative manual-work IDs remain excluded from Android DownloadManager
+  monitoring, and history retention sorts by creation time.
+- [x] Focused queue/history tests, Kotlin compilation, and `:app:assembleDebug`
+  passed. Installed APK SHA-256:
+  `50C2371FB23056CFF864BFB788336D83028374F2AAC5C6764464540AA1F7EA17`.
+- [x] On the physical 1920×1080 HDMI display 47, imported the MIT Chroma
+  Circuit Dreamcast homebrew from a ZIP in Store → **Import your copy**. GameBox
+  extracted the CDI into `files/imports/sega-dreamcast/chroma-circuit-dreamcast/`,
+  registered the game, removed the source ZIP from Downloads, and recorded
+  **Completed → Added to Library** in Download Manager after navigating away.
+  The extracted CDI SHA-256 matched the local legal fixture.
+- [ ] Immediate navigation while a large import is active, process-death
+  recovery, cancel/rollback, and a 7z archive still need TV acceptance tests.
+- [ ] The Android SAF picker opens as a floating window over GameBox on HONOR;
+  borderless picker presentation remains an OEM/system limitation to address.
+
+## 29 October 2026 — GBA gameplay and N64 permission retry
+
+- [x] On physical HDMI display 47, continued the MIT `@rkanoid` GBA homebrew
+  in GBA.emu. The title/menu advanced to the Arkanoid playfield; holding the
+  on-screen D-pad Right moved the paddle right and Left moved it back. This is
+  synthetic touch input, not a physical-controller pass.
+- [x] Retried the legal N64brew Fission Failure 64 test on HDMI after the user
+  approved temporary Mupen64Plus AE notification and All files access grants.
+  Explicit GameBox FileProvider read grants allowed AE to reach GameActivity.
+  The default Glide64 renderer had previously native-crashed; GlideN64-Medium
+  stayed alive but showed only a dim N64brew splash, with no playable screen.
+  N64 gameplay is not verified.
+- [x] Revoked `POST_NOTIFICATIONS` and `MANAGE_EXTERNAL_STORAGE` after the
+  retry; Android reports notification permission denied and the all-files app-op
+  denied.
+- [x] `:app:testDebugUnitTest` focused on `LaunchAdapterTest` and
+  `EmulatorIntentPolicyTest`, plus `:app:assembleDebug`, passed after the
+  explicit FileProvider grant change. Installed APK was top-resumed on physical
+  HDMI display 47.
+- [ ] Mupen AE still appears in an HONOR floating window and the N64 homebrew
+  does not progress past its splash. Re-test after determining a compatible
+  renderer/ROM configuration; physical controller input remains unverified.
+- [x] Repeated **Play Now** with both approved permissions enabled and waited
+  another 20 seconds on HDMI. The same dim splash remained; no crash or gameplay
+  appeared. Stopped AE and restored both permissions to denied. These permissions
+  are not the cause of the stalled game screen.
+- [x] Added Gopher64 v1.1.42 as the first standalone N64 choice, installed its
+  official Android APK on HONOR, and verified GameBox **Play Now** launched its
+  N64 activity with the existing legal ROM. The Fission Failure 64 title menu
+  rendered on HDMI; Back twice returned to the same GameBox details page and
+  showed the session return message.
+- [ ] Full gameplay and physical-controller input remain unverified. The
+  synthetic A attempts did not advance the title menu, and GameBox reports the
+  controller disconnected. Gopher64 maximizes, but the HONOR Dock remains
+  visible; per-app fullscreen is still pending.
+
+### Follow-up N64 run — 29 October 2026
+
+- [x] With the user's approval, temporarily granted Mupen64Plus AE notification
+  and All files access permissions. On the physical 1920×1080 HDMI display,
+  AE indexed the legal `FissionFailure64.z64` homebrew and opened its game
+  action screen. Selecting **Start** returned to GameBox; Android's exit info
+  records the emulator process as SIGNALED (status 9). No gameplay was shown.
+- [x] Revoked both permissions and deleted the dedicated
+  `GameBoxOS-QA-N64-20261029` test folder from the HONOR. Verified notification
+  permission and all-files app-op are denied again.
+- [ ] N64 boot, controller input, and seamless GameBox return remain unverified.
+
+### Dreamcast import and launch — 29 October 2026
+
+- [x] Installed the current debug APK on HDMI display 47, selected the
+  uninstalled Chroma Circuit entry, and imported its MIT homebrew CDI from a ZIP
+  with the SAF picker. Download Manager showed **Completed · 1** and
+  **Added to Library** after navigating away. The source ZIP disappeared from
+  Downloads, and the private CDI hash matched
+  `FFA04879195D4E83F70701980A41A4B795095D85B582755661295C4F5F1FE23B`.
+- [x] **Play Now** launched Flycast on HDMI, but Flycast showed “Cannot stat
+  file:///storage/emulated/0/Download/GameBox/session-…/chroma-circuit.cdi”.
+  Android reports Flycast's `READ_EXTERNAL_STORAGE` permission denied and no
+  `MANAGE_EXTERNAL_STORAGE` app-op. Gameplay did not start; a temporary Flycast
+  storage-permission test awaits the user's answer.
+- [x] Reproduced the same failure on 29 October 2026 using the current
+  `com.gamebox.os.debug` build on HDMI display 47. Flycast v2.7 opened, then
+  reported **“Flycast has stopped. Cannot stat file:///…/chroma-circuit.cdi”**;
+  both legacy external-storage permissions remain denied. Returned to GameBox
+  with Back. The installed manifest does not request
+  `MANAGE_EXTERNAL_STORAGE`, so Android's All files access toggle is disabled.
+  With user approval, temporarily granted only Flycast's declared
+  `READ_EXTERNAL_STORAGE`; Play Now reproduced the same file-stat failure.
+  Revoked the permission and verified `granted=false`. All files access was
+  never granted; both failed-launch export folders were empty and removed.
+- [x] Tried Flycast's empty-library **Add Game Folder** route with a temporary
+  copy of the repo's MIT Chroma Circuit fixture. Flycast opened on HDMI 47, but
+  TV-targeted tap and Enter did not open its folder picker; no SAF grant or game
+  scan was completed. The physical controller was not connected. Stopped
+  Flycast and removed the exact test copy and folder.
+- [x] Simplified the SAF contract to omit the redundant `EXTRA_MIME_TYPES`
+  wildcard when requesting `*/*`. The current Android intent is verified as
+  `ACTION_OPEN_DOCUMENT` with `type=*/*`; ZIP visibility in this test required
+  MediaStore indexing because ADB-pushed test files are not indexed by default.
+- [x] `:app:testDebugUnitTest :app:assembleDebug` passed. Installed debug APK
+  SHA-256: `FE47438E67F71244702F63E77250DC2DB6A371466B7C40B70507BDF57CAAF1E0`.
+- [ ] Remove the Chroma Circuit test import after Flycast's storage behavior is
+  resolved; retain no QA screenshots or temporary source files on the HONOR.
+
+## 28 October 2026 — N64 quick-return feedback retest on debug TV build
+
+- [x] Corrected the hardware test target: installing the debug APK alone left
+  the production `com.gamebox.os` activity foreground on HDMI. Used the verified
+  projection installer to start `com.gamebox.os.debug` on physical display 47
+  and confirmed that exact package was top-resumed before interacting.
+- [x] On the debug Home screen, opened the already imported MIT-licensed
+  Fission Failure 64 entry and selected **Play Now**. Mupen64Plus AE opened on
+  the TV, then stopped with its own required-permissions error. Dismissed the
+  error without granting All files access.
+- [x] GameBox returned to the same N64 details screen and displayed:
+  “Emulator returned in under a minute; the game may not have finished
+  starting. No managed save was found to back up.” This verifies the quick
+  return wording on the target hardware; it does not verify N64 gameplay.
+- [x] Focused `LaunchReturnMessageTest` and `LaunchSessionControllerTest`, plus
+  `:app:assembleDebug`, pass. The focused test also verifies that quick-return
+  feedback does not hide a failed automatic save backup.
+- [ ] The HONOR Dock/taskbar still overlays the bottom of the TV UI. No physical
+  controller is connected, and N64 gameplay remains blocked by Mupen64Plus AE's
+  All files access requirement.
+
+## 27 October 2026 — HONOR TV Vimm spelling-correction follow-up
+
+- [x] Corrected a hardware-test error: `app-debug.apk` installs as
+  `com.gamebox.os.debug`, but earlier commands launched the older production
+  package `com.gamebox.os`. Those repeated failures did not test the edits.
+- [x] Verified the final debug package top-resumed on physical HDMI display 7
+  (1920×1080). Searching `Freedoom` returned four results grouped by console
+  with artwork and **Did you mean “Freedom”?**. Selecting the suggestion changed
+  the query, removed the suggestion, and populated the four corrected results
+  without another manual search. No result detail or download was activated.
+- [x] Query editing clears stale source results directly; correction uses the
+  result's source ID and dispatches through the existing configured-source
+  action. Removed the pending-query effect, speculative source fallback, and
+  temporary diagnostic logs.
+- [x] Added `scripts/install-honor-projection.ps1`: it derives the package and
+  launcher from the APK, requires an active physical external display, and
+  verifies that exact package is resumed there. Confirmed successful install
+  on display 7 and rejection of phone display 0 and virtual display 8.
+  Verified APK SHA-256:
+  `540F96C8783D0E5F48CACBB354F2CC5097CEDECE4D28784EEFB23DBB227F6D4D`.
+- [x] Unit tests, debug APK, controller-test APK compilation, and lint passed.
+  Instrumentation tests were compiled, not executed on the phone display.
+- [x] HONOR Dock → GameBox → **Open in full screen mode** hides the Dock on the
+  TV; the transient title controls disappear after navigation. Left the debug
+  app on Home in that borderless fullscreen state.
+- [ ] A cold ADB stop/start brings the Dock back. Automatic restoration across
+  process restarts remains unproven; standard fullscreen launch flags alone did
+  not hide the HONOR Dock. Global Taskbar settings were not changed.
+- [x] Opened the installed legal Galaxy Patrol fixture and selected Play Now.
+  NES.emu (`com.explusalpha.NesEmu/com.imagine.BaseActivity`) became resumed on
+  physical TV display 7 and rendered the game. Its normal Exit menu returned
+  to the same GameBox debug details screen on the TV. Injected gamepad B then
+  returned to Home; recorded playtime increased from 4m to 14m. This checks the
+  software event path and session tracking, not physical-controller input.
+- [x] In NES.emu 1.5.85, changed On-screen Input Setup → Use Virtual Gamepad
+  from Auto to Off; verified the D-pad, A/B, Start, and Select overlays hidden.
+  Applied its HONOR Dock fullscreen action and verified the bottom Dock hidden
+  during play. Native emulator menu/fast-forward controls remain available.
+- [ ] Physical gamepad acceptance and download/import/emulator end-to-end
+  acceptance remain outstanding. The TV reports no connected controller.
 
 ## 11 October 2026 — HONOR TV Vimm search and focus retest
 
@@ -4346,3 +4788,385 @@ database files are present. Do not treat the failed run as a product-test pass.
   controls only when a gamepad is connected, a full gameplay/save cycle, and a
   successful generic user-owned import plus live Vimm download tracking. No
   copyrighted game was downloaded.
+
+## 2026-10-29 — GBA.emu HDMI fullscreen relaunch check
+
+- [x] On physical HDMI display 47 (1920×1080), confirmed GBA.emu 1.5.85
+  settings **Title Bar: Off**, **Hide OS Navigation: On**, and **Use Virtual
+  Gamepad: Off**. The MIT `@rkanoid` homebrew rendered with no touch layout.
+- [x] Applied HONOR Dock → **Open in full screen mode**. The settled TV capture
+  showed the emulator edge-to-edge with the Dock and navigation strip hidden.
+  GBA.emu's normal Exit returned to the same GameBox detail page; relaunch from
+  **Play Now** again rendered the ROM correctly.
+- [ ] HONOR does not retain that per-app fullscreen choice across GameBox
+  launches: after relaunch the Dock returned, and applying **Open in full screen
+  mode** again hid it. This is a reproducible deployment gap for emulator
+  fullscreen. Check whether Android/HONOR offers a persistent app setting or
+  implement a supported immersive launch policy where possible.
+- [ ] The emulator's virtual gamepad is currently Off. Physical-controller
+  input was not verified, and synthetic A/DPAD events did not advance the
+  1 Player menu. Restore/verify controller-driven gameplay before
+  treating controls as accepted; leaving touch controls off without a gamepad
+  makes this test title unplayable.
+- [x] Updated HONOR TV settings guidance to explain that the Dock can return
+  when a game launches and the emulator may need its own fullscreen action.
+  Updated the existing expected-string test; the focused test passed.
+- [x] Built and installed the debug APK with the external-display guard script;
+  it verified `com.gamebox.os.debug` resumed on physical HDMI display 47. The
+  Settings → Display screen rendered the new guidance, with TV safe area Off
+  and active inset 0%. The HONOR Dock remained visible after cold launch.
+
+## 2026-10-29 — N64 import, Gopher64 launch, and return on HDMI
+
+- [x] Ran the full `:app:testDebugUnitTest` suite successfully. Used the current
+  GameBox debug build on physical HDMI display 47 to import the existing legal
+  Fission Failure 64 N64 homebrew from `GameBoxOS/games/N64`.
+- [x] GameBox showed the N64 entry installed with Play Now. Its private import
+  (`files/imports/nintendo-64/fission-failure-64-n64/FissionFailure64.z64`)
+  SHA-256 matched the shared source exactly:
+  `EAAA374A817DC2327133B39371B1F2231FC25A074BEE566E678E637EDA3F3319`. The
+  original shared-storage ROM remains in place.
+- [x] **Play Now** launched Gopher64 1.1.42 on HDMI; the N64 homebrew title
+  screen rendered. Two Back actions returned to the same GameBox details page,
+  which displayed the session-return message and no-managed-save notice.
+- [ ] Game interaction remains unverified: TV taps on the Tutorial label and
+  Gopher64's visible A touch control did not advance the title screen. Android
+  reports no connected controller. HONOR opened Gopher64 in a floating window;
+  its maximize control removed the inset window but left the app title bar,
+  touch controls, and Dock visible.
+
+## 2026-10-29 — SNES GameBox handoff and Dreamcast adapter correction
+
+- [x] Added a metadata-only MIT Gothicvania SNES entry and integrity test.
+  Full `:app:testDebugUnitTest`, focused emulator-adapter tests, and
+  `:app:assembleDebug` passed.
+- [x] On physical HDMI display 48, imported Gothicvania through GameBox and
+  launched Play Now to Snes9x EX+; the title rendered. Removed the temporary
+  import through GameBox, preserving the shared original. Physical SNES Start
+  input and borderless emulator fullscreen remain unverified.
+- [x] Removed Flycast from selectable Dreamcast adapters after the tested
+  content-URI and public-path handoffs failed. Redream is the tested route and
+  remains selectable. Installed debug APK SHA-256
+  `3771104F813E9A7E02FA9D52ECAF0BF6207CE2FE48753C084E23554C6BFD5B9F`;
+  projection guard verified GameBox foreground on HDMI display 48.
+- [ ] Flycast support remains unavailable until a scoped-storage-compatible
+  launch path can be implemented and accepted. This build-install verification
+  did not launch a Dreamcast ROM because the prior test import had been removed.
+
+## 2026-10-29 — Hide stale import success after uninstall
+
+- [x] Fixed Game Details retaining “Import complete. The game is ready in your
+  Library” from a previous successful manual import after the content had been
+  uninstalled. The message now appears only while the game is installed or has
+  an available update; failure/cancellation messages remain visible.
+- [x] Added a regression test for installed, not-installed, and missing-file
+  states. Full Android JVM unit tests and debug APK assembly passed.
+- [x] Updated the debug APK in place and verified on HDMI display 48 that the
+  uninstalled Chroma Circuit detail no longer shows the stale success message.
+  The same screen continued to offer the expected import action.
+
+## 2026-10-29 — Preserve raw sources during missing-file repair
+
+- [x] Actual TV recovery testing found that **Locate files** deleted the raw
+  `gothicvania.sfc` selected from `GameBoxOS/games/SNES`. The repair card now
+  retains raw game files and removes only selected ZIP/7z archives after
+  successful repair; the policy is shown before opening the picker.
+- [x] Restored the exact source from GameBox’s verified import (`524,288` bytes,
+  SHA-256 `11D32045C69839309490676FE2DD46E3385806F79C8DAD279C2D1F4FFA6027DF`)
+  before retesting. With the updated APK on HDMI display 48, uninstall then
+  Locate files restored the game and reported “Selected game files were
+  retained”; the shared source still had the same size and hash afterward.
+- [x] Added raw SNES/CUE/BIN preservation assertions alongside the existing
+  ZIP/7z cleanup policy tests. Full Android JVM tests and debug plus Android
+  test APK compilation passed. Device instrumentation was not run.
+
+## 2026-10-29 — Controller gameplay input attempt
+
+- [ ] The user pressed D-pad Right for the Level 1 input check, but the HDMI
+  capture showed GameBox's SNES details/repair page rather than the game. This
+  is not a gameplay-input pass. Android listed the Bluetooth controller as a
+  GAMEPAD/JOYSTICK; return the intended emulator to the TV display before
+  repeating. The HONOR Dock was still visible.
+
+## 2026-10-29 — GBA.emu HDMI gameplay setup
+
+- [x] Re-imported the MIT @rkanoid fixture through GameBox from a temporary
+  Downloads QA folder. Its source SHA-256 is
+  `99AE825FFB1B7E8B48B33CD2715CEB8CA524858F99FEE4B22938489460083D94`.
+  Play Now launched GBA.emu as top-resumed on HDMI display 48 and rendered
+  Level 1 with the touch overlay off.
+- [ ] Physical D-pad Right acceptance remains pending; no input event was
+  observed on `/dev/input/event13`. The stream showed only minor `ABS_RX`
+  changes and no key/hat event; the game image remained unchanged. The HONOR
+  Dock remained visible. The exact temporary staging copy was removed after
+  import; GameBox's private imported game remains available for the check.
+
+## 2026-10-29 — Manual import persistence and TV label fix
+
+- [x] On HDMI display 48, imported legal MIT @rkanoid through GameBox, launched
+  it in GBA.emu, and confirmed its completed **Added to Library** row in
+  Download Manager. Force-stopped and relaunched GameBox; the title and
+  completed import history persisted.
+- [x] Changed the completed section label to “Completed imports and downloads”
+  because the old “Completed browser downloads” label included manual imports.
+  Android JVM tests and `:app:assembleDebug` passed. APK SHA-256
+  `C1A54755220A0D60066B9D6C957DAFC416948108FDB14EB08142AF71906649C0` installed
+  in place; the projection guard verified GameBox top-resumed on HDMI display
+  48, and the corrected label plus @rkanoid history row were visible.
+- [ ] Still open: physical controller acceptance, in-progress import recovery,
+  progress/cancel rollback, archive cleanup, a save/reinstall loop, and HONOR
+  Dock suppression across relaunch.
+
+## 2026-10-29 — GBA.emu physical controller check
+
+Reopened the installed MIT @rkanoid from GameBox on HDMI display 48. GBA.emu owned the TV display at Level 1 with touch controls hidden. The latest `/dev/input/event13` capture showed only small `ABS_RX` fluctuations (`0x1b`-`0x1c`), and the paddle remained stationary; this attempt did not reconfirm physical input. The earlier GBA.emu controller retry in the test matrix captured physical Start and D-pad events and visibly moved the paddle, so physical gameplay input has a prior verified pass. A synthetic `KEYCODE_DPAD_RIGHT` also moved the paddle. The HONOR Dock remains visible. HONOR's documented Global Taskbar search returned unrelated AI results; searching Multi-window and PC mode also exposed no Dock toggle. Settings was closed without changing system settings. A forced `:app:testDebugUnitTest --rerun-tasks` executed all 25 tasks and passed.
+
+## 2026-10-29 — GBC homebrew boot on Honor TV
+
+- [x] Installed and hash-verified the MIT GBC RayTracer homebrew in the organized `games/GBC` folder, granted Lemuroid scoped access to that folder, and confirmed the game indexed and rendered its live scene on HDMI display 48.
+- [x] This was a manual Lemuroid scan/launch and was only an emulator smoke check at the time. The later GameBox GBC import/launch pass is recorded below. A synthetic maximize tap hid the bottom Dock but left Lemuroid's top window controls; borderless fullscreen is still open.
+
+## 2026-10-29 — GameBox GBC import and launch
+
+- [x] Added a metadata-only MIT GBC RayTracer Store entry and integrity test; no ROM is bundled or remotely offered. The full Android JVM unit suite and debug APK assembly passed.
+- [x] Installed checksum-verified GBC.emu 1.5.85 prerelease on the Honor, refreshed Store on HDMI display 48, imported the existing GBC ROM through the GameBox detail flow, and launched it via GameBox's scoped content URI. The demo rendered. An earlier synthetic-D-pad capture caught a partial render and did not establish gameplay response; the later physical-input retest is recorded below.
+- [x] Normal **Close Content → Exit** returned to the same GameBox detail page with session-return feedback. The source ROM remained in the organized GBC directory; its SHA-256 matched GameBox's private imported copy.
+- [ ] Borderless fullscreen remains open; the HONOR Dock is visible. Other console adapters still need individual hardware tests.
+
+## 2026-10-29 — GBC physical-controller retest on Honor TV
+
+- [x] Reconnected ADB to the Honor and captured HDMI display 48 at 1920×1080 while GBC.emu ran the MIT RayTracer homebrew. Its published controls specify D-pad Up for the far view and Down for the close view.
+- [x] Captured physical DualShock 4 D-pad Up and Down as `ABS_HAT0Y` transitions on `/dev/input/event13`. GBC.emu’s Generic Gamepad profile showed Up/Down bindings and **POV Hat as D-Pad: On**. A temporary PS3 profile comparison made no visible difference; the original Generic Gamepad profile was restored.
+- [ ] Neither physical direction produced a repeatable view change in the HDMI captures. The earlier synthetic-D-pad screenshot was captured during a partial render and does not prove the game responded. Controller connection and Android event delivery pass; GBC.emu gameplay response remains unresolved. The HONOR Dock is visible.
+- [x] Reclosed the emulator normally; GameBox returned to the same installed GBC detail page and showed session feedback. Captures are in `tmp/gamebox-gbc-*`.
+- [x] `:app:testDebugUnitTest` passed using the installed Gradle 9.7.1 distribution; all 25 tasks executed.
+- [x] Built and installed the current debug APK on the Honor (SHA-256 `7D54DE4B291F0CDB02B1826ABA7E32CF792F421609D67BE3BCCC016E20D31425`). GameBox reopened on HDMI display 48 with the connected controller shown and the GBC RayTracer hero and collection visible. The HONOR Dock remains visible.
+
+## 2026-10-29 — Windows library concurrent-save race
+
+- [x] The Windows Core self-test exposed a race in `LibraryStore.SaveAsync`: it released the per-instance save lock before cleaning up the shared temporary file, allowing a waiting save to lose its temp file before the atomic move.
+- [x] Temporary-file cleanup now happens while the lock is held, with lock release protected if cleanup throws. `dotnet run --project windows/GameBox.Windows.Core.Tests/GameBox.Windows.Core.Tests.csproj --no-restore` passed, including 24 concurrent writes.
+- [x] The Honor and HDMI display became reachable through ADB for the GBC physical D-pad retest above; ADB remains a required path for the next hardware run.
+
+## 2026-10-29 — GameBox controller navigation on current Honor build
+
+- [x] On the installed current debug APK, physically pressed D-pad Right while GameBox was open on HDMI display 48. The capture showed `ABS_HAT0X=+1`, focus moved from Store to Downloads, and GameBox reported the Wireless Controller connected. This verifies physical controller navigation in GameBox; it does not resolve the separate GBC.emu gameplay response.
+- [x] HDMI screenshot: `tmp/gamebox-home-after-right2.png`.
+
+## 2026-10-29 — Download Manager TV route
+
+- [x] From GameBox Home with Downloads focused, a TV-display-targeted software A event opened Download Manager. The Completed view showed the GBC RayTracer import as **Added to Library**; the Queue view showed `0` active and `0` queued and its clear-queue message.
+- [x] Activated **Browse Store** from the empty queue and returned to Store on HDMI display 48. Captures: `tmp/gamebox-download-manager-current.png`, `tmp/gamebox-download-queue-empty.png`, and `tmp/gamebox-downloads-browse-store.png`.
+- [ ] Physical A-button acceptance was not observed in the input capture; this validates the navigation route only, not physical confirm input.
+
+## 2026-10-29 — Corrected Vimm homebrew search on Honor TV
+
+- [x] On HDMI display 48, searched the main Store catalog for `CHROMA CIRCUIT`; it showed the authorized MIT homebrew fixture with `CC` artwork. A later explicit Vimm search for that query returned no Vimm matches. The lower-page search CTA was partly under HONOR's Dock.
+- [x] The tile was under the confusing **Your Game Sources** heading despite being an authorized catalog game, not a Vimm result. Its generic catalog details promo returned to Store as designed; this was not evidence of a Vimm route failure. The heading now reads **Available Games** and was verified on the newly installed Honor build.
+- [x] A fresh `:app:testDebugUnitTest --rerun-tasks` run completed successfully (25 tasks executed). Existing nullable-`File` warnings remain. This is JVM suite evidence only; Vimm routing was subsequently verified below.
+
+## 2026-10-29 — Vimm result and tracked browser return on Honor TV
+
+- [x] On HDMI display 48, used GameBox's TV on-screen keyboard to search Vimm for `MARIO`. The live Vimm source returned 65 results grouped by console with box art. Opened the Game Boy Advance result **Mario & Luigi: Superstar Saga**; GameBox showed the correct title and platform. GameBox could not hydrate extra Vimm metadata and displayed its fallback notice.
+- [x] Activated GameBox's **Download** action. `TrackedSourceBrowserActivity` became top-resumed on HDMI; Vimm first showed its Cloudflare human check, then loaded the exact game's vault page with the website Download control focused. No game-file download was activated.
+- [x] Used **Back to GameBox**. GameBox returned to the same result details and displayed “Returned without starting a download.” No transfer was started, so Download Manager tracking and automatic import remain unverified. This was software-directed HDMI testing, not a physical-controller acceptance test. Captures: `tmp/goal-mario-vimm-results2.png`, `tmp/goal-mario-vimm-detail.png`, `tmp/goal-vimm-browser.png`, `tmp/goal-vimm-after-wait.png`, and `tmp/goal-vimm-return.png`.
+- [x] `:app:testDebugUnitTest` and `:app:assembleDebug` both passed (43 tasks). Installed APK SHA-256: `A499E9BAB3C793BBC5B689C699E043E100EFF9AABADB45EBC6ADDF05635C073B`. The updated **Available Games** label was visible on the running Honor HDMI display 48.
+
+## 2026-10-29 — Vimm artwork handoff and Honor test recovery
+
+- [x] Fixed configured-source result activation so the resolved box art shown on a Vimm result card is included in the selected game passed to details. Added an instrumentation regression case for that handoff.
+- [x] Verified on the actual Honor HDMI display that a live Vimm result card showed box art and the details hero retained that artwork even while Vimm detail hydration displayed its fallback notice. Used a read-only `MARIO` search; no website download was started. The retained console filter limited this check to five SNES results.
+- [x] The Android JVM suite and debug APK assembly completed successfully; Gradle reported all tasks up to date.
+- [ ] Honor instrumentation did not provide assertion results: the AndroidX Test Orchestrator run reported all five cases as instrumentation-process crashes after Android force-stopped the app-under-test. Following that run and the app reinstall, the private library database was new; the exact cause (test orchestration or reinstall procedure) was not isolated. Do not repeat on this install until the runner/reinstall path is understood.
+- [x] Recovered the existing GBC RayTracer and SNES Gothicvania entries through GameBox's normal import picker from the preserved `/sdcard/GameBoxOS/games` copies. The SNES folder also contains `gothicvania.0A.frz`; it was left untouched. No original source ROMs were deleted.
+- [ ] Actual TV controller acceptance was skipped because the user could not press A during this check. Android's bottom taskbar is visible; borderless fullscreen and physical Download activation remain open.
+
+## 2026-10-29 — SNES GameBox launch and HONOR window-mode check
+
+- [x] Verified GameBox Library contains exactly the recovered GBC RayTracer and SNES Gothicvania imports. Used a software-injected TV A event to open Gothicvania details and launch it through the configured Snes9x EX+ 1.5.81 adapter. The legal title screen rendered on the actual Honor TV.
+- [x] Closed content and exited Snes9x through its normal menus. GameBox regained focus on the same Gothicvania detail screen, recorded a 3-minute session, and showed its save-backup status. The user source ROM and adjacent `.frz` save-state were not changed.
+- [ ] Snes9x opens as a floating window over GameBox even though GameBox supplies the external-display fullscreen launch hint. The Android taskbar was also visible during launch/return. HONOR's app drawer long-press menu for Snes9x only exposed Add to Desktop, Pin to Taskbar, and Uninstall; it did not expose fullscreen. This remains an OEM window-mode limitation pending a working HONOR per-window fullscreen control or another supported launch mechanism.
+
+## 2026-10-29 — N64 follow-up and GameBox TV fullscreen
+- [x] Re-imported MIT Fission Failure 64 from the organized N64 folder through GameBox. Play Now opened Gopher64 1.1.42, which rendered its title/tutorial screen on the actual TV; returning to GameBox showed the game installed.
+- [ ] Gopher64's own fullscreen setting and HONOR maximize did not remove its touch controls reliably; emulator fullscreen/window chrome behavior remains unresolved. No gameplay or physical controller input was verified.
+- [x] Selected HONOR Desktop Mode's per-app **Open in full screen mode** for the debug GameBox app. A subsequent 1920×1080 TV capture showed GameBox filling the display with the HONOR Dock hidden.
+- [ ] Download Manager activation and physical controller acceptance were skipped because the user was unavailable to press the controller. GameBox's internal controller footer remains visible as app UI.
+- [ ] Controller status is connected in GameBox, but all inputs in this check were software-injected; physical confirmation/gameplay response was not tested.
+- [x] 2026-10-29 follow-up: on the live HDMI display 48, opened Downloads and navigated from Completed to Download Queue using display-targeted software taps/D-pad/confirm events. Queue reported clear; Completed showed the three imported homebrew titles and “Added to Library.” Android input service enumerated the paired DualShock 4 as a gamepad, and GameBox footer labeled “Wireless Controller.” This confirms the UI path and current OS/app detection only; no physical button press was available.
+- [x] `:app:testDebugUnitTest` passed with the installed Android Studio JDK and cached Gradle 9.7.1.
+- [x] Followed the empty-queue **Browse Store** call-to-action on HDMI, then opened **Search Vimm's Lair**. The retained SNES filter and `MARIO` query produced five SNES results with artwork after the source request settled. No result details or website download were opened; this was a read-only search smoke test. Capture: `tmp/vimm-settled-tv.png`.
+
+## 2026-10-29 — Nintendo DS homebrew import and standalone boot
+- [x] Retrieved the developer-hosted GPL-3.0 Pong DS v1.1.0 binary and placed it in `games/DS/PongDS_v1.1.0.nds`; SHA-256 `102F3C58182AA1B9273B2825D67AD6E575A6223E2504B5FFC5370E117B764CD9`. The official project page identifies the game as GPL-3.0: https://pongds.aldatsa.eus/.
+- [x] Copied it to the Honor’s organized `/sdcard/GameBoxOS/games/DS` folder; the on-device hash matched. GameBox imported it from the existing Pong-NDS Store detail; the private managed copy hash matched too. Download Manager showed four completed items and Pong-NDS **Added to Library**.
+- [x] GameBox Play Now launched `me.magnum.melonds/.ui.emulator.EmulatorActivity` on HDMI display 48; the DS language/title screen rendered. Normal melonDS **Exit** returned to the same GameBox detail and session status.
+- [x] Inspected melonDS key mappings without changing them: DS A/B/X/Y map to DualShock face-button codes and D-pad maps to HAT/axis inputs. Applied HONOR **Open in full screen mode** to melonDS; the Dock hid after transient system controls cleared, though melonDS’s own toolbar overlay remains.
+- [ ] Software-generated touch and D-pad/confirm did not advance the Pong DS language menu, so gameplay and physical-controller response remain unverified. A different DS image previously rendered black; DS compatibility is not universal.
+- [x] Reapplied HONOR per-app fullscreen to GameBox after emulator exit and confirmed the TV returned to the installed Pong-NDS details page with the Dock hidden. Captures: `tmp/pong-imported.png`, `tmp/pong-launched.png`, `tmp/melon-fullscreen-settled.png`, `tmp/ds-download-manager.png`, `tmp/ds-final-tv.png`.
+
+## 2026-10-29 — TV review without physical input
+- [x] Captured the actual 1920×1080 HDMI output (SurfaceFlinger display 1) while GameBox was foreground. The installed Pong-NDS detail page, Vimm **Download** action, and controller footer were visible; the footer identified the paired device as **Wireless Controller**, and HONOR's Dock was hidden.
+- [ ] Physical controller navigation is still pending because the user could not press a button during this check. No input was injected and no emulator or game state was changed.
+- [x] The lower save tools were below the initial details-page viewport. Source inspection confirmed the details content uses a remembered vertical scroll state inside the area above the persistent footer, so the capture alone does not indicate footer overlap. Scrolling still needs a user/controller interaction to verify on hardware. Capture: `tmp/gamebox-tv-current.png`.
+- [x] Forced execution of the Android JVM unit suite against the current working tree: `:app:testDebugUnitTest --rerun-tasks` passed (25 tasks executed). Compilation reports existing nullable-File warnings in tests; no test failures.
+- [x] Recompiled the complete Android instrumentation APK with `:app:assembleDebugAndroidTest --rerun-tasks` (51 tasks passed), including Vimm browser-focus and 7-Zip lifecycle coverage. Tests were compiled but not run on-device.
+
+## 2026-10-29 — Updated build and Download Manager on Honor TV
+- [x] Built debug APK SHA-256 `260D7543494E57E91234C05C89EAF67B92B4E08F2468A6C32E8DCDEAB3403525` and updated `com.gamebox.os.debug` with `adb install -r`; the existing four-game library remained intact.
+- [x] On HDMI display 48, used three software RB tab events from Home to open Downloads. After its state settled, the current build selected **Completed · 4**, listed all four imported homebrew games, and showed Pong-NDS as **Added to Library**. Final app state was left on Download Manager. Capture: `tmp/gamebox-tv-final-downloads.png`.
+- [x] Reapplied HONOR's per-app **Open in full screen mode** after the explicit display launch presented a window. The settled 1920×1080 capture has no taskbar, title bar, or transient window controls: `tmp/gamebox-tv-final.png`.
+- [ ] This verifies software-generated navigation only. The physical controller is detected, but no physical button press was available for acceptance.
+- [x] Ran only `SevenZipImportLifecycleTest.archiveIsRemovedOnlyAfterItsPayloadIsRegistered` directly with AndroidJUnitRunner on the Honor (`OK (1 test)`), bypassing Test Orchestrator so target app data was not cleared. The fixture verified valid 7z extraction and source deletion only after registration, multi-file PS1 CUE import retaining originals, and corrupt/unavailable source failures retaining files. The test-only APK was removed afterward.
+- [x] Verified the debug package and its database/import directories still existed after the test; restored the four-game debug Library and fullscreen TV presentation. Final HDMI capture: `tmp/gamebox-tv-debug-fullscreen-settled.png`.
+- [x] Left the updated debug app on Download Manager's **Completed · 4** view; all four homebrew entries remained visible and Pong-NDS remained **Added to Library**. Final TV capture: `tmp/gamebox-tv-final-after-test.png`.
+- [x] Completed the full manual 7z reimport round trip on HDMI with MIT-licensed Pong-NDS: confirmed uninstall preview listed one owned 403,520-byte ROM and retained saves/history; uninstalled only Pong-NDS; selected `PongDS_flow_test.7z` via Android's file picker; GameBox extracted and registered it, then removed the archive. The imported ROM hash (`102F3C…B764CD9`) matched both the untouched public source copy and original homebrew file. Library returned to four installed homebrew entries. Physical controller confirmation was unavailable; screen interaction used taps.
+- [x] Test harness caveat: saving the first HDMI capture inside the watched Downloads/GameBoxOS folder created one failed Download Manager row (`post-test-prod-tv.png`, unsupported DS `.png`). The exact device screenshot was removed, and the generated failed history record was dismissed after the Download Manager fix. Subsequent captures were written under Pictures and pulled to the workspace.
+- [x] Fixed the terminal download-history gap: failed/cancelled entries can now be dismissed; active and successful records remain protected, retry cookies are cleared, and manual-import SAF grants are released. Build, 808 JVM unit tests, and Android test APK assembly passed. On the Honor TV, dismissed the test-only failed screenshot row and verified Download Queue · 0 and Completed · 5 after navigating away and back; the four-game library and `gamebox.db` remained intact. The focused on-device instrumentation command reported `Process crashed` with no matching recent crash log; live UI acceptance succeeded. Capture: `tmp/gamebox-tv-downloads-persisted.png`.
+- [x] Cold-start validation after the final debug update initially showed a stale one-game Library view. The four managed ROMs were still present and the persisted download store still contained five `IMPORTED` records. Re-registered the four preserved ROMs through `GameRepository.registerImportedGame` (no ROM files modified), removed the one-off recovery test, force-stopped/reopened GameBox, and confirmed the four-homebrew collection on Home plus Download Queue · 0 / Completed · 5. Pong’s managed ROM hash still matches its source. Captures: `tmp/gamebox-tv-library-recovered-fresh.png`, `tmp/gamebox-tv-downloads-reloaded.png`.
+
+## 2026-10-29 — Vimm metadata fallback and HONOR fullscreen recovery
+- [x] Isolated optional Libretro artwork lookup from Vimm detail hydration. Artwork lookup failures now leave parsed source metadata available; cancellation still propagates. Focused `VimmThumbnailLookupTest` and `VimmLairDiscoverySourceTest` passed, and `:app:assembleDebug` succeeded.
+- [x] Installed the updated debug APK on the HONOR and cold-launched it on the physical 1920×1080 HDMI display. The app and existing homebrew Library loaded, the controller status showed **Wireless Controller**, and no download or game data was changed.
+- [x] Restored HONOR Desktop Mode's per-app **Open in full screen mode** after reinstall had left the taskbar menu offering that action. After the transition settled, the TV showed GameBox without the HONOR Dock or window controls. Capture: `tmp/honor-fullscreen-restored-settled.png`.
+- [x] Force-stopped and cold-launched GameBox again on HDMI; the fullscreen preference persisted, the app remained borderless, and the Dock stayed hidden. Capture: `tmp/honor-fullscreen-cold-relaunch.png`.
+- [ ] Physical controller confirmation remains pending; the user could not press A during this check.
+- [ ] Live Vimm detail hydration remains unverified. The site-safety gate blocked opening `vimm.net` in the browser, so no alternate access path was attempted and no ROM download was started.
+- [x] On physical HDMI, opened Download Manager and verified Queue · 0, Completed · 1, 436.3 GB free, and the existing Galaxy Patrol transfer at 48.0 KB / 48.0 KB. Switching to Completed showed the same ready record; no transfer state changed. Captures: `tmp/gamebox-download-manager-tv-current.png`, `tmp/gamebox-download-completed-tv.png`.
+- [x] Launched the installed Galaxy Patrol sample through GameBox; Android opened NES.emu 1.5.85. Normal emulator exit returned to the same GameBox details page with “Returned to GameBox; time away recorded.” No crash or library change occurred. Capture: `tmp/nesemu-exit-confirm-tv.png`.
+- [x] NES.emu identified the paired pad as **DualShock 4** and had the generic gamepad profile selected. Set this content’s profile to **PS3 Controller**, turned **Use Virtual Gamepad** off, and turned **Show Gamepad If Screen Touched** off. HONOR per-app fullscreen was enabled. Its emulator menu toolbar still appears over the game; gameplay/input acceptance is incomplete.
+- [ ] D-pad Right sent via Android software input did not visibly move the ship; this is inconclusive and is not physical-controller evidence. The GameBox controller status later changed to **Not connected** while Settings was open.
+- [ ] The HONOR Dock reappeared after screen navigation even though per-app fullscreen was selected, and remained visible after 35 seconds idle. HONOR Settings search for **Global taskbar** showed only unrelated AI results; no system value was changed. Clean fullscreen after interaction remains a hardware deployment issue. Captures: `tmp/gamebox-download-manager-tv-idle.png`, `tmp/gamebox-after-honor-settings-tv.png`.
+
+## 2026-10-29 — Automatic save recovery safety and HONOR cold-start check
+- [x] Closed a save-loss path in automatic pre-launch recovery: `restoreLatest` now inspects live emulator saves and restores only snapshot paths that are missing. If inspection fails, or all live paths already exist, it leaves the current files untouched. The explicit user-requested `restore` operation retains its replace behavior.
+- [x] Regression tests cover preserving newer live progress, refusing automatic restore when live-save inspection fails, and restoring missing files from the last snapshot. Full `:app:testDebugUnitTest --rerun-tasks :app:assembleDebug` passed: 815 tests, 0 failures, 0 errors, 1 skipped. Debug APK SHA-256: `864D7A038A74D8828731C5D2BD56FEC54174FE4B46E0C990991C8CD284D3CC7E`.
+- [x] Installed the debug build over `com.gamebox.os.debug` on the connected HONOR and launched it on the physical HDMI display (logical display 65, 1920×1080). The existing Galaxy Patrol library entry remained visible. Final settled TV capture: `tmp/goal-honor-final-fullscreen-settled.png`.
+- [ ] The HONOR Dock returned after install/cold relaunch, covering the footer. Applying the visible **Open in full screen mode** per-app action hid the Dock and transient controls for the current session, but a cold relaunch brought the Dock back again. The setting is an OEM per-window control; this build has not solved persistence.
+- [ ] Controller status was **Not connected**, and the user was unavailable for a physical press. No physical navigation, gameplay input, or actual emulator save/restore lifecycle was claimed or tested in this pass.
+- [x] Rechecked the HONOR Global Taskbar control on the physical TV. The Settings search for both **Global Taskbar** and **Large screen** returned only unrelated AI/accessibility results; no setting was changed. HONOR’s official Dock instructions describe enabling Global Taskbar on tablets/foldable phones ([HONOR Dock support](https://www.honor.com/global/support/content/en-us15866416/)); they do not establish a supported toggle for this PGT-N19 phone’s desktop projection.
+- [x] Closed the Settings floating window and restored GameBox Home. Reapplied **Open in full screen mode**; the final settled HDMI capture shows GameBox without Dock or window chrome (`tmp/goal-honor-final-current.png`). This is current-session evidence; a preceding cold relaunch showed that the setting does not persist across relaunch.
+
+### Follow-up — durable manual-import scheduling and fullscreen cold starts
+- [x] Closed the crash window where a manual import record could be persisted as `QUEUED` but the process could die before WorkManager enqueue. Application startup now reconciles queued manual-import records and schedules them through the existing unique-work `KEEP` path. A regression test confirms only queued manual imports are re-enqueued.
+- [x] `:app:testDebugUnitTest --rerun-tasks :app:assembleDebug` passed: 816 tests, 0 failures, 0 errors, 1 skipped. `git diff --check` found no whitespace errors. APK SHA-256: `119D0D63E1A9A508AB02E2146D90B97ACC650A0071FD17BC6FCA12251FDF3A8D`.
+- [x] Installed the APK on HONOR and force-stopped/cold-launched GameBox twice on physical HDMI (1920×1080). Home and the existing Galaxy Patrol entry loaded; the HONOR Dock and floating window chrome were absent in both settled captures: `tmp/goal-manual-import-recovery-tv.png` and `tmp/goal-manual-import-recovery-tv-relaunch2.png`.
+- [ ] The controller was disconnected and the user was unavailable for a button press. No queued import was present to recover on-device, so recovery after an actual interrupted import, full import/cancellation lifecycle, and emulator save recovery remain unverified on hardware.
+- [x] Follow-up review removed a duplicate WorkRequest that was constructed and discarded before the shared enqueue helper. `BrowserDownloadRecoveryTest` passed again. A fresh TV check was unavailable because the local ADB server failed to start (`could not read ok from ADB Server`); the earlier two cold-start captures remain the latest hardware evidence.
+- [x] Reconnected to the physical HONOR and reran `CompanionEndpointServiceLifecycleTest` on-device. The stalled TLS request and concurrent authenticated status request passed; test cleanup restored the prior companion settings. Relaunched `com.gamebox.os/.MainActivity` on HDMI display 65 and confirmed it was resumed/focused there. HDMI remained active at 1920×1080. A new screenshot was not captured because this Android build's `screencap -d 65` rejects the logical display ID.
+- [x] Corrected the capture procedure: SurfaceFlinger identifies the HDMI panel as physical display `4639578574838715141`. Fresh 1920×1080 screenshots now work. The cold-start capture showed the HONOR Dock returning over GameBox even though Android logged the app fullscreen request as accepted. Reapplying the Dock's **Open in full screen mode** action hid the Dock and transient window controls after they settled. Display settings guidance now tells users to reapply after restarting GameBox; `ExternalDisplayTaskbarGuidanceTest` passed.
+- [x] Installed the updated debug APK over the existing app without clearing data and verified its Home screen on the actual HDMI panel. GameBox remained focused on display 65 at 1920×1080, and the settled capture showed the footer with no Dock or window chrome: `tmp/gamebox-hdmi-postinstall.png`. The controller status remained **Not connected**.
+- [x] On the actual HDMI display, Android-injected gamepad key codes exercised the TV search flow: `BUTTON_X` opened the controller keyboard, `BUTTON_A` inserted the focused Q, `DPAD_RIGHT` plus `BUTTON_A` appended W, and `BUTTON_B` closed text-entry mode. A second `BUTTON_B` returned Store to Home. Captures: `tmp/gamebox-hdmi-search-x.png`, `tmp/gamebox-hdmi-keyboard-a.png`, `tmp/gamebox-hdmi-search-close.png`, and `tmp/gamebox-hdmi-after-search-back.png`. This validates GameBox's key handling on the HONOR TV; it is not physical-controller acceptance. The final screen was left on Home with the Dock hidden.
+- [x] Continued gamepad-key acceptance on the actual HDMI display: `BUTTON_START` opened Home Quick Actions with Downloads focused; `BUTTON_A` opened Download Manager, which showed Queue · 0 and Completed · 1. `DPAD_RIGHT` then `BUTTON_A` selected Completed and displayed Galaxy Patrol as completed (48.0 KB / 48.0 KB); `BUTTON_B` returned to Home. Captures: `tmp/gamebox-hdmi-quick-actions.png`, `tmp/gamebox-hdmi-download-manager.png`, `tmp/gamebox-hdmi-download-completed.png`, and `tmp/gamebox-hdmi-home-after-download-test.png`. This tests injected key handling on HONOR, not the physical Bluetooth controller.
+- [x] Repeated the Quick Actions → Downloads → Completed path in the current session on HDMI. The focused Downloads row opened correctly; D-pad Right/A switched tabs and rendered Galaxy Patrol as completed, and B returned to Home. Final TV screen capture: `tmp/gamebox-hdmi-home-after-download-test.png`.
+- [x] Distinguished the installed release package (`com.gamebox.os`) from the updated debug package (`com.gamebox.os.debug`); left release app data untouched. On the debug build, Galaxy Patrol Details displayed **Cloud copy**, and the built-in MIT fixture installed successfully.
+- [x] Launched Galaxy Patrol from debug GameBox on physical HDMI; Android resumed NES.emu with the fixture URI under the debug app's FileProvider, and the game rendered. Normal close returned to GameBox Details with the session status message. The emulator's own toolbar remains visible when its content is running.
+- [x] Applied HONOR's per-app **Open in full screen mode** to NES.emu; the taskbar Dock disappeared for the running emulator session. After emulator exit the Dock was visible over GameBox, so reapplied the same HONOR action to GameBox; final 1920×1080 HDMI capture `tmp/gamebox-tv-final-return.png` shows borderless GameBox with the footer visible and Dock hidden.
+- [ ] Physical controller input remains unverified: the paired controller reported **Not connected**, and the user could not perform a button press. Android-injected key events are software checks only. NES.emu gameplay response, save/restore, and its toolbar-free presentation remain unverified.
+
+## 2026-10-29 — Game details scrolling on physical TV
+- [x] On HONOR's 1920×1080 HDMI display, scrolled the Galaxy Patrol details page twice. Save copy/cloud copy controls, Game settings, Play/Uninstall/Favorite/Back actions, and the full Managed save data card became visible above the persistent footer. Final capture: `tmp/gamebox-tv-details-lower.png`.
+- [ ] This verifies touch-driven scrolling on HDMI only. Controller focus movement through the lower details actions remains unverified; the footer reported **Not connected**.
+
+## 2026-10-29 — Download Manager current-state check on physical TV
+- [x] Opened Downloads from the current debug build on HDMI. Queue showed 0 active/queued items; Completed showed one **Galaxy Patrol** entry at 48.0 KB / 48.0 KB with Ready status. Captures: `tmp/gamebox-tv-downloads-audit.png`, `tmp/gamebox-tv-completed-audit.png`.
+- [ ] This checks visibility of the built-in authorized fixture's completed record after in-app navigation. It does not verify live network/Vimm transfer, background continuation, or physical-controller navigation; the controller footer reported **Not connected**.
+
+## 2026-10-29 — Android regression and device-test build verification
+- [x] `:app:testDebugUnitTest` passed on the current working tree: 816 tests, 0 failures, 0 errors, 1 skipped.
+- [x] `:app:assembleDebugAndroidTest` passed (all 51 tasks up-to-date), confirming the instrumentation APK and test sources compile. Instrumentation was not run in this pass to avoid the known Orchestrator/app-data reset risk.
+- [ ] Physical controller and live Vimm transfer remain unverified. The HONOR reports no connected gamepad; no ROM transfer was started.
+- [ ] HDMI disconnected during wrap-up: Android's display inventory then showed only the internal 1312×2848 panel, and the prior HDMI capture ID was invalid. No further screen input was sent; the final GameBox Home frame is therefore not reverified on TV.
+
+## 2026-10-29 — Windows companion core and UI build recheck
+- [x] `GameBox.Windows.Core.Tests` self-check passed. Test Temp was directed into the workspace because the sandbox cannot write to the default system Temp directory.
+- [x] `dotnet build windows/GameBox.Windows/GameBox.Windows.csproj` succeeded with 0 warnings and 0 errors.
+- [ ] This validates core policy and compilation only; Windows UI interaction and live PC-to-HONOR transfer remain unverified.
+
+## 2026-10-29 — Keep local ROMs and generated captures out of project changes
+- [x] Added narrow `.gitignore` entries for `/games/`, `/tmp/`, `/docs/evidence/`, and root-level capture, hierarchy, emulator-profile, and log files. `git check-ignore -v` confirms the private God of War archive and DS test ROM are excluded from Git while files remain on disk.
+- [x] Confirmed no tracked project file is newly ignored (`git ls-files -ci --exclude-standard` returned no paths). Project docs, Android sources, and the install helper remain visible as normal changes/untracked source files.
+- [ ] No local ROM, capture, log, or emulator profile was deleted or altered; cleanup/reorganization of the existing local artifacts is intentionally not performed by this change.
+
+## 2026-10-29 — Serialize Windows library writes across store instances
+- [x] Fixed the shared `.tmp` race: `LibraryStore` now uses a process-wide semaphore keyed by its normalized full path, so separate windows/store instances targeting the same JSON file cannot overwrite each other's staging file.
+- [x] Extended the Windows core concurrency self-check to alternate 24 writes between two `LibraryStore` objects on the same path. `GameBox.Windows.Core.Tests` passed, including the blocked-destination cleanup assertion.
+- [x] Rebuilt the WPF companion successfully with 0 warnings and 0 errors.
+- [ ] Cross-process writers and a live desktop interaction with a disk failure are not covered.
+
+## 2026-10-29 — Reproducible Android Gradle entry point
+- [x] Added the standard Gradle Wrapper pinned to 9.7.1 with SHA-256 verification (`acd53f…04d20a`). The generated wrapper JAR hash matches Gradle's published checksum for 9.7.1.
+- [x] Updated Android CI, emulator instrumentation, preview, APK, and production workflows to use the wrapper, eliminating the separate 9.5.0 vs local 9.7.1 version split.
+- [x] Verified both `gradlew.bat --version` and `bash ./gradlew --version`; forced `:app:testDebugUnitTest --rerun-tasks` (816 tests, 0 failures, 0 errors, 1 skipped), and `:app:assembleDebugAndroidTest` through the wrapper.
+- [x] Added `.gitattributes` to preserve LF for the Bash launcher and CRLF for the Windows batch launcher across checkouts.
+- [ ] Hosted CI, lint/release provenance, signed upgrade/rollback, and TV runtime acceptance are still open; adding a wrapper does not itself validate those gates.
+
+## 2026-10-29 — API 26 display lookup and Android lint gate
+- [x] Replaced the unguarded API-30 `Activity.display` read in the emulator-launch action with the existing API-compatible `currentDisplayId()` helper. This restores the declared API 26 compatibility path without changing display selection on newer Android versions.
+- [x] Added `lintDebug` to the regular Android CI job using the pinned Gradle wrapper.
+- [x] Verified `:app:lintDebug` completes successfully: 0 errors and 32 warnings. Existing warnings cover dependency update suggestions, KTX/Compose style recommendations, and a small set of platform/manifest notices; none were suppressed.
+- [ ] Hosted CI has not run for this working tree. HONOR HDMI is disconnected (only the phone panel is enumerated), so no device UI interaction was performed.
+
+## 2026-10-29 — Bash CI lint command and projection recheck
+- [x] Re-ran the lint gate via Git Bash using the same `bash ./gradlew --no-daemon lintDebug` command configured in Android CI. It completed successfully (0 errors; 32 warnings).
+- [x] Read-only ADB inspection confirms HONOR is connected, but Android exposes only the built-in 1312×2848 panel and a private 544×1182 Android Studio virtual display. Neither is the TV output, so I did not interact with either screen or count the virtual display as hardware acceptance.
+- [ ] TV-side behavior and physical-controller input remain unverified until the actual projection is connected and an acceptance session is possible.
+
+## 2026-10-29 — Fresh Android build and unit-suite acceptance
+- [x] Forced a fresh `:app:testDebugUnitTest --rerun-tasks` run on the current worktree: 816 tests, 0 failures, 0 errors, 1 skipped.
+- [x] Built both `assembleDebug` and `assembleDebugAndroidTest`; both completed successfully. Debug APK SHA-256: `B2218053E5F02B33476AA30047F1833FF7592F4F8A3C2A988640233173ED6C10`; instrumentation APK SHA-256: `9E508B59E00DB34C7BD95AFFBD67DA111556EF3C99F35F56B9D49DFE68C0319C`.
+- [ ] APKs were not installed because HDMI projection is absent; installed-device behavior and the physical controller are still unverified.
+
+## 2026-11-07 — Live TV honesty and real-HONOR playback recheck
+- [x] Confirmed ADB access to HONOR and the active physical HDMI display (1920×1080); installed the current debug build with `adb install -r`, preserving app data.
+- [x] Removed unverified playlist resolution suffixes from TV-facing channel names without changing underlying channel identity; focused `TvModeAppsTest` and `:app:assembleDebug` passed, and the updated display was visually checked on the TV.
+- [ ] Serbian broadcast reliability remains open: Prva failed with `ERROR_CODE_IO_NETWORK_CONNECTION_FAILED`; RTS 1 showed no video through the RTS Planeta fallback. Restored the RS playlist and the previous TDI last-watched channel. See [UAT](docs/UAT.md) for captures.
+- [ ] Physical Bluetooth-controller interaction remains unverified; Android did not report an active controller. The HONOR Dock remains visible on TV.
+
+## 2026-11-07 — RTS fallback clarity and download integrity
+- [x] On HONOR HDMI display 38 (1920×1080), RTS 1 direct playback again failed and the official RTS Planeta fallback rendered its programme page without video. The fallback header now clearly reports that the direct stream is unavailable and that the official RTS Planeta page is open. Back/close returned to GameBox; TDI Radio TV was restored as last watched. Capture: `tmp/honor-tv-rts-labeled-fallback-2026-11-07.png`.
+- [x] Browser transfers now compare the staged-file length against a known HTTP `Content-Length` or `Content-Range` total before promotion/import. A mismatch fails without renaming the `.part` file; unknown-length responses remain supported. Focused checks cover matching, truncated, and unknown totals.
+- [x] `TvModeAppsTest` (27 tests), `BrowserDownloadTransferSchedulerTest` (3 tests), and `:app:assembleDebug` passed. The debug build installed in place on HONOR and opened on the external display; app data was preserved. Final screen shows the restored TDI last-watched channel: `tmp/honor-tv-restored-tdi-2026-11-07.png`.
+- [x] Full `:app:testDebugUnitTest` passed (865 tests, 0 failures/errors, 1 skipped); `:app:assembleRelease` succeeded and produced unsigned APK SHA-256 `43A934C330F111328948DED9E7D5BD3E07A8213B4F17D69CCF87CAD2C4146ED0`.
+- [ ] RTS direct playback remains failed/unverified on the official fallback; the HONOR taskbar Dock remains visible. No active physical controller was reported. Transfer-length validation was unit-tested, but no controlled truncated HTTP response was run end to end.
+
+### Follow-up — download promotion regression and release rebuild
+- [x] Tested the same staged-file finalizer used by the transfer service with real temporary files. A truncated part is rejected and preserved, and an existing destination is left unchanged; exact and unknown-length files still promote.
+- [x] `BrowserDownloadTransferSchedulerTest` now passes 4/4. The full JVM suite passes 866 tests (0 failures/errors, 1 skipped). `:app:assembleRelease` succeeds; unsigned APK SHA-256 is `1083DF9D5146EA28B7C6089C3CB1AB8BC0CF676C1609D70C3F5870D14D30D06B`.
+- [x] Reinstalled the debug build in place on HONOR and confirmed TV Home on HDMI display 38 at 1920×1080. Capture: `tmp/honor-tv-transfer-finalizer-check-2026-11-07.png`.
+- [ ] The HTTP transfer service has not yet been driven by a controlled truncated server response; physical controller remains unavailable.
+
+### Follow-up — response-body copy coverage
+- [x] Moved the staged response-copy loop into a shared function used by the JobService and its tests. The connection is disconnected in `finally`; tests verify complete and short bodies through this copy/promotion sequence, along with existing destination preservation.
+- [x] `BrowserDownloadTransferSchedulerTest` passes 6/6; full JVM suite passes 868 tests (0 failures/errors, 1 skipped). `:app:assembleRelease` succeeds unsigned; APK SHA-256 `5851239882EF961E28F2E2C433EAF6A7EE6F684B70318857F90ACBBDA1B3BB15`.
+- [ ] Local HTTP-server testing was attempted but the request did not reach its handler in this environment; the deterministic test double does not prove actual HTTP header/body behavior. HONOR physical controller and signed-release install remain open.
+
+## 2026-11-08 — Authorized homebrew install and HDMI gameplay
+- [x] Installed bundled MIT Galaxy Patrol through GameBox on HONOR and verified the installed NES fixture SHA-256 matches the checked-in legal fixture. Play Now opened NES.emu and the game rendered gameplay on the 1920×1080 HDMI TV (`tmp/gamebox-tv-galaxy-playing-2026-11-08.png`).
+- [x] On the physical HDMI display, confirmed Close Content and exited NES.emu. GameBox resumed the same Galaxy Patrol details page and reported the return/session result (`tmp/gamebox-tv-galaxy-exit-2026-11-08.png`). The installed legal fixture hash still matches after return. This passed the specific emulator close/return check with synthetic ADB taps.
+- [ ] Fullscreen is partial (`hw-pc-freeform`, HONOR Dock visible); physical controller input and save behavior remain untested.
+
+## 2026-11-08 — Now/next guide coverage
+- [x] Raised the three-programme-per-channel cap to 96 and bounded current guide storage to 25,000 entries total; XMLTV remains limited to the 24-hour window and existing compressed/unpacked byte limits. Regressions prove the fourth programme can become current and per-channel storage stays bounded.
+- [x] `TvModeAppsTest` passed 31/31 and `:app:assembleDebug` passed. Installed the updated `0.1.0-debug` build on HONOR in place, preserving app data (final APK SHA-256 `53EF5E87330AA188CCD72572BD35150105A9C03B844D1D570C302DE899411C69`).
+- [x] On physical HDMI display 62 (1920×1080/60 Hz), restored GameBox TV Mode with the saved `iptv-org · RS` playlist and programme cards intact. At the 15:00 CET boundary, RTS 1 advanced from “SAT” to “Vesti” and its progress indicator reset without leaving TV Mode (`tmp/gamebox-tv-guide-fix-installed-2026-11-08.png`, `tmp/gamebox-tv-guide-boundary-2026-11-08.png`).
+- [ ] Guide-unavailable handling and Serbian stream playback remain unverified/pending; the HONOR Dock is still visible and no controller is connected.
+
+## 2026-11-08 — NES.emu fullscreen behavior on HONOR Desktop
+- [x] On physical HDMI display 62, opened NES.emu’s HONOR Dock menu and selected “Open in full screen mode”; the Dock disappeared for the active session (`tmp/gamebox-tv-nes-fullscreen-selected-2026-11-08.png`).
+- [ ] Final GameBox HDMI capture still shows the 43 px HONOR `Dock` (`tmp/gamebox-tv-final-fullscreen-2026-11-08.png`). WindowManager confirms it is a separate system window on HDMI display 62, while GameBox fills the display. Reapplying GameBox's immersive flags does not hide the OEM Dock after this fresh launch/update.
+- [ ] After exiting and reopening the game through GameBox, the Dock returned; the task remained `hw-pc-freeform` and the same one-session fullscreen option was offered again (`tmp/gamebox-tv-nes-fullscreen-relaunch-2026-11-08.png`). GameBox’s launch hint does not persist HONOR’s mode. Only NES.emu was checked; other emulators remain unverified.
+- [x] Exiting NES.emu returned to the Galaxy Patrol details page; GameBox reported the session return and no managed save. No user game files or save data were changed.
+
+## 2026-11-08 — Manual import recovery and Live TV retry
+- [x] Startup reconciliation now reschedules manual import records left in `IMPORTING`, while WorkManager's unique `KEEP` policy avoids replacing an active chain. `BrowserDownloadRecoveryTest` passes 10/10.
+- [x] Retry after all channel URLs fail now restarts at the primary URL so alternate candidates are attempted again. `TvModeAppsTest` passes 32/32.
+- [x] Focused 42-test run and `:app:assembleDebug` succeeded. Installed the build in place on HONOR, preserving app data; installed APK hash matches `63DEC146E5B294649288CF7DC6CA7C11431865819020C628BB8BC64D0A1D5A40`.
+- [x] Verified TV Mode reopens on the physical 1920×1080/60 Hz HDMI display with RS source, app favorites, and last-watched card retained (`tmp/goal-current-hdmi-2026-11-08.png`).
+- [ ] Recovery after a forced process death, successful live-stream retry, guide recovery, physical controller input, and a clean HONOR Dock-free launch remain unverified. At the capture, guide data was unavailable and the system Dock remained visible.
+
+## 2026-11-08 — Remote navigation in the tracked source browser
+- [x] TrackedSourceBrowserActivity registers with the Remote command bus while resumed and takes precedence over the underlying GameBox host on the same display. D-pad, Select, and Back route through the browser's existing handling; text editing stays disabled there.
+- [x] Added command-bus priority coverage and extended the browser instrumentation case for Remote Select/Back. Instrumentation compiled but was not executed on HONOR.
+- [x] Focused JVM suites passed 45/45; debug and Android-test APKs assembled. The debug APK was installed in place and its hash matched `3201E82BB7884393894BF7337438CDE27D3BE70ED1B856672B643196C21DF8D8`. TV Mode reopened with saved RS source/favorites/last-watched state on physical HDMI.
+- [ ] Separate-phone Remote acceptance on the live Vimm page, a physical gamepad, live channel video/EPG recovery, and persistent Dock-free TV output remain open.

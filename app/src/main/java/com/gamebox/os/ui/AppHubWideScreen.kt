@@ -41,6 +41,7 @@ internal fun AppHubWideScreen(
 ) {
     val isPc = hubKind == AppHubKind.PC
     val context = LocalContext.current
+    val externalDisplay = isExternalDisplayContext(context)
     val audio = context.getSystemService(android.media.AudioManager::class.java)
     val volume = audio?.getStreamVolume(android.media.AudioManager.STREAM_MUSIC) ?: 0
     val volumeMax = audio?.getStreamMaxVolume(android.media.AudioManager.STREAM_MUSIC) ?: 1
@@ -164,8 +165,8 @@ internal fun AppHubWideScreen(
                         fontSize = 11.sp,
                     )
                     BlueprintOutlinedButton(
-                        onClick = { runCatching { context.startActivity(desktopHomeIntent()) } },
-                        modifier = Modifier.semantics { contentDescription = "Return to Android or DeX desktop" },
+                        onClick = { runCatching { context.startActivity(desktopHomeIntent(externalDisplay)) } },
+                        modifier = Modifier.semantics { contentDescription = "Return to Android desktop" },
                     ) {
                         Icon(Icons.Rounded.DesktopWindows, null, Modifier.size(16.dp))
                         Text("Desktop mode", Modifier.padding(start = 6.dp), fontSize = 11.sp)

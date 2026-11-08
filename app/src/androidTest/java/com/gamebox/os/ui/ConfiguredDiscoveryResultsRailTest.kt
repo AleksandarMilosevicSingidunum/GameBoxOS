@@ -19,6 +19,9 @@ import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.gamebox.os.source.DiscoverySourceGame
+import com.gamebox.os.catalog.LibretroThumbnailClient
+import org.junit.Assert.assertNotNull
+import java.util.concurrent.atomic.AtomicInteger
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -33,6 +36,7 @@ class ConfiguredDiscoveryResultsRailTest {
     @Test
     fun gamepadAActivatesTheVimmCorrectedSearchSuggestion() {
         var appliedQuery = "God of Wra"
+        var appliedSourceId: String? = null
         compose.setContent {
             MaterialTheme {
                 ConfiguredDiscoveryResultsRail(
@@ -49,7 +53,10 @@ class ConfiguredDiscoveryResultsRailTest {
                     cardWidth = 180.dp,
                     cardHeight = 250.dp,
                     query = appliedQuery,
-                    onUseSearchSuggestion = { appliedQuery = it },
+                    onUseSearchSuggestion = { query, sourceId ->
+                        appliedQuery = query
+                        appliedSourceId = sourceId
+                    },
                 )
             }
         }
@@ -58,7 +65,10 @@ class ConfiguredDiscoveryResultsRailTest {
             .performSemanticsAction(SemanticsActions.RequestFocus)
             .assertIsFocused()
         InstrumentationRegistry.getInstrumentation().sendKeyDownUpSync(KeyEvent.KEYCODE_BUTTON_A)
-        compose.runOnIdle { assertEquals("God of War", appliedQuery) }
+        compose.runOnIdle {
+            assertEquals("God of War", appliedQuery)
+            assertEquals("vimm-lair", appliedSourceId)
+        }
     }
 
     @Test
@@ -116,6 +126,38 @@ class ConfiguredDiscoveryResultsRailTest {
         ).performSemanticsAction(SemanticsActions.RequestFocus).assertIsFocused()
         InstrumentationRegistry.getInstrumentation().sendKeyDownUpSync(KeyEvent.KEYCODE_BUTTON_A)
         compose.runOnIdle { assertEquals(1, opened) }
+    }
+
+    @Test
+    fun resultActivationCarriesTheBoxArtShownOnItsCardIntoDetails() {
+        var opened: DiscoverySourceGame? = null
+        val thumbnailProbes = AtomicInteger()
+        compose.setContent {
+            MaterialTheme {
+                ConfiguredSourceResultCard(
+                    game = DiscoverySourceGame(
+                        sourceId = "vimm-lair",
+                        externalId = "gba-123",
+                        title = "Mario & Luigi: Superstar Saga",
+                        platform = "Game Boy Advance",
+                    ),
+                    modifier = Modifier.width(180.dp).height(250.dp),
+                    thumbnailClient = LibretroThumbnailClient(exists = {
+                        thumbnailProbes.incrementAndGet()
+                        true
+                    }),
+                    onClick = { opened = it },
+                )
+            }
+        }
+
+        compose.onNodeWithContentDescription(
+            "Mario & Luigi: Superstar Saga, Game Boy Advance, external discovery result",
+        ).performSemanticsAction(SemanticsActions.RequestFocus).assertIsFocused()
+        compose.waitUntil(5_000) { thumbnailProbes.get() > 0 }
+        compose.waitForIdle()
+        InstrumentationRegistry.getInstrumentation().sendKeyDownUpSync(KeyEvent.KEYCODE_BUTTON_A)
+        compose.runOnIdle { assertNotNull(opened?.coverUrl) }
     }
 
     @Test

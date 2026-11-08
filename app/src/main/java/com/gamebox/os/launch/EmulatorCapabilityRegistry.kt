@@ -61,12 +61,19 @@ class EmulatorCapabilityRegistry(
         "com.retroarch.aarch64", "com.retroarch", "com.retroarch.ra32" -> "RetroArch"
         "org.ppsspp.ppsspp", "org.ppsspp.ppssppgold", "org.ppsspp.ppsspplegacy" -> "PPSSPP"
         "org.dolphinemu.dolphinemu" -> "Dolphin"
-        "xyz.aethersx2.android" -> "AetherSX2"
+        "com.armsx2" -> "ARMSX2"
         "com.github.stenzek.duckstation" -> "DuckStation"
         "com.explusalpha.NesEmu" -> "NES.emu"
         "org.mupen64plusae.v3.fzurita" -> "M64Plus FZ"
         "com.flycast.emulator" -> "Flycast"
+        "io.recompiled.redream" -> "Redream"
         "org.azahar_emu.azahar" -> "Azahar"
+        "me.magnum.melonds" -> "melonDS"
+        "me.magnum.melondualds" -> "WatermelonDS"
+        "org.mupen64plusae.v3.alpha" -> "Mupen64Plus AE"
+        "io.github.gopher64.gopher64" -> "Gopher64"
+        "com.justgba" -> "JustGBA"
+        "com.explusalpha.GbaEmu" -> "GBA.emu"
         else -> packageName.substringAfterLast(".")
     }
 
@@ -82,19 +89,21 @@ class EmulatorCapabilityRegistry(
         "psp", "playstationportable", "sonyplaystationportable" ->
             listOf("org.ppsspp.ppsspp", "org.ppsspp.ppssppgold", "org.ppsspp.ppsspplegacy")
         "ps1", "psx", "playstation", "sonyplaystation" -> listOf("com.github.stenzek.duckstation")
-        "n64", "nintendo64" -> listOf("org.mupen64plusae.v3.fzurita")
-        "dreamcast", "segadreamcast" -> listOf("com.flycast.emulator")
+        "n64", "nintendo64" -> listOf(
+            "io.github.gopher64.gopher64", "org.mupen64plusae.v3.fzurita", "org.mupen64plusae.v3.alpha",
+        )
+        "dreamcast", "segadreamcast" -> listOf("io.recompiled.redream")
         "gamecube", "nintendogamecube", "wii", "nintendowii", "wiiware" ->
             listOf("org.dolphinemu.dolphinemu")
         "3ds", "nintendo3ds" -> listOf("org.azahar_emu.azahar")
-        "ps2", "playstation2", "sonyplaystation2" -> listOf("xyz.aethersx2.android")
+        "ps2", "playstation2", "sonyplaystation2" -> listOf("com.armsx2")
         "nes", "famicom", "nintendoentertainmentsystem" -> listOf("com.explusalpha.NesEmu")
         "snes", "superfamicom", "supernintendo", "supernintendoentertainmentsystem" ->
             listOf("com.explusalpha.Snes9xPlus")
         "gb", "gameboy", "nintendogameboy", "gbc", "gameboycolor", "nintendogameboycolor" ->
             listOf("com.explusalpha.GbcEmu")
         "gba", "gameboyadvance", "nintendogameboyadvance" -> listOf("com.explusalpha.GbaEmu")
-        "ds", "nds", "nintendods", "dsi" -> listOf("me.magnum.melonds")
+        "ds", "nds", "nintendods", "dsi" -> listOf("me.magnum.melonds", "me.magnum.melondualds")
         "mastersystem", "segamastersystem", "gamegear", "segagamegear",
         "genesis", "megadrive", "segagenesis", "segamegadrive" -> listOf("com.explusalpha.MdEmu")
         "atari2600" -> listOf("com.explusalpha.A2600Emu")

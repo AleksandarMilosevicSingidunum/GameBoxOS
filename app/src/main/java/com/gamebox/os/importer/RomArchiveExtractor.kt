@@ -19,14 +19,15 @@ object RomArchiveExtractor {
         maxFiles: Int,
         maxBytes: Long,
         onProgress: ((bytesProcessed: Long, totalBytes: Long?) -> Unit)? = null,
+        ensureActive: () -> Unit = {},
     ): List<ExtractedFile>? {
         val extension = source.extension.lowercase()
         if (extension !in setOf("zip", "7z")) return null
         val output = staging.resolve("archive-content").apply { mkdirs() }
         val result = try {
             when (extension) {
-                "zip" -> extractZip(source, output, platform, maxFiles, maxBytes, onProgress)
-                else -> extractSevenZip(source, output, platform, maxFiles, maxBytes, onProgress)
+                "zip" -> extractZip(source, output, platform, maxFiles, maxBytes, onProgress, ensureActive)
+                else -> extractSevenZip(source, output, platform, maxFiles, maxBytes, onProgress, ensureActive)
             }
         } catch (error: Exception) {
             // Do not leave an earlier entry (or a partially written current
@@ -54,9 +55,10 @@ object RomArchiveExtractor {
         maxFiles: Int,
         maxBytes: Long,
         onProgress: ((bytesProcessed: Long, totalBytes: Long?) -> Unit)?,
+        ensureActive: () -> Unit,
     ): List<ExtractedFile> {
         ZipFile(source).use { zip ->
-            val totalBytes = zipSupportedContentSize(zip, platform)
+            val totalBytes = zipSupportedContentSize(zip, platform, ensureActive)
             var total = 0L
             var processed = 0L
             val progressThrottle = ByteProgressThrottle(
@@ -65,6 +67,7 @@ object RomArchiveExtractor {
             return zip.entries().asSequence()
                 .filterNot { it.isDirectory }
                 .mapNotNull { entry ->
+                    ensureActive()
                     val safeName = supportedContentName(entry.name, platform) ?: return@mapNotNull null
                     require(resultCount(output) < maxFiles) { "Archive contains too many supported game files" }
                     val target = uniqueTarget(output, safeName)
@@ -73,6 +76,7 @@ object RomArchiveExtractor {
                             readChunk = input::read,
                             target = target,
                             remaining = maxBytes - total,
+                            ensureActive = ensureActive,
                         ) { count ->
                             processed += count
                             progressThrottle.onBytesProcessed(processed)
@@ -93,8 +97,9 @@ object RomArchiveExtractor {
         maxFiles: Int,
         maxBytes: Long,
         onProgress: ((bytesProcessed: Long, totalBytes: Long?) -> Unit)?,
+        ensureActive: () -> Unit,
     ): List<ExtractedFile> {
-        val totalBytes = sevenZipSupportedContentSize(source, platform)
+        val totalBytes = sevenZipSupportedContentSize(source, platform, ensureActive)
         SevenZFile.builder().setFile(source).get().use { archive ->
             var total = 0L
             var processed = 0L
@@ -103,6 +108,7 @@ object RomArchiveExtractor {
             )
             val result = mutableListOf<ExtractedFile>()
             while (true) {
+                ensureActive()
                 val entry = archive.nextEntry ?: break
                 if (entry.isDirectory) continue
                 val safeName = supportedContentName(entry.name, platform) ?: continue
@@ -112,6 +118,7 @@ object RomArchiveExtractor {
                     readChunk = archive::read,
                     target = target,
                     remaining = maxBytes - total,
+                    ensureActive = ensureActive,
                 ) { count ->
                     processed += count
                     progressThrottle.onBytesProcessed(processed)
@@ -137,11 +144,12 @@ object RomArchiveExtractor {
         return runCatching { RomImportPolicy.safeArchiveContentFileName(name, platform) }.getOrNull()
     }
 
-    private fun zipSupportedContentSize(zip: ZipFile, platform: String?): Long? {
+    private fun zipSupportedContentSize(zip: ZipFile, platform: String?, ensureActive: () -> Unit): Long? {
         val entries = zip.entries()
         var total = 0L
         var known = true
         while (entries.hasMoreElements()) {
+            ensureActive()
             val entry = entries.nextElement()
             if (entry.isDirectory || supportedContentName(entry.name, platform) == null) continue
             if (entry.size < 0L) {
@@ -154,11 +162,12 @@ object RomArchiveExtractor {
         return total.takeIf { known && it > 0L }
     }
 
-    private fun sevenZipSupportedContentSize(source: File, platform: String?): Long? {
+    private fun sevenZipSupportedContentSize(source: File, platform: String?, ensureActive: () -> Unit): Long? {
         SevenZFile.builder().setFile(source).get().use { archive ->
             var total = 0L
             var known = true
             while (true) {
+                ensureActive()
                 val entry = archive.nextEntry ?: break
                 if (entry.isDirectory || supportedContentName(entry.name, platform) == null) continue
                 if (entry.size < 0L) {
@@ -176,6 +185,7 @@ object RomArchiveExtractor {
         readChunk: (ByteArray) -> Int,
         target: File,
         remaining: Long,
+        ensureActive: () -> Unit,
         onChunk: (Long) -> Unit = {},
     ): Long {
         require(remaining > 0) { "Archive exceeds the configured import limit" }
@@ -183,6 +193,7 @@ object RomArchiveExtractor {
         target.outputStream().buffered().use { output ->
             val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
             while (true) {
+                ensureActive()
                 val bytesRead = readChunk(buffer)
                 if (bytesRead < 0) break
                 total += bytesRead

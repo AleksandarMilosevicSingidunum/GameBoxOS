@@ -205,4 +205,21 @@ class LibretroThumbnailClientTest {
         assertEquals(cover, enriched.artworkUrl)
         assertEquals(cover, enriched.providerArtworkUrl)
     }
+
+    @Test
+    fun artworkCandidateUsesCanonicalProviderTitleAfterDisplayTitleOverride() = runBlocking {
+        val cover = thumbnailUrl(
+            "Sony - PlayStation Portable", "Named_Boxarts", "Crisis Core - Final Fantasy VII (Europe)",
+        )
+        val game = Game(
+            id = GameId("crisis-core-candidate"), title = "My Favorite PSP Game",
+            providerTitle = "Crisis Core: Final Fantasy VII",
+            platform = "PSP", year = 2007, genre = "RPG", sizeMb = 1,
+            state = InstallState.INSTALLED, region = "Europe",
+        )
+
+        val candidate = LibretroThumbnailClient { it == cover }.findCandidates(game).single()
+
+        assertEquals(cover, candidate.artworkUrl)
+    }
 }

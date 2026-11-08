@@ -16,8 +16,14 @@ data class BrowserDownloadProgress(
     val downloadedBytes: Long,
     val totalBytes: Long,
     val percent: Int?,
-    val paused: Boolean = false,
+    val status: BrowserDownloadStatus,
 )
+
+internal fun browserDownloadTransferStatus(androidStatus: Int): BrowserDownloadStatus = when (androidStatus) {
+    DownloadManager.STATUS_PENDING -> BrowserDownloadStatus.QUEUED
+    DownloadManager.STATUS_PAUSED -> BrowserDownloadStatus.PAUSED
+    else -> BrowserDownloadStatus.DOWNLOADING
+}
 
 internal fun hasRecoverableStagedDownload(stagedFile: File): Boolean =
     stagedFile.isFile && stagedFile.length() > 0L
@@ -65,7 +71,7 @@ class BrowserDownloadTracker(context: Context) {
                     percent = if (state.totalBytes > 0) {
                         (state.downloadedBytes * 100 / state.totalBytes).coerceIn(0, 99).toInt()
                     } else null,
-                    paused = state.status == DownloadManager.STATUS_PAUSED,
+                    status = browserDownloadTransferStatus(state.status),
                 ),
             )
             delay(1_000L)

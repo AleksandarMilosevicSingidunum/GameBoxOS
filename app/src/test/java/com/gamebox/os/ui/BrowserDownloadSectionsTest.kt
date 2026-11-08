@@ -12,11 +12,12 @@ class BrowserDownloadSectionsTest {
         val downloading = record(2L, BrowserDownloadStatus.DOWNLOADING)
         val imported = record(3L, BrowserDownloadStatus.IMPORTED)
         val failed = record(4L, BrowserDownloadStatus.FAILED)
+        val cancelled = record(5L, BrowserDownloadStatus.CANCELLED)
 
-        val sections = browserDownloadSections(listOf(queued, downloading, imported, failed))
+        val sections = browserDownloadSections(listOf(queued, downloading, imported, failed, cancelled))
 
         assertEquals(listOf(queued, downloading, failed), sections.active)
-        assertEquals(listOf(imported), sections.completed)
+        assertEquals(listOf(imported, cancelled), sections.completed)
     }
 
     @Test

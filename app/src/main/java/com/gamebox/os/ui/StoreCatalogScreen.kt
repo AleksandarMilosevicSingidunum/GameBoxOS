@@ -26,9 +26,6 @@ import com.gamebox.os.source.GameSourceConfig
 import com.gamebox.os.source.GameSourceProviderType
 import kotlinx.coroutines.launch
 
-internal fun pendingVimmSearchForQuery(currentQuery: String, pendingQuery: String?): String? =
-    pendingQuery?.takeIf { it == currentQuery }
-
 @Composable
 internal fun CatalogScreen(
     repository: GameRepository,
@@ -71,7 +68,6 @@ internal fun CatalogScreen(
     var searchFocusRequestedForStore by remember(uiState) { mutableStateOf(false) }
     var showControllerSearchKeyboard by remember(uiState) { mutableStateOf(false) }
     var searchVimmAfterKeyboard by remember(uiState) { mutableStateOf(false) }
-    var pendingVimmCorrection by remember(uiState) { mutableStateOf<String?>(null) }
     val firstWideCatalogRailItem = remember { FocusRequester() }
     val firstWideCatalogContent = remember { FocusRequester() }
     val emptyCatalogActionFocusRequester = remember { FocusRequester() }
@@ -181,13 +177,8 @@ internal fun CatalogScreen(
         }
     }
 
-    LaunchedEffect(filters.query, selectedConsoleKey) {
+    LaunchedEffect(selectedConsoleKey) {
         discoveryActions.clearSearchResults()
-        val correctedQuery = pendingVimmCorrection.also { pendingVimmCorrection = null }
-        pendingVimmSearchForQuery(filters.query, correctedQuery)?.let { query ->
-            configuredSources.firstOrNull { it.type == GameSourceProviderType.VIMM_LAIR }
-                ?.let { discoveryActions.openSource(it, query, selectedConsole) }
-        }
     }
     DisposableEffect(controllerActions, selectedDiscovery, selectedConfiguredResult) {
         val lease = if (selectedDiscovery == null && selectedConfiguredResult == null) {
@@ -276,9 +267,17 @@ internal fun CatalogScreen(
         discoveryActions.openSource(source, filters.query, selectedConsole)
     }
 
-    fun useSearchSuggestion(query: String) {
-        pendingVimmCorrection = query
+    fun updateQuery(query: String) {
+        if (filters.query != query) discoveryActions.clearSearchResults()
         filters.query = query
+    }
+
+    fun useSearchSuggestion(query: String, sourceId: String) {
+        val source = configuredSources.firstOrNull {
+            it.type == GameSourceProviderType.VIMM_LAIR && it.id == sourceId
+        } ?: return
+        filters.query = query
+        openConfiguredSource(source)
     }
 
     fun openConfiguredResult(result: DiscoverySourceGame) {
@@ -307,6 +306,7 @@ internal fun CatalogScreen(
                 showControllerSearchKeyboard = showControllerSearchKeyboard,
             ),
             actions = BlueprintCatalogScreenActions(
+                onQuery = ::updateQuery,
                 onClearPlatform = { filters.platform = null },
                 onSelectConsole = { selection.selectConsole(it?.key) },
                 onOpenConfiguredSource = ::openConfiguredSource,
@@ -350,6 +350,7 @@ internal fun CatalogScreen(
             configuredResults = configuredSourceResults,
         ),
         actions = CompactCatalogActions(
+            onQuery = ::updateQuery,
             refresh = repository::refreshCatalog,
             onFocused = onFocused,
             openAuthorized = open,

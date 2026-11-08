@@ -33,6 +33,25 @@ class GameDetailsHeroTest {
     val compose = createComposeRule()
 
     @Test
+    fun launchFailureIsShownBesideThePrimaryAction() {
+        val game = testGame(InstallState.INSTALLED)
+        compose.setContent {
+            MaterialTheme {
+                LaunchFeedbackBanner(
+                    game.id,
+                    LaunchUiState(
+                        status = LaunchUiState.Status.HANDOFF_REJECTED,
+                        gameId = game.id,
+                        message = "Could not open emulator. Check storage access and try again.",
+                    ),
+                )
+            }
+        }
+
+        compose.onNodeWithText("Could not open emulator. Check storage access and try again.").assertIsDisplayed()
+    }
+
+    @Test
     fun installedGameShowsAndInvokesPlayAction() {
         var plays = 0
         val game = testGame(InstallState.INSTALLED)

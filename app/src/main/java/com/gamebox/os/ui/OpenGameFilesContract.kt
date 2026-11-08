@@ -13,12 +13,12 @@ import androidx.activity.result.contract.ActivityResultContract
  */
 internal class OpenGameFilesContract(
     private val allowMultiple: Boolean,
-) : ActivityResultContract<Array<String>, List<Uri>>() {
+) : ActivityResultContract<Array<String>, GameFileSelection>() {
     override fun createIntent(context: Context, input: Array<String>): Intent =
         Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
             addCategory(Intent.CATEGORY_OPENABLE)
             type = "*/*"
-            putExtra(Intent.EXTRA_MIME_TYPES, input)
+            if (input.any { it != "*/*" }) putExtra(Intent.EXTRA_MIME_TYPES, input)
             putExtra(Intent.EXTRA_ALLOW_MULTIPLE, allowMultiple)
             addFlags(
                 Intent.FLAG_GRANT_READ_URI_PERMISSION or
@@ -27,14 +27,19 @@ internal class OpenGameFilesContract(
             )
         }
 
-    override fun parseResult(resultCode: Int, intent: Intent?): List<Uri> {
-        if (resultCode != Activity.RESULT_OK || intent == null) return emptyList()
+    override fun parseResult(resultCode: Int, intent: Intent?): GameFileSelection {
+        if (resultCode != Activity.RESULT_OK || intent == null) return GameFileSelection(emptyList(), 0)
         val selected = buildList {
             intent.clipData?.let { clip ->
                 for (index in 0 until clip.itemCount) clip.getItemAt(index).uri?.let(::add)
             }
             intent.data?.let(::add)
         }
-        return selected.distinct()
+        return GameFileSelection(
+            selected.distinct(),
+            intent.flags and (Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION),
+        )
     }
 }
+
+internal data class GameFileSelection(val uris: List<Uri>, val grantFlags: Int)

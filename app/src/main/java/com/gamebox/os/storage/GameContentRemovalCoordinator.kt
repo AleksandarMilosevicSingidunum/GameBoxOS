@@ -23,6 +23,7 @@ internal class GameContentRemovalCoordinator(
     private val savesRoot: File,
     private val backupService: SaveBackupService,
     private val externalContent: ExternalLibraryContentStore?,
+    private val cloudConfigured: suspend () -> Boolean,
     private val uploadCloudSave: suspend (relativePath: String, updatedAtMillis: Long) -> Unit,
     private val safeCloudError: (Throwable) -> String,
 ) {
@@ -73,7 +74,8 @@ internal class GameContentRemovalCoordinator(
                         }
                         true
                     } ?: false
-                    val cloudBackupCreated = saveRecord?.let { record ->
+                    val shouldUploadCloud = saveRecord != null && cloudConfigured()
+                    val cloudBackupCreated = saveRecord?.takeIf { shouldUploadCloud }?.let { record ->
                         val upload = runCatching {
                             uploadCloudSave(record.relativePath, record.updatedAtMillis)
                         }
@@ -106,7 +108,7 @@ internal class GameContentRemovalCoordinator(
                             append("$removedBeforeFailure content file(s) removed. ")
                             if (backupCreated) append("Verified save backup created. ")
                             if (cloudBackupCreated) append("Cloud save uploaded and verified. ")
-                            else if (saveRecord != null) {
+                            else if (shouldUploadCloud) {
                                 append("Cloud backup unavailable; explicitly continued with verified local backup. ")
                             }
                             append("Saves, backups, metadata and history retained.")

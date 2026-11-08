@@ -48,6 +48,11 @@ class GameSettingsPanelReadinessTest {
             }
         }
 
+        composeRule.onNodeWithText("Adjust graphics and performance in the emulator's own settings.")
+            .assertExists()
+        composeRule.onNodeWithText("Graphics profile").assertDoesNotExist()
+        composeRule.onNodeWithText("Performance").assertDoesNotExist()
+
         if (installedOptions.isEmpty()) {
             composeRule.onNodeWithText("Install PPSSPP before launching this game.")
                 .assertExists()

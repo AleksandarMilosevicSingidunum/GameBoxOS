@@ -1,9 +1,13 @@
+using System.Collections.Concurrent;
 using System.Text.Json;
 
 namespace GameBox.Windows.Core;
 
 public sealed class LibraryStore
 {
+    private static readonly ConcurrentDictionary<string, SemaphoreSlim> SaveLocks =
+        new(StringComparer.OrdinalIgnoreCase);
+
     private static readonly JsonSerializerOptions JsonOptions = new() {
         WriteIndented = true,
         PropertyNameCaseInsensitive = true
@@ -49,12 +53,28 @@ public sealed class LibraryStore
             ?? throw new InvalidOperationException("Library path requires a directory.");
         Directory.CreateDirectory(directory);
         var temporary = Path + ".tmp";
-        await using (var stream = new FileStream(
-            temporary, FileMode.Create, FileAccess.Write, FileShare.None))
+        var saveLock = SaveLocks.GetOrAdd(Path, static _ => new SemaphoreSlim(1, 1));
+        await saveLock.WaitAsync(cancellationToken);
+        try
         {
-            await JsonSerializer.SerializeAsync(stream, normalized, JsonOptions, cancellationToken);
-            await stream.FlushAsync(cancellationToken);
+            await using (var stream = new FileStream(
+                temporary, FileMode.Create, FileAccess.Write, FileShare.None))
+            {
+                await JsonSerializer.SerializeAsync(stream, normalized, JsonOptions, cancellationToken);
+                await stream.FlushAsync(cancellationToken);
+            }
+            File.Move(temporary, Path, true);
         }
-        File.Move(temporary, Path, true);
+        finally
+        {
+            try
+            {
+                if (File.Exists(temporary)) File.Delete(temporary);
+            }
+            finally
+            {
+                saveLock.Release();
+            }
+        }
     }
 }

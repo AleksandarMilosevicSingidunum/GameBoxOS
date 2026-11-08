@@ -175,7 +175,7 @@ class ConfiguredDiscoverySourcesSectionTest {
                     allDiscoveryGames = emptyList(),
                     onOpenSource = {},
                     onOpenResult = {},
-                    onUseSearchSuggestion = { updatedQuery = it },
+                    onUseSearchSuggestion = { query, _ -> updatedQuery = query },
                 )
             }
         }
@@ -206,6 +206,30 @@ class ConfiguredDiscoverySourcesSectionTest {
         }
 
         compose.onNodeWithContentDescription("Sync Homebrew Index configured metadata source")
+            .assertIsNotEnabled()
+    }
+
+    @Test
+    fun vimmActionIsDisabledForConfiguredConsolesWithoutVaultMappings() {
+        compose.setContent {
+            GameBoxTheme {
+                ConfiguredDiscoverySourcesSection(
+                    configuredSources = listOf(
+                        source("vimm", "Vimm's Lair", GameSourceProviderType.VIMM_LAIR)
+                            .copy(platforms = setOf("3DS", "Switch")),
+                    ),
+                    query = "Mario",
+                    consoleLabel = "3DS",
+                    syncing = false,
+                    results = emptyList(),
+                    allDiscoveryGames = emptyList(),
+                    onOpenSource = {},
+                    onOpenResult = {},
+                )
+            }
+        }
+
+        compose.onNodeWithContentDescription("Search Vimm's Lair configured discovery source")
             .assertIsNotEnabled()
     }
 

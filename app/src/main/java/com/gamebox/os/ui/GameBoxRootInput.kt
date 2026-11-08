@@ -38,6 +38,15 @@ internal fun gameBoxBackTarget(
     else -> GameBoxBackTarget.NONE
 }
 
+internal fun dispatchTvModeBack(
+    hasActiveTextEntry: Boolean,
+    dismissTextEntry: () -> Unit,
+    exitTvMode: () -> Unit,
+): Boolean {
+    if (hasActiveTextEntry) dismissTextEntry() else exitTvMode()
+    return true
+}
+
 internal fun gameBoxRootInputForKey(keyCode: Int): GameBoxRootInput? = when (keyCode) {
     KeyEvent.KEYCODE_BUTTON_L1 -> GameBoxRootInput.MovePrimaryTab(-1)
     KeyEvent.KEYCODE_BUTTON_R1 -> GameBoxRootInput.MovePrimaryTab(1)
@@ -48,6 +57,9 @@ internal fun gameBoxRootInputForKey(keyCode: Int): GameBoxRootInput? = when (key
     KeyEvent.KEYCODE_BACK, KeyEvent.KEYCODE_BUTTON_B -> GameBoxRootInput.Back
     else -> null
 }
+
+internal fun shouldHandleGameBoxRootKey(keyCode: Int, repeatCount: Int): Boolean =
+    repeatCount == 0 || gameBoxRootInputForKey(keyCode) == null
 
 internal fun gameBoxNavigationSoundForKey(keyCode: Int): Int? = when (keyCode) {
     KeyEvent.KEYCODE_DPAD_LEFT -> SoundEffectConstants.NAVIGATION_LEFT
@@ -71,6 +83,9 @@ internal fun Modifier.onGameBoxRootInput(
 ): Modifier = onPreviewKeyEvent { event ->
     if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
     val keyCode = event.nativeKeyEvent.keyCode
+    if (!shouldHandleGameBoxRootKey(keyCode, event.nativeKeyEvent.repeatCount)) {
+        return@onPreviewKeyEvent true
+    }
     if (soundsEnabled && event.nativeKeyEvent.repeatCount == 0) {
         gameBoxNavigationSoundForKey(keyCode)?.let(playSoundEffect)
     }

@@ -16,7 +16,8 @@ internal fun deleteImportedSource(context: Context, uri: Uri): Boolean = runCatc
             // write grant while the import runs, then release it after deletion.
             runCatching { context.contentResolver.takePersistableUriPermission(uri, access) }
             try {
-                DocumentsContract.deleteDocument(context.contentResolver, uri)
+                DocumentsContract.deleteDocument(context.contentResolver, uri) ||
+                    context.contentResolver.delete(uri, null, null) > 0
             } finally {
                 runCatching { context.contentResolver.releasePersistableUriPermission(uri, access) }
             }

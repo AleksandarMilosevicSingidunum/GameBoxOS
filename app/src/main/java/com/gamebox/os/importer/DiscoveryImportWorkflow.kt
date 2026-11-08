@@ -1,4 +1,4 @@
-package com.gamebox.os.ui
+package com.gamebox.os.importer
 
 import android.content.Context
 import android.net.Uri
@@ -7,18 +7,14 @@ import com.gamebox.os.content.GameMutationGate
 import com.gamebox.os.data.DiscoveryGame
 import com.gamebox.os.data.GameRepository
 import com.gamebox.os.domain.LocalContentFile
-import com.gamebox.os.importer.AuthorizedRomImporter
-import com.gamebox.os.importer.RomImportResult
-import com.gamebox.os.importer.RomImportSetResult
-import com.gamebox.os.importer.RomImportSource
-import com.gamebox.os.importer.RomImportPolicy
-import com.gamebox.os.importer.RomImportProgress
-import com.gamebox.os.importer.deleteImportedSource
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.withContext
 
 internal data class DiscoveryImportOutcome(val message: String, val succeeded: Boolean)
+
+internal fun shouldRemoveImportedArchive(displayName: String): Boolean =
+    displayName.substringAfterLast('.', "").lowercase() in setOf("zip", "7z")
 
 /** Owns verified import, Library registration, rollback, and source cleanup for a discovery title. */
 internal class DiscoveryImportWorkflow(
@@ -91,7 +87,7 @@ internal class DiscoveryImportWorkflow(
     suspend fun importDiscSet(
         sources: List<RomImportSource>,
         onProgress: (RomImportProgress) -> Unit = {},
-    ): String =
+    ): DiscoveryImportOutcome =
         GameMutationGate.withGameLock(game.id.value) {
             when (val result = importer.importSet(game.id, sources, platformName, onProgress = onProgress)) {
                 is RomImportSetResult.Imported -> completeRegistration(
@@ -128,16 +124,25 @@ internal class DiscoveryImportWorkflow(
                     val cleanupDeferred = runCatching {
                         importer.confirmRegistration(game.id, result.transactionId)
                     }.isFailure
-                    val sourcesRemoved = sources.count { deleteImportedSource(context, it.uri) }
+                    val archiveSources = sources.filter { shouldRemoveImportedArchive(it.displayName) }
+                    val archivesRemoved = archiveSources.count { deleteImportedSource(context, it.uri) }
                     buildString {
                         append("${result.files.size}-file disc set verified and added to Library; ")
-                        append("$sourcesRemoved source archive/file(s) removed")
+                        if (archiveSources.isEmpty()) {
+                            append("original disc files retained")
+                        } else {
+                            append("$archivesRemoved of ${archiveSources.size} selected archive(s) removed")
+                            if (archivesRemoved < archiveSources.size) append("; some archives could not be deleted")
+                            if (sources.size > archiveSources.size) append("; original disc files retained")
+                        }
                         if (cleanupDeferred) append(". Transaction cleanup will finish after restart.")
                     }
-                }.message
-                RomImportSetResult.SourceUnavailable -> "A selected file is unavailable or its access expired. Choose the files again."
-                is RomImportSetResult.Rejected -> "Import rejected: ${result.reason}"
-                is RomImportSetResult.Failed -> "Import failed: ${result.reason}"
+                }
+                RomImportSetResult.SourceUnavailable -> DiscoveryImportOutcome(
+                    "A selected file is unavailable or its access expired. Choose the files again.", false,
+                )
+                is RomImportSetResult.Rejected -> DiscoveryImportOutcome("Import rejected: ${result.reason}", false)
+                is RomImportSetResult.Failed -> DiscoveryImportOutcome("Import failed: ${result.reason}", false)
             }
         }
 

@@ -22,6 +22,7 @@ class HomePresentationTest {
 
         assertEquals(newest.id, home.hero.id)
         assertEquals(listOf(newest, older), home.recentlyPlayed)
+        assertEquals("Continue playing", home.heroHeading)
     }
 
     @Test
@@ -35,6 +36,7 @@ class HomePresentationTest {
 
         assertEquals(listOf(installed, update), home.installedGames)
         assertEquals(installed.id, home.hero.id)
+        assertEquals("Your games", home.heroHeading)
     }
 
     @Test
@@ -47,6 +49,7 @@ class HomePresentationTest {
 
         assertEquals(sample.id, home.hero.id)
         assertEquals(focus, home.focusTarget)
+        assertEquals("Discover games", home.heroHeading)
     }
 
     @Test

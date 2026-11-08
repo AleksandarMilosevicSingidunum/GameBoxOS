@@ -9,3 +9,16 @@ captures/
 **/bin/
 **/obj/
 artifacts/
+
+# Local device content and generated hardware-test evidence. Keep user ROMs,
+# emulator settings, captures, and logs out of project commits.
+/games/
+/tmp/
+/docs/evidence/
+/*.png
+/*.jpg
+/*.jpeg
+/*.webp
+/*.xml
+/*.ini
+/*.log

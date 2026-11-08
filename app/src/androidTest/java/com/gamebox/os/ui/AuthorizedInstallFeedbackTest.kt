@@ -76,6 +76,19 @@ class AuthorizedInstallFeedbackTest {
         compose.runOnIdle { assertEquals(1, installs) }
     }
 
+    @Test
+    fun installedFixtureOffersOnePlayActionInsteadOfReinstall() {
+        var plays = 0
+        showPanel(
+            AuthorizedDownloadState(status = AuthorizedDownloadState.Status.SUCCEEDED),
+            onPrimaryAction = { plays++ },
+        )
+        compose.onNodeWithText("Install game").assertDoesNotExist()
+        compose.onNodeWithText("Reinstall game").assertDoesNotExist()
+        compose.onNodeWithText("Play").performClick()
+        compose.runOnIdle { assertEquals(1, plays) }
+    }
+
     private fun showPanel(
         download: AuthorizedDownloadState,
         contentInstalled: Boolean = download.status == AuthorizedDownloadState.Status.SUCCEEDED,

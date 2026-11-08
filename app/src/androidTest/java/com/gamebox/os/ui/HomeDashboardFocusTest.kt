@@ -15,6 +15,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.assertHeightIsAtLeast
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -37,6 +38,48 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class HomeDashboardFocusTest {
     @get:Rule val compose = createComposeRule()
+
+    @Test
+    fun activeDownloadOnEmptyHomeOpensDownloadManager() {
+        var openedDownloads = false
+        compose.setContent {
+            MaterialTheme {
+                HomeDashboardContent(
+                    games = emptyList(), presentation = null, compact = false,
+                    showDefaultHomeSetupBanner = false, networkLabel = "Connected", storagePercent = 4,
+                    deviceModel = "HONOR", controllerLabel = "Connected", onChooseHome = {},
+                    emptyHomeSetupFocusRequester = remember { FocusRequester() },
+                    openPc = {}, openStore = {}, onFocused = {}, open = {},
+                    downloadActivity = HomeDownloadActivity("Homebrew", "Downloading", .5f, 1),
+                    openDownloads = { openedDownloads = true },
+                )
+            }
+        }
+        compose.onNodeWithText("Homebrew · Downloading · 50%").assertIsDisplayed()
+        compose.onNodeWithText("View downloads").performClick()
+        compose.runOnIdle { assertTrue(openedDownloads) }
+    }
+
+    @Test
+    fun dpadDownFromHeroReachesActiveDownload() {
+        val hero = game("recent", lastPlayed = "2026-10-01T10:00:00Z")
+        compose.setContent {
+            MaterialTheme {
+                HomeDashboardContent(
+                    games = listOf(hero), presentation = homePresentationState(listOf(hero), hero.id, false),
+                    compact = false, showDefaultHomeSetupBanner = false, networkLabel = "Connected",
+                    storagePercent = 4, deviceModel = "HONOR", controllerLabel = "Connected",
+                    onChooseHome = {}, emptyHomeSetupFocusRequester = remember { FocusRequester() },
+                    openPc = {}, openStore = {}, onFocused = {}, open = {},
+                    downloadActivity = HomeDownloadActivity("Homebrew", "Downloading", .5f, 1),
+                    openDownloads = {},
+                )
+            }
+        }
+        compose.onNodeWithContentDescription(GameBoxSemantics.gameCardDescription(hero, hero = true)).assertIsFocused()
+        InstrumentationRegistry.getInstrumentation().sendKeyDownUpSync(KeyEvent.KEYCODE_DPAD_DOWN)
+        compose.onNodeWithText("View downloads").assertIsFocused()
+    }
 
     @Test
     fun storageUsageProgressExposesItsCurrentValueToAccessibility() {
@@ -175,6 +218,7 @@ class HomeDashboardFocusTest {
 
         compose.onNodeWithContentDescription(GameBoxSemantics.gameCardDescription(recent, hero = true))
             .assertIsFocused()
+            .assertHeightIsAtLeast(212.dp)
         compose.onAllNodesWithContentDescription(GameBoxSemantics.gameCardDescription(hidden, hero = false))
             .assertCountEquals(0)
         compose.onNodeWithContentDescription("Open Vimm Lair in GameBox")
@@ -225,6 +269,27 @@ class HomeDashboardFocusTest {
         InstrumentationRegistry.getInstrumentation().sendKeyDownUpSync(KeyEvent.KEYCODE_DPAD_UP)
         compose.onNodeWithContentDescription(GameBoxSemantics.gameCardDescription(hero, hero = false))
             .assertIsFocused()
+    }
+
+    @Test
+    fun tvDpadDownFromDiscoveryHeroReachesGamesBeforePcShortcuts() {
+        val hero = game("galaxy-patrol").copy(state = InstallState.NOT_INSTALLED)
+        val other = game("other").copy(state = InstallState.NOT_INSTALLED)
+        val games = listOf(hero, other)
+        compose.setContent {
+            MaterialTheme {
+                HomeDashboardContent(
+                    games = games, presentation = homePresentationState(games, hero.id, false),
+                    compact = false, showDefaultHomeSetupBanner = false, networkLabel = "Connected",
+                    storagePercent = 4, deviceModel = "HONOR", controllerLabel = "Connected",
+                    onChooseHome = {}, emptyHomeSetupFocusRequester = remember { FocusRequester() },
+                    openPc = {}, openStore = {}, onFocused = {}, open = {},
+                )
+            }
+        }
+        compose.onNodeWithContentDescription(GameBoxSemantics.gameCardDescription(hero, hero = true)).assertIsFocused()
+        InstrumentationRegistry.getInstrumentation().sendKeyDownUpSync(KeyEvent.KEYCODE_DPAD_DOWN)
+        compose.onNodeWithContentDescription(GameBoxSemantics.gameCardDescription(other, hero = false)).assertIsFocused()
     }
 
     @Test

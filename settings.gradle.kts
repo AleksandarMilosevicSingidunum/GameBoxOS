@@ -6,4 +6,4 @@ dependencyResolutionManagement {
     repositories { google(); mavenCentral() }
 }
 rootProject.name = "GameBoxOS"
-include(":app")
+include(":app", ":companion-remote")

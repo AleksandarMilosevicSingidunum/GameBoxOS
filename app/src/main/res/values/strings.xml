@@ -6,4 +6,5 @@
     <string name="tracked_source_https_downloads_only">Only HTTPS downloads are supported</string>
     <string name="tracked_source_unsupported_filename">The source did not provide a supported game filename. Use Import your copy after downloading in a browser.</string>
     <string name="tracked_source_download_start_failed">Could not start download: %1$s</string>
+    <string name="tracked_source_transfer_schedule_failed">The download could not be scheduled. Check Downloads for details and retry.</string>
 </resources>

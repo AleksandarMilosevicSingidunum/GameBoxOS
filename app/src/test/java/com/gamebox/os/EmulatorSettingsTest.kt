@@ -8,10 +8,32 @@ import com.gamebox.os.launch.EmulatorReadinessPolicy
 import com.gamebox.os.launch.emulatorPackageCandidates
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.io.File
+import javax.xml.parsers.DocumentBuilderFactory
+import org.w3c.dom.Element
 
 class EmulatorSettingsTest {
     private val registry = EmulatorCapabilityRegistry()
+
+    @Test
+    fun approvedEmulatorsAreVisibleThroughManifestQueries() {
+        val manifest = DocumentBuilderFactory.newInstance().apply { isNamespaceAware = true }
+            .newDocumentBuilder().parse(File("src/main/AndroidManifest.xml"))
+        val packages = manifest.getElementsByTagName("queries").item(0) as Element
+        val nodes = packages.getElementsByTagName("package")
+        val declared = (0 until nodes.length).map {
+            (nodes.item(it) as Element).getAttributeNS("http://schemas.android.com/apk/res/android", "name")
+        }.toSet()
+        val platforms = listOf("PSP", "PS1", "N64", "Dreamcast", "GameCube", "Wii", "WiiWare",
+            "3DS", "PS2", "NES", "SNES", "GB", "GBC", "GBA", "DS", "Genesis", "Atari 2600")
+        val packagesNeeded = platforms.flatMap { platform ->
+            val game = Game(GameId("visibility-test"), "Test", platform, 2020, "Test", 1, InstallState.INSTALLED)
+            registry.optionsFor(game).flatMap(::emulatorPackageCandidates)
+        }.toSet()
+        assertTrue("Missing emulator package queries: ${packagesNeeded - declared}", declared.containsAll(packagesNeeded))
+    }
 
     @Test
     fun platformOptionsProvideApprovedDefaults() {
@@ -130,10 +152,10 @@ class EmulatorSettingsTest {
     fun supportedVimmConsolesPreferStandaloneEmulators() {
         val cases = mapOf(
             "PS1" to "com.github.stenzek.duckstation",
-            "N64" to "org.mupen64plusae.v3.fzurita",
-            "Dreamcast" to "com.flycast.emulator",
+            "N64" to "io.github.gopher64.gopher64",
+            "Dreamcast" to "io.recompiled.redream",
             "PSP" to "org.ppsspp.ppsspp",
-            "PS2" to "xyz.aethersx2.android",
+            "PS2" to "com.armsx2",
             "GameCube" to "org.dolphinemu.dolphinemu",
             "Wii" to "org.dolphinemu.dolphinemu",
             "WiiWare" to "org.dolphinemu.dolphinemu",
@@ -163,6 +185,12 @@ class EmulatorSettingsTest {
             assertNull(capability.requiredCore)
             assertNull(capability.retroArchCoreFileName)
         }
+
+        val dreamcast = Game(GameId("redream-select"), "Dreamcast", "Dreamcast", 2000, "Test", 1,
+            InstallState.INSTALLED, emulatorPackage = "io.recompiled.redream",
+            localContentRelativePath = "dreamcast/game.cdi", localContentSha256 = "e".repeat(64),
+            localContentMimeType = "application/octet-stream")
+        assertEquals("io.recompiled.redream", registry.forGame(dreamcast)?.packageName)
     }
 
     @Test
@@ -173,7 +201,7 @@ class EmulatorSettingsTest {
                 "Action", 1, InstallState.INSTALLED,
                 emulatorPackage = when (platform) {
                     "PS1" -> "com.github.stenzek.duckstation"
-                    "N64" -> "org.mupen64plusae.v3.fzurita"
+                    "N64" -> "io.github.gopher64.gopher64"
                     else -> "com.flycast.emulator"
                 },
                 localContentRelativePath = "standalone-$index/game.rom",

@@ -185,7 +185,7 @@ class PerGameSaveCardTest {
         }
 
         val local = compose.onNodeWithText("Save copy").fetchSemanticsNode().boundsInRoot
-        val cloud = compose.onNodeWithText("Encrypted cloud copy").fetchSemanticsNode().boundsInRoot
+        val cloud = compose.onNodeWithText("Cloud copy").fetchSemanticsNode().boundsInRoot
         assertTrue("wide TV save panels should occupy separate columns", local.right < cloud.left)
         compose.onNodeWithText("GameBox manages a separate single-file copy", substring = true).assertIsDisplayed()
         compose.onNodeWithText("Upload cloud copy").assertIsDisplayed()

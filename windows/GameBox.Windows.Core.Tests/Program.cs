@@ -123,6 +123,22 @@ try
     try { await store.ImportAsync(Path.Combine(root, "missing.json")); }
     catch (FileNotFoundException) { missingBackupRejected = true; }
     Require(missingBackupRejected, "Missing library backups must be rejected.");
+    var secondStoreForSamePath = new LibraryStore(store.Path);
+    await Task.WhenAll(Enumerable.Range(0, 24).Select(index =>
+        (index % 2 == 0 ? store : secondStoreForSamePath)
+            .SaveAsync(new[] { first with { Title = $"Concurrent {index}" } })));
+    var concurrentSave = await store.LoadAsync();
+    Require(concurrentSave.Count == 1 && concurrentSave[0].Title.StartsWith("Concurrent ", StringComparison.Ordinal),
+        "Concurrent library writes must leave valid JSON from one complete snapshot.");
+    Require(!File.Exists(store.Path + ".tmp"), "A completed concurrent save must not leave its temporary file.");
+    var blockedLibraryPath = Path.Combine(root, "blocked", "library.json");
+    Directory.CreateDirectory(Path.GetDirectoryName(blockedLibraryPath)!);
+    Directory.CreateDirectory(blockedLibraryPath);
+    var failedSaveReported = false;
+    try { await new LibraryStore(blockedLibraryPath).SaveAsync(new[] { first }); }
+    catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { failedSaveReported = true; }
+    Require(failedSaveReported, "A library save blocked by an existing directory must report failure.");
+    Require(!File.Exists(blockedLibraryPath + ".tmp"), "A failed library save must remove its temporary file.");
 
     var duplicateRejected = false;
     try { GameLibrary.Normalize(new[] { first, first }); }
@@ -211,6 +227,14 @@ try
         "\"AppState\"\n{\n  \"name\" \"Missing ID\"\n}");
 
     var steamShortcuts = Path.Combine(root, "generated-steam-shortcuts");
+    var customSteamRoot = Path.Combine(root, "custom-steam");
+    Directory.CreateDirectory(Path.Combine(customSteamRoot, "steamapps"));
+    Require(SteamDiscovery.ResolveInstallRoot(new[] { customSteamRoot, steamRoot }) == Path.GetFullPath(customSteamRoot),
+        "Steam discovery must prefer a registered custom install with a steamapps folder.");
+    Require(SteamDiscovery.ResolveInstallRoot(new[] { Path.Combine(root, "missing-steam"), steamRoot }) == Path.GetFullPath(steamRoot),
+        "Steam discovery must fall back when its registered install is unavailable.");
+    Require(SteamDiscovery.ResolveInstallRoot(new[] { "\0", steamRoot }) == Path.GetFullPath(steamRoot),
+        "Steam discovery must ignore an invalid registered path and use the default install.");
     var steamDiscovery = SteamDiscovery.Discover(
         steamRoot,
         steamShortcuts,

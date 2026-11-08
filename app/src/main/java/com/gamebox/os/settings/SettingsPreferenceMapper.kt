@@ -37,5 +37,13 @@ internal fun Preferences.toGameBoxSettings(): GameBoxSettings {
         platformEmulatorDefaults = decodePlatformDefaults(this[PLATFORM_EMULATOR_DEFAULTS]),
         recentShortcutLaunches = decodeShortcutLaunchHistory(this[RECENT_SHORTCUT_LAUNCHES]),
         hiddenShortcutPackages = decodeHiddenShortcutPackages(this[HIDDEN_SHORTCUT_PACKAGES]),
+        tvFavoritePackages = (this[TV_FAVORITE_PACKAGES]?.lineSequence()
+            ?: DEFAULT_TV_FAVORITE_PACKAGES.asSequence())
+            .filter { it.matches(Regex("[A-Za-z0-9_]+(\\.[A-Za-z0-9_]+)+")) }.distinct().take(100).toList(),
+        tvPlaylistUri = this[TV_PLAYLIST_URI],
+        tvFavoriteChannels = this[TV_FAVORITE_CHANNELS]?.lineSequence()?.filter { it.length in 1..160 && it.none(Char::isISOControl) }?.distinct()?.take(500)?.toList().orEmpty(),
+        tvLastChannel = this[TV_LAST_CHANNEL]?.takeIf { it.length in 1..160 && it.none(Char::isISOControl) },
+        tvHomeSections = this[TV_HOME_SECTIONS]?.lineSequence()?.filter { it in DEFAULT_TV_HOME_SECTIONS }?.distinct()?.toList()
+            ?: DEFAULT_TV_HOME_SECTIONS,
     )
 }

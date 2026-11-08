@@ -6,6 +6,7 @@ import android.content.pm.ActivityInfo
 import android.content.pm.PackageManager
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import com.gamebox.os.ExternalDisplayActivity
 import com.gamebox.os.MainActivity
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -28,6 +29,24 @@ class DefaultHomeRegistrationTest {
             candidates.any { candidate ->
                 candidate.activityInfo.packageName == context.packageName &&
                     candidate.activityInfo.name == MainActivity::class.java.name
+            },
+        )
+    }
+
+    @Test
+    fun externalDisplayHostIsRegisteredAsSecondaryHomeCandidate() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val intent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_SECONDARY_HOME)
+        val candidates = context.packageManager.queryIntentActivities(
+            intent,
+            PackageManager.MATCH_DEFAULT_ONLY,
+        )
+
+        assertTrue(
+            "GameBox external display host must be an Android SECONDARY_HOME candidate",
+            candidates.any { candidate ->
+                candidate.activityInfo.packageName == context.packageName &&
+                    candidate.activityInfo.name == ExternalDisplayActivity::class.java.name
             },
         )
     }

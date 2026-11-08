@@ -3,6 +3,7 @@ package com.gamebox.os.ui
 import com.gamebox.os.data.DiscoveryGame
 import com.gamebox.os.domain.GameId
 import com.gamebox.os.domain.LocalContentFile
+import com.gamebox.os.importer.importedGameRegistration
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test

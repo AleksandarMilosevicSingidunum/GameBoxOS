@@ -4,7 +4,6 @@ import android.content.ContentValues
 import android.content.Context
 import android.os.Build
 import android.provider.MediaStore
-import androidx.core.content.edit
 import java.io.File
 import java.io.InputStream
 import java.util.UUID
@@ -15,6 +14,7 @@ internal data class RetroArchContentSource(
     val openSource: () -> InputStream,
 )
 
+
 /** Publishes verified content only for RetroArch builds that require a filesystem path. */
 internal class RetroArchContentPublisher(
     context: Context,
@@ -23,14 +23,19 @@ internal class RetroArchContentPublisher(
     private val applicationContext = context.applicationContext
     private val preference = applicationContext.getSharedPreferences(preferencesName, Context.MODE_PRIVATE)
 
-    fun cleanup() {
-        val persistedUris = preference.getStringSet(PUBLISHED_URI_KEY, emptySet())
+    fun cleanup() = cleanup { uri -> applicationContext.contentResolver.delete(uri, null, null) }
+
+    internal fun cleanup(delete: (android.net.Uri) -> Int) {
+        val remaining = preference.getStringSet(PUBLISHED_URI_KEY, emptySet())
             .orEmpty()
-            .mapNotNull { raw -> runCatching { android.net.Uri.parse(raw) }.getOrNull() }
-        persistedUris.distinct().forEach { uri ->
-            runCatching { applicationContext.contentResolver.delete(uri, null, null) }
+            .filterTo(mutableSetOf()) { raw ->
+                val uri = runCatching { android.net.Uri.parse(raw) }.getOrNull() ?: return@filterTo false
+                runCatching { delete(uri) }.isFailure
+            }
+        preference.edit().apply {
+            if (remaining.isEmpty()) remove(PUBLISHED_URI_KEY) else putStringSet(PUBLISHED_URI_KEY, remaining)
         }
-        preference.edit { remove(PUBLISHED_URI_KEY) }
+            .commit()
     }
 
     fun publish(

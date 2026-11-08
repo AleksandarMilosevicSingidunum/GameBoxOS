@@ -7,11 +7,13 @@ import com.gamebox.os.display.applyBorderlessFullscreenWindow
 import com.gamebox.os.display.currentDisplayId
 import com.gamebox.os.display.hideSystemBars
 import com.gamebox.os.display.requestExternalFullscreenAfterFocus
+import com.gamebox.os.display.requestExternalActivityFullscreen
 import com.gamebox.os.display.shouldFinishExternalDisplayActivityForRemovedDisplay
 import com.gamebox.os.display.shouldReapplyExternalDisplayWindowPolicyForChangedDisplay
 
 /** Dedicated fullscreen host for GameBox when launched from the phone onto an external display. */
 class ExternalDisplayActivity : GameBoxHostActivity() {
+    private var fullscreenRequestedFromUserInteraction = false
     private val displayListener = object : DisplayManager.DisplayListener {
         override fun onDisplayAdded(displayId: Int) = Unit
 
@@ -66,6 +68,15 @@ class ExternalDisplayActivity : GameBoxHostActivity() {
             // Retry after focus returns from system pickers, which may otherwise
             // restore an OEM freeform window instead of the fullscreen TV surface.
             requestExternalFullscreenAfterFocus()
+        }
+    }
+
+    override fun onUserInteraction() {
+        super.onUserInteraction()
+        if (isInMultiWindowMode && !fullscreenRequestedFromUserInteraction) {
+            // Desktop windowing requires fullscreen promotion to follow user input.
+            fullscreenRequestedFromUserInteraction = true
+            requestExternalActivityFullscreen(this)
         }
     }
 

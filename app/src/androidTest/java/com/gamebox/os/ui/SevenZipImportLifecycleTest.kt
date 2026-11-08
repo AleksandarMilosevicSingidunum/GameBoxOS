@@ -11,6 +11,8 @@ import com.gamebox.os.data.GameRepository
 import com.gamebox.os.data.ImportedGameRegistration
 import com.gamebox.os.domain.GameId
 import com.gamebox.os.importer.AuthorizedRomImporter
+import com.gamebox.os.importer.DiscoveryImportWorkflow
+import com.gamebox.os.importer.RomImportSource
 import java.io.File
 import org.apache.commons.compress.archivers.sevenz.SevenZOutputFile
 import org.junit.Assert.assertEquals
@@ -56,6 +58,18 @@ class SevenZipImportLifecycleTest {
             assertTrue(importedFile.readBytes().contentEquals(bytes))
             assertFalse(registration.relativePath.endsWith(".7z"))
 
+            val discGame = discoveryGame("disc-set-fixture")
+            val cue = root.resolve("disc.cue").apply {
+                writeText("FILE \"track.bin\" BINARY\n TRACK 01 MODE1/2352\n INDEX 01 00:00:00\n")
+            }
+            val track = root.resolve("track.bin").apply { writeBytes(ByteArray(128) { it.toByte() }) }
+            val discSet = DiscoveryImportWorkflow(context, importer, repository, discGame, "PS1")
+                .importDiscSet(listOf(RomImportSource(Uri.fromFile(cue), cue.name), RomImportSource(Uri.fromFile(track), track.name)))
+            assertTrue(discSet.message, discSet.succeeded)
+            assertTrue(discSet.message.contains("original disc files retained"))
+            assertTrue("selected CUE file must be retained", cue.exists())
+            assertTrue("selected track file must be retained", track.exists())
+
             val broken = root.resolve("broken.7z").apply { writeText("not a 7z archive") }
             val failed = DiscoveryImportWorkflow(
                 context,
@@ -68,7 +82,7 @@ class SevenZipImportLifecycleTest {
             assertFalse(failed.succeeded)
             assertTrue(failed.message.startsWith("Import failed:") || failed.message.startsWith("Import rejected:"))
             assertTrue("source archive must remain after unsuccessful import", broken.exists())
-            assertEquals(1, registrations.size)
+            assertEquals(2, registrations.size)
 
             val unavailable = root.resolve("missing.iso")
             val unavailableResult = DiscoveryImportWorkflow(
@@ -80,7 +94,7 @@ class SevenZipImportLifecycleTest {
             ).importSingle(Uri.fromFile(unavailable), unavailable.name, removeSourceAfterSuccess = true)
             assertFalse(unavailableResult.succeeded)
             assertTrue(unavailableResult.message.isNotBlank())
-            assertEquals(1, registrations.size)
+            assertEquals(2, registrations.size)
         } finally {
             root.deleteRecursively()
         }

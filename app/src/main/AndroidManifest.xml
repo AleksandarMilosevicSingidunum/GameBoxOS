@@ -5,7 +5,13 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+    <uses-permission android:name="android.permission.RUN_USER_INITIATED_JOBS" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <queries>
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent>
         <package android:name="com.retroarch.aarch64" />
         <package android:name="com.retroarch" />
         <package android:name="com.retroarch.ra32" />
@@ -14,6 +20,9 @@
         <package android:name="org.ppsspp.ppsspplegacy" />
         <package android:name="org.dolphinemu.dolphinemu" />
         <package android:name="org.azahar_emu.azahar" />
+        <package android:name="me.magnum.melonds" />
+        <package android:name="me.magnum.melondualds" />
+        <package android:name="com.justgba" />
         <package android:name="com.explusalpha.NesEmu" />
         <package android:name="com.explusalpha.Snes9xPlus" />
         <package android:name="com.explusalpha.GbcEmu" />
@@ -21,9 +30,13 @@
         <package android:name="com.explusalpha.MdEmu" />
         <package android:name="com.explusalpha.A2600Emu" />
         <package android:name="xyz.aethersx2.android" />
+        <package android:name="com.armsx2" />
         <package android:name="com.github.stenzek.duckstation" />
         <package android:name="org.mupen64plusae.v3.fzurita" />
+        <package android:name="org.mupen64plusae.v3.alpha" />
+        <package android:name="io.github.gopher64.gopher64" />
         <package android:name="com.flycast.emulator" />
+        <package android:name="io.recompiled.redream" />
         <package android:name="com.google.android.youtube" />
         <package android:name="com.netflix.mediaclient" />
         <package android:name="org.xbmc.kodi" />
@@ -50,6 +63,7 @@
                 android:resource="@xml/file_paths" />
         </provider>
         <service android:name=".companion.CompanionEndpointService" android:exported="false" android:foregroundServiceType="dataSync" />
+        <service android:name=".importer.BrowserDownloadTransferJobService" android:permission="android.permission.BIND_JOB_SERVICE" android:exported="false" />
         <receiver android:name=".importer.BrowserDownloadCompleteReceiver" android:exported="false">
             <intent-filter>
                 <action android:name="android.intent.action.DOWNLOAD_COMPLETE" />
@@ -67,8 +81,14 @@
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
-        <activity android:name=".ExternalDisplayActivity" android:exported="false" android:resizeableActivity="true" android:launchMode="standard" android:windowSoftInputMode="adjustResize" android:windowFullscreen="true" android:windowNoTitle="true" android:screenOrientation="landscape" android:enableOnBackInvokedCallback="true" tools:targetApi="tiramisu"
-            android:configChanges="keyboard|keyboardHidden|navigation|orientation|screenLayout|screenSize|smallestScreenSize|uiMode" />
+        <activity android:name=".ExternalDisplayActivity" android:exported="true" android:resizeableActivity="true" android:launchMode="singleTask" android:taskAffinity="com.gamebox.os.external" android:windowSoftInputMode="adjustResize" android:windowFullscreen="true" android:windowNoTitle="true" android:screenOrientation="landscape" android:enableOnBackInvokedCallback="true" tools:targetApi="tiramisu"
+            android:configChanges="keyboard|keyboardHidden|navigation|orientation|screenLayout|screenSize|smallestScreenSize|uiMode">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.SECONDARY_HOME" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
         <activity android:name=".TrackedSourceBrowserActivity" android:exported="false" android:resizeableActivity="true" android:windowFullscreen="true" android:windowNoTitle="true" android:screenOrientation="landscape" android:configChanges="keyboard|keyboardHidden|navigation|orientation|screenLayout|screenSize|smallestScreenSize|uiMode" />
     </application>
 </manifest>

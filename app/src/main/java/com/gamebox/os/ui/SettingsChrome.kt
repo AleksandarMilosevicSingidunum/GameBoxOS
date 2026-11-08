@@ -104,7 +104,7 @@ internal fun SettingsWideSectionRail(
                         contentDescription = "${section.label} settings section"
                     },
                 color = containerColor,
-                shape = RoundedCornerShape(8.dp),
+                shape = RoundedCornerShape(10.dp),
                 border = when {
                     borderWidth <= 0.1.dp -> null
                     focused -> BorderStroke(borderWidth, blueprintFocusBrush())
@@ -151,9 +151,9 @@ internal fun settingsSectionIcon(section: SettingsSection): ImageVector = when (
 @Composable
 internal fun SettingsStatusCard(icon: ImageVector, title: String, detail: String) {
     Surface(
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.72f),
-        shape = RoundedCornerShape(8.dp),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.55f)),
+        color = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.94f),
+        shape = RoundedCornerShape(12.dp),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.72f)),
         modifier = Modifier.fillMaxWidth().padding(vertical = 5.dp),
     ) {
         Row(
@@ -209,7 +209,7 @@ internal fun SettingsActionRow(
             .onFocusChanged { focused = it.isFocused }
             .semantics { contentDescription = title },
         color = container,
-        shape = RoundedCornerShape(8.dp),
+        shape = RoundedCornerShape(10.dp),
         border = BorderStroke(borderWidth, border),
     ) {
         Row(

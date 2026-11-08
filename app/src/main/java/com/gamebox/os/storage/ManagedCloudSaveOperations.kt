@@ -24,7 +24,7 @@ import java.nio.file.Files
 import java.nio.file.StandardCopyOption
 import java.net.URI
 
-/** Cloud-specific connectivity, credential, encryption, conflict, and transport policy. */
+/** Cloud-specific connectivity, credential, conflict, and transport policy. */
 internal class ManagedCloudSaveOperations(
     context: Context,
     private val saveRecordDao: SaveRecordDao,
@@ -43,6 +43,10 @@ internal class ManagedCloudSaveOperations(
                 "No managed save copy requires cloud protection.",
             )
         requireSavePathForGame(game.id.value, record.relativePath)
+        if (!isConfigured()) return@withContext CloudBackupPreflight(
+            CloudBackupPreflightStatus.NOT_REQUIRED,
+            "Cloud backup is not configured. A verified local backup is required.",
+        )
         runCatching { cloudAccess() }.fold(
             onSuccess = {
                 CloudBackupPreflight(
@@ -58,6 +62,8 @@ internal class ManagedCloudSaveOperations(
             },
         )
     }
+
+    suspend fun isConfigured(): Boolean = settingsRepository.settings.first().cloudSaveEndpoint.isNotBlank()
 
     suspend fun upload(relativePath: String, updatedAtMillis: Long) {
         val cloud = cloudAccess()

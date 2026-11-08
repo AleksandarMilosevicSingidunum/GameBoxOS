@@ -2,6 +2,7 @@ package com.gamebox.os.ui
 
 import com.gamebox.os.domain.DownloadJob
 import com.gamebox.os.domain.Game
+import com.gamebox.os.domain.isPlayableLocally
 
 object GameBoxSemantics {
     const val HOME_TAB = "gamebox.home.tab"
@@ -20,7 +21,7 @@ object GameBoxSemantics {
             add(playtimeDescription(it))
         }
         if (game.favorite) add("favorite")
-        if (hero) add("continue playing")
+        if (hero && game.lastPlayed != null && game.state.isPlayableLocally()) add("continue playing")
     }.joinToString(", ")
 
     internal fun playtimeDescription(minutesPlayed: Int): String {

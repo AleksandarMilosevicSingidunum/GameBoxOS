@@ -1,4 +1,4 @@
-package com.gamebox.os.ui
+package com.gamebox.os.importer
 
 import com.gamebox.os.data.DiscoveryGame
 import com.gamebox.os.data.ImportedGameRegistration

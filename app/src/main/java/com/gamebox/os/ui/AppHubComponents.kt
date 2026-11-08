@@ -255,7 +255,7 @@ internal fun ShortcutCard(
             .focusDebugTarget()
             .onFocusChanged { focused = it.isFocused }
             .blueprintActivation(interactionSource, performClick, showIndication = false),
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(18.dp),
         color = MaterialTheme.colorScheme.surface.copy(alpha = 0.92f),
         border = BorderStroke(
             borderWidth,
