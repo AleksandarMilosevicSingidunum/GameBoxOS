@@ -26,9 +26,7 @@ import android.view.KeyEvent
 import com.gamebox.os.data.AppContainer
 import com.gamebox.os.domain.GameId
 import com.gamebox.os.navigation.GameBoxNavigationRequest
-import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 
 @Composable
@@ -84,8 +82,6 @@ fun GameBoxApp(
     var showQuickActions by remember { mutableStateOf(false) }
     var showSystemStatus by remember { mutableStateOf(false) }
     var focusStoreSearchOnEnter by remember { mutableStateOf(false) }
-    var tvMode by remember { mutableStateOf(externalDisplay) }
-    var remoteSearchTarget by remember { mutableStateOf<TvRemoteTextTarget?>(null) }
     val remoteTextOwner = remember { Any() }
     val remoteCommands = remember {
         MutableSharedFlow<com.gamebox.os.companion.CompanionRemoteCommand>(extraBufferCapacity = 32)
@@ -118,19 +114,12 @@ fun GameBoxApp(
         )
         onDispose { com.gamebox.os.companion.CompanionRemoteCommandBus.unregister(remoteTextOwner) }
     }
-    val remoteTextChannel = remember { Channel<TvRemoteTextInput>(capacity = Channel.BUFFERED) }
-    val remoteTextInputs = remember(remoteTextChannel) { remoteTextChannel.receiveAsFlow() }
     SideEffect {
         com.gamebox.os.companion.CompanionRemoteCommandBus.setHostState(
             remoteTextOwner,
             hostResumed,
-            tvMode && remoteSearchTarget != null,
+            false,
         )
-    }
-    DisposableEffect(remoteTextChannel, remoteTextOwner) {
-        onDispose {
-            remoteTextChannel.close()
-        }
     }
     val selectedTabFocusRequester = remember { FocusRequester() }
     val uiState = rememberGameBoxUiState()
@@ -150,35 +139,22 @@ fun GameBoxApp(
                     remoteInputView.dispatchKeyEvent(KeyEvent(now, now, KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_BUTTON_B, 0))
                     remoteInputView.dispatchKeyEvent(KeyEvent(now, android.os.SystemClock.uptimeMillis(), KeyEvent.ACTION_UP, KeyEvent.KEYCODE_BUTTON_B, 0))
                 }
-                is com.gamebox.os.companion.CompanionRemoteCommand.Text -> if (tvMode) {
-                    remoteSearchTarget?.let { target -> remoteTextChannel.send(TvRemoteTextInput(target, command.value)) }
-                }
-                com.gamebox.os.companion.CompanionRemoteCommand.Backspace -> if (tvMode) {
-                    remoteSearchTarget?.let { target -> remoteTextChannel.send(TvRemoteTextInput(target, null)) }
-                }
+                is com.gamebox.os.companion.CompanionRemoteCommand.Text,
+                com.gamebox.os.companion.CompanionRemoteCommand.Backspace -> Unit
                 com.gamebox.os.companion.CompanionRemoteCommand.Home -> {
                     uiState.clearSelection()
                     uiState.openDestination(Destination.HOME.name)
-                    tvMode = true
                 }
                 com.gamebox.os.companion.CompanionRemoteCommand.GameBox -> {
                     uiState.clearSelection()
                     uiState.openDestination(Destination.HOME.name)
-                    tvMode = false
-                    remoteSearchTarget = null
                 }
             }
         }
     }
     fun handleBack(): Boolean {
         return controllerActions.dispatchBack {
-            if (tvMode) {
-                dispatchTvModeBack(
-                    hasActiveTextEntry = remoteSearchTarget != null,
-                    dismissTextEntry = { remoteSearchTarget = null },
-                    exitTvMode = { tvMode = false; remoteSearchTarget = null },
-                )
-            } else when (
+            when (
             gameBoxBackTarget(
                 showQuickActions = showQuickActions,
                 showSystemStatus = showSystemStatus,
@@ -271,36 +247,6 @@ fun GameBoxApp(
                 heightDp = maxHeight.value,
             )
         }
-        if (tvMode) {
-            TvModeScreen(
-                externalDisplay = externalDisplay,
-                settingsRepository = settingsRepository,
-                bottomOverlayInset = externalDisplayBottomInset,
-                favoritePackages = appSettings.tvFavoritePackages,
-                playlistUri = appSettings.tvPlaylistUri,
-                favoriteChannelKeys = appSettings.tvFavoriteChannels,
-                lastChannelKey = appSettings.tvLastChannel,
-                homeSections = appSettings.tvHomeSections,
-                remoteSearchTarget = remoteSearchTarget,
-                remoteTextInputs = remoteTextInputs,
-                onRemoteSearchTargetChanged = { target ->
-                    remoteSearchTarget = target
-                    com.gamebox.os.companion.CompanionRemoteCommandBus.setHostState(
-                        remoteTextOwner,
-                        hostResumed,
-                        tvMode && target != null,
-                    )
-                },
-                onFavoritesChanged = { packages -> appScope.launch { settingsRepository.setTvFavoritePackages(packages) } },
-                onPlaylistChanged = settingsRepository::setTvPlaylistUri,
-                onFavoriteChannelsChanged = { keys -> appScope.launch { settingsRepository.setTvFavoriteChannels(keys) } },
-                onLastChannelChanged = { key -> appScope.launch { settingsRepository.setTvLastChannel(key) } },
-                onHomeSectionsChanged = { sections -> appScope.launch { settingsRepository.setTvHomeSections(sections) } },
-                onReturnToGameBox = { tvMode = false; remoteSearchTarget = null },
-                onSettings = { tvMode = false; remoteSearchTarget = null; uiState.openSettings(SettingsSection.SYSTEM) },
-                onRemoteSetup = { tvMode = false; remoteSearchTarget = null; uiState.openSettings(SettingsSection.NETWORK) },
-            )
-        } else {
         BlueprintBackdrop(compact)
         Column(
             Modifier.fillMaxSize()
@@ -325,7 +271,6 @@ fun GameBoxApp(
                     uiState.openDestination(Destination.STORE.name)
                 },
                 selectedFocusRequester = selectedTabFocusRequester,
-                onTvMode = { tvMode = true },
             )
             SessionRecoveryBanner(gameLaunchController)
             Spacer(Modifier.height(if (compact) 14.dp else 12.dp))
@@ -364,8 +309,7 @@ fun GameBoxApp(
                 ControllerFooter(controllerActions.xLabel, controllerActions.yLabel, appSettings.activeProfileName)
             }
         }
-        }
-        if (!tvMode && showQuickActions) {
+        if (showQuickActions) {
             QuickActionsDialog(
                 destination = destination,
                 xLabel = controllerActions.xLabel,
@@ -394,10 +338,10 @@ fun GameBoxApp(
                 autoFocusFirstAction = !compact,
             )
         }
-        if (!tvMode && showSystemStatus) {
+        if (showSystemStatus) {
             SystemStatusDialog(onDismiss = { showSystemStatus = false })
         }
-        if (!tvMode && showProfileSwitcher) {
+        if (showProfileSwitcher) {
             ProfileSwitcherDialog(
                 activeProfile = appSettings.activeProfileName,
                 onDismiss = { showProfileSwitcher = false },

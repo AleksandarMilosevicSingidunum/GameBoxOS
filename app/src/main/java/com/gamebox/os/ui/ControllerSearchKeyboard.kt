@@ -50,7 +50,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.window.Dialog
 
-/** Search trigger for a controller-driven TV surface; it never opens a software IME. */
+/** Search trigger for a controller-driven surface; it never opens a software IME. */
 @Composable
 internal fun ControllerSearchField(
     query: String,
@@ -87,7 +87,7 @@ internal fun ControllerSearchField(
     }
 }
 
-/** Full D-pad/A/B keyboard so TV search does not depend on a physical keyboard or IME. */
+/** Full D-pad/A/B keyboard so controller search does not depend on a physical keyboard or IME. */
 @Composable
 internal fun ControllerSearchKeyboardDialog(
     query: String,

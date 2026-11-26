@@ -38,15 +38,6 @@ internal fun gameBoxBackTarget(
     else -> GameBoxBackTarget.NONE
 }
 
-internal fun dispatchTvModeBack(
-    hasActiveTextEntry: Boolean,
-    dismissTextEntry: () -> Unit,
-    exitTvMode: () -> Unit,
-): Boolean {
-    if (hasActiveTextEntry) dismissTextEntry() else exitTvMode()
-    return true
-}
-
 internal fun gameBoxRootInputForKey(keyCode: Int): GameBoxRootInput? = when (keyCode) {
     KeyEvent.KEYCODE_BUTTON_L1 -> GameBoxRootInput.MovePrimaryTab(-1)
     KeyEvent.KEYCODE_BUTTON_R1 -> GameBoxRootInput.MovePrimaryTab(1)

@@ -65,7 +65,7 @@ internal fun isLikelyVirtualPresentationDisplay(name: String): Boolean {
 }
 
 internal fun externalDisplayLaunchRequestedMessage(target: ExternalDisplayTarget): String =
-    "GameBox TV mode requested on ${target.name}; confirm the display switch if prompted"
+    "GameBox requested the external display ${target.name}; confirm the switch if prompted"
 
 internal fun isExternalDisplayId(displayId: Int): Boolean = displayId > Display.DEFAULT_DISPLAY
 

@@ -58,8 +58,9 @@ internal fun Activity.currentDisplayId(): Int {
 internal fun shouldRequestExternalFullscreenOnFocus(
     displayId: Int,
     hasFocus: Boolean,
+    isInMultiWindowMode: Boolean,
 ): Boolean =
-    hasFocus && isExternalDisplayId(displayId)
+    hasFocus && isExternalDisplayId(displayId) && isInMultiWindowMode
 
 internal fun shouldRequestPrimaryFullscreenOnFocus(
     displayId: Int,
@@ -70,13 +71,14 @@ internal fun shouldRequestPrimaryFullscreenOnFocus(
 
 /** Retry after the desktop shell has completed its focus/window-mode transition. */
 internal fun Activity.requestExternalFullscreenAfterFocus(delayMillis: Long = 300L) {
-    if (!hasWindowFocus() || !isExternalDisplayId(currentDisplayId())) return
+    if (!hasWindowFocus() || !isExternalDisplayId(currentDisplayId()) || !isInMultiWindowMode) return
     window.decorView.postDelayed({
         if (
             !isFinishing && hasWindowFocus() &&
             shouldRequestExternalFullscreenOnFocus(
                 currentDisplayId(),
                 hasFocus = true,
+                isInMultiWindowMode = isInMultiWindowMode,
             )
         ) {
             requestExternalActivityFullscreen(this)
@@ -112,7 +114,7 @@ internal fun externalFullscreenRetryDelayMillis(retryIndex: Int): Long? =
 /** Ask desktop-mode window managers to promote an external-display host to fullscreen. */
 internal fun requestExternalActivityFullscreen(activity: Activity, retryIndex: Int = 0): Boolean {
     val displayId = activity.currentDisplayId()
-    if (!isExternalDisplayId(displayId)) return false
+    if (!isExternalDisplayId(displayId) || !activity.isInMultiWindowMode) return false
     return requestFullscreenModeOnDisplay(activity, displayId, retryIndex)
 }
 

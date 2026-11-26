@@ -10,19 +10,6 @@ import org.junit.Test
 
 class GameBoxRootInputTest {
     @Test
-    fun tvModeBackDismissesActiveTextEntryBeforeExitingMode() {
-        var textEntryActive = true
-        var exits = 0
-
-        assertTrue(dispatchTvModeBack(true, { textEntryActive = false }, { exits++ }))
-        assertFalse(textEntryActive)
-        assertEquals(0, exits)
-
-        assertTrue(dispatchTvModeBack(textEntryActive, { textEntryActive = false }, { exits++ }))
-        assertEquals(1, exits)
-    }
-
-    @Test
     fun backDismissalUsesOneStablePriorityAcrossOverlaysAndDetails() {
         assertEquals(
             GameBoxBackTarget.QUICK_ACTIONS,

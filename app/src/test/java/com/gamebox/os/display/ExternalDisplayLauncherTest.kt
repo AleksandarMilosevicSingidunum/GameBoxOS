@@ -45,7 +45,7 @@ class ExternalDisplayLauncherTest {
     @Test
     fun externalDisplaySuccessMessageDoesNotClaimConfirmationAlreadyCompleted() {
         assertEquals(
-            "GameBox TV mode requested on SMART TV; confirm the display switch if prompted",
+            "GameBox requested the external display SMART TV; confirm the switch if prompted",
             externalDisplayLaunchRequestedMessage(ExternalDisplayTarget(23, "SMART TV")),
         )
     }
@@ -74,9 +74,10 @@ class ExternalDisplayLauncherTest {
 
     @Test
     fun fullscreenRetryRequiresFocusOnAnExternalDisplay() {
-        assertEquals(false, shouldRequestExternalFullscreenOnFocus(0, hasFocus = true))
-        assertEquals(false, shouldRequestExternalFullscreenOnFocus(8, hasFocus = false))
-        assertEquals(true, shouldRequestExternalFullscreenOnFocus(8, hasFocus = true))
+        assertEquals(false, shouldRequestExternalFullscreenOnFocus(0, hasFocus = true, isInMultiWindowMode = true))
+        assertEquals(false, shouldRequestExternalFullscreenOnFocus(8, hasFocus = false, isInMultiWindowMode = true))
+        assertEquals(false, shouldRequestExternalFullscreenOnFocus(8, hasFocus = true, isInMultiWindowMode = false))
+        assertEquals(true, shouldRequestExternalFullscreenOnFocus(8, hasFocus = true, isInMultiWindowMode = true))
     }
 
     @Test

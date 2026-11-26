@@ -44,31 +44,6 @@ internal fun BlueprintBackdrop(compact: Boolean) {
 }
 
 @Composable
-internal fun TvModeBackdrop() {
-    val reducedMotion = LocalReducedMotion.current
-    val transition = rememberInfiniteTransition(label = "tv-ambient-backdrop")
-    val drift = if (reducedMotion) 0f else transition.animateFloat(
-        initialValue = -1f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(tween(36_000, easing = FastOutSlowInEasing), RepeatMode.Reverse),
-        label = "tv-ambient-drift",
-    ).value
-    Canvas(Modifier.fillMaxSize()) {
-        drawRect(Brush.verticalGradient(listOf(Color(0xFF111214), Color(0xFF0B0C0E), Color(0xFF090A0B))))
-        val radius = size.maxDimension * 0.9f
-        drawRect(Brush.radialGradient(
-            listOf(Color(0x202F343B), Color(0x10282B30), Color.Transparent),
-            center = Offset(size.width * (0.16f + drift * 0.035f), size.height * 0.06f), radius = radius,
-        ))
-        drawRect(Brush.radialGradient(
-            listOf(Color(0x1B33363C), Color(0x10292B30), Color.Transparent),
-            center = Offset(size.width * (0.84f - drift * 0.04f), size.height * 0.2f), radius = radius,
-        ))
-        drawRect(Brush.verticalGradient(listOf(Color.Transparent, Color(0x99070809))))
-    }
-}
-
-@Composable
 private fun BoxScope.StaticAmbientGlows() {
     AmbientGlow(Modifier.size(620.dp).offset(x = (-100).dp, y = (-120).dp), blueAmbientBrush)
     AmbientGlow(

@@ -48,7 +48,7 @@ import com.gamebox.os.domain.DownloadStatus
 import com.gamebox.os.importer.BrowserDownloadStatus
 
 internal enum class Destination(val title: String) {
-    HOME("Home"), LIBRARY("Library"), STORE("Store"), DOWNLOADS("Downloads"),
+    HOME("Overview"), LIBRARY("Library"), STORE("Store"), DOWNLOADS("Downloads"),
     MEDIA("Media"), PC("PC"), SETTINGS("Settings")
 }
 
@@ -76,7 +76,6 @@ internal fun TopNav(
     selectedFocusRequester: FocusRequester? = null,
     onSelect: (Destination) -> Unit,
     onSearch: () -> Unit = { onSelect(Destination.STORE) },
-    onTvMode: () -> Unit = {},
 ) {
     var now by remember { mutableStateOf(LocalDateTime.now()) }
     LaunchedEffect(Unit) {
@@ -95,10 +94,6 @@ internal fun TopNav(
             ) {
                 GameBoxLogo(selected)
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    val openTvMode = rememberUiClickAction(onTvMode)
-                    IconButton(onClick = openTvMode, modifier = Modifier.size(36.dp).blueprintButtonFocusRing(CircleShape).onBlueprintActivation(openTvMode).semantics { contentDescription = "Open TV Mode" }) {
-                        Icon(Icons.Rounded.Tv, contentDescription = null, modifier = Modifier.size(18.dp))
-                    }
                     IconButton(
                         onClick = openDownloads,
                         modifier = Modifier.size(36.dp).blueprintButtonFocusRing(CircleShape)
@@ -140,14 +135,6 @@ internal fun TopNav(
                 }
             }
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                val openTvMode = rememberUiClickAction(onTvMode)
-                IconButton(
-                    onClick = openTvMode,
-                    modifier = Modifier.size(36.dp).blueprintButtonFocusRing(CircleShape)
-                        .onBlueprintActivation(openTvMode).semantics { contentDescription = "Open TV Mode" },
-                ) {
-                    Icon(Icons.Rounded.Tv, contentDescription = null, modifier = Modifier.size(18.dp))
-                }
                 val openSearch = rememberUiClickAction(onSearch)
                 IconButton(
                     onClick = openSearch,

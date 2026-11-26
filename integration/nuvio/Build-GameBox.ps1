@@ -51,9 +51,33 @@ $env:JAVA_HOME = $jdk
 $env:PATH = "$jdk\bin;$env:PATH"
 $env:ANDROID_HOME = $sdk
 $env:ANDROID_SDK_ROOT = $sdk
+$goCommand = if ($env:NUVIO_GO) {
+    Get-Command $env:NUVIO_GO -ErrorAction SilentlyContinue
+} else {
+    Get-Command go -ErrorAction SilentlyContinue
+}
+if (-not $goCommand) {
+    $installedGo = Join-Path $env:ProgramFiles 'Go\bin\go.exe'
+    if (Test-Path $installedGo) { $goCommand = Get-Item $installedGo }
+}
+if (-not $goCommand) {
+    throw 'Go is required to build the Nuvio native VPN transport. Install Go 1.21 or newer and add go.exe to PATH, or set NUVIO_GO to its full path.'
+}
+$goPath = if ($goCommand -is [System.IO.FileInfo]) { $goCommand.FullName } else { $goCommand.Source }
+$env:NUVIO_GO = $goPath
+$goVersion = (& $env:NUVIO_GO version 2>&1 | Out-String).Trim()
+if ($LASTEXITCODE -ne 0 -or $goVersion -notmatch '^go version go1\.(\d+)') {
+    throw "Could not determine the installed Go version: $goVersion"
+}
+if ([int]$Matches[1] -lt 21) {
+    throw "Go 1.21 or newer is required for the pinned native build; found $goVersion"
+}
+if (-not (Test-Path (Join-Path $sdk 'ndk\29.0.14206865'))) {
+    throw "Android NDK 29.0.14206865 is required. Install it from Android Studio > SDK Manager > SDK Tools."
+}
 Push-Location $Checkout
 try {
-    & .\gradlew.bat :app:assembleFullDebug '-PlivetvDebugAppId=com.gamebox.os.nuviointegration' '-PlivetvTestBuild=true'
+    & .\gradlew.bat :app:assembleFullDebug '-PgameBoxDebugAppId=com.gamebox.os.nuviointegration' '-PlivetvTestBuild=true'
     if ($LASTEXITCODE -ne 0) { throw 'Merged GameBox build failed.' }
     $apk = Join-Path $Checkout 'app\build\outputs\apk\full\debug\app-full-arm64-v8a-debug.apk'
     if (-not (Test-Path $apk)) { throw "Build completed but APK was not found: $apk" }
