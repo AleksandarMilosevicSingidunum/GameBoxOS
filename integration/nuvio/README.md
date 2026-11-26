@@ -9,19 +9,16 @@ On Windows, install Temurin/OpenJDK 17, Go 1.21 or newer, Android SDK Platform 3
 Then run from the project root:
 
 ```powershell
-.\integration
-uvio\Build-GameBox.ps1
+.\integration\nuvio\Build-GameBox.ps1
 ```
 
-To install the debug build on an ADB-connected device:
+To install the debug build on a connected HONOR, use the same script with `-Install`:
 
 ```powershell
-.\integration
-uvio\Build-GameBox.ps1 -Install
+.\integration\nuvio\Build-GameBox.ps1 -Install
 ```
 
-The script checks out Nuvio revision `b7028012fbc19379974a005ae3ae79ac6787822d`, applies `gamebox-nuvio.patch`, and builds an arm64 test APK. It leaves the checkout under ignored `tmp
-uvio-upstream`. The patch intentionally excludes ROM/download fixture files. Use `-Checkout <path>` to provide another clean checkout at the same pinned revision.
+When installing, the script selects the HONOR's direct ADB serial to avoid duplicate Wi-Fi/mDNS aliases. If several distinct devices are connected, pass `-DeviceSerial <serial>`. The script checks out upstream revision `b7028012fbc19379974a005ae3ae79ac6787822d`, applies `gamebox-nuvio.patch`, and builds an arm64 test APK. It leaves the checkout under ignored `tmp\nuvio-upstream`. The patch intentionally excludes ROM/download fixture files. Use `-Checkout <path>` to provide another clean checkout at the same pinned revision.
 
 ## Current status
 
@@ -30,8 +27,8 @@ uvio-upstream`. The patch intentionally excludes ROM/download fixture files. Use
 - [x] The obsolete GameBox TV Mode screens and controller keyboard are removed. The shared D-pad search keyboard remains available to GameBox Library and Store under a neutral component name.
 - [x] Debug APK builds successfully with Temurin Java 17.
 - [x] Verify the pinned integration patch applies and a fresh checkout builds the full arm64 debug APK, including the native VPN code.
-- [x] Latest fresh-checkout APK (`1.2.0-test.474773+beta.3`) installed to the separate GameBox test package on HONOR without clearing app data.
-- [x] Installed build verified on HONOR HDMI at 1920×1080 while the phone was unlocked; the GameBox Gaming page rendered correctly after the sidebar inset fix.
+- [x] Latest fresh-checkout APK (`1.2.0-test.474845+beta.3`) installed to the separate GameBox test package on HONOR without clearing app data.
+- [x] Installed build `1.2.0-test.474845+beta.3` verified on HONOR HDMI at 1920×1080 while the phone was unlocked; the GameBox Gaming page rendered correctly after the sidebar inset fix. The repository build script completed a full build and installed it using its selected ADB serial.
 - [x] GameBox pages use the shared sidebar inset. The Gaming route now reserves the full expanded sidebar width on external displays; this fixes clipped hero text and cards found in the latest TV capture.
 - [x] GameBox’s embedded theme now follows the TV theme’s active colors for surfaces, text, borders, and controller focus.
 - [x] Removed the duplicate GameBox logo/clock header from the embedded Gaming area; its section tabs remain while the shared sidebar owns app-level navigation.

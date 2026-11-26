@@ -1,7 +1,8 @@
 [CmdletBinding()]
 param(
     [string]$Checkout = (Join-Path $PSScriptRoot '..\..\tmp\nuvio-upstream'),
-    [switch]$Install
+    [switch]$Install,
+    [string]$DeviceSerial
 )
 
 $ErrorActionPreference = 'Stop'
@@ -43,8 +44,38 @@ if (-not $jdk -or -not (Test-Path (Join-Path $jdk 'bin\java.exe'))) {
     throw 'Install a Java 17 JDK and set JAVA_HOME before building.'
 }
 $sdk = if ($env:ANDROID_HOME) { $env:ANDROID_HOME } else { Join-Path $env:LOCALAPPDATA 'Android\Sdk' }
-if (-not (Test-Path (Join-Path $sdk 'platform-tools\adb.exe'))) {
+$adb = Join-Path $sdk 'platform-tools\adb.exe'
+if (-not (Test-Path $adb)) {
     throw "Android SDK was not found at $sdk. Set ANDROID_HOME."
+}
+
+$installDeviceSerial = $null
+if ($Install) {
+    $deviceLines = @(& $adb devices -l | Select-Object -Skip 1 | Where-Object { $_ -match '^\S+\s+device(?:\s|$)' })
+    if ($LASTEXITCODE -ne 0) { throw 'Could not query ADB devices.' }
+    if ($DeviceSerial) {
+        $installDeviceSerial = $deviceLines |
+            Where-Object { ($_ -split '\s+')[0] -eq $DeviceSerial } |
+            ForEach-Object { ($_ -split '\s+')[0] } |
+            Select-Object -First 1
+        if (-not $installDeviceSerial) {
+            throw "ADB device '$DeviceSerial' is not connected and authorized. Run 'adb devices -l' to see available serials."
+        }
+    } else {
+        $honorDevices = @($deviceLines | Where-Object { $_ -match 'model:PGT_N19|product:PGT-N19EEA' })
+        $directHonorDevices = @($honorDevices | Where-Object { ($_ -split '\s+')[0] -match '^\d{1,3}(?:\.\d{1,3}){3}:\d+$' })
+        if ($directHonorDevices.Count -eq 1) {
+            $installDeviceSerial = ($directHonorDevices[0] -split '\s+')[0]
+        } elseif ($honorDevices.Count -eq 1) {
+            $installDeviceSerial = ($honorDevices[0] -split '\s+')[0]
+        } elseif ($deviceLines.Count -eq 1) {
+            $installDeviceSerial = ($deviceLines[0] -split '\s+')[0]
+        } else {
+            $available = if ($deviceLines.Count) { ($deviceLines | ForEach-Object { ($_ -split '\s+')[0] }) -join ', ' } else { 'none' }
+            throw "Choose a device with -DeviceSerial. Connected authorized ADB devices: $available"
+        }
+    }
+    Write-Host "Installing to ADB device $installDeviceSerial"
 }
 
 $env:JAVA_HOME = $jdk
@@ -83,8 +114,9 @@ try {
     if (-not (Test-Path $apk)) { throw "Build completed but APK was not found: $apk" }
     Write-Host "Merged APK: $apk"
     if ($Install) {
-        & (Join-Path $sdk 'platform-tools\adb.exe') install -r $apk
+        & $adb -s $installDeviceSerial install -r $apk
         if ($LASTEXITCODE -ne 0) { throw 'APK installation failed; check that the HONOR is connected to ADB.' }
+        Write-Host "Installed APK on ADB device $installDeviceSerial."
     }
 } finally {
     Pop-Location
