@@ -31,11 +31,11 @@ uvio-upstream`. The patch intentionally excludes ROM/download fixture files. Use
 - [x] Debug APK builds successfully with Temurin Java 17.
 - [x] Verify the pinned integration patch applies and a fresh checkout builds the full arm64 debug APK, including the native VPN code.
 - [x] Latest fresh-checkout APK (`1.2.0-test.474773+beta.3`) installed to the separate GameBox test package on HONOR without clearing app data.
-- [ ] Verify the live TV/Gaming UI on HDMI after that install: the HONOR is locked and the external HDMI display currently reports OFF.
-- [x] GameBox pages now use the shared sidebar inset once; removed the duplicate inset that had placed Gaming content behind the sidebar.
+- [x] Installed build verified on HONOR HDMI at 1920×1080 while the phone was unlocked; the GameBox Gaming page rendered correctly after the sidebar inset fix.
+- [x] GameBox pages use the shared sidebar inset. The Gaming route now reserves the full expanded sidebar width on external displays; this fixes clipped hero text and cards found in the latest TV capture.
 - [x] GameBox’s embedded theme now follows the TV theme’s active colors for surfaces, text, borders, and controller focus.
 - [x] Removed the duplicate GameBox logo/clock header from the embedded Gaming area; its section tabs remain while the shared sidebar owns app-level navigation.
-- [ ] Visually accept the updated Gaming color palette and tab layout on the HDMI display after unlocking the phone.
+- [x] Verified the merged Gaming overview on the unlocked HONOR HDMI display at 1920×1080 after installing the latest debug APK. The Galaxy Patrol hero, collection headings, homebrew cards, and quick-launch row are fully visible beside the shared sidebar.
 - [x] Updated GameBox Gaming layout captured on the HONOR HDMI display at 1920×1080. Gaming hero shapes, shared corner tokens, GameBox theme, and left-side content inset now follow the TV shell more closely.
 - [x] HDMI navigation smoke check on the installed merged build: D-pad Up from Home focused Gaming, confirm opened the Gaming overview, and selecting TV opened the live guide directly. TV's secondary pages remained available under TV. These checks used ADB-generated keys, not the physical controller.
 - [ ] Verify D-pad focus movement between GameBox tabs and physical-controller confirm input. The controller was reported disconnected during this check, and ADB-generated key events did not fully verify tab traversal.

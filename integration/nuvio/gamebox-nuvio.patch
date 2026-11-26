@@ -93756,10 +93756,24 @@ index 223616f..a162176 100644
 +    }
  }
 diff --git a/app/src/main/java/com/nuvio/tv/ui/navigation/NuvioNavHost.kt b/app/src/main/java/com/nuvio/tv/ui/navigation/NuvioNavHost.kt
-index 07d7622..42237ed 100644
+index 07d7622cc..0042ecc78 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/navigation/NuvioNavHost.kt
 +++ b/app/src/main/java/com/nuvio/tv/ui/navigation/NuvioNavHost.kt
-@@ -274,6 +274,24 @@ private fun PlaybackNavHost(
+@@ -3,10 +3,13 @@ package com.nuvio.tv.ui.navigation
+ import kotlinx.coroutines.launch
+ import com.nuvio.tv.ui.theme.NuvioMotion
+ import com.nuvio.tv.ui.components.PlaybackAvailabilityProvider
++import com.nuvio.tv.ui.theme.NuvioComponents
+ import com.nuvio.tv.ui.components.LocalPlaybackAvailability
+ import com.nuvio.tv.ui.components.canStream
+ import android.widget.Toast
++import android.view.Display
+ import androidx.compose.ui.platform.LocalContext
++import androidx.compose.ui.platform.LocalView
+ import com.nuvio.tv.R
+ import com.nuvio.tv.LocalRootContentInset
+ import androidx.compose.foundation.layout.Box
+@@ -274,6 +277,24 @@ private fun PlaybackNavHost(
              }
          }
      ) {
@@ -93784,7 +93798,7 @@ index 07d7622..42237ed 100644
          composable(Screen.ExperienceModeSelection.route) {
              ExperienceModeSelectionScreen(
                  onContinue = { mode ->
-@@ -2481,6 +2499,30 @@ private fun PlaybackNavHost(
+@@ -2481,6 +2502,37 @@ private fun PlaybackNavHost(
      }
  }
  
@@ -93794,7 +93808,14 @@ index 07d7622..42237ed 100644
 +    val gameBox = context.applicationContext as com.gamebox.os.GameBoxApplication
 +    val destination = section.uppercase().takeIf { it in com.gamebox.os.ui.Destination.entries.map { item -> item.name } }
 +        ?: com.gamebox.os.ui.Destination.HOME.name
-+    Box(Modifier.fillMaxSize()) {
++    // Gaming needs the full expanded rail width because its hero and card rows
++    // start at the page edge; the smaller generic root inset clips their labels.
++    val sidebarInset = if (LocalView.current.display?.displayId != Display.DEFAULT_DISPLAY) {
++        NuvioComponents.tokens.sidebar.expandedWidth
++    } else {
++        LocalRootContentInset.current
++    }
++    Box(Modifier.fillMaxSize().padding(start = sidebarInset)) {
 +        com.gamebox.os.ui.theme.GameBoxTheme {
 +            com.gamebox.os.ui.GameBoxApp(
 +                container = gameBox.container,
