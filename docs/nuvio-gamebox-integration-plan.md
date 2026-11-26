@@ -49,7 +49,7 @@ Replace GameBox OS's custom Live TV and TV Mode with Nuvio-based TV features ins
 ### Latest acceptance check — 26 November 2026
 
 - Rebuilt the pinned integration with Temurin 17 as an arm64 `fullDebug` APK and installed it over `com.gamebox.os.nuviointegration` without clearing app data.
-- On the physical HONOR PGT-N19 HDMI display at 1920×1080, the controller was reported as connected. A physical D-pad Up moved focus from Home to GameBox Gaming; confirm opened Gaming in the same app task.
+- On the physical HONOR PGT-N19 HDMI display at 1920×1080, the controller was reported as connected. A physical D-pad Up moved focus from Home to GameBox Gaming; an ADB-generated confirm event opened Gaming in the same app task. Physical A-button activation remains unverified.
 - Gaming now uses the shared dark navy and blue/purple colors, larger TV-style hero/card radii, and left content inset so the host navigation rail no longer covers the GameBox logo or hero text. The GameBox home screen and controller status were visually checked on the TV.
 - HONOR still opens the activity as a desktop window after a cold launch. Manually maximizing it hides the bottom dock; automatic borderless startup is still unresolved.
 - This pass did not configure or play an IPTV source, verify GameBox-to-TV playback/Back, migrate old TV settings, remove the old GameBox TV Mode implementation from the tracked app, or complete the dependency and license inventory. Do not treat the combined app as production-ready yet.

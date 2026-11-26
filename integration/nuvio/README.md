@@ -25,7 +25,7 @@ The script checks out Nuvio revision `b7028012fbc19379974a005ae3ae79ac6787822d`,
 - [x] Debug APK builds successfully with Temurin Java 17.
 - [x] Debug APK installed on HONOR without clearing app data.
 - [x] Updated GameBox Gaming layout captured on the HONOR HDMI display at 1920×1080. Gaming hero shapes, shared corner tokens, GameBox theme, and left-side content inset now follow the TV shell more closely.
-- [x] Physical controller check: with Home selected, D-pad Up moved focus to GameBox Gaming. Confirm/center opened the Gaming destination in the same app. The HONOR reports the Wireless Controller connected.
+- [x] Physical controller check: with Home selected, D-pad Up moved focus to GameBox Gaming. An ADB-generated confirm/center event then opened Gaming in the same app. The HONOR reports the Wireless Controller connected; a physical A-button activation remains to be checked.
 - [ ] Verify GameBox-to-TV playback and return behavior with an authorized playlist. No channel source was configured for this check.
 - [ ] Verify automatic borderless launch. HONOR still starts the app in a desktop window; maximizing it hides the bottom dock, but this is currently a manual system action.
 - [ ] Complete the migration, old TV implementation removal, permissions/dependency/license review, and release build. These remain open until the single-app flow passes on hardware.
