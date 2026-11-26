@@ -27,11 +27,12 @@ When installing, the script selects the HONOR's direct ADB serial to avoid dupli
 - [x] The obsolete GameBox TV Mode screens and controller keyboard are removed. The shared D-pad search keyboard remains available to GameBox Library and Store under a neutral component name.
 - [x] Debug APK builds successfully with Temurin Java 17.
 - [x] Verify the pinned integration patch applies and a fresh checkout builds the full arm64 debug APK, including the native VPN code.
-- [x] Latest arm64 test APK (`1.2.0-test.474916+beta.3`) built and installed to the separate GameBox test package on HONOR without clearing app data.
+- [x] Latest arm64 test APK (`1.2.0-test.474968+beta.3`) built from the pinned checkout and installed to the separate GameBox test package on HONOR without clearing app data.
 - [x] Installed build `1.2.0-test.474916+beta.3` verified on HONOR HDMI at 1920×1080 while the phone was unlocked; the GameBox Gaming hero, title, card row, and quick launch render fully beside the shared sidebar. The repository build script completed a full build and installed it using its selected ADB serial.
 - [x] ADB-generated D-pad navigation on the installed build moved Home → Gaming → TV guide → Gaming. This confirms software key navigation and return between the merged sections; physical-controller input remains unverified.
 - [x] Rebranded the music-linking, Navidrome-linking, and music-party companion pages to GameBox. Upstream attribution remains in the in-app legal screen.
 - [x] GameBox pages use the shared sidebar inset. The Gaming route now reserves the full expanded sidebar width on external displays; this fixes clipped hero text and cards found in the latest TV capture.
+- [x] New profiles now default to a collapsed sidebar, matching the TV guide and preventing the Home hero from sitting under the expanded menu. The HONOR profile has a saved expanded preference; pressing D-pad Right collapsed it, after which the full Home hero and rows were readable at 1920×1080. Existing user layout choices remain intact.
 - [x] GameBox’s embedded theme now follows the TV theme’s active colors for surfaces, text, borders, and controller focus.
 - [x] Removed the duplicate GameBox logo/clock header from the embedded Gaming area; its section tabs remain while the shared sidebar owns app-level navigation.
 - [x] Verified the merged Gaming overview on the unlocked HONOR HDMI display at 1920×1080 after installing the latest debug APK. The Galaxy Patrol hero, collection headings, homebrew cards, and quick-launch row are fully visible beside the shared sidebar.

@@ -107966,3 +107966,29 @@ index 9cfb2b0..a69df14 100644
  </div>
  
  <script>
+diff --git a/app/src/main/java/com/nuvio/tv/data/local/LayoutPreferenceDataStore.kt b/app/src/main/java/com/nuvio/tv/data/local/LayoutPreferenceDataStore.kt
+index c0ff44d..643f9ce 100644
+--- a/app/src/main/java/com/nuvio/tv/data/local/LayoutPreferenceDataStore.kt
++++ b/app/src/main/java/com/nuvio/tv/data/local/LayoutPreferenceDataStore.kt
+@@ -235,7 +235,7 @@ class LayoutPreferenceDataStore @Inject constructor(
+     }
+ 
+     val sidebarCollapsedByDefault: Flow<Boolean> = profileFlow { prefs ->
+-        prefs[sidebarCollapsedKey] ?: false
++        prefs[sidebarCollapsedKey] ?: true
+     }
+ 
+     /** The floating pill (Modern sidebar) shows the profile's picture and name instead of the page's icon and name. */
+diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/settings/LayoutSettingsViewModel.kt b/app/src/main/java/com/nuvio/tv/ui/screens/settings/LayoutSettingsViewModel.kt
+index 6b227bb..670f6e6 100644
+--- a/app/src/main/java/com/nuvio/tv/ui/screens/settings/LayoutSettingsViewModel.kt
++++ b/app/src/main/java/com/nuvio/tv/ui/screens/settings/LayoutSettingsViewModel.kt
+@@ -47,7 +47,7 @@ data class LayoutSettingsUiState(
+     val hasChosen: Boolean = false,
+     val availableCatalogs: List<CatalogInfo> = emptyList(),
+     val heroCatalogKeys: List<String> = emptyList(),
+-    val sidebarCollapsedByDefault: Boolean = false,
++    val sidebarCollapsedByDefault: Boolean = true,
+     val floatingPillShowsProfile: Boolean = false,
+     val modernSidebarEnabled: Boolean = false,
+     val modernSidebarBlurEnabled: Boolean = false,
