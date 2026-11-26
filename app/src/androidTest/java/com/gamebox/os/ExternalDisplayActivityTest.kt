@@ -133,18 +133,22 @@ class ExternalDisplayActivityTest {
         rule.waitUntil(15_000) {
             rule.onAllNodesWithContentDescription("Home tab").fetchSemanticsNodes().isNotEmpty()
         }
+        rule.onNodeWithContentDescription("Home tab")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .assertIsFocused()
         sendButton(KeyEvent.KEYCODE_BUTTON_START)
         rule.onNodeWithContentDescription("Controller quick actions").assertIsDisplayed()
-        val downloadsAction = rule.onNodeWithContentDescription("Downloads")
+        rule.onNodeWithContentDescription("Downloads")
             .performSemanticsAction(SemanticsActions.RequestFocus)
             .assertIsFocused()
         rule.onNodeWithContentDescription("Downloads")
             .performSemanticsAction(SemanticsActions.OnClick)
         rule.waitForIdle()
+        val emptyQueueHeading = hasText("No active downloads") or hasText("Your queue is clear")
         rule.waitUntil(15_000) {
-            rule.onAllNodesWithText("No active downloads").fetchSemanticsNodes().isNotEmpty()
+            rule.onAllNodes(emptyQueueHeading).fetchSemanticsNodes().isNotEmpty()
         }
-        rule.onNodeWithText("No active downloads").assertIsDisplayed()
+        rule.onNode(emptyQueueHeading).assertIsDisplayed()
         rule.onAllNodesWithText("Browse Store")
             .filter(hasClickAction())
             .onFirst()

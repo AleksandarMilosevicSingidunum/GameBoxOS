@@ -90,29 +90,41 @@ internal fun ImportedGameReimportCard(game: Game, importer: AuthorizedRomImporte
                                     runCatching { importer.rollbackRegistration(current.id, result.transactionId) }
                                     throw error
                                 }
-                                val cleanupDeferred = runCatching {
+                                val confirmationFailure = try {
                                     importer.confirmRegistration(current.id, result.transactionId)
-                                }.isFailure
-                                val archives = sources.filter { shouldRemoveImportedArchive(it.displayName) }
-                                val archivesRemoved = if (cleanupDeferred) 0 else
-                                    archives.count { deleteImportedSource(context, it.uri) }
-                                val rawSourceCount = sources.size - archives.size
-                                val sourceStatus = when {
-                                    cleanupDeferred ->
-                                        "Transaction recovery is pending; source files were retained."
-                                    archives.isEmpty() ->
-                                        "Selected game files were retained."
-                                    archivesRemoved == archives.size ->
-                                        "$archivesRemoved selected archive(s) removed; $rawSourceCount game file(s) retained."
-                                    archivesRemoved > 0 ->
-                                        "$archivesRemoved of ${archives.size} selected archive(s) removed; remaining files were retained."
-                                    else ->
-                                        "Selected archives could not be deleted; all source files were retained."
+                                    null
+                                } catch (cancelled: CancellationException) {
+                                    throw cancelled
+                                } catch (error: Exception) {
+                                    error
                                 }
-                                if (cleanupDeferred) {
-                                    "Content verified and restored. Saves and history retained; transaction cleanup will finish after restart. $sourceStatus"
+                                if (confirmationFailure is ImportRegistrationIntegrityException) {
+                                    runCatching { importer.rollbackRegistration(current.id, result.transactionId) }
+                                    repository.setInstallStateAndAwait(current.id, com.gamebox.os.domain.InstallState.MISSING_FILES)
+                                    "Import verification failed; source files were retained and the Library entry needs repair."
                                 } else {
-                                    "Content verified and restored. Existing saves and history retained. $sourceStatus"
+                                    val cleanupDeferred = confirmationFailure != null
+                                    val archives = sources.filter { shouldRemoveImportedArchive(it.displayName) }
+                                    val archivesRemoved = if (cleanupDeferred) 0 else
+                                        archives.count { deleteImportedSource(context, it.uri) }
+                                    val rawSourceCount = sources.size - archives.size
+                                    val sourceStatus = when {
+                                        cleanupDeferred ->
+                                            "Transaction recovery is pending; source files were retained."
+                                        archives.isEmpty() ->
+                                            "Selected game files were retained."
+                                        archivesRemoved == archives.size ->
+                                            "$archivesRemoved selected archive(s) removed; $rawSourceCount game file(s) retained."
+                                        archivesRemoved > 0 ->
+                                            "$archivesRemoved of ${archives.size} selected archive(s) removed; remaining files were retained."
+                                        else ->
+                                            "Selected archives could not be deleted; all source files were retained."
+                                    }
+                                    if (cleanupDeferred) {
+                                        "Content verified and restored. Saves and history retained; transaction cleanup will finish after restart. $sourceStatus"
+                                    } else {
+                                        "Content verified and restored. Existing saves and history retained. $sourceStatus"
+                                    }
                                 }
                             }
                             RomImportSetResult.SourceUnavailable -> "A selected file could not be opened; select the files again."

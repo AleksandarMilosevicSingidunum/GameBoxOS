@@ -123,6 +123,18 @@ class ImportRegistrationJournal(
         }
     }
 
+    fun verifyTargetMatchesPending(pending: PendingImportTransaction) {
+        try {
+            if (!targetMatchesPending(pending)) {
+                throw ImportRegistrationIntegrityException("Imported content changed before registration cleanup")
+            }
+        } catch (error: ImportRegistrationIntegrityException) {
+            throw error
+        } catch (error: Exception) {
+            throw ImportRegistrationIntegrityException("Imported content could not be verified before registration cleanup", error)
+        }
+    }
+
     fun confirm(pending: PendingImportTransaction) {
         validatePending(pending)
         val backup = backupDirectory(pending)

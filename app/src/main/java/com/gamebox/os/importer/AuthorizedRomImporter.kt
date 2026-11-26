@@ -15,6 +15,9 @@ import java.util.UUID
 
 data class RomImportSource(val uri: Uri, val displayName: String)
 
+internal class ImportRegistrationIntegrityException(message: String, cause: Throwable? = null) :
+    IllegalStateException(message, cause)
+
 data class ImportedRomFile(
     val relativePath: String,
     val hashes: RomHashes,
@@ -232,12 +235,13 @@ class AuthorizedRomImporter(
     suspend fun confirmRegistration(gameId: GameId, transactionId: String) {
         withContext(NonCancellable + Dispatchers.IO) {
             importTransactionMutex.withLock {
-                val pending = registrationJournal.pendingFor(gameId)
-                    .singleOrNull { it.transactionId == transactionId }
-                    ?: throw IllegalStateException("Pending import registration was not found")
-                require(registrationJournal.targetMatchesPending(pending)) {
-                    "Imported content changed before registration cleanup"
+                val pending = try {
+                    registrationJournal.pendingFor(gameId).singleOrNull { it.transactionId == transactionId }
+                } catch (error: Exception) {
+                    throw ImportRegistrationIntegrityException("Pending import registration could not be validated", error)
                 }
+                    ?: throw ImportRegistrationIntegrityException("Pending import registration was not found")
+                registrationJournal.verifyTargetMatchesPending(pending)
                 registrationJournal.confirm(pending)
             }
         }
@@ -257,10 +261,15 @@ class AuthorizedRomImporter(
 
     suspend fun reconcilePendingRegistrations(
         createdBeforeMillis: Long = Long.MAX_VALUE,
+        onIntegrityFailure: suspend (GameId) -> Unit = {},
         gameLookup: suspend (GameId) -> com.gamebox.os.domain.Game?,
     ): ImportRegistrationRecoveryReport =
         importTransactionMutex.withLock {
-            registrationRecovery.reconcile(createdBeforeMillis, gameLookup)
+            registrationRecovery.reconcile(
+                createdBeforeMillis = createdBeforeMillis,
+                onIntegrityFailure = onIntegrityFailure,
+                gameLookup = gameLookup,
+            )
         }
 
 }

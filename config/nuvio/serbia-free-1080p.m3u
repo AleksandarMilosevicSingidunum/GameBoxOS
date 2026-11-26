@@ -1,0 +1,7 @@
+#EXTM3U url-tvg="https://www.open-epg.com/files/serbia2.xml"
+# Public RTV1/RTV2 streams are linked by iptv-org/iptv's Serbia playlist.
+# Both HLS master playlists currently advertise 1920x1080 video.
+#EXTINF:-1 tvg-id="RTV 1.rs" tvg-name="RTV 1" group-title="Serbia - 1080p",RTV 1
+http://212.200.230.50:1935/RTV/rtv1/playlist.m3u8
+#EXTINF:-1 tvg-id="RTV 2.rs" tvg-name="RTV 2" group-title="Serbia - 1080p",RTV 2
+http://212.200.230.50:1935/RTV/rtv2/playlist.m3u8

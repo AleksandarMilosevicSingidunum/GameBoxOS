@@ -1,5 +1,29 @@
 # GameBox OS Roadmap
 
+## 24 November 2026 — MSI virtual QA and Windows package fixes
+
+- [x] Created the isolated hardware-accelerated API 35 VM. Initial virtual checks passed for the bundled legal game lifecycle, save retention, 7z cleanup, disc-set reimport, and companion service lifecycle. The Quick Actions assertion failed and the software-rendered VM disconnected before the suite completed. See [UAT](docs/UAT.md).
+- [x] TV Mode now saves a replacement playlist before releasing the old document grant. Android JVM regression coverage passed.
+- [x] The Windows release workflow derives each MSIX version from its release tag, reads the protected PFX without prompting, and exposes the app in Start. The self-contained app opened on the MSI and the unsigned package manifest checks passed.
+- [ ] Complete Android instrumentation and resolve failures. Finish real HONOR HDMI acceptance, second-phone Remote, and signed Windows install and upgrade on a clean system.
+
+## 8 November 2026 — latest HDMI controller and import cleanup verification
+
+- [x] Focused JVM suites passed 62/62 (`BrowserDownloadRecoveryTest` 15, `ImportedSourceCleanupTest` 1, `ImportRegistrationJournalTest` 10, `TvModeAppsTest` 34, `GameDetailsManualImportPolicyTest` 2). Android-test Kotlin compilation, debug assembly, debug lint, and unsigned release assembly passed.
+- [x] Installed final debug build in place without clearing data (SHA-256 `44E8B9D9578B33A94C8437BBF9452E3AD68FC26A2A3D749D0E2E010E2F418908`); GameBox TV Mode is active on HONOR HDMI display 62 at 1920×1080/60 Hz.
+- [x] Physical Sony Wireless Controller was active; on the final build D-pad Right focused Live TV Options. On the preceding UI-identical build B returned from Library to standard Home. This remains partial controller acceptance. HDMI captures: `tmp/gamebox-honor-tv-final-dpad-right.png`, `tmp/gamebox-honor-tv-pad-back-home.png`, and `tmp/gamebox-honor-tv-final.png`.
+- [x] Browser import surfaces a warning if staged-copy deletion fails after import status is durable. Integrity-validation errors are distinct from cleanup I/O failures; invalid imports fail verification, retain their source, roll back files where possible, and mark the Library item for repair. Startup recovery also marks registered-but-corrupt content for repair while retaining its journal and backup.
+- [ ] Dock remains visible; A/confirm, search typing, shoulder/analog controls, emulator gameplay input, Serbian live playback, and complete download/import lifecycle acceptance remain open. EON playback still requires authorized SBB sign-in; no account credentials were entered.
+
+## 8 November 2026 — SBB EON lineup reference and import cleanup safety
+
+- [x] Added the currently published SBB EON channel positions to Serbian playlist ordering. Channels with published audience-share data stay first; matching channels then follow EON’s numbered lineup, and unmatched channels retain their existing order. This is lineup placement, not a claim of audience ranking, and it does not add EON subscription streams. Source: [SBB EON channel listing](https://sr.eon.tv/paketi/). SBB terms restrict commercial reproduction without consent; do not distribute embedded lineup data beyond individual use without reuse rights.
+- [x] Fixed deferred import finalization: browser and manual imports now keep their staged/archive source when importer cleanup is incomplete, retain the Download Manager record, and expose the warning.
+- [x] Focused Android tests passed: 51 tests across `BrowserDownloadRecoveryTest`, `ImportedSourceCleanupTest`, `TvModeAppsTest`, and `GameDetailsManualImportPolicyTest` (0 failures/errors); the updated instrumentation sources compiled and `:app:assembleDebug` succeeded.
+- [x] Installed the debug APK in place on HONOR and verified GameBox TV Home on HDMI display 62 (1920×1080/60 Hz). Capture: `tmp/gamebox-tv-sbb-import-check-2026-11-08.png`.
+- [x] Opened the official EON app on HDMI and selected SBB; the app requires SBB username/password before channel access. No authenticated playback was possible without signing in. EON was stopped and GameBox TV Home restored (`tmp/honor-eon-sbb-login-2026-11-08.png`).
+- [ ] EON’s channel positions are not viewership measurements; reliable Serbian broadcast streams and decoded 1080p acceptance remain open. The HONOR Dock and physical-controller acceptance also remain open.
+
 ## 8 November 2026 — HONOR HDMI Dock/fullscreen investigation
 
 - [x] Reinstalled the current debug APK in place and inspected GameBox on HONOR HDMI display 62 (1920×1080/60 Hz). GameBox is borderless and fills the app bounds, but a 43 px `Dock` window from `com.hihonor.desktop.systemui` remains at y=1037–1080.

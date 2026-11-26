@@ -38,6 +38,28 @@ class ImportRegistrationJournalTest {
     }
 
     @Test
+    fun targetHashMismatchIsAnIntegrityFailureAndKeepsRecoveryMarker() {
+        val files = temporary.newFolder("files")
+        val imports = File(files, "imports").apply { mkdirs() }
+        val id = GameId("tampered-game")
+        val payload = "trusted bytes"
+        val transactionId = UUID.randomUUID().toString()
+        val journal = ImportRegistrationJournal(files)
+        val pending = journal.prepare(
+            gameId = id,
+            transactionId = transactionId,
+            hadExistingTarget = false,
+            files = listOf(PendingImportFile("tampered-game/game.iso", sha256(payload))),
+        )
+        File(imports, "tampered-game").apply { mkdirs() }.resolve("game.iso").writeText("changed bytes")
+
+        val failure = runCatching { journal.verifyTargetMatchesPending(pending) }.exceptionOrNull()
+
+        assertTrue(failure is ImportRegistrationIntegrityException)
+        assertEquals(transactionId, journal.pending().single().transactionId)
+    }
+
+    @Test
     fun unregisteredNewImportIsRemovedOnRecovery() = runBlocking {
         val files = temporary.newFolder("files")
         val imports = File(files, "imports").apply { mkdirs() }
@@ -173,9 +195,14 @@ class ImportRegistrationJournalTest {
             ),
         )
 
-        val report = ImportRegistrationRecovery(journal).reconcile { registered }
+        val repairRequired = mutableListOf<GameId>()
+        val report = ImportRegistrationRecovery(journal).reconcile(
+            gameLookup = { registered },
+            onIntegrityFailure = repairRequired::add,
+        )
 
         assertEquals(1, report.failures)
+        assertEquals(listOf(id), repairRequired)
         assertEquals(0, report.rolledBack)
         assertEquals("corrupt", target.resolve("game.iso").readText())
         assertTrue(backup.exists())

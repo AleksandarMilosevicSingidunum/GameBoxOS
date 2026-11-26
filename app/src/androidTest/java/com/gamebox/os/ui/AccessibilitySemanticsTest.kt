@@ -10,6 +10,7 @@ import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
@@ -82,7 +83,7 @@ class AccessibilitySemanticsTest {
     }
 
     @Test
-    fun blueprintBrandMarksComposeAsScalableUiAssets() {
+    fun blueprintBrandMarksAreVisibleAtTheirConfiguredSizes() {
         composeRule.setContent {
             Column {
                 GameBoxBrandMark(Modifier.testTag("gamebox-brand").size(32.dp))
@@ -91,10 +92,9 @@ class AccessibilitySemanticsTest {
             }
         }
 
-        val renders = SemanticsMatcher("brand mark renders") { true }
-        composeRule.onNodeWithTag("gamebox-brand").assert(renders)
-        composeRule.onNodeWithTag("console-brand").assert(renders)
-        composeRule.onNodeWithTag("app-brand").assert(renders)
+        composeRule.onNodeWithTag("gamebox-brand").assertIsDisplayed()
+        composeRule.onNodeWithTag("console-brand").assertIsDisplayed()
+        composeRule.onNodeWithTag("app-brand").assertIsDisplayed()
     }
 }
 

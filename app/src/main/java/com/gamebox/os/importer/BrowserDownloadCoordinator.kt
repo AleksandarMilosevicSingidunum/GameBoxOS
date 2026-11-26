@@ -355,10 +355,21 @@ class BrowserDownloadCoordinator(
             store.update(downloadId) { it.copy(status = BrowserDownloadStatus.FAILED, error = result.message) }
         } else {
             markBrowserDownloadImportedBeforeCleanup(
+                sourceCleanupSafe = !result.cleanupDeferred,
                 markImported = {
-                    store.update(downloadId) { it.copy(status = BrowserDownloadStatus.IMPORTED, error = null) }
+                    store.update(downloadId) {
+                        it.copy(
+                            status = BrowserDownloadStatus.IMPORTED,
+                            error = result.message.takeIf { result.cleanupDeferred },
+                        )
+                    }
                 },
                 cleanupSource = { deleteImportedSource(appContext, candidate.uri) },
+                onCleanupFailure = {
+                    store.update(downloadId) {
+                        it.copy(error = "Added to Library, but GameBox could not remove the staged download copy.")
+                    }
+                },
             )
             runCatching { store.setRetryCookie(downloadId, null) }
             if (current.transferJobId == null) runCatching { manager.remove(downloadId) }
@@ -367,9 +378,14 @@ class BrowserDownloadCoordinator(
 
 }
 
-internal fun markBrowserDownloadImportedBeforeCleanup(markImported: () -> Unit, cleanupSource: () -> Unit) {
+internal fun markBrowserDownloadImportedBeforeCleanup(
+    sourceCleanupSafe: Boolean = true,
+    markImported: () -> Unit,
+    cleanupSource: () -> Boolean,
+    onCleanupFailure: () -> Unit = {},
+) {
     markImported()
-    cleanupSource()
+    if (sourceCleanupSafe && !cleanupSource()) onCleanupFailure()
 }
 
 internal fun activeBrowserDownloadIds(records: List<BrowserDownloadRecord>): List<Long> =

@@ -85,7 +85,7 @@ internal fun manualImportOutcome(record: BrowserDownloadRecord, gameState: Insta
     when {
         record.status == BrowserDownloadStatus.IMPORTED &&
             gameState in setOf(InstallState.INSTALLED, InstallState.UPDATE_AVAILABLE) ->
-            "Import complete. The game is ready in your Library."
+            record.error ?: "Import complete. The game is ready in your Library."
         record.status in setOf(BrowserDownloadStatus.FAILED, BrowserDownloadStatus.CANCELLED) -> record.error
         else -> null
     }

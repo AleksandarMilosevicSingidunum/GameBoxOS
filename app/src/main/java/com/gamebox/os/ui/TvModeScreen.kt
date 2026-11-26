@@ -102,6 +102,7 @@ import com.gamebox.os.tvmode.parseAuthorizedM3u
 import com.gamebox.os.tvmode.playlistGuideUrl
 import com.gamebox.os.tvmode.playlistGrantToRelease
 import com.gamebox.os.tvmode.playlistUriAfterLoad
+import com.gamebox.os.tvmode.saveTvPlaylistReplacement
 import com.gamebox.os.tvmode.readPlaylist
 import com.gamebox.os.tvmode.tvChannelKey
 import com.gamebox.os.tvmode.tvPlaybackErrorMessage
@@ -149,7 +150,7 @@ internal fun TvModeScreen(
     remoteTextInputs: Flow<TvRemoteTextInput>,
     onRemoteSearchTargetChanged: (TvRemoteTextTarget?) -> Unit,
     onFavoritesChanged: (List<String>) -> Unit,
-    onPlaylistChanged: (String?) -> Unit,
+    onPlaylistChanged: suspend (String) -> Unit,
     onFavoriteChannelsChanged: (List<String>) -> Unit,
     onLastChannelChanged: (String?) -> Unit,
     onHomeSectionsChanged: (List<String>) -> Unit,
@@ -200,6 +201,7 @@ internal fun TvModeScreen(
     var guideRetryCount by remember { mutableIntStateOf(0) }
     var loadedPlaylistUri by remember { mutableStateOf<String?>(null) }
     var pendingPlaylistUri by remember { mutableStateOf<String?>(null) }
+    var savingPlaylist by remember { mutableStateOf(false) }
     var playlistReplacementError by remember { mutableStateOf<String?>(null) }
     fun releasePlaylistGrant(uri: String) {
         runCatching {
@@ -210,7 +212,7 @@ internal fun TvModeScreen(
         }
     }
     fun changePlaylist(uri: String?) {
-        if (uri == pendingPlaylistUri) return
+        if (savingPlaylist || uri == pendingPlaylistUri) return
         if (uri == playlistUri) {
             playlistGrantToRelease(pendingPlaylistUri, playlistUri)?.let { releasePlaylistGrant(it) }
             pendingPlaylistUri = null
@@ -222,7 +224,7 @@ internal fun TvModeScreen(
         playlistError = null
     }
     val playlistPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-        if (uri != null) {
+        if (uri != null && !savingPlaylist) {
             runCatching {
                 context.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
             }.onSuccess { changePlaylist(uri.toString()) }
@@ -233,7 +235,10 @@ internal fun TvModeScreen(
     // Settings can arrive after TV Mode opens; don't persist this fallback over a saved playlist.
     val effectivePlaylistUri = pendingPlaylistUri ?: playlistUri ?: iptvOrgCountryPlaylistUrl("RS")
     LaunchedEffect(playlistUri, pendingPlaylistUri) {
-        if (pendingPlaylistUri != null && playlistUri == pendingPlaylistUri) pendingPlaylistUri = null
+        if (pendingPlaylistUri != null && playlistUri == pendingPlaylistUri) {
+            pendingPlaylistUri = null
+            savingPlaylist = false
+        }
     }
 
     LaunchedEffect(context, managingApps) {
@@ -301,15 +306,17 @@ internal fun TvModeScreen(
                     val guideChannels = channels.mapNotNull { channel -> channel.guideId?.let { it to channel.name } }.toMap()
                     Triple(channels, guide, guideChannels)
                 }
+                val selectedUri = playlistUriAfterLoad(playlistUri, pendingPlaylistUri, effectivePlaylistUri, channels.isNotEmpty())
+                if (selectedUri != null && selectedUri != playlistUri && selectedUri == pendingPlaylistUri) {
+                    savingPlaylist = true
+                    withContext(kotlinx.coroutines.NonCancellable) {
+                        saveTvPlaylistReplacement(playlistUri, selectedUri, onPlaylistChanged, ::releasePlaylistGrant)
+                    }
+                    playlistReplacementError = null
+                }
                 playlistChannels = channels
                 loadedPlaylistUri = effectivePlaylistUri
                 playlistError = null
-                val selectedUri = playlistUriAfterLoad(playlistUri, pendingPlaylistUri, effectivePlaylistUri, channels.isNotEmpty())
-                if (selectedUri != null && selectedUri != playlistUri && selectedUri == pendingPlaylistUri) {
-                    playlistGrantToRelease(playlistUri, selectedUri)?.let(::releasePlaylistGrant)
-                    onPlaylistChanged(selectedUri)
-                    playlistReplacementError = null
-                }
                 guideRetryAvailable = guide != null && guideChannels.isNotEmpty()
                 val programmes = if (guide != null && guideChannels.isNotEmpty()) {
                     try {
@@ -334,6 +341,7 @@ internal fun TvModeScreen(
                 throw cancelled
             } catch (failure: Exception) {
                 if (isReplacement) {
+                    savingPlaylist = false
                     playlistGrantToRelease(effectivePlaylistUri, playlistUri)?.let(::releasePlaylistGrant)
                     playlistReplacementError = "Playlist not changed: ${failure.message ?: "could not be read"}"
                     pendingPlaylistUri = null

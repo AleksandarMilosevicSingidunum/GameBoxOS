@@ -2,6 +2,39 @@
 
 > Full cross-area QA findings and console-by-console status for the 8 November 2026 audit: [UAT gap audit](UAT_GAP_AUDIT_2026-11-08.md). Its Pass/Partial/Fail/Not run labels are evidence-based; build and unit-test success do not substitute for hardware acceptance.
 
+### 25 November 2026 — Nuvio TV Launcher compatibility trial
+
+- Installed the ARM64 APK from [Nuvio TV Launcher 1.2.4](https://github.com/Br0ck25/NuvioTVLauncher/releases/tag/1.2.4) after matching the GitHub release asset SHA-256. The released IPTV launcher entry opened on the physical HONOR HDMI display (1920×1080, logical display 4). Setup continued without an account and the HONOR launcher retained the Home role.
+- HONOR opened Nuvio in a floating desktop window and kept it there after a fullscreen launch request against the running task. Synthetic D-pad input navigated Nuvio. The GameBox button-to-app handoff, physical controls, Back return, and actual stream playback remain unverified. GameBox was brought back to the foreground after the trial. See `tmp/nuvio-qa/nuvio-ready.png`.
+
+### 25 November 2026 — MSI instrumentation follow-up
+
+- The host GPU run recorded 165 passes, 30 failures and 1 assumption skip before the Android guest reported a system crash during case 197 of 252. The remaining 56 cases produced no terminal result. The corrected Downloads assertion reached the empty queue on both display profiles, then failed to focus **Browse Store** on both. Debug lint and unsigned Android release assembly passed. See `tmp/gamebox-msi-qa/instrumentation-host-full.log` and `tmp/gamebox-msi-qa/quick-actions-*.log`.
+
+### 24 November 2026 — MSI test VM and Windows packaging
+
+- Created a separate Android 15 / API 35 x86-64 QA VM with Windows Hypervisor Platform acceleration. Its disk and test logs are in `tmp/gamebox-msi-qa`. ADB commands for the test suite target only `emulator-5580`.
+- In the 1920×1080 virtual profile, 13 of the first 14 reported instrumentation cases passed before the software-rendered VM disconnected. Passes included legal Galaxy Patrol install → uninstall → reinstall and save retention, 7z cleanup after registration, disc-set uninstall and reimport with progress metadata retained, backup failure preventing removal, and the authenticated companion service lifecycle. `tvControllerLeavesEmptyDownloadsForStore` failed because Quick Actions was not displayed immediately after the controller Menu event. The remaining cases in that attempt produced no result. See `tmp/gamebox-msi-qa/instrumentation-focused.log`.
+- After the playlist persistence fix, the Android JVM suite reported 907 cases, 0 failures, and 1 skipped. Remote JVM tests passed 13/13. Debug GameBox, Remote, and instrumentation APKs built. The new regression checks that a failed replacement settings write retains the old document grant.
+- Windows core test harness and Release build passed with 0 warnings and 0 errors. The self-contained Windows companion opened a responsive window on the MSI. A local unsigned MSIX built and its packaged manifest contained version `0.2.3.0` and allowed a Start menu entry. Signed installation and upgrade on a clean Windows system remain open.
+- HONOR USB debugging authorization was lost after a separate phone diagnostics restart. The MSI results leave HONOR HDMI playback, OEM fullscreen, and physical controller checks open.
+
+### 8 November 2026 — current HONOR HDMI/controller and staged-source cleanup check
+
+- [x] Focused JVM suites passed 62/62: `BrowserDownloadRecoveryTest` 15, `ImportedSourceCleanupTest` 1, `ImportRegistrationJournalTest` 10, `TvModeAppsTest` 34, and `GameDetailsManualImportPolicyTest` 2 (0 failures/errors). `:app:compileDebugAndroidTestKotlin`, `:app:assembleDebug`, `:app:lintDebug`, and unsigned `:app:assembleRelease` succeeded.
+- [x] Installed the final debug APK in place without clearing app data; SHA-256 `44E8B9D9578B33A94C8437BBF9452E3AD68FC26A2A3D749D0E2E010E2F418908`. SurfaceFlinger confirmed physical HDMI display 62 at 1920×1080/60 Hz and `ExternalDisplayActivity` resumed there. TV Mode Home retained RS and IDJTV last-watched state; the programme guide was still loading at capture. Evidence: `tmp/gamebox-honor-tv-final.png`. The HONOR Dock remains visible.
+- [x] Physical controller partial: Android detected a Sony Wireless Controller (vendor `054c`, product `05c4`) as GAMEPAD/JOYSTICK. On the final build, D-pad Right focused Live TV Options (`tmp/gamebox-honor-tv-final-dpad-right.png`). On the preceding UI-identical debug build, physical B returned from Library to standard Home (`tmp/gamebox-honor-tv-pad-back-home.png`). This advances PAD-02 and PAD-03 only; A, shoulders, text entry, analog, and in-game controls remain untested.
+- [x] Browser import now records a visible Download Manager message if deleting the staged duplicate returns false after durable Library registration. Integrity-validation failures are distinct from cleanup I/O errors: they fail verification, retain source files, roll back the import transaction when possible, and mark the Library item for repair. Startup recovery also marks registered-but-corrupt content as needing repair while preserving its journal and backup.
+- [ ] The HONOR Dock remains visible on HDMI, and Serbian 1080p streams, physical A/B, emulator input, and full download/import lifecycle acceptance remain open.
+
+### 8 November 2026 — SBB EON lineup reference and importer recovery
+
+- [x] Added SBB EON channel-position metadata for channels that match the existing `iptv-org · RS` playlist. Ordering keeps the six channels with published audience-share data first, then sorts matching entries by EON position, and preserves playlist order for unmatched entries. EON positions are not viewing figures. Source: [SBB EON channel listing](https://sr.eon.tv/paketi/) and [official schedule effective 1 January 2026](https://sbb.rs/wp-content/uploads/2026/01/eon-raspored-kanala-01-2026.pdf). SBB’s [current site terms](https://sbb.rs/wp-content/uploads/2026/03/uslovi-koriscenja-i-obavestenje-o-privatnosti-prilikom-upotrebe-korisnickog-portala-od-1-4-2026.pdf) limit individual use and restrict commercial reproduction without consent; treat the embedded mapping as private-use only unless reuse rights are obtained. The playlist source and saved RS selection were retained; no EON streams were imported.
+- [x] Opened the installed official EON app on the HONOR HDMI display, selected SBB, and verified it reaches the SBB username/password sign-in screen. No account was signed in and no channel playback was attempted because credentials are required. Stopped EON and restored GameBox TV Home; no notification permission was granted. Evidence: `tmp/honor-eon-sbb-login-2026-11-08.png`, `tmp/gamebox-tv-after-eon-check-2026-11-08.png`.
+- [x] Browser downloads and manual imports now retain the original staged/archive source if registration cleanup is deferred. The Download Manager keeps the completed record and shows a cleanup warning.
+- [x] Focused tests passed: `BrowserDownloadRecoveryTest` 14/14, `ImportedSourceCleanupTest` 1/1, `TvModeAppsTest` 34/34, and `GameDetailsManualImportPolicyTest` 2/2. Android instrumentation sources compiled; `:app:assembleDebug` succeeded. Instrumentation was not run on the HONOR.
+- [x] Installed the APK in place without clearing app data. GameBox TV Home was visible on HONOR HDMI display 62 at 1920×1080/60 Hz (`tmp/gamebox-tv-sbb-import-check-2026-11-08.png`). Opening All channels showed 50 entries and the order began RTS 1, Pink, Prva, RTS 2, Narodna TV, RTS 3 (`tmp/gamebox-tv-eon-ordered-list-2026-11-08.png`). This verifies lineup ordering and the TV UI only; EON playback and Serbian stream reliability remain unproven. The HONOR Dock remained visible, and Android reported no connected game controller.
+
 ### 8 November 2026 — cross-area audit and build verification
 
 - [x] Five parallel reviews covered gaming/emulators; discovery/download/import/library; TV/Live TV; controller/Remote/Windows companion; and release/security/resilience. Reconciled results are in `docs/UAT_GAP_AUDIT_2026-11-08.md`.
@@ -132,16 +165,16 @@ Use this index to confirm the full shipped product surface is represented. Each 
 
 Run these with the actual Bluetooth or wired controller on the TV. Record the controller identity and Android input device. If no `GAMEPAD`/`JOYSTICK` source is present, mark the cases Blocked and continue with other sections.
 
-- [ ] **PAD-01 — Connect/reconnect:** Result: Blocked — Android input inventory currently has no GAMEPAD/JOYSTICK device. Evidence: 3 November HONOR TV input inventory recorded below.
-- [ ] **PAD-02 — D-pad focus:** Result: Blocked for physical-controller acceptance — synthetic D-pad moves focus, but no gamepad is connected. Evidence: 3 November HONOR TV input inventory recorded below.
-- [ ] **PAD-03 — Confirm/Back:** Result: Blocked — physical A/B acceptance requires a connected gamepad. Evidence: 3 November HONOR TV input inventory recorded below.
-- [ ] **PAD-04 — Shoulder navigation:** Result: Blocked — no physical gamepad is connected. Evidence: 3 November HONOR TV input inventory recorded below.
-- [ ] **PAD-05 — Context actions:** Result: Blocked — no physical gamepad is connected. Evidence: 3 November HONOR TV input inventory recorded below.
-- [ ] **PAD-06 — Search keyboard:** Result: Blocked for physical-controller acceptance — synthetic/remote text behavior does not verify controller typing. Evidence: 3 November HONOR TV input inventory recorded below.
-- [ ] **PAD-07 — Analog/hat:** Result: Blocked — no physical gamepad is connected. Evidence: 3 November HONOR TV input inventory recorded below.
-- [ ] **PAD-08 — Focus restoration:** Result: Blocked for full physical-controller run — no gamepad is connected. Evidence: 3 November HONOR TV input inventory recorded below.
-- [ ] **PAD-09 — Emulator input:** Result: Blocked — no physical gamepad is connected. Evidence: 3 November HONOR TV input inventory recorded below.
-- [ ] **PAD-10 — Touch overlay:** Result: Blocked — no physical gamepad is connected. Evidence: 3 November HONOR TV input inventory recorded below.
+- [ ] **PAD-01 — Connect/reconnect:** Result: Partial — Android currently detects a Sony Wireless Controller as GAMEPAD/JOYSTICK; a disconnect/reconnect cycle was not tested. Evidence: 8 November HONOR HDMI check below.
+- [ ] **PAD-02 — D-pad focus:** Result: Partial — physical D-pad Right visibly moved focus to Live TV Options on the freshly installed TV Mode screen and from Home to Library on the standard launcher. Other directions and sustained navigation were not tested. Evidence: `tmp/gamebox-honor-tv-dpad-right.png`.
+- [ ] **PAD-03 — Confirm/Back:** Result: Partial — physical B returned from Library to Home on the preceding UI-identical debug build; A/confirm was not tested. Evidence: `tmp/gamebox-honor-tv-pad-back-home.png`.
+- [ ] **PAD-04 — Shoulder navigation:** Result: Not run — no physical LB/RB press was observed in this run.
+- [ ] **PAD-05 — Context actions:** Result: Not run — physical Menu/Options navigation was not exercised.
+- [ ] **PAD-06 — Search keyboard:** Result: Not run — controller-driven typing, A-to-enter, and B-to-exit were not exercised.
+- [ ] **PAD-07 — Analog/hat:** Result: Not run — analog and hat-axis gameplay/navigation were not exercised.
+- [ ] **PAD-08 — Focus restoration:** Result: Not run — dialog close and focus restoration after hardware interaction were not exercised.
+- [ ] **PAD-09 — Emulator input:** Result: Not run — physical input was not tested inside an emulator.
+- [ ] **PAD-10 — Touch overlay:** Result: Not run — emulator overlay visibility and physical game input were not tested.
 
 ## Home, Library, catalog, and details
 
@@ -222,7 +255,7 @@ Additional emulator acceptance:
 ## TV Live TV and user playlists
 
 - [x] **LIVE-01 — Default region:** Result: Pass — RS is selected by default and the iptv-org RS playlist and channel cards load on the HONOR TV. Evidence: `tmp/honor-tv-compact-layout-2026-11-03.png`.
-- [x] **LIVE-02 — Popularity order:** Result: Pass — measured national channels use the 2024 audience-share order (RTS 1, Pink, Prva, Happy, B92, RTS 2); unranked entries retain playlist order. Source: [RTS 2024 audience report](https://www.rts.rs/upload/media/2025/6/31/11/53/271/4282968/Revizorski_izve%C5%A1taj.pdf). Evidence: 31 October HDMI run and `TvModeAppsTest.serbianChannelsFollowPublishedAudienceRankAndKeepPlaylistOrderForUnrankedChannels`.
+- [x] **LIVE-02 — Serbian lineup ordering:** Result: Partial — the six broadcasters with published audience-share data remain first (RTS 1, Pink, Prva, Happy, B92, RTS 2); remaining matched channels use SBB EON lineup positions, and unmatched channels retain iptv-org order. EON positions are not viewership measurements, so the full list is not verified as Serbia’s 50 most-watched channels. Source: [RTS 2024 audience report](https://www.rts.rs/upload/media/2025/6/31/11/53/271/4282968/Revizorski_izvestaj.pdf) and [SBB EON listing](https://sr.eon.tv/paketi/). Tests: `TvModeAppsTest.serbianChannelsUsePublishedAudienceRankThenSbbEonPositionsAndPreserveUnknownOrder`, `TvModeAppsTest.sbbLineupPositionsApplyOnlyAsFallbackAndDoNotDropChannels`. HDMI evidence: `tmp/gamebox-tv-eon-ordered-list-2026-11-08.png`.
 - [ ] **LIVE-03 — Duplicates:** Result: Partial — focused parser test confirms duplicate `tvg-id` variants and normalized resolution-suffixed names collapse while a distinct channel remains. End-to-end duplicate fixture on HDMI was not run. Evidence: `TvModeAppsTest.playlistDeduplicatesByGuideIdThenNormalizedChannelName` (3 November).
 - [ ] **LIVE-04 — Now/next guide:** Result: Partial — the parser keeps up to 96 entries per channel and 25,000 total in the 24-hour guide window. `TvModeAppsTest.currentXmltvGuideRetainsAllProgramsInIts24HourWindow` covers progression past the former three-programme cap. On HDMI, RTS 1 changed from “SAT” to “Vesti” at the 15:00 programme boundary without reopening TV Mode (`tmp/gamebox-tv-guide-boundary-2026-11-08.png`). Guide-unavailable handling remains untested.
 - [ ] **LIVE-05 — User M3U:** Result: Partial — a local test M3U was selected, parsed, and replaced by the RS playlist; retained permission across restart and populated custom group/guide metadata were not verified. Evidence: 3 November Mux M3U run below.

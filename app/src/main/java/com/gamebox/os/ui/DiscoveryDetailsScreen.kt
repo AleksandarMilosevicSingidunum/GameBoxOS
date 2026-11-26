@@ -153,7 +153,11 @@ internal fun DiscoveryDetailsScreen(
                 com.gamebox.os.importer.BrowserDownloadStatus.IMPORTING ->
                     "Download complete; verifying and importing ${record.title}…"
                 com.gamebox.os.importer.BrowserDownloadStatus.IMPORTED ->
-                    "${record.title} was verified and added to your Library. The temporary download was moved."
+                    if (record.error == null) {
+                        "${record.title} was verified and added to your Library. The temporary download was moved."
+                    } else {
+                        "${record.title} was added to your Library. The staged download was kept because import cleanup needs attention."
+                    }
                 com.gamebox.os.importer.BrowserDownloadStatus.FAILED ->
                     "Download needs attention: ${record.error ?: "try importing your copy manually"}"
                 com.gamebox.os.importer.BrowserDownloadStatus.CANCELLED ->

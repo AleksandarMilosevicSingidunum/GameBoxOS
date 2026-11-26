@@ -1,5 +1,6 @@
 package com.gamebox.os.tvmode
 
+import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertThrows
 import org.junit.Test
@@ -8,6 +9,23 @@ import java.io.ByteArrayOutputStream
 import java.util.zip.GZIPOutputStream
 
 class TvModeAppsTest {
+    @Test
+    fun playlistReplacementReleasesOldGrantOnlyAfterSuccessfulSave() = runBlocking {
+        val previous = "content://documents/old.m3u"
+        val next = "content://documents/new.m3u"
+        val events = mutableListOf<String>()
+        val failure = runCatching {
+            saveTvPlaylistReplacement(previous, next, { throw java.io.IOException("write failed") }) {
+                events += "released $it"
+            }
+        }
+        assertEquals("write failed", failure.exceptionOrNull()?.message)
+        assertEquals(emptyList<String>(), events)
+
+        saveTvPlaylistReplacement(previous, next, { events += "saved $it" }) { events += "released $it" }
+        assertEquals(listOf("saved $next", "released $previous"), events)
+    }
+
     @Test
     fun displayChannelNameRemovesUnverifiedTrailingQualityAndResolution() {
         assertEquals("Pink", displayTvChannelName("Pink (720p)"))
@@ -132,15 +150,30 @@ https://media.example/unsafe.m3u8
     }
 
     @Test
-    fun serbianChannelsFollowPublishedAudienceRankAndKeepPlaylistOrderForUnrankedChannels() {
+    fun serbianChannelsUsePublishedAudienceRankThenSbbEonPositionsAndPreserveUnknownOrder() {
         val channels = listOf(
             "Belle Amie", "Prva Files", "RTS 2", "Happy", "B92", "Prva Kick", "Prva", "Pink (720p)", "RTS 1", "AXN Adria",
         )
             .map { TvChannel(it, "https://example.invalid/${it.hashCode()}") }
 
         assertEquals(
-            listOf("RTS 1", "Pink (720p)", "Prva", "Happy", "B92", "RTS 2", "Belle Amie", "Prva Files", "Prva Kick", "AXN Adria"),
-            sortSerbianChannelsByPopularity(channels).map(TvChannel::name),
+            listOf("RTS 1", "Pink (720p)", "Prva", "Happy", "B92", "RTS 2", "Prva Kick", "Prva Files", "Belle Amie", "AXN Adria"),
+            orderSerbianChannels(channels).map(TvChannel::name),
+        )
+    }
+
+    @Test
+    fun sbbLineupPositionsApplyOnlyAsFallbackAndDoNotDropChannels() {
+        val channels = listOf(
+            TvChannel("Belle Amie", "https://example.invalid/belle"),
+            TvChannel("RTV 2 (576p)", "https://example.invalid/rtv2"),
+            TvChannel("Kitchen TV", "https://example.invalid/kitchen"),
+            TvChannel("RTS 1", "https://example.invalid/rts1"),
+        )
+
+        assertEquals(
+            listOf("RTS 1", "RTV 2 (576p)", "Kitchen TV", "Belle Amie"),
+            orderSerbianChannels(channels).map(TvChannel::name),
         )
     }
 

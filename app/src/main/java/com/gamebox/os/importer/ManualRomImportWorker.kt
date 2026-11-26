@@ -79,7 +79,7 @@ class ManualRomImportWorker(context: Context, parameters: WorkerParameters) :
             store.update(id) {
                 it.copy(
                     status = if (outcome.succeeded) BrowserDownloadStatus.IMPORTED else BrowserDownloadStatus.FAILED,
-                    error = outcome.message.takeUnless { outcome.succeeded },
+                    error = outcome.message.takeIf { outcome.cleanupDeferred || !outcome.succeeded },
                 )
             }
             return if (outcome.succeeded) Result.success() else Result.failure()

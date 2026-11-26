@@ -14,7 +14,7 @@ class BrowserDownloadRecoveryTest {
 
         markBrowserDownloadImportedBeforeCleanup(
             markImported = { events += "imported" },
-            cleanupSource = { events += "deleted" },
+            cleanupSource = { events += "deleted"; true },
         )
 
         assertEquals(listOf("imported", "deleted"), events)
@@ -23,13 +23,39 @@ class BrowserDownloadRecoveryTest {
         try {
             markBrowserDownloadImportedBeforeCleanup(
                 markImported = { throw IOException("status persistence failed") },
-                cleanupSource = { events += "deleted" },
+                cleanupSource = { events += "deleted"; true },
             )
         } catch (_: IOException) {
             // A failed durable status update must leave the original download intact.
         }
 
         assertTrue(events.isEmpty())
+    }
+
+    @Test
+    fun deferredImportCleanupKeepsStagedBrowserSourceAfterRecordingImport() {
+        val events = mutableListOf<String>()
+
+        markBrowserDownloadImportedBeforeCleanup(
+            sourceCleanupSafe = false,
+            markImported = { events += "imported" },
+            cleanupSource = { events += "deleted"; true },
+        )
+
+        assertEquals(listOf("imported"), events)
+    }
+
+    @Test
+    fun failedStagedSourceDeletionLeavesImportedStatusAndRecordsWarning() {
+        val events = mutableListOf<String>()
+
+        markBrowserDownloadImportedBeforeCleanup(
+            markImported = { events += "imported" },
+            cleanupSource = { events += "delete-failed"; false },
+            onCleanupFailure = { events += "warning" },
+        )
+
+        assertEquals(listOf("imported", "delete-failed", "warning"), events)
     }
 
     @Test

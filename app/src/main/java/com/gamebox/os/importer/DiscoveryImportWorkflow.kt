@@ -7,11 +7,16 @@ import com.gamebox.os.content.GameMutationGate
 import com.gamebox.os.data.DiscoveryGame
 import com.gamebox.os.data.GameRepository
 import com.gamebox.os.domain.LocalContentFile
+import com.gamebox.os.domain.InstallState
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.withContext
 
-internal data class DiscoveryImportOutcome(val message: String, val succeeded: Boolean)
+internal data class DiscoveryImportOutcome(
+    val message: String,
+    val succeeded: Boolean,
+    val cleanupDeferred: Boolean = false,
+)
 
 internal fun shouldRemoveImportedArchive(displayName: String): Boolean =
     displayName.substringAfterLast('.', "").lowercase() in setOf("zip", "7z")
@@ -63,17 +68,19 @@ internal class DiscoveryImportWorkflow(
                         sizeBytes = result.hashes.sizeBytes,
                     ),
                 )
-                val cleanupDeferred = runCatching {
-                    importer.confirmRegistration(game.id, result.transactionId)
-                }.isFailure
+                val cleanupDeferred = confirmRegistration(result.transactionId)
                 val sourceRemoved = removeSourceAfterSuccess && shouldDeleteImportedSource(cleanupDeferred) &&
                     deleteImportedSource(context, uri)
-                singleImportSuccessMessage(
-                    platform = resolvedPlatform,
-                    hash = result.hashes.sha256,
+                DiscoveryImportOutcome(
+                    message = singleImportSuccessMessage(
+                        platform = resolvedPlatform,
+                        hash = result.hashes.sha256,
+                        cleanupDeferred = cleanupDeferred,
+                        sourceRemoved = sourceRemoved,
+                        sourceRemovalRequested = removeSourceAfterSuccess,
+                    ),
+                    succeeded = true,
                     cleanupDeferred = cleanupDeferred,
-                    sourceRemoved = sourceRemoved,
-                    sourceRemovalRequested = removeSourceAfterSuccess,
                 )
             }
             RomImportResult.SourceUnavailable -> DiscoveryImportOutcome(
@@ -122,14 +129,12 @@ internal class DiscoveryImportWorkflow(
                             sizeBytes = result.files.sumOf { it.hashes.sizeBytes },
                         ),
                     )
-                    val cleanupDeferred = runCatching {
-                        importer.confirmRegistration(game.id, result.transactionId)
-                    }.isFailure
+                    val cleanupDeferred = confirmRegistration(result.transactionId)
                     val archiveSources = sources.filter { shouldRemoveImportedArchive(it.displayName) }
                     val archivesRemoved = if (shouldDeleteImportedSource(cleanupDeferred)) {
                         archiveSources.count { deleteImportedSource(context, it.uri) }
                     } else 0
-                    buildString {
+                    DiscoveryImportOutcome(buildString {
                         append("${result.files.size}-file disc set verified and added to Library; ")
                         if (cleanupDeferred && archiveSources.isNotEmpty()) {
                             append("${archiveSources.size} original archive(s) retained because GameBox could not finish import cleanup")
@@ -141,7 +146,7 @@ internal class DiscoveryImportWorkflow(
                             if (sources.size > archiveSources.size) append("; original disc files retained")
                         }
                         if (cleanupDeferred) append(". Delete retained archives only after verifying the Library copy.")
-                    }
+                    }, succeeded = true, cleanupDeferred = cleanupDeferred)
                 }
                 RomImportSetResult.SourceUnavailable -> DiscoveryImportOutcome(
                     "A selected file is unavailable or its access expired. Choose the files again.", false,
@@ -154,14 +159,26 @@ internal class DiscoveryImportWorkflow(
     private suspend fun completeRegistration(
         subject: String,
         rollback: suspend () -> Unit,
-        operation: suspend () -> String,
+        operation: suspend () -> DiscoveryImportOutcome,
     ): DiscoveryImportOutcome = try {
-        DiscoveryImportOutcome(operation(), succeeded = true)
+        operation()
     } catch (cancelled: CancellationException) {
         withContext(NonCancellable) { runCatching { rollback() } }
         throw cancelled
     } catch (error: Exception) {
         registrationFailureMessage(subject, error, rollback)
+    }
+
+    private suspend fun confirmRegistration(transactionId: String): Boolean = try {
+        importer.confirmRegistration(game.id, transactionId)
+        false
+    } catch (cancelled: CancellationException) {
+        throw cancelled
+    } catch (integrityFailure: ImportRegistrationIntegrityException) {
+        repository.setInstallStateAndAwait(game.id, InstallState.MISSING_FILES)
+        throw integrityFailure
+    } catch (_: Exception) {
+        true
     }
 
     private suspend fun registrationFailureMessage(
@@ -171,7 +188,13 @@ internal class DiscoveryImportWorkflow(
     ): DiscoveryImportOutcome {
         val rolledBack = withContext(NonCancellable) { runCatching { rollback() }.isSuccess }
         val detail = error.message?.take(140) ?: "unknown error"
-        val message = if (rolledBack) {
+        val message = if (error is ImportRegistrationIntegrityException) {
+            if (rolledBack) {
+                "Import verification failed; $subject were rolled back and the Library entry needs repair: $detail"
+            } else {
+                "Import verification failed and recovery is pending; keep the source and restart GameBox: $detail"
+            }
+        } else if (rolledBack) {
             "Library registration failed; $subject were rolled back safely: $detail"
         } else {
             "Library registration failed and recovery is pending; restart GameBox: $detail"

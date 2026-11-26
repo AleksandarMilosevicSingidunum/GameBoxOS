@@ -292,7 +292,7 @@ fun GameBoxApp(
                     )
                 },
                 onFavoritesChanged = { packages -> appScope.launch { settingsRepository.setTvFavoritePackages(packages) } },
-                onPlaylistChanged = { uri -> appScope.launch { settingsRepository.setTvPlaylistUri(uri) } },
+                onPlaylistChanged = settingsRepository::setTvPlaylistUri,
                 onFavoriteChannelsChanged = { keys -> appScope.launch { settingsRepository.setTvFavoriteChannels(keys) } },
                 onLastChannelChanged = { key -> appScope.launch { settingsRepository.setTvLastChannel(key) } },
                 onHomeSectionsChanged = { sections -> appScope.launch { settingsRepository.setTvHomeSections(sections) } },

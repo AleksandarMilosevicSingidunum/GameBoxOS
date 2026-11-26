@@ -77,16 +77,22 @@ internal fun currentAndNextProgrammes(channel: TvChannel, programmes: List<TvPro
 
 internal fun hasCurrentTvProgramme(label: String?): Boolean = label?.startsWith("Now ·") == true
 
-internal fun sortSerbianChannelsByPopularity(channels: List<TvChannel>): List<TvChannel> =
+internal fun orderSerbianChannels(channels: List<TvChannel>): List<TvChannel> =
     channels.withIndex()
-        .sortedWith(compareBy({ serbianChannelPopularityRank(it.value.name) }, { it.index }))
+        .sortedWith(
+            compareBy(
+                { serbianChannelAudienceRank(it.value.name) },
+                { sbbEonChannelPosition(it.value.name) },
+                { it.index },
+            ),
+        )
         .map { it.value }
 
 internal fun orderTvChannelsForPlaylist(playlistUri: String?, channels: List<TvChannel>): List<TvChannel> =
-    if (playlistUri?.let(::iptvOrgPlaylistCountryCode) == "rs") sortSerbianChannelsByPopularity(channels) else channels
+    if (playlistUri?.let(::iptvOrgPlaylistCountryCode) == "rs") orderSerbianChannels(channels) else channels
 
-// shortcut: published ratings cover national broadcasters only; unranked channels retain playlist order.
-private fun serbianChannelPopularityRank(name: String): Int {
+// shortcut: audience data covers six broadcasters; remaining EON positions are lineup order, not viewership.
+private fun serbianChannelAudienceRank(name: String): Int {
     val key = name.lowercase().filter(Char::isLetterOrDigit)
     return when {
         isMeasuredChannel(key, "rts1", "ртс1") -> 0
@@ -98,6 +104,68 @@ private fun serbianChannelPopularityRank(name: String): Int {
         else -> Int.MAX_VALUE
     }
 }
+
+private fun sbbEonChannelPosition(name: String): Int {
+    val key = displayTvChannelName(name).lowercase().filter(Char::isLetterOrDigit)
+    return sbbEonChannelPositions[key] ?: Int.MAX_VALUE
+}
+
+// Public EON lineup positions, checked 8 November 2026; provider order is not audience data.
+private val sbbEonChannelPositions = mapOf(
+    "rts1" to 1,
+    "rts2" to 2,
+    "rtv1" to 3,
+    "prva" to 4,
+    "pink" to 5,
+    "b92" to 6,
+    "happy" to 7,
+    "happytv" to 7,
+    "novas" to 8,
+    "nova" to 8,
+    "kurir" to 9,
+    "kurirtv" to 9,
+    "n1" to 10,
+    "informer" to 11,
+    "informertv" to 11,
+    "k1" to 12,
+    "tanjug" to 13,
+    "euronewsserbia" to 14,
+    "vesti" to 15,
+    "rtv2" to 16,
+    "blictv" to 17,
+    "narodna" to 18,
+    "narodnatv" to 18,
+    "cinestar1" to 19,
+    "insajder" to 20,
+    "insajdertv" to 20,
+    "newsmaxbalkans" to 21,
+    "bloombergadria" to 22,
+    "rts3" to 23,
+    "redtv" to 24,
+    "rtl" to 25,
+    "novahr" to 27,
+    "una" to 28,
+    "studiob" to 29,
+    "scifi" to 64,
+    "rtsdrama" to 68,
+    "prvaplus" to 69,
+    "prvalife" to 70,
+    "prvakick" to 71,
+    "prvaworld" to 72,
+    "prvamax" to 73,
+    "prvafiles" to 74,
+    "arenasport1" to 101,
+    "rtspoletarac" to 316,
+    "rtstrezor" to 317,
+    "rtszivot" to 318,
+    "kitchentv" to 337,
+    "rtvnovipazar" to 430,
+    "sandzaktv" to 432,
+    "soskanalplus" to 433,
+    "idjtv" to 804,
+    "rtsmuzika" to 815,
+    "rtskolo" to 830,
+)
 
 private fun isMeasuredChannel(key: String, vararg aliases: String): Boolean = aliases.any { alias ->
     key == alias || key.matches(Regex("$alias(?:\\d{3,4}p|sd|hd|fhd|uhd|4k)"))
@@ -160,6 +228,16 @@ internal fun moveTvFavorite(favorites: List<String>, packageName: String, offset
 
 internal fun playlistGrantToRelease(previousUri: String?, nextUri: String?): String? =
     previousUri?.takeIf { it != nextUri && it.startsWith("content://") }
+
+internal suspend fun saveTvPlaylistReplacement(
+    previousUri: String?,
+    nextUri: String,
+    persist: suspend (String) -> Unit,
+    releaseGrant: (String) -> Unit,
+) {
+    persist(nextUri)
+    playlistGrantToRelease(previousUri, nextUri)?.let(releaseGrant)
+}
 
 internal fun playlistUriAfterLoad(activeUri: String?, pendingUri: String?, loadedUri: String, hasChannels: Boolean): String? =
     if (hasChannels && pendingUri != null && pendingUri == loadedUri) pendingUri else activeUri

@@ -4,6 +4,8 @@ GameBox OS is a controller-first Android living-room shell for a docked phone. I
 
 GameBox is an Android external-display application, not a custom ROM or emulator. Game sources must be user-owned backups, homebrew, freeware, open-source, or otherwise authorized content. An optional native Windows Companion is provided for local Windows-library launching; it does not replace the Android device shell.
 
+GameBox OS project source is licensed under [GPL-3.0-only](LICENSE). Third-party software, assets, and game fixtures retain their own licenses and notices; see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+
 ## Current development status
 
 Android UI update (7 September 2026): a new Blueprint-focused pass refines the

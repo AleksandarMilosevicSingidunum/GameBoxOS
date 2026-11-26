@@ -84,9 +84,12 @@ class DefaultAppContainer(context: Context) : AppContainer {
     )
 
     private val importRegistrationRecovery = applicationScope.launch {
-        authorizedRomImporter.reconcilePendingRegistrations(processStartedAtMillis) { gameId ->
-            database.gameDao().getById(gameId.value)?.toDomain()
-        }
+        authorizedRomImporter.reconcilePendingRegistrations(
+            processStartedAtMillis,
+            onIntegrityFailure = { gameId ->
+                gameRepository.setInstallStateAndAwait(gameId, com.gamebox.os.domain.InstallState.MISSING_FILES)
+            },
+        ) { gameId -> database.gameDao().getById(gameId.value)?.toDomain() }
     }
 
     override val managedSaveDiscovery = com.gamebox.os.storage.ManagedSaveDiscovery(

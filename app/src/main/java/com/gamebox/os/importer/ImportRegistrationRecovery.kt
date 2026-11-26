@@ -15,6 +15,7 @@ class ImportRegistrationRecovery(
 ) {
     suspend fun reconcile(
         createdBeforeMillis: Long = Long.MAX_VALUE,
+        onIntegrityFailure: suspend (GameId) -> Unit = {},
         gameLookup: suspend (GameId) -> Game?,
     ): ImportRegistrationRecoveryReport {
         require(createdBeforeMillis >= 0L) { "Import recovery cutoff is invalid" }
@@ -44,9 +45,12 @@ class ImportRegistrationRecovery(
                             journal.confirm(pending)
                             confirmed += 1
                         }
-                        roomMatches -> throw IllegalStateException(
-                            "Registered import bytes do not match the durable journal; keep recovery state for repair"
-                        )
+                        roomMatches -> {
+                            onIntegrityFailure(GameId(gameId))
+                            throw ImportRegistrationIntegrityException(
+                                "Registered import bytes do not match the durable journal; keep recovery state for repair"
+                            )
+                        }
                         else -> {
                             journal.rollback(pending)
                             rolledBack += 1
