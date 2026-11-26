@@ -1,5 +1,5 @@
 diff --git a/app/build.gradle.kts b/app/build.gradle.kts
-index bd6b05e..f93832f 100644
+index bd6b05e..f93b3b9 100644
 --- a/app/build.gradle.kts
 +++ b/app/build.gradle.kts
 @@ -1,4 +1,4 @@
@@ -132,6 +132,15 @@ index bd6b05e..f93832f 100644
          }
      }
  
+@@ -456,7 +461,7 @@ android.defaultConfig.buildConfigField("String", "TESTER_KEY", buildConfigString
+ if (livetvIsTestBuild) {
+     // 1767225600 = 2026-01-01 00:00 UTC, in seconds.
+     val minutesSince2026: Int = ((System.currentTimeMillis() / 1000L - 1767225600L) / 60L).toInt()
+-    android.defaultConfig.versionCode = 200_000_000 + minutesSince2026
++    android.defaultConfig.versionCode = maxOf(200_000_000 + minutesSince2026, 200_474_700)
+     if ((findProperty("livetvVersionName") as String?).isNullOrBlank()) {
+         val base = android.defaultConfig.versionName ?: "0.0.0"
+         val core = base.substringBefore('-').substringBefore('+')
 @@ -470,17 +475,16 @@ androidComponents {
      onVariants(selector().withBuildType("debug")) { variant ->
          val isPlaystore = variant.productFlavors.any { it.second == "playstore" }
@@ -32689,7 +32698,7 @@ new file mode 100644
 index 0000000..96a26de
 --- /dev/null
 +++ b/app/src/gamebox/java/com/gamebox/os/ui/PrimaryNavigation.kt
-@@ -0,0 +1,322 @@
+@@ -0,0 +1,314 @@
 +package com.gamebox.os.ui
 +
 +import androidx.compose.animation.animateColorAsState
@@ -32798,15 +32807,7 @@ index 0000000..96a26de
 +            delay(30_000)
 +        }
 +    }
-+    if (unifiedNavigation) {
-+        Row(
-+            Modifier.fillMaxWidth().height(56.dp),
-+            horizontalArrangement = Arrangement.Center,
-+            verticalAlignment = Alignment.CenterVertically,
-+        ) {
-+            primaryDestinations.forEach { navButton(it) }
-+        }
-+    } else if (compact) {
++    if (compact) {
 +        Column {
 +            val openDownloads = rememberUiClickAction { onSelect(Destination.DOWNLOADS) }
 +            Row(
@@ -37751,7 +37752,7 @@ new file mode 100644
 index 0000000..84588ae
 --- /dev/null
 +++ b/app/src/gamebox/java/com/gamebox/os/ui/theme/GameBoxTheme.kt
-@@ -0,0 +1,195 @@
+@@ -0,0 +1,167 @@
 +package com.gamebox.os.ui.theme
 +
 +import androidx.compose.material3.MaterialTheme
@@ -37767,7 +37768,6 @@ index 0000000..84588ae
 +import androidx.compose.ui.text.font.FontWeight
 +import androidx.compose.ui.unit.dp
 +import androidx.compose.ui.unit.sp
-+import com.nuvio.tv.ui.theme.NuvioTheme
 +
 +val GameBoxBlue = Color(0xFF5184FF)
 +/** Filled-button blue keeps normal-size white labels above 4.5:1 contrast. */
@@ -37912,37 +37912,10 @@ index 0000000..84588ae
 +
 +@Composable
 +fun GameBoxTheme(content: @Composable () -> Unit) {
-+    val tvPalette = NuvioTheme.colors
-+    val unifiedColors = colors.copy(
-+        primary = tvPalette.FocusRing,
-+        onPrimary = tvPalette.FocusContent,
-+        primaryContainer = tvPalette.FocusBackground,
-+        onPrimaryContainer = tvPalette.FocusContent,
-+        secondary = tvPalette.Secondary,
-+        onSecondary = tvPalette.OnSecondary,
-+        secondaryContainer = tvPalette.BackgroundElevated,
-+        onSecondaryContainer = tvPalette.TextPrimary,
-+        background = tvPalette.Background,
-+        surface = tvPalette.Surface,
-+        surfaceVariant = tvPalette.SurfaceVariant,
-+        surfaceDim = tvPalette.Background,
-+        surfaceBright = tvPalette.BackgroundCard,
-+        surfaceContainerLowest = tvPalette.Background,
-+        surfaceContainerLow = tvPalette.BackgroundElevated,
-+        surfaceContainer = tvPalette.BackgroundCard,
-+        surfaceContainerHigh = tvPalette.Surface,
-+        surfaceContainerHighest = tvPalette.SurfaceVariant,
-+        onSurfaceVariant = tvPalette.TextSecondary,
-+        outline = tvPalette.Border,
-+        outlineVariant = tvPalette.BorderMuted,
-+        onBackground = tvPalette.TextPrimary,
-+        onSurface = tvPalette.TextPrimary,
-+        scrim = tvPalette.Scrim,
-+    )
-+    MaterialTheme(colorScheme = unifiedColors, typography = typography, shapes = shapes) {
++    MaterialTheme(colorScheme = colors, typography = typography, shapes = shapes) {
 +        // Android's platform default content color can be black; explicitly seed every
 +        // screen with the dark-surface foreground so plain Text remains readable.
-+        CompositionLocalProvider(LocalContentColor provides unifiedColors.onBackground) {
++        CompositionLocalProvider(LocalContentColor provides colors.onBackground) {
 +            content()
 +        }
 +    }
@@ -93386,6 +93359,39 @@ index 9082bcd..681f4ac 100644
              appendLine("Android ${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT}) · ${Build.MANUFACTURER} ${Build.MODEL}")
              appendLine(situation(null))
              appendLine("Thread: ${thread.name}")
+diff --git a/app/src/main/java/com/nuvio/tv/livetv/data/LegacyGameBoxChannelMatcher.kt b/app/src/main/java/com/nuvio/tv/livetv/data/LegacyGameBoxChannelMatcher.kt
+new file mode 100644
+index 0000000..52059c5
+--- /dev/null
++++ b/app/src/main/java/com/nuvio/tv/livetv/data/LegacyGameBoxChannelMatcher.kt
+@@ -0,0 +1,27 @@
++package com.nuvio.tv.livetv.data
++
++import com.nuvio.tv.livetv.model.LiveChannel
++
++private val legacyChannelQualitySuffix = Regex(
++    "\\s*(?:\\(\\s*(?:\\d{3,4}p|\\d{3,4}\\s*[x×]\\s*\\d{3,4}|hd|sd|fhd|uhd|[48]k)\\s*\\)|(?:\\d{3,4}p|\\d{3,4}\\s*[x×]\\s*\\d{3,4}|hd|sd|fhd|uhd|[48]k))\\s*$",
++    RegexOption.IGNORE_CASE
++)
++
++/** Index by both old identifier forms so either an XMLTV id or a displayed name can migrate. */
++internal fun indexLegacyGameBoxChannels(channels: List<LiveChannel>): Map<String, List<LiveChannel>> {
++    val index = LinkedHashMap<String, MutableList<LiveChannel>>()
++    channels.forEach { channel ->
++        val ids = buildSet {
++            channel.tvgId?.substringBefore('@')?.trim()?.lowercase()
++                ?.takeIf(String::isNotBlank)?.let(::add)
++            channel.name.trim()
++                .replace(legacyChannelQualitySuffix, "")
++                .trimEnd(' ', '-', '–', '—', '|', '·')
++                .lowercase()
++                .replace(Regex("[^\\p{L}\\p{N}]"), "")
++                .takeIf(String::isNotBlank)?.let(::add)
++        }
++        ids.forEach { key -> index.getOrPut(key, ::mutableListOf).add(channel) }
++    }
++    return index
++}
 diff --git a/app/src/main/java/com/nuvio/tv/livetv/data/LiveTvPreferences.kt b/app/src/main/java/com/nuvio/tv/livetv/data/LiveTvPreferences.kt
 index 64c0857..c764371 100644
 --- a/app/src/main/java/com/nuvio/tv/livetv/data/LiveTvPreferences.kt
@@ -93436,7 +93442,7 @@ index 64c0857..c764371 100644
          var removed = emptySet<String>()
          store.edit { p ->
 diff --git a/app/src/main/java/com/nuvio/tv/livetv/data/LiveTvRepository.kt b/app/src/main/java/com/nuvio/tv/livetv/data/LiveTvRepository.kt
-index ad90361..51dac5c 100644
+index ad90361..57dceea 100644
 --- a/app/src/main/java/com/nuvio/tv/livetv/data/LiveTvRepository.kt
 +++ b/app/src/main/java/com/nuvio/tv/livetv/data/LiveTvRepository.kt
 @@ -3,6 +3,7 @@ package com.nuvio.tv.livetv.data
@@ -93471,15 +93477,7 @@ index ad90361..51dac5c 100644
              // The guides' channel lists used to be saved in a file of their own; they're in the
              // stored guide now.
              withContext(Dispatchers.IO) { runCatching { File(baseDir, "epg_channel_lists.bin").delete() } }
-@@ -191,6 +195,7 @@ class LiveTvRepository @Inject constructor(
-             // so when this starts with the app it waits a little, out of Nuvio's way.
-             if (updateCheckDelayMs > 0) delay(updateCheckDelayMs)
-             refreshStale()
-+            migrateLegacyGameBoxChannelState()
-             firstCheckDone = true
-             // Then keep checking while the app stays open. TV boxes keep the app running for
-             // days (Home only sends it to the background), and the check used to happen only
-@@ -203,6 +208,66 @@ class LiveTvRepository @Inject constructor(
+@@ -203,6 +207,59 @@ class LiveTvRepository @Inject constructor(
          }
      }
  
@@ -93519,14 +93517,7 @@ index ad90361..51dac5c 100644
 +        val channels = _channels.value
 +        if (channels.isEmpty()) return // Keep the migration pending until the saved playlist loads.
 +
-+        fun legacyKey(channel: LiveChannel): String = channel.tvgId?.substringBefore('@')
-+            ?.lowercase()?.takeIf(String::isNotBlank)
-+            ?: channel.name.trim()
-+                .replace(Regex("\\s*(?:\\(\\s*(?:\\d{3,4}p|\\d{3,4}\\s*[x×]\\s*\\d{3,4}|hd|sd|fhd|uhd|[48]k)\\s*\\)|(?:\\d{3,4}p|\\d{3,4}\\s*[x×]\\s*\\d{3,4}|hd|sd|fhd|uhd|[48]k))\\s*$", RegexOption.IGNORE_CASE), "")
-+                .trimEnd(' ', '-', '–', '—', '|', '·')
-+                .lowercase().replace(Regex("[^\\p{L}\\p{N}]"), "")
-+
-+        val byLegacyKey = channels.groupBy(::legacyKey)
++        val byLegacyKey = indexLegacyGameBoxChannels(channels)
 +        val matchedFavorites = oldFavorites.flatMap { byLegacyKey[it.lowercase()].orEmpty() }.map { it.key }.toSet()
 +        val currentState = prefs.userState.first()
 +        val currentKeys = channels.map { it.key }
@@ -93546,7 +93537,17 @@ index ad90361..51dac5c 100644
      /** Opening Live TV: update anything past its update time (the playlist or guide interval). */
      fun refreshIfStale() {
          // Not before the start-up check (the saved channels may not be read yet).
-@@ -3137,6 +3202,10 @@ class LiveTvRepository @Inject constructor(
+@@ -761,6 +818,9 @@ class LiveTvRepository @Inject constructor(
+             buildChannels(addingMessage(newlyAdded), forceAddon = forcePlaylists || addonStale)
+             saveChannels() // so the next start uses it straight away
+         }
++        // Keep this tied to channel availability: an offline/expired playlist on first launch
++        // must not permanently skip migration of the old favorites and last channel.
++        migrateLegacyGameBoxChannelState()
+ 
+         val epgTargets = collectEpgTargets()
+         // Files saved by earlier versions, unzipped: zipped once (see download()).
+@@ -3137,6 +3197,10 @@ class LiveTvRepository @Inject constructor(
      ): Boolean = withContext(Dispatchers.IO) {
          require(url.isNotBlank()) { "No URL set" }
          target.parentFile?.mkdirs()
@@ -93557,7 +93558,7 @@ index ad90361..51dac5c 100644
          val meta = File(target.parentFile, target.name + ".meta")
          val (etag, lastModified) = if (!full && target.exists() && meta.exists()) {
              meta.readLines().let { it.getOrNull(0).orEmpty() to it.getOrNull(1).orEmpty() }
-@@ -3220,6 +3289,66 @@ class LiveTvRepository @Inject constructor(
+@@ -3220,6 +3284,66 @@ class LiveTvRepository @Inject constructor(
          }
      }
  
@@ -93756,24 +93757,10 @@ index 223616f..a162176 100644
 +    }
  }
 diff --git a/app/src/main/java/com/nuvio/tv/ui/navigation/NuvioNavHost.kt b/app/src/main/java/com/nuvio/tv/ui/navigation/NuvioNavHost.kt
-index 07d7622cc..0042ecc78 100644
+index 07d7622..47a7230 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/navigation/NuvioNavHost.kt
 +++ b/app/src/main/java/com/nuvio/tv/ui/navigation/NuvioNavHost.kt
-@@ -3,10 +3,13 @@ package com.nuvio.tv.ui.navigation
- import kotlinx.coroutines.launch
- import com.nuvio.tv.ui.theme.NuvioMotion
- import com.nuvio.tv.ui.components.PlaybackAvailabilityProvider
-+import com.nuvio.tv.ui.theme.NuvioComponents
- import com.nuvio.tv.ui.components.LocalPlaybackAvailability
- import com.nuvio.tv.ui.components.canStream
- import android.widget.Toast
-+import android.view.Display
- import androidx.compose.ui.platform.LocalContext
-+import androidx.compose.ui.platform.LocalView
- import com.nuvio.tv.R
- import com.nuvio.tv.LocalRootContentInset
- import androidx.compose.foundation.layout.Box
-@@ -274,6 +277,24 @@ private fun PlaybackNavHost(
+@@ -274,6 +274,24 @@ private fun PlaybackNavHost(
              }
          }
      ) {
@@ -93798,7 +93785,7 @@ index 07d7622cc..0042ecc78 100644
          composable(Screen.ExperienceModeSelection.route) {
              ExperienceModeSelectionScreen(
                  onContinue = { mode ->
-@@ -2481,6 +2502,37 @@ private fun PlaybackNavHost(
+@@ -2481,6 +2499,34 @@ private fun PlaybackNavHost(
      }
  }
  
@@ -93808,14 +93795,11 @@ index 07d7622cc..0042ecc78 100644
 +    val gameBox = context.applicationContext as com.gamebox.os.GameBoxApplication
 +    val destination = section.uppercase().takeIf { it in com.gamebox.os.ui.Destination.entries.map { item -> item.name } }
 +        ?: com.gamebox.os.ui.Destination.HOME.name
-+    // Gaming needs the full expanded rail width because its hero and card rows
-+    // start at the page edge; the smaller generic root inset clips their labels.
-+    val sidebarInset = if (LocalView.current.display?.displayId != Display.DEFAULT_DISPLAY) {
-+        NuvioComponents.tokens.sidebar.expandedWidth
-+    } else {
-+        LocalRootContentInset.current
-+    }
-+    Box(Modifier.fillMaxSize().padding(start = sidebarInset)) {
++    val sharedInset = LocalRootContentInset.current
++    val embeddedContentInset = if (sharedInset > 0.dp) {
++        maxOf(sharedInset, com.nuvio.tv.ui.theme.NuvioComponents.tokens.sidebar.expandedWidth)
++    } else 0.dp
++    Box(Modifier.fillMaxSize().padding(start = embeddedContentInset)) {
 +        com.gamebox.os.ui.theme.GameBoxTheme {
 +            com.gamebox.os.ui.GameBoxApp(
 +                container = gameBox.container,
@@ -107776,50 +107760,65 @@ index e212e4c..62337fb 100644
 +    <files-path name="installed_content" path="installed/" />
 +    <files-path name="imported_content" path="imports/" />
  </paths>
+diff --git a/app/src/test/java/com/nuvio/tv/livetv/data/LegacyGameBoxChannelMatcherTest.kt b/app/src/test/java/com/nuvio/tv/livetv/data/LegacyGameBoxChannelMatcherTest.kt
+new file mode 100644
+index 0000000..6f9d88d
+--- /dev/null
++++ b/app/src/test/java/com/nuvio/tv/livetv/data/LegacyGameBoxChannelMatcherTest.kt
+@@ -0,0 +1,40 @@
++package com.nuvio.tv.livetv.data
++
++import com.nuvio.tv.livetv.model.LiveChannel
++import org.junit.Assert.assertEquals
++import org.junit.Test
++
++class LegacyGameBoxChannelMatcherTest {
++    @Test
++    fun `indexes both old guide id and normalized channel name`() {
++        val channel = channel(tvgId = "RTS1.rs@serbia", name = "RTS 1 (1080p)")
++
++        val index = indexLegacyGameBoxChannels(listOf(channel))
++
++        assertEquals(listOf(channel), index["rts1.rs"])
++        assertEquals(listOf(channel), index["rts1"])
++    }
++
++    @Test
++    fun `name matching ignores punctuation and quality suffix`() {
++        val channel = channel(tvgId = null, name = "RTS-1 HD")
++
++        val index = indexLegacyGameBoxChannels(listOf(channel))
++
++        assertEquals(listOf(channel), index["rts1"])
++    }
++
++    private fun channel(tvgId: String?, name: String) = LiveChannel(
++        key = "source|$name",
++        sourceId = "source",
++        sourceName = "Test playlist",
++        name = name,
++        tvgId = tvgId,
++        tvgName = null,
++        logo = null,
++        groupId = "group",
++        group = "Channels",
++        number = 1,
++        url = "https://example.test/live.m3u8"
++    )
++}
 diff --git a/app/src/test/java/com/nuvio/tv/livetv/data/LiveTvImportProgressPreferencesTest.kt b/app/src/test/java/com/nuvio/tv/livetv/data/LiveTvImportProgressPreferencesTest.kt
-index 3116dc48e..60a48e7c7 100644
+index 3116dc4..1b5ea68 100644
 --- a/app/src/test/java/com/nuvio/tv/livetv/data/LiveTvImportProgressPreferencesTest.kt
 +++ b/app/src/test/java/com/nuvio/tv/livetv/data/LiveTvImportProgressPreferencesTest.kt
-@@ -1,7 +1,9 @@
- package com.nuvio.tv.livetv.data
+@@ -2,6 +2,7 @@ package com.nuvio.tv.livetv.data
  
  import android.content.Context
-+import android.content.ContextWrapper
  import com.nuvio.tv.core.profile.ProfileManager
 +import com.nuvio.tv.livetv.model.PlaylistSource
  import io.mockk.every
  import io.mockk.mockk
  import kotlinx.coroutines.flow.MutableStateFlow
-@@ -13,9 +15,15 @@ import org.junit.Assert.assertFalse
- import org.junit.Assert.assertTrue
- import org.junit.Before
- import org.junit.Test
-+import org.junit.runner.RunWith
-+import org.robolectric.RobolectricTestRunner
-+import org.robolectric.RuntimeEnvironment
-+import org.robolectric.annotation.Config
- import java.io.File
- import java.nio.file.Files
- 
-+@RunWith(RobolectricTestRunner::class)
-+@Config(application = android.app.Application::class, manifest = Config.NONE, sdk = [35])
- class LiveTvImportProgressPreferencesTest {
-     private lateinit var tempDir: File
-     private lateinit var preferences: LiveTvPreferences
-@@ -23,9 +31,9 @@ class LiveTvImportProgressPreferencesTest {
-     @Before
-     fun setUp() {
-         tempDir = Files.createTempDirectory("live_tv_import_progress_prefs_test").toFile()
--        val context = mockk<Context>(relaxed = true) {
--            every { applicationContext } returns this
--            every { filesDir } returns tempDir
-+        val context = object : ContextWrapper(RuntimeEnvironment.getApplication()) {
-+            override fun getApplicationContext(): Context = this
-+            override fun getFilesDir(): File = tempDir
-         }
-         val profileManager = mockk<ProfileManager> {
-             every { activeProfileId } returns MutableStateFlow(1)
-@@ -78,4 +86,35 @@ class LiveTvImportProgressPreferencesTest {
+@@ -78,4 +79,35 @@ class LiveTvImportProgressPreferencesTest {
  
          assertTrue(preferences.currentSettings().showImportProgress)
      }
