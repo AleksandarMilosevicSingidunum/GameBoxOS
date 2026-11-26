@@ -107756,18 +107756,49 @@ index e212e4c..62337fb 100644
 +    <files-path name="imported_content" path="imports/" />
  </paths>
 diff --git a/app/src/test/java/com/nuvio/tv/livetv/data/LiveTvImportProgressPreferencesTest.kt b/app/src/test/java/com/nuvio/tv/livetv/data/LiveTvImportProgressPreferencesTest.kt
-index 3116dc4..1b5ea68 100644
+index 3116dc48e..60a48e7c7 100644
 --- a/app/src/test/java/com/nuvio/tv/livetv/data/LiveTvImportProgressPreferencesTest.kt
 +++ b/app/src/test/java/com/nuvio/tv/livetv/data/LiveTvImportProgressPreferencesTest.kt
-@@ -2,6 +2,7 @@ package com.nuvio.tv.livetv.data
+@@ -1,7 +1,9 @@
+ package com.nuvio.tv.livetv.data
  
  import android.content.Context
++import android.content.ContextWrapper
  import com.nuvio.tv.core.profile.ProfileManager
 +import com.nuvio.tv.livetv.model.PlaylistSource
  import io.mockk.every
  import io.mockk.mockk
  import kotlinx.coroutines.flow.MutableStateFlow
-@@ -78,4 +79,35 @@ class LiveTvImportProgressPreferencesTest {
+@@ -13,9 +15,15 @@ import org.junit.Assert.assertFalse
+ import org.junit.Assert.assertTrue
+ import org.junit.Before
+ import org.junit.Test
++import org.junit.runner.RunWith
++import org.robolectric.RobolectricTestRunner
++import org.robolectric.RuntimeEnvironment
++import org.robolectric.annotation.Config
+ import java.io.File
+ import java.nio.file.Files
+ 
++@RunWith(RobolectricTestRunner::class)
++@Config(application = android.app.Application::class, manifest = Config.NONE, sdk = [35])
+ class LiveTvImportProgressPreferencesTest {
+     private lateinit var tempDir: File
+     private lateinit var preferences: LiveTvPreferences
+@@ -23,9 +31,9 @@ class LiveTvImportProgressPreferencesTest {
+     @Before
+     fun setUp() {
+         tempDir = Files.createTempDirectory("live_tv_import_progress_prefs_test").toFile()
+-        val context = mockk<Context>(relaxed = true) {
+-            every { applicationContext } returns this
+-            every { filesDir } returns tempDir
++        val context = object : ContextWrapper(RuntimeEnvironment.getApplication()) {
++            override fun getApplicationContext(): Context = this
++            override fun getFilesDir(): File = tempDir
+         }
+         val profileManager = mockk<ProfileManager> {
+             every { activeProfileId } returns MutableStateFlow(1)
+@@ -78,4 +86,35 @@ class LiveTvImportProgressPreferencesTest {
  
          assertTrue(preferences.currentSettings().showImportProgress)
      }

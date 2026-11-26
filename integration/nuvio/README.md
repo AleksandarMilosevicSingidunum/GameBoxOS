@@ -31,7 +31,7 @@ uvio-upstream`. The patch intentionally excludes ROM/download fixture files. Use
 - [x] Debug APK builds successfully with Temurin Java 17.
 - [x] Verify the pinned integration patch applies and a fresh checkout builds the full arm64 debug APK, including the native VPN code.
 - [x] Latest fresh-checkout APK (`1.2.0-test.474773+beta.3`) installed to the separate GameBox test package on HONOR without clearing app data.
-- [ ] Verify the live TV/Gaming UI on HDMI after that install: the HONOR relocked before the final screen review, and HDMI currently shows its unlock prompt.
+- [ ] Verify the live TV/Gaming UI on HDMI after that install: the HONOR is locked and the external HDMI display currently reports OFF.
 - [x] GameBox pages now use the shared sidebar inset once; removed the duplicate inset that had placed Gaming content behind the sidebar.
 - [x] GameBox’s embedded theme now follows the TV theme’s active colors for surfaces, text, borders, and controller focus.
 - [x] Removed the duplicate GameBox logo/clock header from the embedded Gaming area; its section tabs remain while the shared sidebar owns app-level navigation.
@@ -43,7 +43,8 @@ uvio-upstream`. The patch intentionally excludes ROM/download fixture files. Use
 - [ ] Verify GameBox-to-TV playback and return behavior with an authorized playlist. No channel source was configured for this check.
 - [x] HONOR accepted Android's fullscreen request on HDMI. The merged activity now has fullscreen 1920×1080 task bounds and the window caption is gone.
 - [ ] Hide the remaining 43 px HONOR Dock overlay. Its “Global Taskbar” control is not listed by Settings search on this Magic6 Pro, so the vendor setting remains unchanged. A test combining deprecated immersive flags with `WindowInsetsController` did not hide the Dock and visibly clipped the page, so those flags were removed.
-- [ ] Verify migration of saved playlists and channel choices from the retired GameBox TV Mode, including file-picker URI access on an upgrade install. The migration code compiles, but the focused preference test class currently fails on this Windows host when AndroidX DataStore renames its temporary preference file; all five cases in that class fail, including its existing tests.
+- [x] The five Live TV preference and legacy playlist migration tests pass on Windows under Robolectric API 35. They use an Android application context and unique temporary storage; production DataStore behavior is unchanged.
+- [ ] Verify saved playlists and channel choices migrate from retired GameBox TV Mode on an upgrade install, including file-picker URI access and retained permissions.
 - [ ] Complete permissions/dependency/license review and run a signed GameBox release build. Release signing now requires GameBox-owned credentials supplied through `GAMEBOX_RELEASE_*`; no upstream signing defaults are used.
 
 The install used package `com.gamebox.os.nuviointegration` to avoid replacing the existing GameBox installation before TV acceptance. This is a test package, not the final production package.
