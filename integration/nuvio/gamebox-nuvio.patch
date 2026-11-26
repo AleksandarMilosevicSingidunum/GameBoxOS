@@ -32689,7 +32689,7 @@ new file mode 100644
 index 0000000..96a26de
 --- /dev/null
 +++ b/app/src/gamebox/java/com/gamebox/os/ui/PrimaryNavigation.kt
-@@ -0,0 +1,314 @@
+@@ -0,0 +1,322 @@
 +package com.gamebox.os.ui
 +
 +import androidx.compose.animation.animateColorAsState
@@ -32798,7 +32798,15 @@ index 0000000..96a26de
 +            delay(30_000)
 +        }
 +    }
-+    if (compact) {
++    if (unifiedNavigation) {
++        Row(
++            Modifier.fillMaxWidth().height(56.dp),
++            horizontalArrangement = Arrangement.Center,
++            verticalAlignment = Alignment.CenterVertically,
++        ) {
++            primaryDestinations.forEach { navButton(it) }
++        }
++    } else if (compact) {
 +        Column {
 +            val openDownloads = rememberUiClickAction { onSelect(Destination.DOWNLOADS) }
 +            Row(
@@ -37743,7 +37751,7 @@ new file mode 100644
 index 0000000..84588ae
 --- /dev/null
 +++ b/app/src/gamebox/java/com/gamebox/os/ui/theme/GameBoxTheme.kt
-@@ -0,0 +1,167 @@
+@@ -0,0 +1,195 @@
 +package com.gamebox.os.ui.theme
 +
 +import androidx.compose.material3.MaterialTheme
@@ -37759,6 +37767,7 @@ index 0000000..84588ae
 +import androidx.compose.ui.text.font.FontWeight
 +import androidx.compose.ui.unit.dp
 +import androidx.compose.ui.unit.sp
++import com.nuvio.tv.ui.theme.NuvioTheme
 +
 +val GameBoxBlue = Color(0xFF5184FF)
 +/** Filled-button blue keeps normal-size white labels above 4.5:1 contrast. */
@@ -37903,10 +37912,37 @@ index 0000000..84588ae
 +
 +@Composable
 +fun GameBoxTheme(content: @Composable () -> Unit) {
-+    MaterialTheme(colorScheme = colors, typography = typography, shapes = shapes) {
++    val tvPalette = NuvioTheme.colors
++    val unifiedColors = colors.copy(
++        primary = tvPalette.FocusRing,
++        onPrimary = tvPalette.FocusContent,
++        primaryContainer = tvPalette.FocusBackground,
++        onPrimaryContainer = tvPalette.FocusContent,
++        secondary = tvPalette.Secondary,
++        onSecondary = tvPalette.OnSecondary,
++        secondaryContainer = tvPalette.BackgroundElevated,
++        onSecondaryContainer = tvPalette.TextPrimary,
++        background = tvPalette.Background,
++        surface = tvPalette.Surface,
++        surfaceVariant = tvPalette.SurfaceVariant,
++        surfaceDim = tvPalette.Background,
++        surfaceBright = tvPalette.BackgroundCard,
++        surfaceContainerLowest = tvPalette.Background,
++        surfaceContainerLow = tvPalette.BackgroundElevated,
++        surfaceContainer = tvPalette.BackgroundCard,
++        surfaceContainerHigh = tvPalette.Surface,
++        surfaceContainerHighest = tvPalette.SurfaceVariant,
++        onSurfaceVariant = tvPalette.TextSecondary,
++        outline = tvPalette.Border,
++        outlineVariant = tvPalette.BorderMuted,
++        onBackground = tvPalette.TextPrimary,
++        onSurface = tvPalette.TextPrimary,
++        scrim = tvPalette.Scrim,
++    )
++    MaterialTheme(colorScheme = unifiedColors, typography = typography, shapes = shapes) {
 +        // Android's platform default content color can be black; explicitly seed every
 +        // screen with the dark-surface foreground so plain Text remains readable.
-+        CompositionLocalProvider(LocalContentColor provides colors.onBackground) {
++        CompositionLocalProvider(LocalContentColor provides unifiedColors.onBackground) {
 +            content()
 +        }
 +    }
@@ -93758,7 +93794,7 @@ index 07d7622..42237ed 100644
 +    val gameBox = context.applicationContext as com.gamebox.os.GameBoxApplication
 +    val destination = section.uppercase().takeIf { it in com.gamebox.os.ui.Destination.entries.map { item -> item.name } }
 +        ?: com.gamebox.os.ui.Destination.HOME.name
-+    Box(Modifier.fillMaxSize().padding(start = LocalRootContentInset.current)) {
++    Box(Modifier.fillMaxSize()) {
 +        com.gamebox.os.ui.theme.GameBoxTheme {
 +            com.gamebox.os.ui.GameBoxApp(
 +                container = gameBox.container,
